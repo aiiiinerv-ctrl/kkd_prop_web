@@ -20,6 +20,30 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Stack
+
+- **Next.js** (App Router) + **TypeScript** + **Tailwind CSS**
+- **[Zustand](https://github.com/pmndrs/zustand)** — client/UI state
+- **[TanStack Query](https://tanstack.com/query)** — server state (fetching, caching, loading/error states)
+- **[shadcn/ui](https://ui.shadcn.com)** — UI components, copied into `src/components/ui` and owned by the project rather than an installed package
+
+See `src/app/page.tsx` for a working example of all three together, `src/store/use-counter-store.ts` for the Zustand store, and `src/hooks/use-example-query.ts` + `src/app/api/example/route.ts` for the TanStack Query + API route pair.
+
+## Coming from Flutter?
+
+Rough equivalents to help map concepts over:
+
+| Flutter | This project |
+| --- | --- |
+| `Provider` / `ChangeNotifier` | Zustand store (`create()`, subscribe via a selector hook) |
+| `Riverpod` (atomic providers) | Consider [Jotai](https://jotai.org) instead of Zustand if you want smaller, composable atoms |
+| A repository class + manual in-memory cache | TanStack Query's `useQuery` — caching, refetch, stale time, loading/error states are handled for you |
+| A custom `Widget` / design system package | shadcn/ui components under `src/components/ui` — you own and can freely edit the code, it isn't a versioned dependency |
+| `pubspec.yaml` | `package.json` |
+| Hot reload | Next.js Fast Refresh (`npm run dev`) |
+
+Adding more shadcn/ui components later: `npx shadcn@latest add <component>` (e.g. `dialog`, `input`, `form`).
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
