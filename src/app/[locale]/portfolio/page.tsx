@@ -7,6 +7,7 @@ import { pickLocale } from "@/lib/i18n-content";
 import { storage } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import type { BuildingType } from "@/generated/prisma/enums";
+import { pageMetadata } from "@/lib/seo";
 
 const FILTERS = [
   { value: "all", key: "filterAll" },
@@ -14,6 +15,16 @@ const FILTERS = [
   { value: "COMMERCIAL", key: "filterCommercial" },
   { value: "INDUSTRIAL", key: "filterIndustrial" },
 ] as const;
+
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  return pageMetadata(locale, "portfolio", "/portfolio");
+}
 
 export default async function PortfolioPage({
   params,

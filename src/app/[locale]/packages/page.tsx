@@ -5,6 +5,7 @@ import { SectionHeading } from "@/components/site/section-heading";
 import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/db";
 import { pickLocale, pickLocaleList } from "@/lib/i18n-content";
+import { pageMetadata } from "@/lib/seo";
 
 export const revalidate = 300;
 
@@ -17,6 +18,16 @@ const SEASON_KEYS = [
   ["rainy", "seasonRainy"],
   ["winter", "seasonWinter"],
 ] as const;
+
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  return pageMetadata(locale, "packages", "/packages");
+}
 
 export default async function PackagesPage({
   params,

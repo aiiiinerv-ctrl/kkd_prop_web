@@ -3,6 +3,7 @@ import { Noto_Sans, Noto_Sans_Thai } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { setRequestLocale } from "next-intl/server";
+import { LocalBusinessJsonLd } from "@/components/site/local-business-jsonld";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteHeader } from "@/components/site/site-header";
 import { routing } from "@/i18n/routing";
@@ -48,6 +49,7 @@ export default async function LocaleLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
+        <LocalBusinessJsonLd />
         <NextIntlClientProvider>
           <SiteHeader />
           <div className="flex-1 flex flex-col">{children}</div>

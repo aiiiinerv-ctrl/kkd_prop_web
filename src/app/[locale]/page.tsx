@@ -4,9 +4,19 @@ import { SectionHeading } from "@/components/site/section-heading";
 import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/db";
 import { pickLocale } from "@/lib/i18n-content";
+import { pageMetadata } from "@/lib/seo";
 import { storage } from "@/lib/storage";
 
 export const revalidate = 300;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  return pageMetadata(locale, "home", "");
+}
 
 const STATS = [
   { value: "200+", key: "statsProjects" },

@@ -1,6 +1,17 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { SectionHeading } from "@/components/site/section-heading";
 import { CalculatorClient } from "./calculator-client";
+import { pageMetadata } from "@/lib/seo";
+
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  return pageMetadata(locale, "calculator", "/calculator");
+}
 
 export default async function CalculatorPage({
   params,

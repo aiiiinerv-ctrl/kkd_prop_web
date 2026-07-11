@@ -1,60 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# KKD PROPERTY — Solar Installation Website
 
-## Getting Started
-
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Bilingual (TH/EN) company website + admin backend for KKD PROPERTY CO., LTD.
 
 ## Stack
 
-- **Next.js** (App Router) + **TypeScript** + **Tailwind CSS**
-- **[Zustand](https://github.com/pmndrs/zustand)** — client/UI state
-- **[TanStack Query](https://tanstack.com/query)** — server state (fetching, caching, loading/error states)
-- **[shadcn/ui](https://ui.shadcn.com)** — UI components, copied into `src/components/ui` and owned by the project rather than an installed package
+- **Next.js 16** (App Router) + **TypeScript** + **Tailwind CSS v4**
+- **Prisma 7** + SQLite (better-sqlite3 adapter; schema is Postgres-portable)
+- **next-intl v4** — TH (default) / EN locale routing via `src/proxy.ts`
+- **Auth.js v5** (next-auth beta) — credentials login, ADMIN/EDITOR roles
+- **Zustand** — client UI state · **TanStack Query** — admin data tables
+- **shadcn/ui** (base-nova) — admin components, code-owned in `src/components/ui`
+- **Resend + LINE Messaging API** — new-lead notifications (env-toggled)
 
-See `src/app/page.tsx` for a working example of all three together, `src/store/use-counter-store.ts` for the Zustand store, and `src/hooks/use-example-query.ts` + `src/app/api/example/route.ts` for the TanStack Query + API route pair.
+## Getting started
+
+```bash
+npm install
+cp .env.example .env        # fill in AUTH_SECRET, ADMIN_* at minimum
+npx prisma migrate deploy   # create the SQLite DB
+npx prisma db seed          # admin user + TH/EN content + sample data
+npm run dev                 # http://localhost:3000
+```
+
+- Public site: `/th` (default) and `/en` — 8 pages × 2 locales
+- Admin: `/admin` — login with `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env`
+
+## Project layout
+
+| Path | What lives there |
+| --- | --- |
+| `src/app/[locale]/` | Public pages (home, about, services, packages, portfolio, booking, contact, calculator) |
+| `src/app/admin/` | Admin backend (dashboard, leads, content CRUD, channels, users, audit log) |
+| `src/app/files/[...key]/` | Serves uploads — `public/*` cached, `private/*` (payment slips) requires admin session |
+| `src/actions/` | Server actions (public form submits + admin mutations, all audited via `withAudit`) |
+| `src/lib/notifications/` | Email (Resend) + LINE push providers — enabled per env vars, never blocks a lead |
+| `src/lib/storage/` | Storage abstraction — local disk now (`STORAGE_ROOT`), S3-swappable later |
+| `src/messages/` | UI strings `th.json` / `en.json`; DB content uses per-locale columns (`titleTh`/`titleEn`) |
+| `prisma/` | Schema, migrations, idempotent seed |
+| `scripts/` | Playwright E2E scripts (`npx tsx scripts/e2e-*.mts`, uses system Chrome) |
+
+## Notifications
+
+Both channels are optional and independent — leave the env vars blank to disable:
+
+- **Email**: `RESEND_API_KEY`, `NOTIFY_EMAIL_FROM`, `NOTIFY_EMAIL_TO`
+- **LINE**: `LINE_CHANNEL_ACCESS_TOKEN`, `LINE_NOTIFY_TO` (LINE Messaging API via your LINE OA — LINE Notify was discontinued in 2025)
+
+## Deployment notes
+
+- SQLite + local file storage → needs a persistent-disk host (VPS/Docker). For Vercel, switch `DATABASE_URL` to Postgres (swap the Prisma adapter) and implement the S3 storage driver.
+- `npm run build && npm run start` for production; uploaded files live outside `.next` and survive rebuilds.
 
 ## Coming from Flutter?
 
-Rough equivalents to help map concepts over:
-
 | Flutter | This project |
 | --- | --- |
-| `Provider` / `ChangeNotifier` | Zustand store (`create()`, subscribe via a selector hook) |
-| `Riverpod` (atomic providers) | Consider [Jotai](https://jotai.org) instead of Zustand if you want smaller, composable atoms |
-| A repository class + manual in-memory cache | TanStack Query's `useQuery` — caching, refetch, stale time, loading/error states are handled for you |
-| A custom `Widget` / design system package | shadcn/ui components under `src/components/ui` — you own and can freely edit the code, it isn't a versioned dependency |
+| `Provider` / `ChangeNotifier` | Zustand store (`src/store/`) |
+| Repository + cache layer | TanStack Query (`src/hooks/admin/`) |
+| Custom widget package | shadcn/ui components you own in `src/components/ui` |
 | `pubspec.yaml` | `package.json` |
-| Hot reload | Next.js Fast Refresh (`npm run dev`) |
-
-Adding more shadcn/ui components later: `npx shadcn@latest add <component>` (e.g. `dialog`, `input`, `form`).
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Hot reload | Fast Refresh (`npm run dev`) |

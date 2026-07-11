@@ -2,6 +2,7 @@ import { Award, BadgeCheck, Building2, Users } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CtaBanner } from "@/components/site/cta-banner";
 import { SectionHeading } from "@/components/site/section-heading";
+import { pageMetadata } from "@/lib/seo";
 
 const NUMBERS = [
   { value: "200+", key: "statsProjects" },
@@ -9,6 +10,16 @@ const NUMBERS = [
   { value: "100%", key: "statsEngineers" },
   { value: "98%", key: "statsSatisfaction" },
 ] as const;
+
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  return pageMetadata(locale, "about", "/about");
+}
 
 export default async function AboutPage({
   params,

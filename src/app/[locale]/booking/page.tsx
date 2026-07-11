@@ -3,6 +3,17 @@ import { SectionHeading } from "@/components/site/section-heading";
 import { prisma } from "@/lib/db";
 import { pickLocale } from "@/lib/i18n-content";
 import { BookingForms } from "./booking-forms";
+import { pageMetadata } from "@/lib/seo";
+
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  return pageMetadata(locale, "booking", "/booking");
+}
 
 export default async function BookingPage({
   params,
