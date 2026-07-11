@@ -1,19 +1,20 @@
-import { setRequestLocale } from "next-intl/server";
-import { useTranslations } from "next-intl";
-import { use } from "react";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { SectionHeading } from "@/components/site/section-heading";
+import { CalculatorClient } from "./calculator-client";
 
-export default function Page({
+export default async function CalculatorPage({
   params,
 }: {
   params: Promise<{ locale: string }>;
 }) {
-  const { locale } = use(params);
+  const { locale } = await params;
   setRequestLocale(locale);
-  const t = useTranslations("calculator");
+  const t = await getTranslations("calculator");
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6">
-      <h1 className="text-3xl font-bold text-primary">{t("title")}</h1>
+      <SectionHeading title={t("title")} subtitle={t("subtitle")} />
+      <CalculatorClient />
     </main>
   );
 }
