@@ -73,6 +73,9 @@ function TabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {
   return (
     <TabsPrimitive.Panel
       data-slot="tabs-content"
+      // Keep inactive panels mounted so form fields inside them are still
+      // submitted with the surrounding <form>.
+      keepMounted
       className={cn("flex-1 text-sm outline-none", className)}
       {...props}
     />
