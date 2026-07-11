@@ -8,6 +8,25 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 Bilingual (TH default / EN) company site + admin backend. Stack: Next.js 16 App Router, TypeScript, Tailwind v4, Prisma 7 + SQLite (better-sqlite3 adapter), next-intl v4, Auth.js v5 beta, shadcn/ui base-nova, Zustand, TanStack Query.
 
+## Architecture
+
+**Two root layouts, no shared `app/layout.tsx`.** `src/app/[locale]/layout.tsx` owns `<html lang={locale}>` for the public site (header/footer, NextIntlClientProvider); `src/app/admin/layout.tsx` is a second root layout (Thai-only UI, noindex, QueryProvider + sonner). Fonts (Noto Sans + Noto Sans Thai) are declared in both.
+
+**Request routing** (`src/proxy.ts`): `/admin/*` gets an optimistic cookie redirect to login (real authorization is always re-checked server-side via `requireAdmin()`); everything else goes through next-intl locale middleware (`/` → `/th`). `api`, `files`, and dotted paths are excluded from the matcher.
+
+**Data flow — three patterns, pick by direction:**
+- Public pages read Prisma directly in RSC (`revalidate = 300` on content pages).
+- Admin *reads* for filterable lists go through GET `/api/admin/*` consumed by TanStack Query hooks (`src/hooks/admin/`).
+- All *mutations* (public form submits + admin CRUD) are server actions in `src/actions/` returning `{ok}|{error}` unions; admin ones call `revalidatePath` so public pages update immediately.
+
+**Lead capture flow:** booking page (two-tab client form, react-hook-form) → `submit-quote.ts` / `submit-survey-booking.ts` (zod re-validation from `src/lib/validations/`, in-memory IP rate limit) → Prisma create → `notifyNewLead()` fan-out (`src/lib/notifications/` — Resend + LINE providers, each enabled only when its env vars are set, `Promise.allSettled`, never throws so a notification outage can't lose a lead).
+
+**Audit trail:** `withAudit()` in `src/lib/audit.ts` is the single choke point — it runs the mutation then stores full before/after JSON snapshots on `AuditLog`; the admin audit page computes field diffs from the snapshots client-side. Logins are also recorded (in `authorize()`).
+
+**Storage:** `src/lib/storage/` driver interface (local disk under `STORAGE_ROOT`, key-sanitized). Keys are namespaced `public/…` (served with immutable cache) vs `private/slips/…` (requires admin session) — both via `src/app/files/[...key]/route.ts`, never from Next's `public/` dir.
+
+**i18n:** locale config in `src/i18n/`; static strings in `src/messages/{th,en}.json` (namespaced per page); DB content uses paired `xxxTh`/`xxxEn` columns read with `pickLocale()`. SEO metadata per page via `pageMetadata()` in `src/lib/seo.ts` (hreflang th/en/x-default).
+
 ## Working rules
 
 - **Ask before assuming.** If a requirement is ambiguous (which page, which locale, paid vs free flow), ask — don't pick silently.
