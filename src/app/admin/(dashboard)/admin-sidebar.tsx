@@ -6,6 +6,7 @@ import {
   Images,
   LayoutDashboard,
   Megaphone,
+  MessageSquareQuote,
   Package,
   ScrollText,
   Users,
@@ -22,6 +23,7 @@ const ITEMS = [
   { href: "/admin/services", label: "บริการ", icon: Wrench },
   { href: "/admin/packages", label: "แพ็กเกจ", icon: Package },
   { href: "/admin/portfolio", label: "ผลงาน", icon: Images },
+  { href: "/admin/testimonials", label: "รีวิวลูกค้า", icon: MessageSquareQuote },
   { href: "/admin/channels", label: "ช่องทางโปรโมท", icon: Megaphone },
   { href: "/admin/users", label: "ผู้ใช้ระบบ", icon: Users, adminOnly: true },
   { href: "/admin/audit", label: "ประวัติการแก้ไข", icon: ScrollText },
@@ -45,10 +47,10 @@ export function AdminSidebar({ role }: { role: "ADMIN" | "EDITOR" }) {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "flex items-center gap-2.5 rounded-lg border-l-[3px] px-3 py-2.5 text-sm font-medium transition-colors",
                 active
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "border-brand-orange bg-primary/8 text-primary"
+                  : "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
               <item.icon className="size-4" />

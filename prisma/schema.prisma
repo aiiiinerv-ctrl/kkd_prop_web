@@ -147,8 +147,8 @@ model Package {
 }
 
 model PortfolioProject {
-  id            String       @id @default(cuid())
-  slug          String       @unique
+  id            String        @id @default(cuid())
+  slug          String        @unique
   titleTh       String
   titleEn       String
   descriptionTh String
@@ -158,12 +158,31 @@ model PortfolioProject {
   systemSizeKw  Float
   imageKeys     Json
   completedAt   DateTime?
-  sortOrder     Int          @default(0)
-  isPublished   Boolean      @default(true)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  sortOrder     Int           @default(0)
+  isPublished   Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  testimonials  Testimonial[]
 
   @@index([category, isPublished])
+}
+
+model Testimonial {
+  id           String           @id @default(cuid())
+  customerName String
+  quoteTh      String
+  quoteEn      String
+  role         String?
+  province     String?
+  photoKey     String?
+  projectId    String?
+  project      PortfolioProject? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  sortOrder    Int              @default(0)
+  isPublished  Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([isPublished, sortOrder])
 }
 
 model AuditLog {

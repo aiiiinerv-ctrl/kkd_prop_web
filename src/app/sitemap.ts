@@ -11,6 +11,7 @@ const PATHS = [
   "/booking",
   "/contact",
   "/calculator",
+  "/testimonials",
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

@@ -12,7 +12,8 @@ type MetaKey =
   | "portfolio"
   | "booking"
   | "contact"
-  | "calculator";
+  | "calculator"
+  | "testimonials";
 
 /** Localized title/description + hreflang alternates for a public page. */
 export async function pageMetadata(
