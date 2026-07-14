@@ -179,7 +179,7 @@ export function UsersClient({
                 <TableCell className="text-right">
                   <Button
                     variant="ghost"
-                    size="icon-sm"
+                    className="p-2"
                     aria-label="แก้ไข"
                     onClick={() => {
                       setEditing(user);
@@ -191,7 +191,7 @@ export function UsersClient({
                   {user.id !== currentUserId && (
                     <Button
                       variant="ghost"
-                      size="icon-sm"
+                      className="p-2"
                       aria-label={user.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
                       disabled={isPending}
                       onClick={() => onToggle(user)}

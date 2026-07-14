@@ -105,7 +105,7 @@ export function LeadDetailClient({
     <div className="mx-auto max-w-3xl space-y-5">
       <div className="flex items-center gap-3">
         <Link href="/admin/leads">
-          <Button variant="ghost" size="icon-sm" aria-label="กลับ">
+          <Button variant="ghost" className="p-2" aria-label="กลับ">
             <ArrowLeft className="size-4" />
           </Button>
         </Link>

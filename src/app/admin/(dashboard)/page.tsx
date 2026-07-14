@@ -40,11 +40,13 @@ export default async function AdminDashboardPage() {
         {stats.map((s) => (
           <div
             key={s.label}
-            className="rounded-xl border border-border/70 bg-card p-5"
+            className="rounded-xl border border-border/70 bg-card p-5 shadow-sm"
           >
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">{s.label}</span>
-              <s.icon className="size-4 text-brand-orange" />
+              <div className="flex size-9 items-center justify-center rounded-lg bg-brand-orange/10">
+                <s.icon className="size-4 text-brand-orange" />
+              </div>
             </div>
             <div className="mt-2 text-3xl font-bold text-primary">{s.value}</div>
           </div>

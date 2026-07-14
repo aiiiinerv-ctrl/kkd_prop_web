@@ -117,7 +117,7 @@ export function ChannelsClient({ channels }: { channels: ChannelRow[] }) {
                 <TableCell className="text-right">
                   <Button
                     variant="ghost"
-                    size="icon-sm"
+                    className="p-2"
                     aria-label="แก้ไข"
                     onClick={() => {
                       setEditing(c);
@@ -129,7 +129,7 @@ export function ChannelsClient({ channels }: { channels: ChannelRow[] }) {
                   <AlertDialog>
                     <AlertDialogTrigger
                       render={
-                        <Button variant="ghost" size="icon-sm" aria-label="ลบ">
+                        <Button variant="ghost" className="p-2" aria-label="ลบ">
                           <Trash2 className="size-4 text-destructive" />
                         </Button>
                       }
