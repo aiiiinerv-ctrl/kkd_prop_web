@@ -25,6 +25,11 @@ const THEME_ROUTES = [
     href: "/theme-4",
     swatches: ["#0d47a1", "#ff9f00", "#050505"],
   },
+  {
+    key: "theme5",
+    href: "/theme-5",
+    swatches: ["#0d47a1", "#c99700", "#faf3d9"],
+  },
 ] as const;
 
 export async function generateMetadata({

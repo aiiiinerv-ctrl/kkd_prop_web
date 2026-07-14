@@ -838,3 +838,116 @@ html[data-theme-variant="footer-black-gold"] .site-footer a:hover {
     animation: none;
   }
 }
+
+/* theme-5 (blue-mustard) — delta on top of the theme-3 block above.
+   theme-3 stays untouched; these overrides swap the orange accent for
+   mustard yellow via the theme-5 skin selector (same specificity, wins
+   on source order). */
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) {
+  --accent: #faf3d9;
+  --accent-foreground: #7a5c00;
+  --ring: #c99700;
+  --brand-orange: #c99700;
+  --brand-orange-dark: #a67c00;
+  --brand-gold: #f2c744;
+  --brand-orange-cta: #c99700;
+  --brand-orange-cta-dark: #a67c00;
+  --shadow-gold: 0 14px 28px rgb(201 151 0 / 0.28);
+}
+
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .site-header nav a:hover,
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .site-header nav a[data-active="true"] {
+  color: #ffd34d;
+}
+
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .site-header .btn-pill {
+  background: #c99700;
+  box-shadow: 0 10px 22px rgb(201 151 0 / 0.26);
+}
+
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .btn-pill:hover {
+  box-shadow: 0 8px 20px rgb(201 151 0 / 0.3);
+}
+
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .btn-pill-outline {
+  border-color: #ffd34d;
+  color: #ffd34d;
+}
+
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .btn-pill-outline:hover {
+  background: #c99700;
+  border-color: #c99700;
+}
+
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .home-hero {
+  background:
+    radial-gradient(circle at 88% 18%, rgb(201 151 0 / 0.38), transparent 26rem),
+    linear-gradient(135deg, #041327 0%, #062a59 58%, #003b8e 100%);
+}
+
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .home-hero::before {
+  background: repeating-linear-gradient(
+    90deg,
+    #c99700 0 96px,
+    #ffffff 96px 128px,
+    #003b8e 128px 224px
+  );
+}
+
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .theme3-hero-kicker {
+  border: 1px solid rgb(242 199 68 / 0.55);
+  background: rgb(201 151 0 / 0.14);
+  color: #f2c744;
+}
+
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .theme3-proof-panel {
+  border-left: 5px solid #c99700;
+}
+
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .theme3-proof-panel span {
+  color: #f2c744;
+}
+
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .theme3-proof-panel li::before {
+  background: #c99700;
+}
+
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .home-hero .btn-pill {
+  background: #c99700;
+  box-shadow: 0 14px 28px rgb(201 151 0 / 0.3);
+}
+
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .theme3-decision-strip span {
+  color: #c99700;
+}
+
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .home-portfolio-card::before {
+  background: #c99700;
+}
+
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .home-portfolio-view {
+  border: 1px solid #c99700;
+  color: #c99700;
+}
+
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .home-action-row :is(span, a) {
+  color: #f2c744;
+}
+
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .home-action-row > a {
+  background: #c99700;
+}
+
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .site-footer,
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .site-footer-main,
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .site-footer-bottom {
+  background: #e0b64b;
+  color: #3d3200;
+}
+
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .site-footer :is(p, li, div),
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .site-footer h4,
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .site-footer a,
+:is(html[data-theme-skin="theme-5"], html:has(.theme-5-page)) .site-footer svg {
+  color: #3d3200;
+}
