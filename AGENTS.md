@@ -40,6 +40,7 @@ Bilingual (TH default / EN) company site + admin backend. Stack: Next.js 16 App 
 - **Uploads never go in `public/`.** Files live under `STORAGE_ROOT` via `src/lib/storage`; payment slips use `private/` keys (admin-only via `/files` route).
 - **Section padding convention:** content sections use `py-16`; banner/CTA-style sections (`cta-banner`, footer) use `py-14` — don't introduce new padding values without reason.
 - Verify per `.claude/skills/verify/SKILL.md` before declaring a change done.
+- **Development plans live in `docs/plans/*.md`** — sprint-structured, committed before implementation starts.
 
 ## Agent model tiers
 
