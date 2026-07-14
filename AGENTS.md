@@ -38,7 +38,19 @@ Bilingual (TH default / EN) company site + admin backend. Stack: Next.js 16 App 
 - **Admin mutations must be audited.** Every create/update/delete in `src/actions/` goes through `withAudit()` (`src/lib/audit.ts`) and starts with `requireAdmin()`/`requireRole()`. Never trust the proxy alone.
 - **Never put secrets in audit snapshots** — see `auditView()` in `src/actions/users.ts`.
 - **Uploads never go in `public/`.** Files live under `STORAGE_ROOT` via `src/lib/storage`; payment slips use `private/` keys (admin-only via `/files` route).
+- **Section padding convention:** content sections use `py-16`; banner/CTA-style sections (`cta-banner`, footer) use `py-14` — don't introduce new padding values without reason.
 - Verify per `.claude/skills/verify/SKILL.md` before declaring a change done.
+
+## Agent model tiers
+
+Project agents live in `.claude/agents/`; each file's frontmatter pins its model. Pick tier by judgment required, not by effort:
+
+- **haiku** — mechanical, checklist-style checks with a binary answer (e.g. `i18n-parity-checker`: TH/EN message-key parity). No taste, no architecture.
+- **sonnet** — default tier: implementation (`nextjs-dev`) and rule-based adversarial review (`audit-compliance-reviewer`, `deploy-verify`), where the invariants are written down and the job is verifying them.
+- **opus** — high-judgment work: design authority (`ux-ui-expert`) and design/business review of real renders (`design-business-reviewer`). This site's history is design rejected at the real-render stage, so both the design side and its reviewer run on opus.
+- **fable** — orchestration and highly ambiguous multi-agent work only; not assigned to any project agent.
+
+Escalation is by role, not by retry: sonnet implements → independent reviewers check → opus judges taste/business fit. Don't silently change an agent's tier — propose it to the user first.
 
 ## Version constraints (verified — do not "fix")
 
