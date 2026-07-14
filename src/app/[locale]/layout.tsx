@@ -6,6 +6,7 @@ import { setRequestLocale } from "next-intl/server";
 import { LocalBusinessJsonLd } from "@/components/site/local-business-jsonld";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteHeader } from "@/components/site/site-header";
+import { ThemeRouteMarker } from "@/components/site/theme-route-marker";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
 
@@ -51,6 +52,7 @@ export default async function LocaleLayout({
       <body className="min-h-full flex flex-col">
         <LocalBusinessJsonLd />
         <NextIntlClientProvider>
+          <ThemeRouteMarker />
           <SiteHeader />
           <div className="flex-1 flex flex-col">{children}</div>
           <SiteFooter />
