@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+*.md
+screenshots
+prisma/*.db
+prisma/*.db-journal
+storage/private
+.env.local
+.env
+
