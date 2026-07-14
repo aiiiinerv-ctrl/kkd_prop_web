@@ -322,9 +322,7 @@ html[data-theme-variant="footer-black-gold"] .site-footer a:hover {
 :is(html[data-theme-variant="blue-orange"], html:has(.theme-3-page)) .site-header img {
   height: 46px;
   width: auto;
-  border-radius: 8px;
-  background: #ffffff;
-  padding: 5px;
+  background: transparent;
 }
 
 :is(html[data-theme-variant="blue-orange"], html:has(.theme-3-page)) .site-header [class*="rounded-full"][class*="border"] {
