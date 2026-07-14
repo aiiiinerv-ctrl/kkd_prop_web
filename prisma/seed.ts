@@ -1,5 +1,6 @@
 import "dotenv/config";
-import { mkdir, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import bcrypt from "bcryptjs";
 import sharp from "sharp";
@@ -13,9 +14,14 @@ const prisma = new PrismaClient({
 });
 
 const STORAGE_ROOT = process.env.STORAGE_ROOT ?? "./storage";
+const SEED_ASSET_ROOT = path.join(process.cwd(), "prisma", "seed-assets");
 
 async function placeholderImage(key: string, color: string) {
   const filePath = path.join(STORAGE_ROOT, key);
+  // Skip if the file already exists — this preserves manually placed real
+  // photos (e.g. licensed stock images swapped in for some portfolio
+  // projects) across reseeds instead of overwriting them with a placeholder.
+  if (existsSync(filePath)) return;
   await mkdir(path.dirname(filePath), { recursive: true });
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">
     <rect width="800" height="600" fill="${color}"/>
@@ -26,6 +32,22 @@ async function placeholderImage(key: string, color: string) {
   </svg>`;
   const jpeg = await sharp(Buffer.from(svg)).jpeg({ quality: 80 }).toBuffer();
   await writeFile(filePath, jpeg);
+}
+
+async function seedPortfolioImage(key: string, color: string, sourceFileName?: string) {
+  const filePath = path.join(STORAGE_ROOT, key);
+  if (existsSync(filePath)) return;
+
+  if (sourceFileName) {
+    const sourcePath = path.join(SEED_ASSET_ROOT, "portfolio", sourceFileName);
+    if (existsSync(sourcePath)) {
+      await mkdir(path.dirname(filePath), { recursive: true });
+      await copyFile(sourcePath, filePath);
+      return;
+    }
+  }
+
+  await placeholderImage(key, color);
 }
 
 async function seedAdmin() {
@@ -201,8 +223,67 @@ async function seedPackages() {
 
 async function seedPortfolio() {
   const projects = [
+    // Real KKD projects. Photos are copied from the owner's reference set into
+    // storage/public/portfolio. systemSizeKw values are provisional estimates.
+    {
+      slug: "eye-hospital-carport",
+      imageKey: "public/portfolio/eye-hospital-carport.jpg",
+      seedImage: "eye-hospital-carport.jpg",
+      titleTh: "โรงพยาบาลจักษุ (Solar Carport)",
+      titleEn: "Eye Hospital (Solar Carport)",
+      descriptionTh: "ติดตั้งระบบโซลาร์คาร์พอร์ตสำหรับโรงพยาบาลจักษุ กรุงเทพมหานคร",
+      descriptionEn: "Solar carport installation for an eye hospital in Bangkok.",
+      category: "COMMERCIAL" as const,
+      province: "กรุงเทพมหานคร",
+      systemSizeKw: 30,
+      color: "#004b87",
+      completedAt: new Date("2026-06-15"),
+    },
+    {
+      slug: "thonglor-pet-hospital",
+      imageKey: "public/portfolio/thonglor-pet-hospital.jpg",
+      seedImage: "thonglor-pet-hospital.jpg",
+      titleTh: "โรงพยาบาลสัตว์ทองหล่อ",
+      titleEn: "Thonglor Pet Hospital",
+      descriptionTh: "ติดตั้งระบบโซลาร์บนหลังคาโรงพยาบาลสัตว์ทองหล่อ กรุงเทพมหานคร",
+      descriptionEn: "Rooftop solar installation for Thonglor Pet Hospital, Bangkok.",
+      category: "COMMERCIAL" as const,
+      province: "กรุงเทพมหานคร",
+      systemSizeKw: 25,
+      color: "#1a6bb3",
+      completedAt: new Date("2026-05-20"),
+    },
+    {
+      slug: "ekachai-hospital",
+      imageKey: "public/portfolio/ekachai-hospital.jpg",
+      seedImage: "ekachai-hospital.jpg",
+      titleTh: "โรงพยาบาลเอกชัย",
+      titleEn: "Ekachai Hospital",
+      descriptionTh: "ติดตั้งระบบโซลาร์บนหลังคาโรงพยาบาลเอกชัย จ.สมุทรสาคร",
+      descriptionEn: "Rooftop solar installation for Ekachai Hospital, Samut Sakhon.",
+      category: "COMMERCIAL" as const,
+      province: "สมุทรสาคร",
+      systemSizeKw: 50,
+      color: "#ff7f00",
+      completedAt: new Date("2026-04-10"),
+    },
+    {
+      slug: "srithai-optical",
+      imageKey: "public/portfolio/srithai-optical.jpg",
+      seedImage: "srithai-optical.jpg",
+      titleTh: "ศรีไทยการแว่น",
+      titleEn: "Srithai Optical",
+      descriptionTh: "ติดตั้งระบบโซลาร์สำหรับอาคารศรีไทยการแว่น",
+      descriptionEn: "Solar installation for the Srithai Optical building.",
+      category: "COMMERCIAL" as const,
+      province: "กรุงเทพมหานคร",
+      systemSizeKw: 20,
+      color: "#e67300",
+      completedAt: new Date("2026-03-05"),
+    },
     {
       slug: "residence-nonthaburi-5kw",
+      isPublished: false,
       titleTh: "บ้านพักอาศัย 5KW จ.นนทบุรี",
       titleEn: "5KW Residence, Nonthaburi",
       descriptionTh: "ติดตั้งระบบออนกริด 5KW บนหลังคา SCG ลดค่าไฟจาก 3,200 เหลือ 900 บาท/เดือน",
@@ -214,6 +295,7 @@ async function seedPortfolio() {
     },
     {
       slug: "residence-bangkok-3kw",
+      isPublished: false,
       titleTh: "บ้านพักอาศัย 3KW กรุงเทพฯ",
       titleEn: "3KW Residence, Bangkok",
       descriptionTh: "ระบบออนกริด 3KW สำหรับบ้านสองชั้น ย่านลาดพร้าว พร้อมระบบ monitoring",
@@ -223,8 +305,12 @@ async function seedPortfolio() {
       systemSizeKw: 3,
       color: "#1a6bb3",
     },
+    // The three entries below previously borrowed the real hospital photos as
+    // stand-ins under generic names. Unpublished so the same photo never
+    // appears twice under two different project names.
     {
       slug: "hotel-chiangmai-30kw",
+      isPublished: false,
       titleTh: "โรงแรม 30KW จ.เชียงใหม่",
       titleEn: "30KW Hotel, Chiang Mai",
       descriptionTh: "ระบบออนกริด 30KW สำหรับโรงแรมขนาด 40 ห้อง ลดต้นทุนค่าไฟระยะยาว",
@@ -236,6 +322,7 @@ async function seedPortfolio() {
     },
     {
       slug: "office-samutprakan-10kw",
+      isPublished: false,
       titleTh: "อาคารสำนักงาน 10KW จ.สมุทรปราการ",
       titleEn: "10KW Office Building, Samut Prakan",
       descriptionTh: "ระบบออนกริด 10KW สามเฟส สำหรับอาคารพาณิชย์ 4 ชั้น",
@@ -247,6 +334,7 @@ async function seedPortfolio() {
     },
     {
       slug: "factory-rayong-100kw",
+      isPublished: false,
       titleTh: "โรงงาน 100KW จ.ระยอง",
       titleEn: "100KW Factory, Rayong",
       descriptionTh: "ระบบออนกริด 100KW บนหลังคาโรงงาน พร้อมระบบ monitoring ระดับอุตสาหกรรม",
@@ -258,6 +346,7 @@ async function seedPortfolio() {
     },
     {
       slug: "warehouse-chonburi-30kw",
+      isPublished: false,
       titleTh: "โกดังสินค้า 30KW จ.ชลบุรี",
       titleEn: "30KW Warehouse, Chonburi",
       descriptionTh: "ระบบออนกริด 30KW สำหรับโกดังกระจายสินค้า คืนทุนภายใน 5 ปี",
@@ -269,13 +358,19 @@ async function seedPortfolio() {
     },
   ];
 
-  for (const { color, ...p } of projects) {
-    const imageKey = `public/portfolio/${p.slug}.jpg`;
-    await placeholderImage(imageKey, color);
+  for (const project of projects) {
+    const { color, imageKey, seedImage, ...p } = project;
+    const resolvedImageKey = imageKey ?? `public/portfolio/${p.slug}.jpg`;
+    await seedPortfolioImage(resolvedImageKey, color, seedImage);
+    const data = {
+      completedAt: new Date("2025-06-01"),
+      ...p,
+      imageKeys: [resolvedImageKey],
+    };
     await prisma.portfolioProject.upsert({
       where: { slug: p.slug },
-      update: {},
-      create: { ...p, imageKeys: [imageKey], completedAt: new Date("2025-06-01") },
+      update: data,
+      create: data,
     });
   }
   console.log(`Portfolio projects: ${projects.length}`);
