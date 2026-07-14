@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/typecheck-on-edit.sh",
+            "timeout": 60,
+            "statusMessage": "Typechecking (tsc --noEmit)..."
+          }
+        ]
+      }
+    ]
+  }
+}

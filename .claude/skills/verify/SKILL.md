@@ -37,6 +37,14 @@ npm run start &   # production mode catches proxy/static issues dev hides
 | messages/*.json | grep the new key in **both** th.json and en.json | key exists in both |
 | Notifications | submit a lead with notify env unset | server log shows "no providers configured", submit still succeeds |
 
+Touching more than one of the above (or unsure which apply)? Run the whole pipeline in one shot instead of chaining commands by hand:
+
+```bash
+npx tsx scripts/verify-all.mts
+```
+
+This runs steps 1-3 for all three e2e suites together (build → production server → booking → admin → admin-crud), kills the server on exit, and fails loud on the first broken suite. It does not replace the Prisma/messages/notifications checks above when those areas are touched.
+
 ## 4. Anti-rationalization table
 
 | Excuse | Counter |
