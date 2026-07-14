@@ -40,6 +40,13 @@ async function shoot(url: string, file: string) {
 await shoot("http://localhost:3000/th", "home-th.png");
 await shoot("http://localhost:3000/en", "home-en.png");
 
+// Public site — theme preview routes (both locales); later sprints just append 5, 6
+const THEME_NUMBERS = [1, 2, 3, 4];
+for (const n of THEME_NUMBERS) {
+  await shoot(`http://localhost:3000/th/theme-${n}`, `theme-${n}-th.png`);
+  await shoot(`http://localhost:3000/en/theme-${n}`, `theme-${n}-en.png`);
+}
+
 // Public site — Phase 6 rollout pages (both locales)
 const PUBLIC_PAGES = [
   "about",

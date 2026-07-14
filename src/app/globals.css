@@ -241,6 +241,9 @@ html[data-theme-variant="footer-black-gold"] .site-footer a:hover {
   color: #fff3c4;
 }
 
+/* theme-4 (blue-orange + black/gold footer) reuses this block via the
+   `theme-2-site-footer` class applied in site-footer.tsx — its !important
+   rules are what beat theme-3's amber footer, so don't drop them. */
 .theme-2-site-footer,
 .theme-2-site-footer .site-footer-main,
 .theme-2-site-footer .site-footer-bottom {

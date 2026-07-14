@@ -8,8 +8,11 @@ import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/db";
 import { pickLocale } from "@/lib/i18n-content";
 import { storage } from "@/lib/storage";
+import { cn } from "@/lib/utils";
 
-export type HomeThemeVariant = "theme-1" | "theme-2" | "theme-3";
+export type HomeThemeVariant = "theme-1" | "theme-2" | "theme-3" | "theme-4" | "theme-5" | "theme-6";
+
+const THEME_3_FAMILY = new Set<HomeThemeVariant>(["theme-3", "theme-4", "theme-5", "theme-6"]);
 
 function themedPath(themeVariant: HomeThemeVariant | undefined, path: string) {
   return themeVariant ? `/${themeVariant}${path}` : path;
@@ -26,7 +29,7 @@ export async function HomeContent({
   setRequestLocale(locale);
   const t = await getTranslations("home");
   const tCommon = await getTranslations("common");
-  const isTheme3 = themeVariant === "theme-3";
+  const isTheme3Family = themeVariant !== undefined && THEME_3_FAMILY.has(themeVariant);
   const bookingSurveyHref = {
     pathname: themedPath(themeVariant, "/booking"),
     query: { tab: "survey" },
@@ -56,7 +59,13 @@ export async function HomeContent({
   });
 
   return (
-    <main className={isTheme3 ? "theme-3-page" : undefined}>
+    <main
+      className={
+        isTheme3Family
+          ? cn("theme-3-page", themeVariant !== "theme-3" && `${themeVariant}-page`)
+          : undefined
+      }
+    >
       <section className="home-hero flex min-h-[600px] flex-col lg:flex-row">
         <div className="home-hero-media relative min-h-[320px] flex-[1.2]">
           <Image
@@ -70,7 +79,7 @@ export async function HomeContent({
         </div>
         <div className="home-hero-content relative flex flex-1 flex-col items-center justify-center bg-gradient-to-br from-[#fff5e6] to-[#fbe2c0] px-6 py-14 text-center sm:px-12 lg:items-start lg:text-left">
           <div className="absolute top-[20%] left-0 hidden h-[60%] w-1.5 rounded-r bg-brand-orange lg:block" />
-          {isTheme3 && (
+          {isTheme3Family && (
             <div className="theme3-hero-kicker">{t("theme3Kicker")}</div>
           )}
           <Reveal>
@@ -92,7 +101,7 @@ export async function HomeContent({
               {tCommon("requestQuote")}
             </Link>
           </Reveal>
-          {isTheme3 && (
+          {isTheme3Family && (
             <Reveal delay={320} className="theme3-proof-panel">
               <div>
                 <span>{t("theme3ProofLabel")}</span>
@@ -114,7 +123,7 @@ export async function HomeContent({
           headingClassName="font-extrabold tracking-[-0.01em]"
         />
 
-        {isTheme3 && (
+        {isTheme3Family && (
           <Reveal className="theme3-decision-strip">
             <div>
               <span>{t("theme3Metric1Label")}</span>

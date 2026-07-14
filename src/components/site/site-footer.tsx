@@ -57,6 +57,9 @@ const FOOTER_SERVICE_LINKS = ["serviceOnGrid", "serviceHybrid", "serviceOffGrid"
 function themePrefixForPath(pathname: string) {
   if (pathname === "/theme-2" || pathname.startsWith("/theme-2/")) return "/theme-2";
   if (pathname === "/theme-3" || pathname.startsWith("/theme-3/")) return "/theme-3";
+  if (pathname === "/theme-4" || pathname.startsWith("/theme-4/")) return "/theme-4";
+  if (pathname === "/theme-5" || pathname.startsWith("/theme-5/")) return "/theme-5";
+  if (pathname === "/theme-6" || pathname.startsWith("/theme-6/")) return "/theme-6";
   if (pathname === "/theme-1" || pathname.startsWith("/theme-1/")) return "/theme-1";
   return "";
 }
@@ -76,14 +79,17 @@ export function SiteFooter() {
   const year = new Date().getFullYear();
 
   useEffect(() => {
-    setPathForTheme(window.location.pathname);
+    // window.location.pathname still carries the locale segment (e.g. "/th/theme-4");
+    // themePrefixForPath expects the locale-stripped path that usePathname() returns.
+    setPathForTheme(window.location.pathname.replace(/^\/(th|en)(?=\/|$)/, "") || "/");
   }, [pathname]);
 
   return (
     <footer
       className={cn(
         "site-footer border-t border-border bg-muted/50",
-        shellThemePrefix === "/theme-2" && "theme-2-site-footer",
+        (shellThemePrefix === "/theme-2" || shellThemePrefix === "/theme-4") &&
+          "theme-2-site-footer",
         shellThemePrefix === "/theme-3" && "theme-3-site-footer"
       )}
     >
