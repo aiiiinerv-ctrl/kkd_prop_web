@@ -43,6 +43,7 @@ export function SiteHeader() {
   const themePrefix = themePrefixForPath(pathname);
   const activePath = themePrefix ? pathname.slice(themePrefix.length) || "/" : pathname;
   const shellThemePrefix = themePrefixForPath(pathForTheme);
+  const isTheme3Family = ["/theme-3", "/theme-4", "/theme-5", "/theme-6"].includes(shellThemePrefix);
 
   useEffect(() => {
     // window.location.pathname still carries the locale segment (e.g. "/th/theme-4");
@@ -54,13 +55,12 @@ export function SiteHeader() {
     <header
       className={cn(
         "site-header sticky top-0 z-50 bg-background shadow-md",
-        ["/theme-3", "/theme-4", "/theme-5", "/theme-6"].includes(shellThemePrefix) &&
-          "theme-3-site-header"
+        isTheme3Family && "theme-3-site-header"
       )}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <Link href={hrefForTheme(themePrefix, "/")} onClick={() => setMobileNavOpen(false)}>
-          <BrandLogo />
+          <BrandLogo isTheme3Family={isTheme3Family} />
         </Link>
 
         <nav className="hidden items-center gap-6 lg:flex">
