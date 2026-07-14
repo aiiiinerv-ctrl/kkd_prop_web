@@ -65,6 +65,12 @@
     "theme3Metric2Value": "Real commercial references",
     "theme3Metric3Label": "Next step",
     "theme3Metric3Value": "Book survey / request quote",
+    "theme6HeroTitleWhite": "CLEAN ENERGY",
+    "theme6HeroTitleGold": "SOLUTIONS",
+    "theme6Feature1": "Smart Energy",
+    "theme6Feature2": "Sustainable Future",
+    "theme6Feature3": "Reliable Performance",
+    "theme6Feature4": "Professional Service",
     "latestProjects": "Our Latest Works",
     "ourServicesTitle": "Our Services",
     "actionRowBadge": "OUR SERVICES",
@@ -125,6 +131,13 @@
       "concept": "Reuse Theme 3's commercial layout in full, but swap the accent from orange to mustard yellow for a warmer, slightly more premium tone while staying technical and credible.",
       "bestFor": "Clients who like Theme 3's structure but want a warmer, more premium accent color than bright orange.",
       "mood": "Warm, confident, and a touch more elevated."
+    },
+    "theme6": {
+      "title": "Theme 6 — Navy & Gold — Premium Corporate",
+      "description": "Theme 3's commercial layout with a deep navy hero and decision strip, gold accents, and a two-tone display headline for a premium corporate finish.",
+      "concept": "Reframe the hero and decision strip in deep navy with gold hairlines and a bold two-tone headline, while keeping the rest of Theme 3's commercial layout, swept to a gold accent.",
+      "bestFor": "Clients who want a premium, high-end corporate impression with a bold navy-and-gold identity.",
+      "mood": "Premium, bold, corporate, and confident."
     }
   },
   "about": {

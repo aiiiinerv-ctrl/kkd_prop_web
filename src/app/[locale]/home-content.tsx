@@ -1,3 +1,4 @@
+import { LineChart, ShieldCheck, Sun, Wrench } from "lucide-react";
 import Image from "next/image";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { FaqSection } from "@/components/site/faq-section";
@@ -30,6 +31,7 @@ export async function HomeContent({
   const t = await getTranslations("home");
   const tCommon = await getTranslations("common");
   const isTheme3Family = themeVariant !== undefined && THEME_3_FAMILY.has(themeVariant);
+  const isTheme6 = themeVariant === "theme-6";
   const bookingSurveyHref = {
     pathname: themedPath(themeVariant, "/booking"),
     query: { tab: "survey" },
@@ -83,9 +85,15 @@ export async function HomeContent({
             <div className="theme3-hero-kicker">{t("theme3Kicker")}</div>
           )}
           <Reveal>
-            <h1 className="text-3xl leading-snug font-extrabold tracking-[-0.01em] text-foreground sm:text-4xl">
-              {t("heroTitle")}
-            </h1>
+            {isTheme6 ? (
+              <h1 className="theme6-hero-title">
+                <span>{t("theme6HeroTitleWhite")}</span> <em>{t("theme6HeroTitleGold")}</em>
+              </h1>
+            ) : (
+              <h1 className="text-3xl leading-snug font-extrabold tracking-[-0.01em] text-foreground sm:text-4xl">
+                {t("heroTitle")}
+              </h1>
+            )}
           </Reveal>
           <Reveal delay={120}>
             <p className="mt-5 max-w-xl text-muted-foreground">{t("heroSubtitle")}</p>
@@ -101,6 +109,26 @@ export async function HomeContent({
               {tCommon("requestQuote")}
             </Link>
           </Reveal>
+          {isTheme6 && (
+            <div className="theme6-feature-row">
+              <div>
+                <Sun aria-hidden="true" />
+                <span>{t("theme6Feature1")}</span>
+              </div>
+              <div>
+                <ShieldCheck aria-hidden="true" />
+                <span>{t("theme6Feature2")}</span>
+              </div>
+              <div>
+                <Wrench aria-hidden="true" />
+                <span>{t("theme6Feature3")}</span>
+              </div>
+              <div>
+                <LineChart aria-hidden="true" />
+                <span>{t("theme6Feature4")}</span>
+              </div>
+            </div>
+          )}
           {isTheme3Family && (
             <Reveal delay={320} className="theme3-proof-panel">
               <div>
