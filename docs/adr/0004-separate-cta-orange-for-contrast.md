@@ -1,0 +1,3 @@
+# Separate `brand-orange-cta` color, distinct from `brand-orange`
+
+`globals.css` defines `--brand-orange-cta: #b35900` (and a `-dark` variant) as a separate token from `--brand-orange: #ff7f00`, used specifically for solid CTA button backgrounds with white text. This looks like an inconsistency — two oranges — but it's deliberate: white text on `brand-orange` fails WCAG AA (~2.5:1 contrast), while white on `brand-orange-cta` passes (4.83:1). `brand-orange` stays as the brighter brand-identity color for accents, borders, and non-text-bearing surfaces where contrast isn't the concern. Do not consolidate these into one orange — that would silently reintroduce a contrast failure on every solid CTA button.

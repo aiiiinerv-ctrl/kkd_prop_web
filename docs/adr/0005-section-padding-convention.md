@@ -1,0 +1,3 @@
+# Two section padding values: `py-16` for content, `py-14` for banner/CTA-style sections
+
+Content sections (services, packages, testimonials, page bodies) use `py-16`; banner/CTA-style sections (`cta-banner`, `site-footer`) deliberately use the slightly tighter `py-14`. This isn't an oversight to normalize to one value — banner-style sections are visually denser (a call-to-action strip, a footer grid) and read as cramped at the same padding that gives content sections room to breathe. `AGENTS.md` already flags this as a convention; this ADR records *why* two values exist so a future pass doesn't "clean up" the site by unifying them. New sections should be classified as one or the other rather than introducing a third padding value without a documented reason.
