@@ -69,6 +69,17 @@ export async function HomeContent({
       }
     >
       <section className="home-hero flex min-h-[600px] flex-col lg:flex-row">
+        {isTheme6 && (
+          <svg
+            className="theme6-hero-chevron"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            <polyline points="48,0 60,50 48,100" />
+            <polyline points="52,0 64,50 52,100" />
+          </svg>
+        )}
         <div className="home-hero-media relative min-h-[320px] flex-[1.2]">
           <Image
             src="/marketing/hero-solar.jpg"
