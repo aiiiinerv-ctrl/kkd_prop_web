@@ -5,6 +5,7 @@
     "services": "Services",
     "packages": "Packages",
     "portfolio": "Portfolio",
+    "testimonials": "Testimonials",
     "calculator": "Calculator",
     "contact": "Contact",
     "booking": "Quote / Survey"
@@ -12,6 +13,7 @@
   "common": {
     "companyName": "KKD PROPERTY CO., LTD.",
     "requestQuote": "Request a Quote",
+    "requestMaintenance": "Book Service",
     "requestQuoteFree": "Get a Free Quote",
     "bookSurvey": "Book Site Survey ฿199",
     "learnMore": "Learn More",
@@ -34,20 +36,82 @@
     "hours": "Mon - Sat 09:00 - 18:00",
     "copyright": "Copyright © {year} KKD PROPERTY CO., LTD. All Rights Reserved.",
     "privacyPolicy": "Privacy Policy",
-    "termsOfUse": "Terms of Use"
+    "termsOfUse": "Terms of Use",
+    "cookiePolicy": "Cookie Policy",
+    "siteMap": "Site Map",
+    "serviceOnGrid": "On-Grid System",
+    "serviceHybrid": "Hybrid System",
+    "serviceOffGrid": "Off-Grid System",
+    "serviceCleaning": "Panel Cleaning Service",
+    "socialFacebook": "Facebook",
+    "socialLine": "LINE",
+    "socialInstagram": "Instagram",
+    "socialTiktok": "TikTok",
+    "socialYoutube": "YouTube",
+    "socialEmail": "Email"
   },
   "home": {
-    "heroTitle": "Solar Energy Experts Who Take Care of You Professionally",
+    "heroTitle": "Lower Your Electricity Bill with Reliable Solar Power",
     "heroSubtitle": "KKD PROPERTY CO., LTD. — fully registered in Thailand. Turn sunlight into reliable savings with our licensed engineering team, guaranteed safety and high service standards.",
-    "latestProjects": "Our Latest Projects",
+    "theme3Kicker": "COMMERCIAL SOLAR PROPOSAL",
+    "theme3ProofLabel": "For commercial buyers",
+    "theme3ProofTitle": "Size the system from real load data and payback goals",
+    "theme3ProofItem1": "Survey the site and installation area",
+    "theme3ProofItem2": "Design capacity around actual electricity usage",
+    "theme3ProofItem3": "Use hospital and commercial projects as references",
+    "theme3Metric1Label": "Focus",
+    "theme3Metric1Value": "Corporate electricity savings",
+    "theme3Metric2Label": "Proof",
+    "theme3Metric2Value": "Real commercial references",
+    "theme3Metric3Label": "Next step",
+    "theme3Metric3Value": "Book survey / request quote",
+    "latestProjects": "Our Latest Works",
     "ourServicesTitle": "Our Services",
-    "ourPackagesTitle": "Solar Packages",
+    "actionRowBadge": "OUR SERVICES",
+    "actionRowTitle": "Site Survey & System Design Service",
+    "actionRowText": "Trust every step with our expert engineering team — real on-site assessment for maximum value.",
+    "actionRowLink": "See Details",
+    "viewAllPortfolio": "View All Our Work",
     "statsProjects": "Projects Installed",
+    "statsProjectsValue": "—",
     "statsYears": "Years of Experience",
+    "statsYearsValue": "—",
     "statsEngineers": "Licensed Engineers",
+    "statsEngineersValue": "—",
     "statsSatisfaction": "Customer Satisfaction",
+    "statsSatisfactionValue": "—",
     "ctaTitle": "Ready to Start Saving on Electricity?",
     "ctaSubtitle": "Free consultation, no obligation. Our team will contact you within 24 hours."
+  },
+  "themeSelector": {
+    "eyebrow": "Website Theme Options",
+    "title": "Choose a Website Look for Client Review",
+    "subtitle": "All 3 options use the same content and portfolio, but each gives the brand a different personality so clients can choose the direction that helps close the sale.",
+    "openPreview": "Open Preview",
+    "conceptLabel": "Concept",
+    "bestForLabel": "Best for",
+    "moodLabel": "Mood",
+    "theme1": {
+      "title": "Theme 1 — Trust & Clean",
+      "description": "KKD's core look: clean, approachable, and easy to read. A stable company-site baseline for clients who want a dependable impression.",
+      "concept": "A solar website focused on trust, clarity, and moving clients directly toward requesting a quote.",
+      "bestFor": "Residential buyers and SMEs who want a professional site that does not feel too heavy or complex.",
+      "mood": "Warm, clean, safe, and trustworthy."
+    },
+    "theme2": {
+      "title": "Theme 2 — Premium Signature",
+      "description": "Keeps the main browsing experience intact, then finishes with a black-gold footer for a heavier, more premium brand impression.",
+      "concept": "Use black and gold as the website's closing signature, making the brand feel more established without changing the main flow.",
+      "bestFor": "Clients who prefer a premium, calm, polished look that elevates the current design.",
+      "mood": "Premium, composed, formal, and weighty."
+    },
+    "theme3": {
+      "title": "Theme 3 — Commercial Energy",
+      "description": "A commercial-sales direction using a dark blue hero, orange accents, and a proof panel so the site feels closer to a proposal for business clients.",
+      "concept": "Turn the home page into a business solar sales flow, emphasizing site survey, real references, and ROI-driven decision making.",
+      "bestFor": "Hospitals, commercial buildings, factories, and buyers who need technical confidence before deciding.",
+      "mood": "Clear, confident, energetic, and engineering-led."
+    }
   },
   "about": {
     "title": "About KKD PROPERTY CO., LTD.",
@@ -60,6 +124,12 @@
     "credExperienceDesc": "Over 200+ projects installed across homes, commercial buildings, and industrial factories.",
     "teamTitle": "Our Team",
     "teamDesc": "Professional engineers and installers, trained to safety standards, taking care of your project from design through after-sales service.",
+    "teamDesignTitle": "Design & Engineering",
+    "teamDesignDesc": "Licensed engineers design On-Grid, Hybrid, and Off-Grid systems tailored to each roof and electricity usage pattern.",
+    "teamInstallTitle": "Site Installation",
+    "teamInstallDesc": "Installers trained to safety standards, controlling quality at every step from project start to finish.",
+    "teamSupportTitle": "After-Sales Support",
+    "teamSupportDesc": "Ongoing care with panel cleaning and system inspection services, keeping your system running at full efficiency.",
     "numbersTitle": "Numbers We're Proud Of"
   },
   "services": {
@@ -91,7 +161,12 @@
     "filterIndustrial": "Industrial",
     "systemSize": "System Size",
     "province": "Province",
-    "empty": "No projects in this category yet"
+    "empty": "No projects in this category yet",
+    "imageDisclaimer": "Illustrative images for presentation purposes; actual installed systems may vary by site.",
+    "viewProject": "View",
+    "lightboxClose": "Close",
+    "lightboxPrev": "Previous project",
+    "lightboxNext": "Next project"
   },
   "booking": {
     "title": "How Would You Like to Start?",
@@ -135,7 +210,9 @@
     "successSurveyTitle": "Booking Submitted!",
     "successSurveyDesc": "We typically confirm via LINE within 2 hours after verifying your ฿199 payment slip.",
     "errorGeneric": "Something went wrong. Please try again.",
-    "required": "Required"
+    "required": "Required",
+    "reassurance": "Free consultation, no obligation. Our team will contact you within 24 hours.",
+    "callUs": "Or call 082-473-1567"
   },
   "contact": {
     "title": "Contact Us",
@@ -150,17 +227,59 @@
     "hoursValue": "Mon - Sat (9:00 - 18:00)"
   },
   "calculator": {
-    "title": "Solar System Calculator",
-    "subtitle": "Enter your average monthly electricity bill to estimate the right system size",
+    "eyebrow": "Calculate Before You Decide",
+    "title": "How Much Is Your Bill, and How Much Can You Save — Know in 10 Seconds",
+    "subtitle": "Enter your monthly electricity bill and instantly estimate the right system size and expected savings, without waiting for a callback.",
+    "panelTitle": "Estimate Your Electricity Bill",
+    "panelIntro": "Drag the slider to match your home's average monthly electricity bill.",
+    "billLabel": "Monthly electricity bill (THB)",
     "billPlaceholder": "Monthly bill (THB)",
     "calculate": "Calculate Recommended System",
+    "calculateDetailed": "Calculate Details",
     "invalidBill": "Please enter a valid bill amount",
     "resultSystem": "Recommended system: {system}",
     "resultSave": "Estimated savings: {amount} THB/month",
+    "beforeLabel": "Bill before installation",
+    "afterLabel": "Bill after installation",
+    "saveBadge": "Save instantly ~ ฿{amount}/month",
+    "saveBadgeWithPayback": "Save instantly ~ ฿{amount}/month · Payback in ~{years} years",
     "system3kw": "3KW System",
     "system5kw": "5KW System (Popular)",
     "system10kw": "10KW System or larger",
-    "disclaimer": "* Estimates only. Actual results depend on site conditions and usage patterns."
+    "month": "month",
+    "packagesEyebrow": "Home Packages",
+    "packagesTitle": "Choose the Package That Fits Your Electricity Bill",
+    "packagesSubtitle": "One clear price with no hidden fees — covering Tier-1 equipment and installation by licensed engineers.",
+    "priceFrom": "From",
+    "disclaimer": "* Estimates only. Actual results depend on site conditions and usage patterns.",
+    "methodologyTitle": "How We Calculate",
+    "methodologyDesc": "This calculator estimates a system size from your average monthly bill, based on our team's real installation data. For an exact recommendation, book a free on-site survey with our engineers.",
+    "colBillRange": "Avg. Monthly Bill",
+    "colSystemSize": "Recommended System",
+    "colEstSaving": "Est. Savings",
+    "billRange3kw": "Below ฿1,500",
+    "billRange5kw": "฿1,500 - ฿3,500",
+    "billRange10kw": "Above ฿3,500"
+  },
+  "testimonials": {
+    "title": "What Our Customers Say",
+    "subtitle": "Real feedback from homeowners and businesses who chose KKD PROPERTY for their solar installation."
+  },
+  "faq": {
+    "badge": "Frequently Asked Questions",
+    "title": "Have Questions About Solar?",
+    "intro": "Answers to the questions we hear most from customers about solar installation. Still have questions? Chat with our team on LINE.",
+    "lineButton": "Chat with us on LINE",
+    "q1": "How much will solar reduce my electricity bill?",
+    "a1": "It depends on your system size and usage. For example, a home with a bill of ฿1,500-3,000/month can cut its bill by up to 60% per month with a 5KW system.",
+    "q2": "How long does on-site installation take?",
+    "a2": "Most on-site installations take just 1-2 days, depending on system size and roof type. Our safety-trained installation team controls quality at every step.",
+    "q3": "What's the payback period?",
+    "a3": "On-grid systems pay back the fastest — typically around 4-6 years for smaller systems, and somewhat longer for larger systems, depending on your bill and usage pattern.",
+    "q4": "What warranty do you provide?",
+    "a4": "The Tier 1 solar panels we install come with a 25-year panel warranty, installed by licensed engineers, so you can be confident in safety and quality at every step.",
+    "q5": "Do I need to apply for permits myself? Who handles the paperwork?",
+    "a5": "Our licensed engineering team handles design and installation end-to-end, and will guide you through any related paperwork so you can feel at ease throughout the process."
   },
   "meta": {
     "homeTitle": "KKD PROPERTY - Complete Solar Installation by Licensed Engineers",
@@ -178,6 +297,8 @@
     "contactTitle": "Contact Us | KKD PROPERTY",
     "contactDesc": "Contact KKD PROPERTY: call 082-473-1567 or LINE @kkdsolar. Open Mon-Sat 9:00-18:00.",
     "calculatorTitle": "Solar Calculator | KKD PROPERTY",
-    "calculatorDesc": "Calculate the right solar system size from your monthly electricity bill, with estimated savings."
+    "calculatorDesc": "Calculate the right solar system size from your monthly electricity bill, with estimated savings.",
+    "testimonialsTitle": "Customer Testimonials | KKD PROPERTY",
+    "testimonialsDesc": "Read what real customers say about their solar installation experience with KKD PROPERTY."
   }
 }

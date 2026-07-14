@@ -43,13 +43,17 @@ export default async function ContactPage({
   return (
     <main>
       <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
-        <SectionHeading title={t("title")} subtitle={t("subtitle")} />
+        <SectionHeading
+          title={t("title")}
+          subtitle={t("subtitle")}
+          headingClassName="font-extrabold tracking-[-0.01em]"
+        />
 
         <div className="grid gap-6 sm:grid-cols-2">
           {ITEMS.map((item) => (
             <div
               key={item.label}
-              className="flex items-start gap-4 rounded-xl border border-border/70 bg-card p-6 shadow-sm"
+              className="flex items-start gap-4 rounded-xl border border-border/70 bg-card p-6 shadow-sm transition-all hover:-translate-y-1.5 hover:shadow-lg"
             >
               <item.icon className="mt-0.5 size-6 shrink-0 text-brand-orange" />
               <div>

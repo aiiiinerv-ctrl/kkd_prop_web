@@ -34,7 +34,10 @@ export default async function BookingPage({
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6">
-      <SectionHeading title={t("title")} />
+      <SectionHeading
+        title={t("title")}
+        headingClassName="font-extrabold tracking-[-0.01em]"
+      />
       <BookingForms
         initialTab={tab === "survey" ? "survey" : "quote"}
         initialBill={bill && /^\d+$/.test(bill) ? bill : ""}

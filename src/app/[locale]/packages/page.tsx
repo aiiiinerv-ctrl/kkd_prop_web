@@ -6,6 +6,7 @@ import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/db";
 import { pickLocale, pickLocaleList } from "@/lib/i18n-content";
 import { pageMetadata } from "@/lib/seo";
+import { cn } from "@/lib/utils";
 
 export const revalidate = 300;
 
@@ -50,7 +51,11 @@ export default async function PackagesPage({
   return (
     <main>
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
-        <SectionHeading title={t("title")} subtitle={t("subtitle")} />
+        <SectionHeading
+          title={t("title")}
+          subtitle={t("subtitle")}
+          headingClassName="font-extrabold tracking-[-0.01em]"
+        />
 
         <div className="grid gap-7 md:grid-cols-3">
           {packages.map((pkg) => (
@@ -58,19 +63,19 @@ export default async function PackagesPage({
               key={pkg.id}
               className={
                 pkg.isPopular
-                  ? "relative flex flex-col rounded-xl border-2 border-brand-orange bg-card p-7 shadow-md"
-                  : "flex flex-col rounded-xl border border-border/70 bg-card p-7 shadow-sm"
+                  ? "group relative flex flex-col rounded-xl border-2 border-brand-orange bg-card p-7 shadow-md transition-all hover:-translate-y-1.5 hover:shadow-[var(--shadow-gold)]"
+                  : "flex flex-col rounded-xl border border-border/70 bg-card p-7 shadow-sm transition-all hover:-translate-y-1.5 hover:shadow-lg"
               }
             >
               {pkg.isPopular && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand-orange px-4 py-0.5 text-xs font-semibold whitespace-nowrap text-white">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand-orange-cta px-4 py-0.5 text-xs font-semibold whitespace-nowrap text-white transition-shadow group-hover:shadow-[var(--shadow-gold)]">
                   {tCommon("popular")}
                 </span>
               )}
               <h3
                 className={
                   pkg.isPopular
-                    ? "text-center text-xl font-bold text-brand-orange"
+                    ? "text-center text-xl font-bold text-brand-orange-cta"
                     : "text-center text-xl font-bold text-primary"
                 }
               >
@@ -98,11 +103,7 @@ export default async function PackagesPage({
                   pathname: "/booking",
                   query: { tab: "quote", package: pkg.slug },
                 }}
-                className={
-                  pkg.isPopular
-                    ? "mt-7 rounded-full bg-brand-orange px-5 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-brand-orange-dark"
-                    : "mt-7 rounded-full border-2 border-brand-orange px-5 py-2.5 text-center text-sm font-semibold text-brand-orange transition-colors hover:bg-brand-orange hover:text-white"
-                }
+                className={cn("mt-7", pkg.isPopular ? "btn-pill" : "btn-pill-outline")}
               >
                 {tCommon("requestQuote")}
               </Link>

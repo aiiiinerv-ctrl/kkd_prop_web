@@ -266,10 +266,16 @@ function QuoteForm({
       </div>
       <SourceChannelField register={register} channels={channels} t={t} />
       {serverError && <p className={errorCls}>{t("errorGeneric")}</p>}
+      <p className="text-center text-xs text-muted-foreground">
+        {t("reassurance")}{" "}
+        <a href="tel:0824731567" className="font-semibold text-brand-orange hover:underline">
+          {t("callUs")}
+        </a>
+      </p>
       <button
         type="submit"
         disabled={isPending}
-        className="w-full rounded-full bg-brand-orange py-3.5 font-semibold text-white transition-colors hover:bg-brand-orange-dark disabled:opacity-60"
+        className="w-full rounded-full bg-brand-orange-cta py-3.5 font-semibold text-white transition-colors hover:bg-brand-orange-cta-dark disabled:opacity-60"
       >
         {isPending ? t("submitting") : t("submitQuote")}
       </button>
@@ -398,10 +404,16 @@ function SurveyForm({
 
       <SourceChannelField register={register} channels={channels} t={t} />
       {serverError && <p className={errorCls}>{t("errorGeneric")}</p>}
+      <p className="text-center text-xs text-muted-foreground">
+        {t("reassurance")}{" "}
+        <a href="tel:0824731567" className="font-semibold text-brand-orange hover:underline">
+          {t("callUs")}
+        </a>
+      </p>
       <button
         type="submit"
         disabled={isPending}
-        className="w-full rounded-full bg-brand-orange py-3.5 font-semibold text-white transition-colors hover:bg-brand-orange-dark disabled:opacity-60"
+        className="w-full rounded-full bg-brand-orange-cta py-3.5 font-semibold text-white transition-colors hover:bg-brand-orange-cta-dark disabled:opacity-60"
       >
         {isPending ? t("submitting") : t("submitSurvey")}
       </button>

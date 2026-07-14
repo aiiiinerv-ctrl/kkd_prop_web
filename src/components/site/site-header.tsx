@@ -2,6 +2,7 @@
 
 import { Menu, X } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { LanguageSwitcher } from "@/components/site/language-switcher";
 import { Link, usePathname } from "@/i18n/navigation";
@@ -14,32 +15,59 @@ const NAV_ITEMS = [
   { key: "services", href: "/services" },
   { key: "packages", href: "/packages" },
   { key: "portfolio", href: "/portfolio" },
+  { key: "testimonials", href: "/testimonials" },
   { key: "calculator", href: "/calculator" },
   { key: "contact", href: "/contact" },
 ] as const;
+
+function themePrefixForPath(pathname: string) {
+  if (pathname === "/theme-2" || pathname.startsWith("/theme-2/")) return "/theme-2";
+  if (pathname === "/theme-3" || pathname.startsWith("/theme-3/")) return "/theme-3";
+  if (pathname === "/theme-1" || pathname.startsWith("/theme-1/")) return "/theme-1";
+  return "";
+}
+
+function hrefForTheme(prefix: string, href: string) {
+  if (!prefix) return href;
+  return href === "/" ? prefix : `${prefix}${href}`;
+}
 
 export function SiteHeader() {
   const t = useTranslations("nav");
   const pathname = usePathname();
   const { mobileNavOpen, setMobileNavOpen } = useUiStore();
+  const [pathForTheme, setPathForTheme] = useState(pathname);
+  const themePrefix = themePrefixForPath(pathname);
+  const activePath = themePrefix ? pathname.slice(themePrefix.length) || "/" : pathname;
+  const shellThemePrefix = themePrefixForPath(pathForTheme);
+
+  useEffect(() => {
+    setPathForTheme(window.location.pathname);
+  }, [pathname]);
 
   return (
-    <header className="sticky top-0 z-50 bg-background shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
+    <header
+      className={cn(
+        "site-header sticky top-0 z-50 bg-background shadow-md",
+        shellThemePrefix === "/theme-3" && "theme-3-site-header"
+      )}
+    >
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-        <Link href="/" onClick={() => setMobileNavOpen(false)}>
+        <Link href={hrefForTheme(themePrefix, "/")} onClick={() => setMobileNavOpen(false)}>
           <BrandLogo />
         </Link>
 
         <nav className="hidden items-center gap-6 lg:flex">
           {NAV_ITEMS.map((item) => {
             const active =
-              item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+              item.href === "/" ? activePath === "/" : activePath.startsWith(item.href);
             return (
               <Link
                 key={item.key}
-                href={item.href}
+                href={hrefForTheme(themePrefix, item.href)}
+                data-active={active ? "true" : "false"}
                 className={cn(
-                  "border-b-2 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
+                  "border-b-[3px] py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
                   active
                     ? "border-brand-orange text-brand-orange"
                     : "border-transparent text-foreground hover:border-brand-orange hover:text-brand-orange"
@@ -53,10 +81,7 @@ export function SiteHeader() {
 
         <div className="hidden items-center gap-3 lg:flex">
           <LanguageSwitcher />
-          <Link
-            href="/booking"
-            className="rounded-full bg-brand-orange px-5 py-2 text-sm font-semibold whitespace-nowrap text-white transition-all hover:bg-brand-orange-dark hover:shadow-[0_4px_8px_rgba(255,127,0,0.3)]"
-          >
+          <Link href={hrefForTheme(themePrefix, "/booking")} className="btn-pill px-5 py-2">
             {t("booking")}
           </Link>
         </div>
@@ -81,7 +106,7 @@ export function SiteHeader() {
             {NAV_ITEMS.map((item) => (
               <li key={item.key} className="border-b border-border/60">
                 <Link
-                  href={item.href}
+                  href={hrefForTheme(themePrefix, item.href)}
                   onClick={() => setMobileNavOpen(false)}
                   className="block px-6 py-4 text-center text-sm font-medium hover:text-brand-orange"
                 >
@@ -91,9 +116,9 @@ export function SiteHeader() {
             ))}
             <li className="p-4 text-center">
               <Link
-                href="/booking"
+                href={hrefForTheme(themePrefix, "/booking")}
                 onClick={() => setMobileNavOpen(false)}
-                className="inline-block rounded-full bg-brand-orange px-6 py-2.5 text-sm font-semibold text-white"
+                className="btn-pill inline-flex px-6 py-2.5"
               >
                 {t("booking")}
               </Link>
