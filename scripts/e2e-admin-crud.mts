@@ -65,7 +65,10 @@ await page.waitForSelector("text=ระบบออนกริด", { timeout: 
 await page.click('button[aria-label="แก้ไข"] >> nth=0');
 const titleInput = page.locator('input[name="titleTh"]');
 await titleInput.waitFor({ timeout: 5000 });
-await titleInput.fill("ระบบออนกริด (On-Grid) [แก้ไขทดสอบ]");
+// Unique suffix each run so the before/after audit snapshot always differs
+// (a fixed string would no-op on repeat runs and leave no field diff).
+const titleSuffix = `[แก้ไขทดสอบ ${Date.now().toString(36)}]`;
+await titleInput.fill(`ระบบออนกริด (On-Grid) ${titleSuffix}`);
 await page.click("text=บันทึก >> nth=-1");
 await page.waitForSelector("text=บันทึกเรียบร้อย", { timeout: 10000 });
 console.log("SERVICES: edited via dialog ✓");
@@ -73,8 +76,18 @@ console.log("SERVICES: edited via dialog ✓");
 const publicRes = await page.request.get("http://localhost:3000/th/services");
 const publicHtml = await publicRes.text();
 console.log(
-  `PUBLIC: edited title on /th/services ${publicHtml.includes("[แก้ไขทดสอบ]") ? "✓" : "✗ (may be cached)"}`
+  `PUBLIC: edited title on /th/services ${publicHtml.includes(titleSuffix) ? "✓" : "✗ (may be cached)"}`
 );
+
+// Restore the original title — this test intentionally mutates a real seed
+// record on every run, so leave the DB clean rather than accumulating
+// "[แก้ไขทดสอบ ...]" suffixes on a public-facing page.
+await page.click('button[aria-label="แก้ไข"] >> nth=0');
+await titleInput.waitFor({ timeout: 5000 });
+await titleInput.fill("ระบบออนกริด (On-Grid)");
+await page.click("text=บันทึก >> nth=-1");
+await page.waitForSelector("text=บันทึกเรียบร้อย", { timeout: 10000 });
+console.log("SERVICES: title restored ✓");
 
 // --- Channels: create one ---
 await page.goto("http://localhost:3000/admin/channels");

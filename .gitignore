@@ -44,6 +44,12 @@ prisma/*.db-journal
 # uploaded files
 /storage/
 
+# generated screenshots (verification output, not source)
+/screenshots/
+
+# firebase CLI deploy cache
+/.firebase/
+
 # vercel
 .vercel
 
