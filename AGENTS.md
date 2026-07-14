@@ -52,6 +52,15 @@ Project agents live in `.claude/agents/`; each file's frontmatter pins its model
 
 Escalation is by role, not by retry: sonnet implements → independent reviewers check → opus judges taste/business fit. Don't silently change an agent's tier — propose it to the user first.
 
+## Commit convention
+
+[Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0.0/): `<type>(scope): <description>`, body explains *why*, footers after a blank line.
+
+- **Types:** `feat` (new user-facing capability → SemVer MINOR), `fix` (bug patch → PATCH), plus `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`. Breaking changes: `!` after type/scope or an uppercase `BREAKING CHANGE:` footer → MAJOR.
+- **Scopes (use these, keep them stable):** `site` (public pages/components), `admin` (dashboard), a feature name when the change is one vertical slice (`testimonials`, `portfolio`, `calculator`, `booking`, `themes`), `deploy` (Dockerfile/fly/firebase), `agents` (.claude/), `e2e` (scripts), `preview` (static-preview). Add a new scope only for a genuinely new area.
+- **One type per commit.** If a change needs both `feat` and `fix`, split it into two commits.
+- Description in imperative mood, lowercase after the colon, no trailing period.
+
 ## Version constraints (verified — do not "fix")
 
 - `src/proxy.ts` is Next 16's rename of middleware.ts — don't rename it back.
