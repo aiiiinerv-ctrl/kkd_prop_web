@@ -12,7 +12,7 @@ type Channel = { id: string; name: string };
 type Tab = "quote" | "survey";
 
 const inputCls =
-  "w-full rounded-lg border border-input bg-background px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/25";
+  "w-full rounded-lg border border-input bg-background px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/50";
 const labelCls = "mb-1.5 block text-sm font-semibold";
 const errorCls = "mt-1 text-xs text-destructive";
 
@@ -268,14 +268,14 @@ function QuoteForm({
       {serverError && <p className={errorCls}>{t("errorGeneric")}</p>}
       <p className="text-center text-xs text-muted-foreground">
         {t("reassurance")}{" "}
-        <a href="tel:0824731567" className="font-semibold text-brand-orange hover:underline">
+        <a href="tel:0824731567" className="font-semibold text-primary hover:underline">
           {t("callUs")}
         </a>
       </p>
       <button
         type="submit"
         disabled={isPending}
-        className="w-full rounded-full bg-brand-orange-cta py-3.5 font-semibold text-white transition-colors hover:bg-brand-orange-cta-dark disabled:opacity-60"
+        className="w-full rounded-full bg-brand-orange-cta py-3.5 font-semibold text-[#0a1e3c] transition-colors hover:bg-brand-orange-cta-dark disabled:opacity-60"
       >
         {isPending ? t("submitting") : t("submitQuote")}
       </button>
@@ -406,14 +406,14 @@ function SurveyForm({
       {serverError && <p className={errorCls}>{t("errorGeneric")}</p>}
       <p className="text-center text-xs text-muted-foreground">
         {t("reassurance")}{" "}
-        <a href="tel:0824731567" className="font-semibold text-brand-orange hover:underline">
+        <a href="tel:0824731567" className="font-semibold text-primary hover:underline">
           {t("callUs")}
         </a>
       </p>
       <button
         type="submit"
         disabled={isPending}
-        className="w-full rounded-full bg-brand-orange-cta py-3.5 font-semibold text-white transition-colors hover:bg-brand-orange-cta-dark disabled:opacity-60"
+        className="w-full rounded-full bg-brand-orange-cta py-3.5 font-semibold text-[#0a1e3c] transition-colors hover:bg-brand-orange-cta-dark disabled:opacity-60"
       >
         {isPending ? t("submitting") : t("submitSurvey")}
       </button>

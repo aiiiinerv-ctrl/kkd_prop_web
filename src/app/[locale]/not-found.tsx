@@ -6,7 +6,7 @@ export default function NotFoundPage() {
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-24 text-center">
-      <p className="text-6xl font-bold text-brand-gold">404</p>
+      <p className="text-6xl font-bold text-primary">404</p>
       <Link
         href="/"
         className="rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground"

@@ -16,13 +16,13 @@ export function CtaBanner() {
         <div className="flex flex-wrap items-center justify-center gap-5">
           <Link
             href={{ pathname: "/booking", query: { tab: "quote" } }}
-            className="rounded-full bg-brand-orange-cta px-7 py-3 text-sm font-semibold text-white transition-all hover:bg-brand-orange-cta-dark hover:shadow-[0_4px_10px_rgba(255,127,0,0.3)]"
+            className="rounded-full bg-brand-orange-cta px-7 py-3 text-sm font-semibold text-[#0a1e3c] transition-all hover:bg-brand-orange-cta-dark hover:shadow-[0_4px_10px_rgba(255,127,0,0.3)]"
           >
             {tCommon("requestQuote")}
           </Link>
           <Link
             href={{ pathname: "/booking", query: { tab: "survey" } }}
-            className="text-sm font-semibold text-brand-orange-cta underline-offset-4 hover:underline"
+            className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
           >
             {tCommon("bookSurvey")}
           </Link>

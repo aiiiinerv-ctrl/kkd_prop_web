@@ -39,16 +39,16 @@ export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
     : "0";
 
   return (
-    <div className="mx-auto max-w-[1140px] overflow-hidden rounded-[18px] border border-[#ead9c5] bg-[#fff8ed] text-left shadow-[0_18px_55px_rgba(13,71,161,0.08)]">
+    <div className="mx-auto max-w-[1140px] overflow-hidden rounded-[18px] border border-border bg-card text-left shadow-[0_18px_55px_rgba(13,71,161,0.08)]">
       <div className="grid lg:grid-cols-[1.08fr_0.92fr]">
-        <div className="bg-[#f5f8fb] p-8 sm:p-10 lg:p-[30px]">
+        <div className="bg-muted p-8 sm:p-10 lg:p-[30px]">
           <h2 className="text-2xl font-bold text-primary">{t("panelTitle")}</h2>
           <p className="mt-3 text-sm text-muted-foreground">{t("panelIntro")}</p>
 
           <label className="mt-7 block text-sm font-bold text-foreground" htmlFor="monthly-bill">
             {t("billLabel")}
           </label>
-          <div className="mt-3 flex min-h-[62px] items-center rounded-xl border border-[#ead9c5] bg-[#fff8ed] px-5">
+          <div className="mt-3 flex min-h-[62px] items-center rounded-xl border border-border bg-accent px-5">
             <span className="mr-3 text-sm font-medium text-foreground">฿</span>
             <input
               id="monthly-bill"
@@ -61,7 +61,7 @@ export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
               onChange={(e) => setBill(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && onCalculate()}
               placeholder={t("billPlaceholder")}
-              className="min-w-0 flex-1 bg-transparent text-2xl font-extrabold text-[#c93a06] outline-none"
+              className="min-w-0 flex-1 bg-transparent text-2xl font-extrabold text-primary outline-none"
             />
             <span className="ml-2 text-sm text-muted-foreground">
               / {t("month")}
@@ -80,7 +80,7 @@ export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
               setError(false);
               setBill(e.target.value);
             }}
-            className="mt-5 w-full accent-[#cf3c06]"
+            className="mt-5 w-full accent-primary"
           />
 
           <button type="button" onClick={onCalculate} className="btn-pill mt-6 w-full">
@@ -88,9 +88,9 @@ export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
           </button>
         </div>
 
-        <div className="flex items-center bg-[#fff6e8] p-8 sm:p-10 lg:px-[30px]">
+        <div className="flex items-center bg-accent p-8 sm:p-10 lg:px-[30px]">
           <div className="w-full space-y-3">
-            <div className="flex min-h-[54px] items-center justify-between rounded-xl border border-[#ead9c5] bg-white px-5 shadow-sm">
+            <div className="flex min-h-[54px] items-center justify-between rounded-xl border border-border bg-white px-5 shadow-sm">
               <span className="text-sm font-medium text-muted-foreground">
                 {t("beforeLabel")} / {t("month")}
               </span>
@@ -99,7 +99,7 @@ export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
               </span>
             </div>
 
-            <div className="flex min-h-[54px] items-center justify-between rounded-xl border border-[#ead9c5] bg-white px-5 shadow-sm">
+            <div className="flex min-h-[54px] items-center justify-between rounded-xl border border-border bg-white px-5 shadow-sm">
               <span className="text-sm font-medium text-muted-foreground">
                 {t("afterLabel")} / {t("month")}
               </span>
@@ -109,8 +109,8 @@ export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
             </div>
 
             {displayedResult && (
-              <div className="rounded-xl bg-[#ffe0ba] px-5 py-4 text-center">
-                <p className="font-extrabold text-[#cf3c06]">
+              <div className="rounded-xl bg-brand-gold px-5 py-4 text-center">
+                <p className="font-extrabold text-primary">
                   {displayedResult.paybackYears != null
                     ? t("saveBadgeWithPayback", {
                         amount: displayedResult.monthlySaving.toLocaleString(locale),

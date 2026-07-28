@@ -58,7 +58,7 @@ export default async function AdminDashboardPage() {
           <h2 className="font-semibold">Lead ล่าสุด</h2>
           <Link
             href="/admin/leads"
-            className="text-sm font-medium text-brand-orange hover:underline"
+            className="text-sm font-medium text-primary hover:underline"
           >
             ดูทั้งหมด →
           </Link>

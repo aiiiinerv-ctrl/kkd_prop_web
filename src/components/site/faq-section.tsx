@@ -16,7 +16,7 @@ export function FaqSection() {
     <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] lg:gap-14">
         <Reveal>
-          <span className="inline-block rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-brand-orange-cta">
+          <span className="inline-block rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-primary">
             {t("badge")}
           </span>
           <h2 className="mt-4 text-2xl font-extrabold tracking-[-0.01em] text-primary sm:text-3xl">

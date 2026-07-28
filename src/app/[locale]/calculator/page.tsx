@@ -36,10 +36,10 @@ export default async function CalculatorPage({
   });
 
   return (
-    <main className="bg-[#fffaf5]">
+    <main className="bg-background">
       <section className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6">
         <Reveal className="mx-auto mb-8 max-w-3xl text-center">
-          <p className="text-sm font-bold text-[#cf3c06]">{t("eyebrow")}</p>
+          <p className="text-sm font-bold text-accent-foreground">{t("eyebrow")}</p>
           <h1 className="mt-4 text-3xl font-extrabold leading-tight tracking-[-0.01em] text-primary sm:text-4xl">
             {t("title")}
           </h1>
@@ -51,10 +51,10 @@ export default async function CalculatorPage({
         <CalculatorClient packages={packages} />
       </section>
 
-      <section className="bg-[#fff6e8]">
+      <section className="bg-accent">
         <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
           <Reveal className="mx-auto mb-10 max-w-3xl text-center">
-            <p className="text-sm font-bold text-[#cf3c06]">{t("packagesEyebrow")}</p>
+            <p className="text-sm font-bold text-accent-foreground">{t("packagesEyebrow")}</p>
             <h2 className="mt-3 text-3xl font-extrabold tracking-[-0.01em] text-primary">
               {t("packagesTitle")}
             </h2>
@@ -71,20 +71,15 @@ export default async function CalculatorPage({
                     "relative flex h-full flex-col rounded-2xl bg-card p-7 shadow-sm transition-all hover:-translate-y-1.5 hover:shadow-lg",
                     pkg.isPopular
                       ? "border-2 border-brand-orange"
-                      : "border border-[#ead9c5]"
+                      : "border border-border"
                   )}
                 >
                   {pkg.isPopular && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand-orange px-4 py-1 text-xs font-bold text-white">
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand-orange px-4 py-1 text-xs font-bold text-[#0a1e3c]">
                       {tCommon("popular")}
                     </span>
                   )}
-                  <h3
-                    className={cn(
-                      "text-center text-xl font-bold",
-                      pkg.isPopular ? "text-brand-orange" : "text-primary"
-                    )}
-                  >
+                  <h3 className="text-center text-xl font-bold text-primary">
                     {pickLocale(pkg, "name", locale)}
                   </h3>
                   <p className="mt-2 text-center text-sm text-muted-foreground">

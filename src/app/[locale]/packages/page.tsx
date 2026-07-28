@@ -68,17 +68,11 @@ export default async function PackagesPage({
               }
             >
               {pkg.isPopular && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand-orange-cta px-4 py-0.5 text-xs font-semibold whitespace-nowrap text-white transition-shadow group-hover:shadow-[var(--shadow-gold)]">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand-orange-cta px-4 py-0.5 text-xs font-semibold whitespace-nowrap text-[#0a1e3c] transition-shadow group-hover:shadow-[var(--shadow-gold)]">
                   {tCommon("popular")}
                 </span>
               )}
-              <h3
-                className={
-                  pkg.isPopular
-                    ? "text-center text-xl font-bold text-brand-orange-cta"
-                    : "text-center text-xl font-bold text-primary"
-                }
-              >
+              <h3 className="text-center text-xl font-bold text-primary">
                 {pickLocale(pkg, "name", locale)}
               </h3>
               <p className="mt-1 text-center text-sm text-muted-foreground">
