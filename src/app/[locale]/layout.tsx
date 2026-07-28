@@ -6,9 +6,11 @@ import { setRequestLocale } from "next-intl/server";
 import { LocalBusinessJsonLd } from "@/components/site/local-business-jsonld";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteHeader } from "@/components/site/site-header";
-import { ThemeRouteMarker } from "@/components/site/theme-route-marker";
+import { prisma } from "@/lib/db";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
+
+export const revalidate = 300;
 
 const notoSans = Noto_Sans({
   variable: "--font-noto-sans",
@@ -43,17 +45,20 @@ export default async function LocaleLayout({
   }
   setRequestLocale(locale);
 
+  const publishedTestimonialCount = await prisma.testimonial.count({
+    where: { isPublished: true },
+  });
+
   return (
     <html
       lang={locale}
       className={`${notoSans.variable} ${notoSansThai.variable} h-full antialiased [--font-sans:var(--font-noto-sans),var(--font-noto-sans-thai),sans-serif]`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">
+      <body className="site-shell min-h-full flex flex-col">
         <LocalBusinessJsonLd />
         <NextIntlClientProvider>
-          <ThemeRouteMarker />
-          <SiteHeader />
+          <SiteHeader showTestimonials={publishedTestimonialCount > 0} />
           <div className="flex-1 flex flex-col">{children}</div>
           <SiteFooter />
         </NextIntlClientProvider>

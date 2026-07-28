@@ -1,6 +1,8 @@
+import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { CtaBanner } from "@/components/site/cta-banner";
 import { TestimonialsSection } from "@/components/site/testimonials-section";
+import { prisma } from "@/lib/db";
 import { pageMetadata } from "@/lib/seo";
 
 export const revalidate = 300;
@@ -21,6 +23,13 @@ export default async function TestimonialsPage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
+
+  const publishedTestimonialCount = await prisma.testimonial.count({
+    where: { isPublished: true },
+  });
+  if (publishedTestimonialCount === 0) {
+    notFound();
+  }
 
   return (
     <main>

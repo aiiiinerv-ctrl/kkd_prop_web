@@ -35,6 +35,7 @@ function parseTestimonial(formData: FormData) {
 
 function revalidate() {
   revalidatePath("/admin/testimonials");
+  revalidatePath("/[locale]", "layout");
   revalidatePath("/[locale]", "page");
   revalidatePath("/[locale]/about", "page");
   revalidatePath("/[locale]/testimonials", "page");
