@@ -241,7 +241,7 @@ async function verifyMutationRejections(ctx: {
 }) {
   // These mirror the exact guard logic in src/actions/leads.ts without
   // needing a full Next.js request/session context.
-  const { canMutateLead } = await import("../src/lib/auth/index.ts");
+  const { canMutateLead } = await import("../src/lib/auth/index");
 
   const salesSession = { user: { id: ctx.salesUser.id, role: "SALES" as const, linkedChannelExecutiveId: null, linkedChannelId: null } };
   const financeSession = { user: { id: ctx.financeUser.id, role: "FINANCE" as const, linkedChannelExecutiveId: null, linkedChannelId: null } };

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  CalendarCheck,
   ClipboardList,
   Home,
   Images,
@@ -9,6 +10,7 @@ import {
   MessageSquareQuote,
   Package,
   ScrollText,
+  Settings,
   Users,
   Wrench,
 } from "lucide-react";
@@ -34,6 +36,12 @@ const ITEMS = [
     roles: ["ADMIN", "SALES", "FINANCE"] as Role[],
   },
   { href: "/admin/leads", label: "ลูกค้า (Leads)", icon: ClipboardList, roles: ALL_ROLES },
+  {
+    href: "/admin/bookings",
+    label: "การจองสำรวจ",
+    icon: CalendarCheck,
+    roles: ["ADMIN", "SALES", "FINANCE"] as Role[],
+  },
   {
     href: "/admin/services",
     label: "บริการ",
@@ -69,6 +77,12 @@ const ITEMS = [
     href: "/admin/audit",
     label: "ประวัติการแก้ไข",
     icon: ScrollText,
+    roles: ["ADMIN"] as Role[],
+  },
+  {
+    href: "/admin/settings",
+    label: "ตั้งค่าระบบ",
+    icon: Settings,
     roles: ["ADMIN"] as Role[],
   },
 ];

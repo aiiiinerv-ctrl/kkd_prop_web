@@ -27,14 +27,21 @@ const dir = mkdtempSync(path.join(tmpdir(), "slip-"));
 const slipPath = path.join(dir, "slip.png");
 writeFileSync(slipPath, png);
 
-const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
+// Spread across a wide window (2-301 days out, deterministic-but-varying per
+// run — same convention as the unique-suffix idempotency trick used in
+// e2e-admin-crud.mts) so repeated runs don't all pile onto the same
+// preferredDate and eventually collide with BookingCapacitySetting.
+const daysOut = 2 + (Date.now() % 300);
+const surveyDate = new Date(Date.now() + daysOut * 86400000)
+  .toISOString()
+  .split("T")[0];
 await page.goto("http://localhost:3000/th/booking?tab=survey");
 await page.fill('input[name="name"]', "ทดสอบ นัดสำรวจ");
 await page.fill('input[name="phone"]', "0898765432");
 await page.fill('input[name="province"]', "กรุงเทพมหานคร");
 await page.selectOption('select[name="buildingType"]', "COMMERCIAL");
 await page.fill('textarea[name="address"]', "123/45 หมู่บ้านทดสอบ ถนนสุขุมวิท แขวงบางนา");
-await page.fill('input[name="preferredDate"]', tomorrow);
+await page.fill('input[name="preferredDate"]', surveyDate);
 await page.selectOption('select[name="timeSlot"]', "MORNING");
 await page.setInputFiles('input[type="file"]', slipPath);
 await page.click('button[type="submit"]');

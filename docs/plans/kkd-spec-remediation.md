@@ -38,6 +38,16 @@ Gap หลักที่พบ (รายละเอียดเต็มอ�
 - ลิงก์ Facebook Page จริง
 - รูปทีมงานจริง (ถ้ายังไม่มี ใช้ไอคอนเดิมไปก่อนได้ ไม่ block)
 
+## สถานะสปรินต์
+
+| Sprint | สถานะ | หมายเหตุ |
+|---|---|---|
+| 0 — Schema & Role Foundation | ✅ เสร็จแล้ว | ยืนยันจากโค้ดจริง: `Role` 4 ค่า, `LeadStatus`/`BookingStatus` เต็มรูปแบบ, `ChannelExecutive`, `BookingCapacitySetting` มีอยู่ใน schema แล้วก่อนเริ่ม Sprint 3 |
+| 1 — Channel Tracking อัตโนมัติ | ✅ เสร็จแล้ว | `?ref=` cookie mechanism ยืนยันแล้วจากโค้ดจริงก่อนเริ่ม Sprint 3 |
+| 2 — RBAC | ✅ เสร็จแล้ว | `getBookingScopeFilter()`/`canMutateBooking()`/`requireRole()` มีอยู่แล้ว; ยืนยันซ้ำรอบนี้ผ่าน `npx tsx scripts/e2e-rbac-sprint2.mts` (ทุกเช็ค role ผ่าน) |
+| 3 — แยกโมดูล Booking Management | ✅ เสร็จแล้ว (2026-07-28) | ดูรายละเอียดผลลัพธ์ท้าย Sprint 3 ด้านล่าง |
+| 4-9 | ⏳ ยังไม่เริ่ม | ตามลำดับเดิมในแผนนี้ |
+
 ## Sprint 0 — Schema & Role Foundation
 
 **ทำไมต้องมาก่อน:** ทุก sprint ถัดไปพึ่งพา schema นี้ (role scoping, channel executive entity, booking status flow)
@@ -73,6 +83,35 @@ Gap หลักที่พบ (รายละเอียดเต็มอ�
 - `src/app/admin/settings/` (ใหม่ หรือรวมใน channels): ตั้งค่าจำนวนนัดสูงสุด/วัน/ช่วงเวลา
 - `src/app/[locale]/booking/booking-forms.tsx`: date picker เรียก API เช็ควันที่เต็มแล้ว (จาก `BookingCapacitySetting` + จำนวนนัดที่มีอยู่)
 
+### Sprint 3 — ผลลัพธ์ (2026-07-28)
+
+งานตาม task breakdown ใน `docs/plans/sprint-3-booking-tasks.md` (Task 1-9, 11) เสร็จครบ, ตรวจสอบโดยละเอียดใน task file นั้น สรุปสั้น:
+
+- `src/lib/bookings/booking-number.ts`, `capacity.ts` (ใหม่) — shared `nextBookingNumber()`/`isDateFull()`
+- `src/actions/bookings.ts` (ใหม่) — mutation ครบ (status/gift/assign engineer-sales/payment/capacity setting) ผ่าน `withAudit()`+`requireRole()`+`canMutateBooking()`; `updatePaymentStatus` ย้ายจาก `leads.ts`
+- `src/app/api/bookings/availability/route.ts` (public), `src/app/api/admin/bookings/route.ts`, `src/app/admin/(dashboard)/bookings/`, `src/app/admin/(dashboard)/settings/` (ใหม่ทั้งหมด)
+- Sidebar เพิ่มเมนู "การจองสำรวจ"/"ตั้งค่าระบบ" (ADMIN/SALES/FINANCE ตาม scope; ตั้งค่าระบบ ADMIN เท่านั้น)
+- `booking-forms.tsx` เช็ควันเต็มผ่าน API ใหม่, ข้อความ TH/EN คู่กัน (`booking.dateFull`/`booking.slotFull`)
+- `scripts/e2e-admin-crud.mts` ขยายครอบคลุม booking module
+
+**เบี่ยงจาก spec/default ที่ต้อง flag:**
+- `BookingStatus` มี 7 ค่าจริงใน schema ไม่ใช่ 8 ตามที่ระบุใน task brief — ไม่ได้แก้ schema, ใช้ 7 ค่าตามจริง
+- Admin sidebar คงเป็นภาษาไทยล้วนตาม AGENTS.md (admin UI Thai-only ที่ยืนยันแล้ว) ไม่เพิ่ม EN แม้ task brief จะขอ
+
+**⚠️ Not yet specified — ต้องเช็คก่อน Sprint 9:** `BookingStatus` enum ใน schema (Sprint 0) มีแค่ 7 ค่า (`PENDING_CONFIRMATION, CONFIRMED, PREPARED, SURVEYED, DESIGNED, SIGNED, CANCELLED`) แต่แผน Sprint 0 เดิม (บรรทัดด้านบน) และ task brief ของ Sprint 3 ระบุว่าควรมี 8 ค่า — ไม่ชัดเจนว่าค่าที่ 8 หายไปคืออะไร (เช่น สถานะย่อยเพิ่มเติมระหว่าง flow, หรือแค่พิมพ์ผิดตอนเขียนแผน) ยืนยันแล้วว่าไม่ใช่บั๊กที่เกิดจาก Sprint 3 (เป็น schema เดิมจาก Sprint 0) จึง**ไม่แก้ schema กลาง Sprint 3** เพื่อลดความเสี่ยง — ต้องเปิด `docs/stuffs/KKD_เอกสารความต้องการเว็บไซต์_V1.2.pdf` เทียบกับ list สถานะจริงก่อนเข้า Sprint 9 (Verification รอบสุดท้าย) ว่าต้องเพิ่ม enum ค่าที่ 8 หรือแก้เอกสารแผนให้ตรง 7 ค่าตามจริง
+
+**บั๊กที่เจอและแก้ระหว่างตรวจสอบ (นอกขอบเขต Sprint 3 เดิม แต่บล็อก build gate ของทุกสปรินต์):**
+- `scripts/e2e-rbac-sprint2.mts:244` import path ลงท้าย `.ts` ทำให้ `npm run build` fail ที่ TypeScript step เสมอ (ยืนยันว่าเป็นบั๊กเดิมตั้งแต่ commit `054d350` ก่อน Sprint 3) — แก้โดยตัด `.ts` ออกจาก import path ตามคำสั่ง ไม่แตะ `tsconfig.json`
+- `scripts/e2e-booking.mts` hardcode วันที่ "พรุ่งนี้" ชนกับ capacity feature ใหม่ (ข้อมูลทดสอบสะสมใน `prisma/dev.db` เกิน `maxPerSlot`/`maxPerDay` ของวันนั้นไปแล้ว) — แก้เป็นวันที่ dynamic กระจาย 2-301 วันข้างหน้า ตาม convention unique-suffix ที่ `e2e-admin-crud.mts` ใช้อยู่แล้ว
+
+**Verification (รอบสุดท้าย, ผ่านทั้งหมด):**
+- `npm run build` — `✓ Compiled successfully` + `Finished TypeScript` + exit code 0
+- `npm run start` — ขึ้นสำเร็จ, `/th`, `/th/booking`, `/en/booking` ตอบ 200, `/api/bookings/availability` ตอบ JSON ถูกต้อง
+- `npx tsx scripts/e2e-rbac-sprint2.mts` — ผ่านทุกเช็ค (RBAC ยังไม่แตกจาก Sprint 3)
+- `npx tsx scripts/e2e-admin-crud.mts` — ผ่านทุกเช็ครวมส่วน booking/settings ใหม่
+- `npx tsx scripts/e2e-booking.mts` — ผ่านหลังแก้วันที่ dynamic
+- i18n parity — **ไม่ได้รัน subagent `i18n-parity-checker` จริง** (ไม่มี tool เรียก subagent ในเซสชันนี้) ใช้สคริปต์ตรวจ key parity + placeholder consistency แทน: `th.json`/`en.json` มี 289 key เท่ากันทั้งสองไฟล์ ไม่มี key ขาดฝั่งใดฝั่งหนึ่ง, ไม่มี `{placeholder}` ไม่ตรงกัน — แนะนำให้รัน `i18n-parity-checker` ตัวจริงเพิ่มถ้าต้องการความมั่นใจระดับ semantic/phrasing เพราะ script นี้เช็คแค่โครงสร้าง key ไม่ใช่คุณภาพคำแปล
+
 ## Sprint 4 — อัปเดตโมดูล Lead Management
 
 - `src/app/admin/leads/`: UI status flow 8 ค่า, มอบหมายเซลส์ (dropdown เลือกจาก AdminUser role=SALES), แสดง `lastFollowUpAt`
@@ -103,6 +142,7 @@ Gap หลักที่พบ (รายละเอียดเต็มอ�
 
 ## Sprint 9 — Verification รอบสุดท้าย
 
+- **เช็คก่อนอื่น**: เทียบ `BookingStatus` enum (ปัจจุบัน 7 ค่าในโค้ด) กับ `docs/stuffs/KKD_เอกสารความต้องการเว็บไซต์_V1.2.pdf` ว่า spec ต้องการ 8 ค่าจริงหรือไม่ และค่าที่ขาดคืออะไร (ดู note ที่ท้าย Sprint 3 ด้านบน) — ตัดสินใจว่าต้อง migrate schema เพิ่มหรือแก้เอกสารแผนให้ตรงของจริง
 - `i18n-parity-checker` — TH/EN parity หลังเพิ่มฟิลด์/หน้าใหม่จำนวนมาก
 - `audit-compliance-reviewer` — ตรวจ role scoping ใหม่ทั้งหมด (จุดเสี่ยงสูงสุดของ sprint นี้คือ data leak ข้าม role)
 - E2E: ขยาย `scripts/e2e-admin-crud.mts` ให้ครอบคลุม booking module ใหม่, เพิ่ม script ทดสอบ channel-tracking (`?ref=` → cookie → lead attribution)

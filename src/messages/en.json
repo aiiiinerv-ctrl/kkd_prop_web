@@ -225,6 +225,8 @@
     "timeSlotPlaceholder": "Select time",
     "timeMorning": "Morning 9:00 - 12:00",
     "timeAfternoon": "Afternoon 13:00 - 17:00",
+    "slotFull": "Fully booked",
+    "dateFull": "This date is fully booked, please choose another date",
     "fieldSlip": "Attach Payment Slip (฿199)",
     "slipBankInfo": "Kasikorn Bank, Account No. 123-4-56789-0, Account Name: KKD Property Co., Ltd.",
     "fieldSource": "How did you find us?",

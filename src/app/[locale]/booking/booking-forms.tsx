@@ -2,7 +2,7 @@
 
 import { Check, CheckCircle2, Gift } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { submitQuote } from "@/actions/submit-quote";
 import { submitSurveyBooking } from "@/actions/submit-survey-booking";
@@ -296,19 +296,52 @@ function SurveyForm({
   const [serverError, setServerError] = useState(false);
   const [slip, setSlip] = useState<File | null>(null);
   const [slipError, setSlipError] = useState(false);
+  const [availability, setAvailability] = useState<Record<string, boolean> | null>(
+    null
+  );
+  const [dateFullError, setDateFullError] = useState(false);
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<SurveyFields>();
+
+  const preferredDate = watch("preferredDate");
+  const timeSlot = watch("timeSlot");
+
+  useEffect(() => {
+    if (!preferredDate) {
+      setAvailability(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/bookings/availability?date=${preferredDate}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled) setAvailability(data?.slots ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setAvailability(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [preferredDate]);
+
+  const isSelectedSlotFull = Boolean(timeSlot && availability?.[timeSlot]);
 
   const onSubmit = (values: SurveyFields) => {
     if (!slip) {
       setSlipError(true);
       return;
     }
+    if (isSelectedSlotFull) {
+      return;
+    }
     setSlipError(false);
     setServerError(false);
+    setDateFullError(false);
     startTransition(async () => {
       const formData = new FormData();
       Object.entries(values).forEach(([k, v]) => formData.set(k, v));
@@ -316,6 +349,7 @@ function SurveyForm({
       formData.set("paymentSlip", slip);
       const result = await submitSurveyBooking(formData);
       if (result.ok) onSuccess();
+      else if (result.error === "date_full") setDateFullError(true);
       else setServerError(true);
     });
   };
@@ -378,10 +412,17 @@ function SurveyForm({
             <option value="" disabled>
               {t("timeSlotPlaceholder")}
             </option>
-            <option value="MORNING">{t("timeMorning")}</option>
-            <option value="AFTERNOON">{t("timeAfternoon")}</option>
+            <option value="MORNING" disabled={availability?.MORNING === true}>
+              {t("timeMorning")}
+              {availability?.MORNING === true ? ` (${t("slotFull")})` : ""}
+            </option>
+            <option value="AFTERNOON" disabled={availability?.AFTERNOON === true}>
+              {t("timeAfternoon")}
+              {availability?.AFTERNOON === true ? ` (${t("slotFull")})` : ""}
+            </option>
           </select>
           {errors.timeSlot && <p className={errorCls}>{t("required")}</p>}
+          {isSelectedSlotFull && <p className={errorCls}>{t("dateFull")}</p>}
         </div>
       </div>
 
@@ -404,6 +445,7 @@ function SurveyForm({
 
       <SourceChannelField register={register} channels={channels} t={t} />
       {serverError && <p className={errorCls}>{t("errorGeneric")}</p>}
+      {dateFullError && <p className={errorCls}>{t("dateFull")}</p>}
       <p className="text-center text-xs text-muted-foreground">
         {t("reassurance")}{" "}
         <a href="tel:0824731567" className="font-semibold text-primary hover:underline">
@@ -412,7 +454,7 @@ function SurveyForm({
       </p>
       <button
         type="submit"
-        disabled={isPending}
+        disabled={isPending || isSelectedSlotFull}
         className="w-full rounded-full bg-brand-orange-cta py-3.5 font-semibold text-[#0a1e3c] transition-colors hover:bg-brand-orange-cta-dark disabled:opacity-60"
       >
         {isPending ? t("submitting") : t("submitSurvey")}

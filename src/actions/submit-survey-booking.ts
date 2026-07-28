@@ -2,6 +2,7 @@
 
 import { createId } from "@paralleldrive/cuid2";
 import { headers } from "next/headers";
+import { nextBookingNumber } from "@/lib/bookings/booking-number";
 import { prisma } from "@/lib/db";
 import { notifyNewLead } from "@/lib/notifications";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -9,21 +10,6 @@ import { resolveRefAttribution } from "@/lib/ref-attribution";
 import { storage, validateImage } from "@/lib/storage";
 import { surveySchema } from "@/lib/validations/lead";
 import type { SubmitResult } from "./submit-quote";
-
-// TODO(sprint 3): move to a shared bookings helper once booking admin/actions
-// land; for now this just keeps `bookingNumber` populated (format
-// KKD-YYYYMMDD-NNN) so the schema's required/unique constraint is satisfied.
-async function nextBookingNumber(): Promise<string> {
-  const now = new Date();
-  const datePart = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(
-    now.getDate()
-  ).padStart(2, "0")}`;
-  const prefix = `KKD-${datePart}-`;
-  const todaysCount = await prisma.surveyBooking.count({
-    where: { bookingNumber: { startsWith: prefix } },
-  });
-  return `${prefix}${String(todaysCount + 1).padStart(3, "0")}`;
-}
 
 export async function submitSurveyBooking(
   formData: FormData
