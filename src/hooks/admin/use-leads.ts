@@ -28,10 +28,12 @@ export type LeadListItem = {
   buildingType: string;
   avgMonthlyBill: number | null;
   createdAt: string;
+  lastFollowUpAt: string | null;
   booking: { paymentStatus: string; preferredDate: string } | null;
   sourceChannel: { nameTh: string } | null;
   autoSourceChannel: { nameTh: string } | null;
   autoSourceExecutive: { name: string } | null;
+  assignedSales: { name: string } | null;
 };
 
 type LeadListResponse = {

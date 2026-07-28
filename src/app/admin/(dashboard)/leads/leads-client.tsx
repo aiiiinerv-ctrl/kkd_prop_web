@@ -137,13 +137,19 @@ export function LeadsClient({
                   <TableHead>ช่องทาง (อัตโนมัติจากลิงก์)</TableHead>
                   <TableHead>วันที่</TableHead>
                   <TableHead>สถานะ</TableHead>
+                  {!isChannelExecutive && (
+                    <>
+                      <TableHead>เซลส์ที่รับผิดชอบ</TableHead>
+                      <TableHead>ติดตามล่าสุด</TableHead>
+                    </>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {data.leads.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={isChannelExecutive ? 6 : 8}
+                      colSpan={isChannelExecutive ? 6 : 10}
                       className="py-10 text-center text-muted-foreground"
                     >
                       ไม่พบข้อมูล
@@ -194,6 +200,16 @@ export function LeadsClient({
                         {LEAD_STATUS_LABELS[lead.status]}
                       </Badge>
                     </TableCell>
+                    {!isChannelExecutive && (
+                      <>
+                        <TableCell>{lead.assignedSales?.name ?? "-"}</TableCell>
+                        <TableCell>
+                          {lead.lastFollowUpAt
+                            ? new Date(lead.lastFollowUpAt).toLocaleDateString("th-TH")
+                            : "-"}
+                        </TableCell>
+                      </>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>

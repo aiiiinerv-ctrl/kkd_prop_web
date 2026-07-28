@@ -129,6 +129,15 @@ async function main() {
       `SALES detail: fetching unassigned lead rejected (status ${detailStatus}) ${blocked ? "✓" : "✗ FAIL"}`
     );
 
+    // Sprint 4: sales assignment is ADMIN-only (canAssignSales) — SALES must
+    // not see the assignment <select>, only a read-only display, on their
+    // own (viewable) lead.
+    await page.goto(`${BASE}/admin/leads/${ownLead.id}`);
+    const hasSalesAssignSelect = await page.locator("#lead-sales").count();
+    console.log(
+      `SALES detail: no sales-assignment dropdown rendered ${hasSalesAssignSelect === 0 ? "✓" : "✗ FAIL"}`
+    );
+
     await page.close();
   }
 

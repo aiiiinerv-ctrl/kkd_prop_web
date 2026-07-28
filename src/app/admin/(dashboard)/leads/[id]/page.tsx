@@ -18,7 +18,7 @@ export default async function LeadDetailPage({
     redirect("/admin/leads");
   }
 
-  const [lead, channels] = await Promise.all([
+  const [lead, channels, salesUsers] = await Promise.all([
     prisma.lead.findUnique({
       where: { id },
       include: {
@@ -26,11 +26,17 @@ export default async function LeadDetailPage({
         sourceChannel: true,
         autoSourceChannel: true,
         autoSourceExecutive: true,
+        assignedSales: { select: { id: true, name: true } },
       },
     }),
     prisma.promoChannel.findMany({
       orderBy: { sortOrder: "asc" },
       select: { id: true, nameTh: true },
+    }),
+    prisma.adminUser.findMany({
+      where: { role: "SALES", isActive: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
     }),
   ]);
   if (!lead) notFound();
@@ -46,6 +52,9 @@ export default async function LeadDetailPage({
   // SALES leads can edit status/notes/payment.
   const canEdit = session.user.role !== "FINANCE";
   const canEditChannel = session.user.role === "ADMIN";
+  // Sales assignment sets ownership/attribution (see getLeadScopeFilter()),
+  // not day-to-day follow-up — kept ADMIN-only, same as canEditChannel.
+  const canAssignSales = session.user.role === "ADMIN";
 
   return (
     <LeadDetailClient
@@ -64,6 +73,9 @@ export default async function LeadDetailPage({
         sourceChannelId: lead.sourceChannelId,
         autoSourceChannelName: lead.autoSourceChannel?.nameTh ?? null,
         autoSourceExecutiveName: lead.autoSourceExecutive?.name ?? null,
+        assignedSalesId: lead.assignedSalesId,
+        assignedSalesName: lead.assignedSales?.name ?? null,
+        lastFollowUpAt: lead.lastFollowUpAt ? lead.lastFollowUpAt.toISOString() : null,
         createdAt: lead.createdAt.toISOString(),
         booking: lead.booking
           ? {
@@ -78,8 +90,10 @@ export default async function LeadDetailPage({
           : null,
       }}
       channels={channels}
+      salesUsers={salesUsers}
       canEdit={canEdit}
       canEditChannel={canEditChannel}
+      canAssignSales={canAssignSales}
     />
   );
 }

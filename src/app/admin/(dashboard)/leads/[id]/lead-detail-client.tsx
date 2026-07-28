@@ -5,11 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
+import { updatePaymentStatus } from "@/actions/bookings";
 import {
+  assignLeadSales,
   updateLeadNotes,
   updateLeadSourceChannel,
   updateLeadStatus,
-  updatePaymentStatus,
 } from "@/actions/leads";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -68,6 +69,9 @@ type LeadDetail = {
   sourceChannelId: string | null;
   autoSourceChannelName: string | null;
   autoSourceExecutiveName: string | null;
+  assignedSalesId: string | null;
+  assignedSalesName: string | null;
+  lastFollowUpAt: string | null;
   createdAt: string;
   booking: {
     id: string;
@@ -83,13 +87,17 @@ type LeadDetail = {
 export function LeadDetailClient({
   lead,
   channels,
+  salesUsers,
   canEdit,
   canEditChannel,
+  canAssignSales,
 }: {
   lead: LeadDetail;
   channels: { id: string; nameTh: string }[];
+  salesUsers: { id: string; name: string }[];
   canEdit: boolean;
   canEditChannel: boolean;
+  canAssignSales: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -219,6 +227,44 @@ export function LeadDetailClient({
                   ? `${lead.autoSourceChannelName} · ${lead.autoSourceExecutiveName}`
                   : lead.autoSourceChannelName
                 : "เข้าโดยตรง"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">เซลส์ที่รับผิดชอบ</dt>
+            <dd>
+              {canAssignSales ? (
+                <select
+                  id="lead-sales"
+                  className={selectCls}
+                  value={lead.assignedSalesId ?? ""}
+                  disabled={isPending}
+                  onChange={(e) =>
+                    run(
+                      () => assignLeadSales(lead.id, e.target.value),
+                      "มอบหมายเซลส์แล้ว"
+                    )
+                  }
+                >
+                  <option value="">ไม่ระบุ</option>
+                  {salesUsers.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="font-medium">
+                  {lead.assignedSalesName ?? "ยังไม่มอบหมาย"}
+                </span>
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">ติดตามล่าสุด</dt>
+            <dd className="font-medium">
+              {lead.lastFollowUpAt
+                ? new Date(lead.lastFollowUpAt).toLocaleString("th-TH")
+                : "ยังไม่เคยติดตาม"}
             </dd>
           </div>
         </dl>

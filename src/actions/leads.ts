@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { withAudit } from "@/lib/audit";
 import { canMutateLead, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import type { LeadStatus, PaymentStatus } from "@/generated/prisma/enums";
+import type { LeadStatus } from "@/generated/prisma/enums";
 import type { ActionResult } from "./users";
 
 const LEAD_STATUSES: LeadStatus[] = [
@@ -17,9 +17,26 @@ const LEAD_STATUSES: LeadStatus[] = [
   "COMPLETED",
   "DISQUALIFIED",
 ];
-const PAYMENT_STATUSES: PaymentStatus[] = ["PENDING_REVIEW", "VERIFIED", "REJECTED"];
 
 const NO_PERMISSION_ERROR = "ไม่มีสิทธิ์แก้ไข lead นี้";
+
+/**
+ * Validates an optional AdminUser id used for sales assignment: must exist,
+ * be active, and hold role SALES — stricter than bookings.ts's
+ * resolveAssignee() (which allows any active AdminUser, since booking
+ * engineer/sales assignment isn't role-constrained the same way). Kept local
+ * to this file rather than shared, per the different role constraint.
+ */
+async function resolveSalesAssignee(
+  salesId: string
+): Promise<{ error: string } | { value: string | null }> {
+  if (!salesId) return { value: null };
+  const user = await prisma.adminUser.findUnique({ where: { id: salesId } });
+  if (!user || !user.isActive || user.role !== "SALES") {
+    return { error: "ไม่พบผู้ใช้ที่เลือก หรือไม่ใช่เซลส์ที่ใช้งานอยู่" };
+  }
+  return { value: salesId };
+}
 
 export async function updateLeadStatus(
   id: string,
@@ -38,6 +55,9 @@ export async function updateLeadStatus(
     return { ok: false, error: NO_PERMISSION_ERROR };
   }
 
+  // lastFollowUpAt intentionally not touched here — a status change is not
+  // necessarily a follow-up contact; it's only recorded when notes are
+  // logged via updateLeadNotes() below.
   await withAudit({
     actorId: session.user.id,
     action: "UPDATE",
@@ -48,7 +68,6 @@ export async function updateLeadStatus(
         where: { id },
         data: {
           status: status as LeadStatus,
-          lastFollowUpAt: new Date(),
         },
       }),
   });
@@ -122,40 +141,35 @@ export async function updateLeadSourceChannel(
   return { ok: true };
 }
 
-export async function updatePaymentStatus(
-  bookingId: string,
-  status: string
+// Assigning "which salesperson owns this lead" is ownership/attribution
+// (it drives getLeadScopeFilter()/canMutateLead() visibility), not day-to-day
+// follow-up work — kept ADMIN-only, mirroring updateLeadSourceChannel above
+// rather than the SALES-can-reassign pattern used for booking assignment.
+export async function assignLeadSales(
+  id: string,
+  salesId: string
 ): Promise<ActionResult> {
-  const session = await requireRole("ADMIN", "SALES");
-  if (!PAYMENT_STATUSES.includes(status as PaymentStatus)) {
-    return { ok: false, error: "สถานะไม่ถูกต้อง" };
-  }
+  const session = await requireRole("ADMIN");
 
-  const before = await prisma.surveyBooking.findUnique({ where: { id: bookingId } });
-  if (!before) return { ok: false, error: "ไม่พบการจอง" };
+  const before = await prisma.lead.findUnique({ where: { id } });
+  if (!before) return { ok: false, error: "ไม่พบ lead" };
 
-  if (session.user.role === "SALES") {
-    const lead = await prisma.lead.findUnique({
-      where: { id: before.leadId },
-      select: { assignedSalesId: true },
-    });
-    if (!lead || lead.assignedSalesId !== session.user.id) {
-      return { ok: false, error: NO_PERMISSION_ERROR };
-    }
-  }
+  const resolved = await resolveSalesAssignee(salesId);
+  if ("error" in resolved) return { ok: false, error: resolved.error };
 
   await withAudit({
     actorId: session.user.id,
     action: "UPDATE",
-    entityType: "SurveyBooking",
+    entityType: "Lead",
     before,
     run: () =>
-      prisma.surveyBooking.update({
-        where: { id: bookingId },
-        data: { paymentStatus: status as PaymentStatus },
+      prisma.lead.update({
+        where: { id },
+        data: { assignedSalesId: resolved.value },
       }),
   });
 
-  revalidatePath(`/admin/leads/${before.leadId}`);
+  revalidatePath(`/admin/leads/${id}`);
+  revalidatePath("/admin/leads");
   return { ok: true };
 }

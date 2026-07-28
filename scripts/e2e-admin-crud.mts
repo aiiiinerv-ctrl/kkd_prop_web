@@ -1,4 +1,10 @@
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { chromium } from "playwright";
+import { PrismaClient } from "../src/generated/prisma/client.js";
+
+const prisma = new PrismaClient({
+  adapter: new PrismaBetterSqlite3({ url: process.env.DATABASE_URL ?? "file:./prisma/dev.db" }),
+});
 
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 const page = await browser.newPage();
@@ -30,6 +36,12 @@ await page.click("text=ทดสอบ นัดสำรวจ");
 await page.waitForSelector("text=ข้อมูลการนัดสำรวจ", { timeout: 10000 });
 console.log("LEAD DETAIL: booking card shown ✓");
 
+// Grab the lead id from the URL so we can assert DB-level field behavior
+// (lastFollowUpAt narrowing, assignedSalesId) directly rather than via
+// fragile UI text formatting.
+const leadDetailUrl = page.url();
+const leadId = leadDetailUrl.split("/").pop()!;
+
 // Slip dialog
 await page.click("text=ดูสลิปโอนเงิน");
 await page.waitForSelector('img[alt="สลิปโอนเงิน"]', { timeout: 10000 });
@@ -48,16 +60,51 @@ if (await verifyBtn.count()) {
   console.log("LEAD DETAIL: payment already verified (skipped) ✓");
 }
 
+// lastFollowUpAt narrowing (Sprint 4 Task 4): status changes must NOT touch
+// it, only updateLeadNotes() should.
+const leadBeforeStatus = await prisma.lead.findUniqueOrThrow({ where: { id: leadId } });
+const followUpBeforeStatus = leadBeforeStatus.lastFollowUpAt?.getTime() ?? null;
+
 // Status pipeline NEW -> CONTACTED
 await page.selectOption("select >> nth=0", "CONTACTED");
 await page.waitForSelector("text=อัปเดตสถานะแล้ว", { timeout: 10000 });
 console.log("LEAD DETAIL: status updated ✓");
+
+const leadAfterStatus = await prisma.lead.findUniqueOrThrow({ where: { id: leadId } });
+const followUpAfterStatus = leadAfterStatus.lastFollowUpAt?.getTime() ?? null;
+console.log(
+  `LEAD DETAIL: lastFollowUpAt untouched by updateLeadStatus ${
+    followUpAfterStatus === followUpBeforeStatus ? "✓" : "✗ FAIL"
+  }`
+);
 
 // Notes
 await page.fill("textarea", `โทรแล้ว ลูกค้าสะดวกช่วงบ่าย (${Date.now().toString(36)})`);
 await page.click("text=บันทึก >> nth=-1");
 await page.waitForSelector("text=บันทึกแล้ว", { timeout: 10000 });
 console.log("LEAD DETAIL: notes saved ✓");
+
+const leadAfterNotes = await prisma.lead.findUniqueOrThrow({ where: { id: leadId } });
+const followUpAfterNotes = leadAfterNotes.lastFollowUpAt?.getTime() ?? null;
+console.log(
+  `LEAD DETAIL: lastFollowUpAt set by updateLeadNotes ${
+    followUpAfterNotes !== null && followUpAfterNotes !== followUpAfterStatus ? "✓" : "✗ FAIL"
+  }`
+);
+
+// Sales assignment (ADMIN-only) — pick the first real SALES option (index 0
+// is "ไม่ระบุ") and confirm the FK persists.
+await page.locator("#lead-sales").selectOption({ index: 1 });
+await page.waitForSelector("text=มอบหมายเซลส์แล้ว", { timeout: 10000 });
+const leadAfterAssign = await prisma.lead.findUniqueOrThrow({ where: { id: leadId } });
+const assignedUser = leadAfterAssign.assignedSalesId
+  ? await prisma.adminUser.findUnique({ where: { id: leadAfterAssign.assignedSalesId } })
+  : null;
+console.log(
+  `LEAD DETAIL: sales assigned, FK resolves to an active SALES user ${
+    assignedUser?.role === "SALES" && assignedUser.isActive ? "✓" : "✗ FAIL"
+  }`
+);
 
 // --- Services: edit title, check public page reflects it ---
 await page.goto("http://localhost:3000/admin/services");
@@ -171,3 +218,4 @@ await page.waitForSelector("text=ฟิลด์", { timeout: 5000 });
 console.log("AUDIT: diff table expands ✓");
 
 await browser.close();
+await prisma.$disconnect();

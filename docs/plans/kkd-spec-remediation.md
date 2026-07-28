@@ -46,7 +46,8 @@ Gap หลักที่พบ (รายละเอียดเต็มอ�
 | 1 — Channel Tracking อัตโนมัติ | ✅ เสร็จแล้ว | `?ref=` cookie mechanism ยืนยันแล้วจากโค้ดจริงก่อนเริ่ม Sprint 3 |
 | 2 — RBAC | ✅ เสร็จแล้ว | `getBookingScopeFilter()`/`canMutateBooking()`/`requireRole()` มีอยู่แล้ว; ยืนยันซ้ำรอบนี้ผ่าน `npx tsx scripts/e2e-rbac-sprint2.mts` (ทุกเช็ค role ผ่าน) |
 | 3 — แยกโมดูล Booking Management | ✅ เสร็จแล้ว (2026-07-28) | ดูรายละเอียดผลลัพธ์ท้าย Sprint 3 ด้านล่าง |
-| 4-9 | ⏳ ยังไม่เริ่ม | ตามลำดับเดิมในแผนนี้ |
+| 4 — อัปเดตโมดูล Lead Management | ✅ เสร็จแล้ว (2026-07-29) | ดูรายละเอียดผลลัพธ์ท้าย Sprint 4 ด้านล่าง |
+| 5-9 | ⏳ ยังไม่เริ่ม | ตามลำดับเดิมในแผนนี้ |
 
 ## Sprint 0 — Schema & Role Foundation
 
@@ -114,8 +115,31 @@ Gap หลักที่พบ (รายละเอียดเต็มอ�
 
 ## Sprint 4 — อัปเดตโมดูล Lead Management
 
+**สถานะ:** เสร็จสมบูรณ์ (2026-07-29)
+
 - `src/app/admin/leads/`: UI status flow 8 ค่า, มอบหมายเซลส์ (dropdown เลือกจาก AdminUser role=SALES), แสดง `lastFollowUpAt`
 - `src/actions/leads.ts`: อัปเดต `lastFollowUpAt` เฉพาะตอนเซลส์บันทึกการติดตาม ไม่ใช่ทุก update ทั่วไป
+
+### Sprint 4 — ผลลัพธ์ (2026-07-29)
+
+งานตาม task breakdown ใน `docs/plans/sprint-4-lead-management-tasks.md` (Task 3-10) เสร็จครบ ตามค่า default ที่ผู้ใช้ยืนยันแล้วสำหรับ Task 1/2 (ADMIN-only sales assignment, `lastFollowUpAt` ผูกกับ `updateLeadNotes` เท่านั้น) สรุป:
+
+- `src/actions/leads.ts` — เพิ่ม `assignLeadSales(id, salesId)` (ADMIN-only ผ่าน `requireRole("ADMIN")`, ผ่าน `withAudit()`) พร้อม `resolveSalesAssignee()` helper ในไฟล์เดียวกัน (validate `role === "SALES"` และ `isActive === true` — ไม่ import ข้าม `bookings.ts` ตามที่ระบุในแผน เพราะ `resolveAssignee()` ของ bookings ไม่จำกัด role); ตัด `lastFollowUpAt: new Date()` ออกจาก `updateLeadStatus()` (คงไว้เฉพาะ `updateLeadNotes()`) พร้อมคอมเมนต์อธิบายเหตุผล
+- `src/app/admin/(dashboard)/leads/[id]/page.tsx` — query เพิ่ม `assignedSales: {select: {id, name}}`, `lastFollowUpAt`, รายชื่อ `AdminUser` ที่ `role === "SALES" && isActive === true` ส่งเป็น prop `salesUsers`, เพิ่ม `canAssignSales = session.user.role === "ADMIN"` (มิเรอร์ `canEditChannel`)
+- `src/app/admin/(dashboard)/leads/[id]/lead-detail-client.tsx` — เพิ่ม dropdown มอบหมายเซลส์ (id `lead-sales` เพื่อให้ e2e เจาะจงได้ มิเรอร์ pattern dropdown `sourceChannel` เดิม — โชว์ select ถ้า `canAssignSales`, โชว์ข้อความอ่านอย่างเดียวถ้าไม่ใช่) และแสดง `lastFollowUpAt` (format `th-TH`, "ยังไม่เคยติดตาม" ถ้าเป็น `null`)
+- `src/app/api/admin/leads/route.ts` + `src/hooks/admin/use-leads.ts` (type `LeadListItem`) — เพิ่ม `assignedSales: {select: {name: true}}` และ `lastFollowUpAt` ในผลลัพธ์ list API (ไม่ต้อง redact เพิ่มใน `redactLeadPII()` เพราะ field ทั้งสองไม่อยู่ใน `LEAD_PII_FIELDS`)
+- `src/app/admin/(dashboard)/leads/leads-client.tsx` — เพิ่มคอลัมน์ "เซลส์ที่รับผิดชอบ" และ "ติดตามล่าสุด" ทั้งในตาราง list และหน้า detail (ตามค่า default ข้อ 3 ที่ยืนยันแล้ว), ซ่อนสองคอลัมน์ใหม่สำหรับ `isChannelExecutive` เหมือนคอลัมน์ชื่อ/เบอร์โทร (ปรับ `colSpan` ของแถว "ไม่พบข้อมูล" จาก 8 เป็น 10 ตามจำนวนคอลัมน์ใหม่)
+- `scripts/e2e-admin-crud.mts` — เพิ่ม prisma client (better-sqlite3 adapter) เพื่อตรวจ DB-level: `lastFollowUpAt` ไม่เปลี่ยนตอน `updateLeadStatus`, เปลี่ยนตอน `updateLeadNotes`, และ `assignLeadSales` เซ็ต FK ไปยัง AdminUser ที่ `role === "SALES" && isActive === true` จริง
+- `scripts/e2e-rbac-sprint2.mts` — เพิ่มเช็คว่า SALES session ไม่เห็น `#lead-sales` dropdown บน lead ของตัวเอง (มิเรอร์ pattern "no status-edit dropdown" ที่มีอยู่แล้วสำหรับ FINANCE) — พิสูจน์ว่า `canAssignSales` คำนวณถูกต้องระดับ UI; การบังคับฝั่ง server อยู่แล้วผ่าน `requireRole("ADMIN")` ใน action (ตรวจสอบโค้ดตรงแล้ว ไม่ได้เขียนสคริปต์ replay server-action request เพราะไม่มี pattern นี้ในโค้ดเดิมและจะเปราะบางต่อการเปลี่ยนแปลง implementation detail ของ Next.js Server Actions protocol)
+
+**เบี่ยงจาก plan ที่ต้อง flag:** ไม่มี — implement ตรงตาม default ที่ผู้ใช้ยืนยันทั้ง 3 ข้อ (ADMIN-only assignment, `lastFollowUpAt` ผูกกับ `updateLeadNotes` เท่านั้น, คอลัมน์ใหม่ทั้ง list และ detail)
+
+**Verification (รอบสุดท้าย, ผ่านทั้งหมด):**
+- `npm run build` — `✓ Compiled successfully` + `Finished TypeScript` + exit code 0
+- `npm run start` — ขึ้นสำเร็จ, `/th` ตอบ 200
+- `npx tsx scripts/e2e-admin-crud.mts` — ผ่านทุกเช็ครวมส่วนใหม่: `LEAD DETAIL: lastFollowUpAt untouched by updateLeadStatus ✓`, `LEAD DETAIL: lastFollowUpAt set by updateLeadNotes ✓`, `LEAD DETAIL: sales assigned, FK resolves to an active SALES user ✓`
+- `npx tsx scripts/e2e-rbac-sprint2.mts` — ผ่านทุกเช็ค รวม `SALES detail: no sales-assignment dropdown rendered ✓` ใหม่, SALES/CHANNEL_EXECUTIVE/FINANCE scoping เดิมยังไม่พัง
+- ไม่ได้รัน `npx prisma migrate dev` แยก เพราะไม่มีการแก้ schema ใน sprint นี้ (ยืนยันตามแผนว่า `LeadStatus`/`assignedSalesId`/`lastFollowUpAt` มีอยู่แล้วครบตั้งแต่ Sprint 0) — build/e2e ผ่านโดยไม่มี pending migration error ยืนยันทางอ้อมว่า schema ตรงกับ client ที่ generate ไว้แล้ว
 
 ## Sprint 5 — แดชบอร์ด/รายงาน + Export Excel
 
