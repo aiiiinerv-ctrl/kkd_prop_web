@@ -1,7 +1,15 @@
-app = "kkd-property-preview"
+app = "kkd-property"
 primary_region = "sin"
 
 [build]
+
+[env]
+  DATABASE_URL = "file:/data/prod.db"
+  STORAGE_ROOT = "/data/storage"
+
+[[mounts]]
+  source = "kkd_property_data"
+  destination = "/data"
 
 [http_service]
   internal_port = 3000
