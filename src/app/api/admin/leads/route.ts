@@ -5,6 +5,17 @@ import type { LeadStatus, LeadType } from "@/generated/prisma/enums";
 
 const PAGE_SIZE = 20;
 
+const LEAD_STATUSES: LeadStatus[] = [
+  "NEW",
+  "ASSIGNED",
+  "CONTACTED",
+  "QUOTED",
+  "SIGNED",
+  "INSTALLING",
+  "COMPLETED",
+  "DISQUALIFIED",
+];
+
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user) {
@@ -20,7 +31,7 @@ export async function GET(req: NextRequest) {
 
   const where = {
     ...(type === "QUOTE" || type === "SURVEY" ? { type: type as LeadType } : {}),
-    ...(["NEW", "CONTACTED", "QUOTED", "WON", "LOST"].includes(status ?? "")
+    ...(LEAD_STATUSES.includes(status as LeadStatus)
       ? { status: status as LeadStatus }
       : {}),
     ...(channelId ? { sourceChannelId: channelId } : {}),

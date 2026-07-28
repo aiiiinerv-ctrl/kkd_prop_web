@@ -9,6 +9,21 @@ import { storage, validateImage } from "@/lib/storage";
 import { surveySchema } from "@/lib/validations/lead";
 import type { SubmitResult } from "./submit-quote";
 
+// TODO(sprint 3): move to a shared bookings helper once booking admin/actions
+// land; for now this just keeps `bookingNumber` populated (format
+// KKD-YYYYMMDD-NNN) so the schema's required/unique constraint is satisfied.
+async function nextBookingNumber(): Promise<string> {
+  const now = new Date();
+  const datePart = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(
+    now.getDate()
+  ).padStart(2, "0")}`;
+  const prefix = `KKD-${datePart}-`;
+  const todaysCount = await prisma.surveyBooking.count({
+    where: { bookingNumber: { startsWith: prefix } },
+  });
+  return `${prefix}${String(todaysCount + 1).padStart(3, "0")}`;
+}
+
 export async function submitSurveyBooking(
   formData: FormData
 ): Promise<SubmitResult> {
@@ -50,6 +65,7 @@ export async function submitSurveyBooking(
     contentType: slip.type,
   });
 
+  const bookingNumber = await nextBookingNumber();
   const lead = await prisma.lead.create({
     data: {
       type: "SURVEY",
@@ -62,6 +78,7 @@ export async function submitSurveyBooking(
       sourceChannelId: data.sourceChannelId || null,
       booking: {
         create: {
+          bookingNumber,
           address: data.address,
           preferredDate: data.preferredDate,
           timeSlot: data.timeSlot,

@@ -11,7 +11,15 @@ export type LeadFilters = {
 export type LeadListItem = {
   id: string;
   type: "QUOTE" | "SURVEY";
-  status: "NEW" | "CONTACTED" | "QUOTED" | "WON" | "LOST";
+  status:
+    | "NEW"
+    | "ASSIGNED"
+    | "CONTACTED"
+    | "QUOTED"
+    | "SIGNED"
+    | "INSTALLING"
+    | "COMPLETED"
+    | "DISQUALIFIED";
   name: string;
   phone: string;
   province: string;

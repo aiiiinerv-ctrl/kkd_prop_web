@@ -24,19 +24,32 @@ function parseChannel(formData: FormData) {
   });
 }
 
+// TODO(sprint 1): move to a dedicated refCode generator once channel type +
+// executive CRUD UI lands; for now this just keeps `refCode` populated so the
+// schema's required/unique constraint is satisfied.
+async function nextChannelRefCode(): Promise<string> {
+  const last = await prisma.promoChannel.findFirst({
+    orderBy: { refCode: "desc" },
+    select: { refCode: true },
+  });
+  const lastNum = last ? Number(last.refCode.replace("CH", "")) || 0 : 0;
+  return `CH${String(lastNum + 1).padStart(3, "0")}`;
+}
+
 export async function createChannel(formData: FormData): Promise<ActionResult> {
   const session = await requireAdmin();
 
   const parsed = parseChannel(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
 
+  const refCode = await nextChannelRefCode();
   await withAudit({
     actorId: session.user.id,
     action: "CREATE",
     entityType: "PromoChannel",
     run: () =>
       prisma.promoChannel.create({
-        data: { ...parsed.data, slug: slugify(parsed.data.nameEn) },
+        data: { ...parsed.data, slug: slugify(parsed.data.nameEn), refCode },
       }),
   });
 

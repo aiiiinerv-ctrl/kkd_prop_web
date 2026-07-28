@@ -7,7 +7,16 @@ import { prisma } from "@/lib/db";
 import type { LeadStatus, PaymentStatus } from "@/generated/prisma/enums";
 import type { ActionResult } from "./users";
 
-const LEAD_STATUSES: LeadStatus[] = ["NEW", "CONTACTED", "QUOTED", "WON", "LOST"];
+const LEAD_STATUSES: LeadStatus[] = [
+  "NEW",
+  "ASSIGNED",
+  "CONTACTED",
+  "QUOTED",
+  "SIGNED",
+  "INSTALLING",
+  "COMPLETED",
+  "DISQUALIFIED",
+];
 const PAYMENT_STATUSES: PaymentStatus[] = ["PENDING_REVIEW", "VERIFIED", "REJECTED"];
 
 export async function updateLeadStatus(

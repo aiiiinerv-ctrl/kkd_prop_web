@@ -4,11 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { prisma } from "@/lib/db";
 
 const STATUS_LABELS: Record<string, string> = {
-  NEW: "ใหม่",
-  CONTACTED: "ติดต่อแล้ว",
+  NEW: "ใหม่ รอมอบหมาย",
+  ASSIGNED: "มอบหมายแล้ว",
+  CONTACTED: "กำลังติดตาม",
   QUOTED: "เสนอราคาแล้ว",
-  WON: "ปิดการขาย",
-  LOST: "ไม่สำเร็จ",
+  SIGNED: "เซ็นสัญญาแล้ว",
+  INSTALLING: "กำลังติดตั้ง",
+  COMPLETED: "เสร็จสิ้น",
+  DISQUALIFIED: "ไม่มีคุณภาพ",
 };
 
 export default async function AdminDashboardPage() {
@@ -17,7 +20,7 @@ export default async function AdminDashboardPage() {
       prisma.lead.count(),
       prisma.lead.count({ where: { status: "NEW" } }),
       prisma.surveyBooking.count({ where: { paymentStatus: "PENDING_REVIEW" } }),
-      prisma.lead.count({ where: { status: "WON" } }),
+      prisma.lead.count({ where: { status: "COMPLETED" } }),
       prisma.lead.findMany({
         orderBy: { createdAt: "desc" },
         take: 8,

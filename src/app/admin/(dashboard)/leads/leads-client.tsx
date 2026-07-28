@@ -18,11 +18,14 @@ import {
 import { useLeads, type LeadFilters } from "@/hooks/admin/use-leads";
 
 export const LEAD_STATUS_LABELS: Record<string, string> = {
-  NEW: "ใหม่",
-  CONTACTED: "ติดต่อแล้ว",
+  NEW: "ใหม่ รอมอบหมาย",
+  ASSIGNED: "มอบหมายแล้ว",
+  CONTACTED: "กำลังติดตาม",
   QUOTED: "เสนอราคาแล้ว",
-  WON: "ปิดการขาย",
-  LOST: "ไม่สำเร็จ",
+  SIGNED: "เซ็นสัญญาแล้ว",
+  INSTALLING: "กำลังติดตั้ง",
+  COMPLETED: "เสร็จสิ้น",
+  DISQUALIFIED: "ไม่มีคุณภาพ",
 };
 
 const selectCls =

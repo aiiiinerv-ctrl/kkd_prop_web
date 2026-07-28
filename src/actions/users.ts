@@ -12,7 +12,7 @@ export type ActionResult = { ok: true } | { ok: false; error: string };
 const userSchema = z.object({
   email: z.string().trim().toLowerCase().pipe(z.email()),
   name: z.string().trim().min(2).max(120),
-  role: z.enum(["ADMIN", "EDITOR"]),
+  role: z.enum(["ADMIN", "SALES", "FINANCE", "CHANNEL_EXECUTIVE"]),
   password: z.string().min(8).max(200).optional().or(z.literal("")),
 });
 

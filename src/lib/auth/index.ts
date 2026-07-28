@@ -8,7 +8,7 @@ export type SessionUser = {
   id: string;
   email: string;
   name: string;
-  role: "ADMIN" | "EDITOR";
+  role: "ADMIN" | "SALES" | "FINANCE" | "CHANNEL_EXECUTIVE";
 };
 
 /** Redirects to the admin login page when there is no active session. */
@@ -20,7 +20,7 @@ export async function requireAdmin() {
   return session;
 }
 
-/** Additionally requires a specific role; EDITORs are bounced to /admin. */
+/** Additionally requires a specific role; non-matching roles are bounced to /admin. */
 export async function requireRole(role: "ADMIN") {
   const session = await requireAdmin();
   if (session.user.role !== role) {

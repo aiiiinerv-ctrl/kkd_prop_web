@@ -8,7 +8,7 @@ export function AdminTopbar({
   role,
 }: {
   name: string;
-  role: "ADMIN" | "EDITOR";
+  role: "ADMIN" | "SALES" | "FINANCE" | "CHANNEL_EXECUTIVE";
 }) {
   return (
     <header className="flex items-center justify-between border-b border-border bg-background px-6 py-3">

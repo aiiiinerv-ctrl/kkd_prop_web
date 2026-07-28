@@ -9,7 +9,9 @@ datasource db {
 
 enum Role {
   ADMIN
-  EDITOR
+  SALES
+  FINANCE
+  CHANNEL_EXECUTIVE
 }
 
 enum LeadType {
@@ -19,10 +21,13 @@ enum LeadType {
 
 enum LeadStatus {
   NEW
+  ASSIGNED
   CONTACTED
   QUOTED
-  WON
-  LOST
+  SIGNED
+  INSTALLING
+  COMPLETED
+  DISQUALIFIED
 }
 
 enum BuildingType {
@@ -42,6 +47,22 @@ enum PaymentStatus {
   REJECTED
 }
 
+enum BookingStatus {
+  PENDING_CONFIRMATION
+  CONFIRMED
+  PREPARED
+  SURVEYED
+  DESIGNED
+  SIGNED
+  CANCELLED
+}
+
+enum ChannelType {
+  INDIVIDUAL
+  COMPANY
+  PLATFORM
+}
+
 enum ServiceKind {
   SYSTEM
   MAINTENANCE
@@ -59,21 +80,38 @@ model AdminUser {
   email        String     @unique
   passwordHash String
   name         String
-  role         Role       @default(EDITOR)
+  role         Role       @default(SALES)
   isActive     Boolean    @default(true)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   auditLogs    AuditLog[]
+
+  assignedLeads               Lead[]          @relation("LeadAssignedSales")
+  assignedBookingsAsSales     SurveyBooking[] @relation("BookingAssignedSales")
+  assignedBookingsAsEngineer  SurveyBooking[] @relation("BookingAssignedEngineer")
 }
 
 model PromoChannel {
-  id        String  @id @default(cuid())
-  slug      String  @unique
-  nameTh    String
-  nameEn    String
-  isActive  Boolean @default(true)
-  sortOrder Int     @default(0)
-  leads     Lead[]
+  id         String             @id @default(cuid())
+  slug       String             @unique
+  nameTh     String
+  nameEn     String
+  type       ChannelType        @default(INDIVIDUAL)
+  refCode    String             @unique
+  isActive   Boolean            @default(true)
+  sortOrder  Int                @default(0)
+  leads      Lead[]
+  executives ChannelExecutive[]
+}
+
+model ChannelExecutive {
+  id        String       @id @default(cuid())
+  channelId String
+  channel   PromoChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  name      String
+  phone     String
+  refCode   String       @unique
+  createdAt DateTime     @default(now())
 }
 
 model Lead {
@@ -89,6 +127,9 @@ model Lead {
   locale          String         @default("th")
   sourceChannelId String?
   sourceChannel   PromoChannel?  @relation(fields: [sourceChannelId], references: [id])
+  assignedSalesId String?
+  assignedSales   AdminUser?     @relation("LeadAssignedSales", fields: [assignedSalesId], references: [id])
+  lastFollowUpAt  DateTime?
   notes           String?
   booking         SurveyBooking?
   createdAt       DateTime       @default(now())
@@ -98,15 +139,29 @@ model Lead {
 }
 
 model SurveyBooking {
-  id             String        @id @default(cuid())
-  leadId         String        @unique
-  lead           Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  address        String
-  preferredDate  DateTime
-  timeSlot       TimeSlot
-  amountThb      Int           @default(199)
-  paymentSlipKey String
-  paymentStatus  PaymentStatus @default(PENDING_REVIEW)
+  id                 String        @id @default(cuid())
+  leadId             String        @unique
+  lead               Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  bookingNumber      String        @unique
+  address            String
+  preferredDate      DateTime
+  timeSlot           TimeSlot
+  amountThb          Int           @default(199)
+  paymentSlipKey     String
+  paymentStatus      PaymentStatus @default(PENDING_REVIEW)
+  status             BookingStatus @default(PENDING_CONFIRMATION)
+  giftSent           Boolean       @default(false)
+  assignedEngineerId String?
+  assignedEngineer   AdminUser?    @relation("BookingAssignedEngineer", fields: [assignedEngineerId], references: [id])
+  assignedSalesId    String?
+  assignedSales      AdminUser?    @relation("BookingAssignedSales", fields: [assignedSalesId], references: [id])
+}
+
+model BookingCapacitySetting {
+  id         String   @id @default(cuid())
+  maxPerDay  Int      @default(4)
+  maxPerSlot Int      @default(2)
+  updatedAt  DateTime @updatedAt
 }
 
 model Service {

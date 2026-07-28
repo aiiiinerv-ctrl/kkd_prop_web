@@ -29,7 +29,11 @@ const ITEMS = [
   { href: "/admin/audit", label: "ประวัติการแก้ไข", icon: ScrollText },
 ];
 
-export function AdminSidebar({ role }: { role: "ADMIN" | "EDITOR" }) {
+export function AdminSidebar({
+  role,
+}: {
+  role: "ADMIN" | "SALES" | "FINANCE" | "CHANNEL_EXECUTIVE";
+}) {
   const pathname = usePathname();
 
   return (

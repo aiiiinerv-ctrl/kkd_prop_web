@@ -71,18 +71,98 @@ async function seedAdmin() {
   console.log(`Admin user ready: ${email}`);
 }
 
+// Generates the next sequential `CH00N` code that isn't already taken —
+// existing channels (including leftover e2e test channels in dev.db) keep
+// whatever refCode they already have; only genuinely new rows get a fresh one.
+async function nextChannelRefCode(): Promise<string> {
+  const last = await prisma.promoChannel.findFirst({
+    orderBy: { refCode: "desc" },
+    select: { refCode: true },
+  });
+  const lastNum = last ? Number(last.refCode.replace("CH", "")) || 0 : 0;
+  return `CH${String(lastNum + 1).padStart(3, "0")}`;
+}
+
 async function seedPromoChannels() {
   const channels = [
-    { slug: "facebook", nameTh: "Facebook", nameEn: "Facebook", sortOrder: 1 },
-    { slug: "line", nameTh: "LINE", nameEn: "LINE", sortOrder: 2 },
-    { slug: "google", nameTh: "Google ค้นหา", nameEn: "Google Search", sortOrder: 3 },
-    { slug: "referral", nameTh: "เพื่อนแนะนำ", nameEn: "Referral", sortOrder: 4 },
-    { slug: "walkin", nameTh: "อื่น ๆ / Walk-in", nameEn: "Other / Walk-in", sortOrder: 5 },
+    {
+      slug: "facebook",
+      nameTh: "Facebook",
+      nameEn: "Facebook",
+      sortOrder: 1,
+      type: "PLATFORM" as const,
+      executive: { name: "ทีมการตลาด Facebook", phone: "0800000001" },
+    },
+    {
+      slug: "line",
+      nameTh: "LINE",
+      nameEn: "LINE",
+      sortOrder: 2,
+      type: "PLATFORM" as const,
+      executive: { name: "ทีมการตลาด LINE", phone: "0800000002" },
+    },
+    {
+      slug: "google",
+      nameTh: "Google ค้นหา",
+      nameEn: "Google Search",
+      sortOrder: 3,
+      type: "PLATFORM" as const,
+      executive: { name: "ทีมการตลาด Google", phone: "0800000003" },
+    },
+    {
+      slug: "referral",
+      nameTh: "เพื่อนแนะนำ",
+      nameEn: "Referral",
+      sortOrder: 4,
+      type: "INDIVIDUAL" as const,
+      executive: { name: "ผู้แนะนำทั่วไป", phone: "0800000004" },
+    },
+    {
+      slug: "walkin",
+      nameTh: "อื่น ๆ / Walk-in",
+      nameEn: "Other / Walk-in",
+      sortOrder: 5,
+      type: "COMPANY" as const,
+      executive: { name: "หน้าร้าน Walk-in", phone: "0800000005" },
+    },
   ];
   for (const c of channels) {
-    await prisma.promoChannel.upsert({ where: { slug: c.slug }, update: {}, create: c });
+    const { executive, ...channelData } = c;
+    const existing = await prisma.promoChannel.findUnique({ where: { slug: c.slug } });
+    const refCode = existing?.refCode ?? (await nextChannelRefCode());
+    const channel = await prisma.promoChannel.upsert({
+      where: { slug: c.slug },
+      update: { type: c.type },
+      create: { ...channelData, refCode },
+    });
+
+    const existingExec = await prisma.channelExecutive.findFirst({
+      where: { channelId: channel.id },
+    });
+    if (!existingExec) {
+      const execRefCode = `${channel.refCode}-EX01`;
+      await prisma.channelExecutive.upsert({
+        where: { refCode: execRefCode },
+        update: {},
+        create: {
+          channelId: channel.id,
+          name: executive.name,
+          phone: executive.phone,
+          refCode: execRefCode,
+        },
+      });
+    }
   }
   console.log(`Promo channels: ${channels.length}`);
+}
+
+async function seedBookingCapacitySetting() {
+  const existing = await prisma.bookingCapacitySetting.findFirst();
+  if (existing) return;
+  await prisma.bookingCapacitySetting.create({
+    data: { maxPerDay: 4, maxPerSlot: 2 },
+  });
+  console.log("Booking capacity setting: ready");
 }
 
 async function seedServices() {
@@ -379,6 +459,7 @@ async function seedPortfolio() {
 async function main() {
   await seedAdmin();
   await seedPromoChannels();
+  await seedBookingCapacitySetting();
   await seedServices();
   await seedPackages();
   await seedPortfolio();

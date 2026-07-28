@@ -28,7 +28,7 @@ type UserRow = {
   id: string;
   email: string;
   name: string;
-  role: "ADMIN" | "EDITOR";
+  role: "ADMIN" | "SALES" | "FINANCE" | "CHANNEL_EXECUTIVE";
   isActive: boolean;
   createdAt: string;
 };
@@ -117,10 +117,12 @@ export function UsersClient({
                 <select
                   id="u-role"
                   name="role"
-                  defaultValue={editing?.role ?? "EDITOR"}
+                  defaultValue={editing?.role ?? "SALES"}
                   className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
                 >
-                  <option value="EDITOR">EDITOR — จัดการเนื้อหาและ lead</option>
+                  <option value="SALES">SALES — จัดการ lead และนัดสำรวจที่รับผิดชอบ</option>
+                  <option value="FINANCE">FINANCE — ตรวจสอบการเงินและออกรายงาน</option>
+                  <option value="CHANNEL_EXECUTIVE">CHANNEL_EXECUTIVE — ดูข้อมูลช่องทางของตนเอง</option>
                   <option value="ADMIN">ADMIN — ทุกสิทธิ์รวมถึงจัดการผู้ใช้</option>
                 </select>
               </div>
