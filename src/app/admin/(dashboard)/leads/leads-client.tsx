@@ -33,9 +33,14 @@ const selectCls =
 
 export function LeadsClient({
   channels,
+  role,
 }: {
   channels: { id: string; nameTh: string }[];
+  role: "ADMIN" | "SALES" | "FINANCE" | "CHANNEL_EXECUTIVE";
 }) {
+  // CHANNEL_EXECUTIVE never sees customer PII or a detail page — the API
+  // already strips name/phone from the payload, this just adapts the table.
+  const isChannelExecutive = role === "CHANNEL_EXECUTIVE";
   const [filters, setFilters] = useState<LeadFilters>({
     page: 1,
     type: "",
@@ -120,8 +125,12 @@ export function LeadsClient({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ชื่อ</TableHead>
-                  <TableHead>เบอร์โทร</TableHead>
+                  {!isChannelExecutive && (
+                    <>
+                      <TableHead>ชื่อ</TableHead>
+                      <TableHead>เบอร์โทร</TableHead>
+                    </>
+                  )}
                   <TableHead>ประเภท</TableHead>
                   <TableHead>จังหวัด</TableHead>
                   <TableHead>ช่องทาง (เลือกเอง)</TableHead>
@@ -134,7 +143,7 @@ export function LeadsClient({
                 {data.leads.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={8}
+                      colSpan={isChannelExecutive ? 6 : 8}
                       className="py-10 text-center text-muted-foreground"
                     >
                       ไม่พบข้อมูล
@@ -143,15 +152,19 @@ export function LeadsClient({
                 )}
                 {data.leads.map((lead) => (
                   <TableRow key={lead.id}>
-                    <TableCell>
-                      <Link
-                        href={`/admin/leads/${lead.id}`}
-                        className="font-medium text-primary hover:underline"
-                      >
-                        {lead.name}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{lead.phone}</TableCell>
+                    {!isChannelExecutive && (
+                      <>
+                        <TableCell>
+                          <Link
+                            href={`/admin/leads/${lead.id}`}
+                            className="font-medium text-primary hover:underline"
+                          >
+                            {lead.name}
+                          </Link>
+                        </TableCell>
+                        <TableCell>{lead.phone}</TableCell>
+                      </>
+                    )}
                     <TableCell>
                       {lead.type === "SURVEY" ? (
                         <span>

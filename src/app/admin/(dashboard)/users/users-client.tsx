@@ -31,17 +31,23 @@ type UserRow = {
   role: "ADMIN" | "SALES" | "FINANCE" | "CHANNEL_EXECUTIVE";
   isActive: boolean;
   createdAt: string;
+  linkedChannelExecutiveId: string | null;
 };
+
+type ChannelExecutiveOption = { id: string; label: string };
 
 export function UsersClient({
   users,
   currentUserId,
+  channelExecutives,
 }: {
   users: UserRow[];
   currentUserId: string;
+  channelExecutives: ChannelExecutiveOption[];
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<UserRow | null>(null);
+  const [selectedRole, setSelectedRole] = useState(editing?.role ?? "SALES");
   const [isPending, startTransition] = useTransition();
 
   const onSubmit = (formData: FormData) => {
@@ -83,7 +89,12 @@ export function UsersClient({
         >
           <DialogTrigger
             render={
-              <Button>
+              <Button
+                onClick={() => {
+                  setEditing(null);
+                  setSelectedRole("SALES");
+                }}
+              >
                 <Plus className="size-4" /> เพิ่มผู้ใช้
               </Button>
             }
@@ -117,7 +128,8 @@ export function UsersClient({
                 <select
                   id="u-role"
                   name="role"
-                  defaultValue={editing?.role ?? "SALES"}
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value as UserRow["role"])}
                   className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
                 >
                   <option value="SALES">SALES — จัดการ lead และนัดสำรวจที่รับผิดชอบ</option>
@@ -126,6 +138,30 @@ export function UsersClient({
                   <option value="ADMIN">ADMIN — ทุกสิทธิ์รวมถึงจัดการผู้ใช้</option>
                 </select>
               </div>
+              {selectedRole === "CHANNEL_EXECUTIVE" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="u-linked-exec">ผู้ดำเนินการช่องทางที่ผูก</Label>
+                  <select
+                    id="u-linked-exec"
+                    name="linkedChannelExecutiveId"
+                    required
+                    defaultValue={editing?.linkedChannelExecutiveId ?? ""}
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">เลือกผู้ดำเนินการ...</option>
+                    {channelExecutives.map((e) => (
+                      <option key={e.id} value={e.id}>
+                        {e.label}
+                      </option>
+                    ))}
+                  </select>
+                  {channelExecutives.length === 0 && (
+                    <p className="text-xs text-destructive">
+                      ยังไม่มีผู้ดำเนินการช่องทางในระบบ — เพิ่มที่หน้า &quot;ช่องทางโปรโมท&quot; ก่อน
+                    </p>
+                  )}
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label htmlFor="u-password">
                   รหัสผ่าน{editing ? " (เว้นว่างถ้าไม่เปลี่ยน)" : ""}
@@ -185,6 +221,7 @@ export function UsersClient({
                     aria-label="แก้ไข"
                     onClick={() => {
                       setEditing(user);
+                      setSelectedRole(user.role);
                       setDialogOpen(true);
                     }}
                   >

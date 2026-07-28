@@ -156,6 +156,61 @@ async function seedPromoChannels() {
   console.log(`Promo channels: ${channels.length}`);
 }
 
+// Sprint 2 (RBAC) test accounts — one per non-ADMIN role, so the access
+// control matrix can be manually/scriptedly verified without touching real
+// staff credentials. Idempotent: only created if missing, never overwrites
+// an existing password.
+async function seedTestRoleAccounts() {
+  const passwordHash = await bcrypt.hash("Test1234!", 12);
+
+  await prisma.adminUser.upsert({
+    where: { email: "sales.test@kkdproperty.local" },
+    update: {},
+    create: {
+      email: "sales.test@kkdproperty.local",
+      passwordHash,
+      name: "ทดสอบ ฝ่ายขาย",
+      role: "SALES",
+    },
+  });
+
+  await prisma.adminUser.upsert({
+    where: { email: "finance.test@kkdproperty.local" },
+    update: {},
+    create: {
+      email: "finance.test@kkdproperty.local",
+      passwordHash,
+      name: "ทดสอบ ฝ่ายการเงิน",
+      role: "FINANCE",
+    },
+  });
+
+  // Link to the Facebook channel's seeded executive (CH001-EX01) so the
+  // CHANNEL_EXECUTIVE scope filter has a real row to resolve against.
+  const facebookChannel = await prisma.promoChannel.findUnique({
+    where: { slug: "facebook" },
+  });
+  const linkedExecutive = facebookChannel
+    ? await prisma.channelExecutive.findFirst({
+        where: { channelId: facebookChannel.id },
+      })
+    : null;
+
+  await prisma.adminUser.upsert({
+    where: { email: "channel.test@kkdproperty.local" },
+    update: { linkedChannelExecutiveId: linkedExecutive?.id ?? null },
+    create: {
+      email: "channel.test@kkdproperty.local",
+      passwordHash,
+      name: "ทดสอบ ผู้ดำเนินการช่องทาง",
+      role: "CHANNEL_EXECUTIVE",
+      linkedChannelExecutiveId: linkedExecutive?.id ?? null,
+    },
+  });
+
+  console.log("Test role accounts: sales/finance/channel_executive ready (password: Test1234!)");
+}
+
 async function seedBookingCapacitySetting() {
   const existing = await prisma.bookingCapacitySetting.findFirst();
   if (existing) return;
@@ -459,6 +514,7 @@ async function seedPortfolio() {
 async function main() {
   await seedAdmin();
   await seedPromoChannels();
+  await seedTestRoleAccounts();
   await seedBookingCapacitySetting();
   await seedServices();
   await seedPackages();

@@ -94,9 +94,12 @@ function CopyButton({ value }: { value: string }) {
 export function ChannelsClient({
   channels,
   siteUrl,
+  readOnly = false,
 }: {
   channels: ChannelRow[];
   siteUrl: string;
+  /** CHANNEL_EXECUTIVE sessions get a read-only view of their own channel — no create/edit/delete. */
+  readOnly?: boolean;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ChannelRow | null>(null);
@@ -161,14 +164,16 @@ export function ChannelsClient({
             และลิงก์โปรโมทด้านล่างจะบันทึกที่มาของลูกค้าอัตโนมัติเมื่อคลิกเข้ามา
           </p>
         </div>
-        <Button
-          onClick={() => {
-            setEditing(null);
-            setDialogOpen(true);
-          }}
-        >
-          <Plus className="size-4" /> เพิ่มช่องทาง
-        </Button>
+        {!readOnly && (
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setDialogOpen(true);
+            }}
+          >
+            <Plus className="size-4" /> เพิ่มช่องทาง
+          </Button>
+        )}
       </div>
 
       <div className="rounded-xl border border-border/70 bg-card">
@@ -217,45 +222,51 @@ export function ChannelsClient({
                   >
                     <Users className="size-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    className="p-2"
-                    aria-label="แก้ไข"
-                    onClick={() => {
-                      setEditing(c);
-                      setDialogOpen(true);
-                    }}
-                  >
-                    <Pencil className="size-4" />
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger
-                      render={
-                        <Button variant="ghost" className="p-2" aria-label="ลบ">
-                          <Trash2 className="size-4 text-destructive" />
-                        </Button>
-                      }
-                    />
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>ลบช่องทาง &quot;{c.nameTh}&quot;?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {c.leadCount > 0
-                            ? `มี lead อ้างอิงช่องทางนี้ ${c.leadCount} รายการ — ระบบจะไม่อนุญาตให้ลบ แนะนำให้ปิดการใช้งานแทน`
-                            : "การลบจะถูกบันทึกในประวัติการแก้ไข"}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => onDelete(c.id)}
-                          disabled={isPending}
-                        >
-                          ลบ
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  {!readOnly && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        className="p-2"
+                        aria-label="แก้ไข"
+                        onClick={() => {
+                          setEditing(c);
+                          setDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger
+                          render={
+                            <Button variant="ghost" className="p-2" aria-label="ลบ">
+                              <Trash2 className="size-4 text-destructive" />
+                            </Button>
+                          }
+                        />
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              ลบช่องทาง &quot;{c.nameTh}&quot;?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {c.leadCount > 0
+                                ? `มี lead อ้างอิงช่องทางนี้ ${c.leadCount} รายการ — ระบบจะไม่อนุญาตให้ลบ แนะนำให้ปิดการใช้งานแทน`
+                                : "การลบจะถูกบันทึกในประวัติการแก้ไข"}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => onDelete(c.id)}
+                              disabled={isPending}
+                            >
+                              ลบ
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -331,14 +342,14 @@ export function ChannelsClient({
                       <TableHead>ชื่อ</TableHead>
                       <TableHead>เบอร์โทร</TableHead>
                       <TableHead>รหัส / ลิงก์โปรโมท</TableHead>
-                      <TableHead className="text-right">จัดการ</TableHead>
+                      {!readOnly && <TableHead className="text-right">จัดการ</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {execDialogChannel.executives.length === 0 && (
                       <TableRow>
                         <TableCell
-                          colSpan={4}
+                          colSpan={readOnly ? 3 : 4}
                           className="py-6 text-center text-sm text-muted-foreground"
                         >
                           ยังไม่มีผู้ดำเนินการ
@@ -355,59 +366,63 @@ export function ChannelsClient({
                             <CopyButton value={promoLink(siteUrl, e.refCode)} />
                           </div>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            className="p-2"
-                            aria-label="แก้ไข"
-                            onClick={() => setEditingExec(e)}
-                          >
-                            <Pencil className="size-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            className="p-2"
-                            aria-label="ลบ"
-                            disabled={isPending}
-                            onClick={() => onExecDelete(e.id)}
-                          >
-                            <Trash2 className="size-4 text-destructive" />
-                          </Button>
-                        </TableCell>
+                        {!readOnly && (
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              className="p-2"
+                              aria-label="แก้ไข"
+                              onClick={() => setEditingExec(e)}
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              className="p-2"
+                              aria-label="ลบ"
+                              disabled={isPending}
+                              onClick={() => onExecDelete(e.id)}
+                            >
+                              <Trash2 className="size-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </div>
 
-              <form
-                action={(fd) => onExecSubmit(execDialogChannel.id, fd)}
-                className="grid grid-cols-1 gap-3 rounded-lg border border-dashed border-border p-4 sm:grid-cols-3"
-                key={editingExec?.id ?? "new-exec"}
-              >
-                <div className="space-y-1.5">
-                  <Label>ชื่อผู้ดำเนินการ</Label>
-                  <Input name="name" required defaultValue={editingExec?.name} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>เบอร์โทร</Label>
-                  <Input name="phone" required defaultValue={editingExec?.phone} />
-                </div>
-                <div className="flex items-end gap-2">
-                  <Button type="submit" disabled={isPending} className="flex-1">
-                    {editingExec ? "บันทึก" : "เพิ่ม"}
-                  </Button>
-                  {editingExec && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setEditingExec(null)}
-                    >
-                      ยกเลิก
+              {!readOnly && (
+                <form
+                  action={(fd) => onExecSubmit(execDialogChannel.id, fd)}
+                  className="grid grid-cols-1 gap-3 rounded-lg border border-dashed border-border p-4 sm:grid-cols-3"
+                  key={editingExec?.id ?? "new-exec"}
+                >
+                  <div className="space-y-1.5">
+                    <Label>ชื่อผู้ดำเนินการ</Label>
+                    <Input name="name" required defaultValue={editingExec?.name} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>เบอร์โทร</Label>
+                    <Input name="phone" required defaultValue={editingExec?.phone} />
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <Button type="submit" disabled={isPending} className="flex-1">
+                      {editingExec ? "บันทึก" : "เพิ่ม"}
                     </Button>
-                  )}
-                </div>
-              </form>
+                    {editingExec && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setEditingExec(null)}
+                      >
+                        ยกเลิก
+                      </Button>
+                    )}
+                  </div>
+                </form>
+              )}
             </div>
           )}
         </DialogContent>

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
+import { auth, getLeadScopeFilter, redactLeadPII } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import type { LeadStatus, LeadType } from "@/generated/prisma/enums";
 
 const PAGE_SIZE = 20;
@@ -29,21 +30,30 @@ export async function GET(req: NextRequest) {
   const channelId = params.get("channelId");
   const search = params.get("search")?.trim();
 
-  const where = {
-    ...(type === "QUOTE" || type === "SURVEY" ? { type: type as LeadType } : {}),
-    ...(LEAD_STATUSES.includes(status as LeadStatus)
-      ? { status: status as LeadStatus }
-      : {}),
-    ...(channelId ? { sourceChannelId: channelId } : {}),
-    ...(search
-      ? {
-          OR: [
-            { name: { contains: search } },
-            { phone: { contains: search } },
-            { province: { contains: search } },
-          ],
-        }
-      : {}),
+  // Scope filter is the single source of truth for role-based visibility —
+  // combined with the client-requested filters via AND, never OR, so a
+  // scoped role can't widen its own visibility through query params.
+  const scopeFilter = getLeadScopeFilter(session);
+  const where: Prisma.LeadWhereInput = {
+    AND: [
+      scopeFilter,
+      {
+        ...(type === "QUOTE" || type === "SURVEY" ? { type: type as LeadType } : {}),
+        ...(LEAD_STATUSES.includes(status as LeadStatus)
+          ? { status: status as LeadStatus }
+          : {}),
+        ...(channelId ? { sourceChannelId: channelId } : {}),
+        ...(search
+          ? {
+              OR: [
+                { name: { contains: search } },
+                { phone: { contains: search } },
+                { province: { contains: search } },
+              ],
+            }
+          : {}),
+      },
+    ],
   };
 
   const [total, leads] = await Promise.all([
@@ -62,8 +72,13 @@ export async function GET(req: NextRequest) {
     }),
   ]);
 
+  // CHANNEL_EXECUTIVE only ever gets aggregate-safe fields — PII must not
+  // be present in the response payload at all, not just hidden client-side.
+  const responseLeads =
+    session.user.role === "CHANNEL_EXECUTIVE" ? leads.map(redactLeadPII) : leads;
+
   return NextResponse.json({
-    leads,
+    leads: responseLeads,
     total,
     page,
     pageCount: Math.max(1, Math.ceil(total / PAGE_SIZE)),

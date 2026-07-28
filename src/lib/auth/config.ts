@@ -25,6 +25,7 @@ export const authConfig = {
 
         const user = await prisma.adminUser.findUnique({
           where: { email: email.toLowerCase().trim() },
+          include: { linkedChannelExecutive: { select: { channelId: true } } },
         });
         if (!user || !user.isActive) return null;
 
@@ -45,6 +46,8 @@ export const authConfig = {
           email: user.email,
           name: user.name,
           role: user.role,
+          linkedChannelExecutiveId: user.linkedChannelExecutiveId,
+          linkedChannelId: user.linkedChannelExecutive?.channelId ?? null,
         };
       },
     }),
@@ -54,12 +57,16 @@ export const authConfig = {
       if (user) {
         token.id = user.id as string;
         token.role = user.role;
+        token.linkedChannelExecutiveId = user.linkedChannelExecutiveId ?? null;
+        token.linkedChannelId = user.linkedChannelId ?? null;
       }
       return token;
     },
     session({ session, token }) {
       session.user.id = token.id;
       session.user.role = token.role;
+      session.user.linkedChannelExecutiveId = token.linkedChannelExecutiveId ?? null;
+      session.user.linkedChannelId = token.linkedChannelId ?? null;
       return session;
     },
   },

@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { LeadDetailClient } from "./lead-detail-client";
@@ -8,8 +8,15 @@ export default async function LeadDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const { id } = await params;
+
+  // CHANNEL_EXECUTIVE only ever gets aggregate counts/status (see the leads
+  // list) — the detail view below renders name/phone/LINE ID/address/payment
+  // slip, so that role never gets a detail page at all.
+  if (session.user.role === "CHANNEL_EXECUTIVE") {
+    redirect("/admin/leads");
+  }
 
   const [lead, channels] = await Promise.all([
     prisma.lead.findUnique({
@@ -27,6 +34,18 @@ export default async function LeadDetailPage({
     }),
   ]);
   if (!lead) notFound();
+
+  // SALES may only view leads assigned to them — a crafted URL to another
+  // salesperson's lead must not leak data, so this is enforced server-side,
+  // not just hidden from the list.
+  if (session.user.role === "SALES" && lead.assignedSalesId !== session.user.id) {
+    notFound();
+  }
+
+  // FINANCE is fully read-only across leads/bookings; ADMIN and (their own)
+  // SALES leads can edit status/notes/payment.
+  const canEdit = session.user.role !== "FINANCE";
+  const canEditChannel = session.user.role === "ADMIN";
 
   return (
     <LeadDetailClient
@@ -59,6 +78,8 @@ export default async function LeadDetailPage({
           : null,
       }}
       channels={channels}
+      canEdit={canEdit}
+      canEditChannel={canEditChannel}
     />
   );
 }

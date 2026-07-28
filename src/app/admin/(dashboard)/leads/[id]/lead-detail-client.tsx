@@ -83,9 +83,13 @@ type LeadDetail = {
 export function LeadDetailClient({
   lead,
   channels,
+  canEdit,
+  canEditChannel,
 }: {
   lead: LeadDetail;
   channels: { id: string; nameTh: string }[];
+  canEdit: boolean;
+  canEditChannel: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -115,20 +119,24 @@ export function LeadDetailClient({
           </Button>
         </Link>
         <h1 className="flex-1 text-xl font-bold">{lead.name}</h1>
-        <select
-          className={selectCls}
-          value={lead.status}
-          disabled={isPending}
-          onChange={(e) =>
-            run(() => updateLeadStatus(lead.id, e.target.value), "อัปเดตสถานะแล้ว")
-          }
-        >
-          {Object.entries(STATUS_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
+        {canEdit ? (
+          <select
+            className={selectCls}
+            value={lead.status}
+            disabled={isPending}
+            onChange={(e) =>
+              run(() => updateLeadStatus(lead.id, e.target.value), "อัปเดตสถานะแล้ว")
+            }
+          >
+            {Object.entries(STATUS_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <Badge variant="secondary">{STATUS_LABELS[lead.status] ?? lead.status}</Badge>
+        )}
       </div>
 
       <div className="rounded-xl border border-border/70 bg-card p-6">
@@ -175,24 +183,30 @@ export function LeadDetailClient({
           <div>
             <dt className="text-muted-foreground">ช่องทางที่รู้จักเรา</dt>
             <dd>
-              <select
-                className={selectCls}
-                value={lead.sourceChannelId ?? ""}
-                disabled={isPending}
-                onChange={(e) =>
-                  run(
-                    () => updateLeadSourceChannel(lead.id, e.target.value),
-                    "อัปเดตช่องทางแล้ว"
-                  )
-                }
-              >
-                <option value="">ไม่ระบุ</option>
-                {channels.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nameTh}
-                  </option>
-                ))}
-              </select>
+              {canEditChannel ? (
+                <select
+                  className={selectCls}
+                  value={lead.sourceChannelId ?? ""}
+                  disabled={isPending}
+                  onChange={(e) =>
+                    run(
+                      () => updateLeadSourceChannel(lead.id, e.target.value),
+                      "อัปเดตช่องทางแล้ว"
+                    )
+                  }
+                >
+                  <option value="">ไม่ระบุ</option>
+                  {channels.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nameTh}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="font-medium">
+                  {channels.find((c) => c.id === lead.sourceChannelId)?.nameTh ?? "ไม่ระบุ"}
+                </span>
+              )}
             </dd>
           </div>
           <div>
@@ -259,7 +273,7 @@ export function LeadDetailClient({
               </DialogContent>
             </Dialog>
 
-            {lead.booking.paymentStatus === "PENDING_REVIEW" && (
+            {canEdit && lead.booking.paymentStatus === "PENDING_REVIEW" && (
               <>
                 <Button
                   disabled={isPending}
@@ -292,19 +306,27 @@ export function LeadDetailClient({
 
       <div className="rounded-xl border border-border/70 bg-card p-6">
         <h2 className="mb-3 font-semibold">บันทึกภายใน</h2>
-        <Textarea
-          rows={4}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="บันทึกการติดต่อ ข้อตกลง หรือรายละเอียดเพิ่มเติม..."
-        />
-        <Button
-          className="mt-3"
-          disabled={isPending || notes === (lead.notes ?? "")}
-          onClick={() => run(() => updateLeadNotes(lead.id, notes), "บันทึกแล้ว")}
-        >
-          บันทึก
-        </Button>
+        {canEdit ? (
+          <>
+            <Textarea
+              rows={4}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="บันทึกการติดต่อ ข้อตกลง หรือรายละเอียดเพิ่มเติม..."
+            />
+            <Button
+              className="mt-3"
+              disabled={isPending || notes === (lead.notes ?? "")}
+              onClick={() => run(() => updateLeadNotes(lead.id, notes), "บันทึกแล้ว")}
+            >
+              บันทึก
+            </Button>
+          </>
+        ) : (
+          <p className="text-sm whitespace-pre-wrap text-muted-foreground">
+            {lead.notes || "ยังไม่มีบันทึก"}
+          </p>
+        )}
       </div>
     </div>
   );

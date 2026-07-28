@@ -17,23 +17,63 @@ import { usePathname } from "next/navigation";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { cn } from "@/lib/utils";
 
+type Role = "ADMIN" | "SALES" | "FINANCE" | "CHANNEL_EXECUTIVE";
+
+const ALL_ROLES: Role[] = ["ADMIN", "SALES", "FINANCE", "CHANNEL_EXECUTIVE"];
+
+// Each item lists the roles allowed to see it. CHANNEL_EXECUTIVE is scoped
+// to leads (read-only, aggregate view) + their own channel; FINANCE loses
+// every content/management link since it never mutates anything; SALES
+// loses channel/user management per spec.
 const ITEMS = [
-  { href: "/admin", label: "แดชบอร์ด", icon: LayoutDashboard, exact: true },
-  { href: "/admin/leads", label: "ลูกค้า (Leads)", icon: ClipboardList },
-  { href: "/admin/services", label: "บริการ", icon: Wrench },
-  { href: "/admin/packages", label: "แพ็กเกจ", icon: Package },
-  { href: "/admin/portfolio", label: "ผลงาน", icon: Images },
-  { href: "/admin/testimonials", label: "รีวิวลูกค้า", icon: MessageSquareQuote },
-  { href: "/admin/channels", label: "ช่องทางโปรโมท", icon: Megaphone },
-  { href: "/admin/users", label: "ผู้ใช้ระบบ", icon: Users, adminOnly: true },
-  { href: "/admin/audit", label: "ประวัติการแก้ไข", icon: ScrollText },
+  {
+    href: "/admin",
+    label: "แดชบอร์ด",
+    icon: LayoutDashboard,
+    exact: true,
+    roles: ["ADMIN", "SALES", "FINANCE"] as Role[],
+  },
+  { href: "/admin/leads", label: "ลูกค้า (Leads)", icon: ClipboardList, roles: ALL_ROLES },
+  {
+    href: "/admin/services",
+    label: "บริการ",
+    icon: Wrench,
+    roles: ["ADMIN", "SALES"] as Role[],
+  },
+  {
+    href: "/admin/packages",
+    label: "แพ็กเกจ",
+    icon: Package,
+    roles: ["ADMIN", "SALES"] as Role[],
+  },
+  {
+    href: "/admin/portfolio",
+    label: "ผลงาน",
+    icon: Images,
+    roles: ["ADMIN", "SALES"] as Role[],
+  },
+  {
+    href: "/admin/testimonials",
+    label: "รีวิวลูกค้า",
+    icon: MessageSquareQuote,
+    roles: ["ADMIN", "SALES"] as Role[],
+  },
+  {
+    href: "/admin/channels",
+    label: "ช่องทางโปรโมท",
+    icon: Megaphone,
+    roles: ["ADMIN", "CHANNEL_EXECUTIVE"] as Role[],
+  },
+  { href: "/admin/users", label: "ผู้ใช้ระบบ", icon: Users, roles: ["ADMIN"] as Role[] },
+  {
+    href: "/admin/audit",
+    label: "ประวัติการแก้ไข",
+    icon: ScrollText,
+    roles: ["ADMIN"] as Role[],
+  },
 ];
 
-export function AdminSidebar({
-  role,
-}: {
-  role: "ADMIN" | "SALES" | "FINANCE" | "CHANNEL_EXECUTIVE";
-}) {
+export function AdminSidebar({ role }: { role: Role }) {
   const pathname = usePathname();
 
   return (
@@ -42,7 +82,7 @@ export function AdminSidebar({
         <BrandLogo />
       </div>
       <nav className="flex-1 space-y-0.5 p-3">
-        {ITEMS.filter((i) => !i.adminOnly || role === "ADMIN").map((item) => {
+        {ITEMS.filter((i) => i.roles.includes(role)).map((item) => {
           const active = item.exact
             ? pathname === item.href
             : pathname.startsWith(item.href);

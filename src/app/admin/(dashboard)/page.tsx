@@ -1,6 +1,8 @@
 import { ClipboardList, Clock, Receipt, TrendingUp } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { getLeadScopeFilter, getBookingScopeFilter, requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -15,13 +17,26 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default async function AdminDashboardPage() {
+  const session = await requireAdmin();
+  // CHANNEL_EXECUTIVE only ever gets the aggregate leads view, not this
+  // dashboard (which shows customer name/phone in "recent leads").
+  if (session.user.role === "CHANNEL_EXECUTIVE") {
+    redirect("/admin/leads");
+  }
+
+  const leadScope = getLeadScopeFilter(session);
+  const bookingScope = getBookingScopeFilter(session);
+
   const [totalLeads, newLeads, pendingSlips, wonLeads, recentLeads] =
     await Promise.all([
-      prisma.lead.count(),
-      prisma.lead.count({ where: { status: "NEW" } }),
-      prisma.surveyBooking.count({ where: { paymentStatus: "PENDING_REVIEW" } }),
-      prisma.lead.count({ where: { status: "COMPLETED" } }),
+      prisma.lead.count({ where: leadScope }),
+      prisma.lead.count({ where: { ...leadScope, status: "NEW" } }),
+      prisma.surveyBooking.count({
+        where: { ...bookingScope, paymentStatus: "PENDING_REVIEW" },
+      }),
+      prisma.lead.count({ where: { ...leadScope, status: "COMPLETED" } }),
       prisma.lead.findMany({
+        where: leadScope,
         orderBy: { createdAt: "desc" },
         take: 8,
         include: { booking: true, sourceChannel: true },

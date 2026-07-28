@@ -14,6 +14,7 @@ const userSchema = z.object({
   name: z.string().trim().min(2).max(120),
   role: z.enum(["ADMIN", "SALES", "FINANCE", "CHANNEL_EXECUTIVE"]),
   password: z.string().min(8).max(200).optional().or(z.literal("")),
+  linkedChannelExecutiveId: z.string().trim().optional().or(z.literal("")),
 });
 
 // Password hash must never appear in audit snapshots.
@@ -23,6 +24,7 @@ function auditView(user: {
   name: string;
   role: string;
   isActive: boolean;
+  linkedChannelExecutiveId?: string | null;
 }) {
   return {
     id: user.id,
@@ -30,7 +32,32 @@ function auditView(user: {
     name: user.name,
     role: user.role,
     isActive: user.isActive,
+    linkedChannelExecutiveId: user.linkedChannelExecutiveId ?? null,
   };
+}
+
+/**
+ * A CHANNEL_EXECUTIVE-role account must be linked to a real ChannelExecutive
+ * row (that's what scopes its lead visibility) — any other role must not
+ * carry a stale link. Returns an error string, or null if valid.
+ */
+async function resolveChannelExecutiveLink(
+  role: string,
+  linkedChannelExecutiveId: string | undefined
+): Promise<{ error: string } | { value: string | null }> {
+  if (role !== "CHANNEL_EXECUTIVE") {
+    return { value: null };
+  }
+  if (!linkedChannelExecutiveId) {
+    return { error: "กรุณาเลือกผู้ดำเนินการช่องทางที่ผูกกับผู้ใช้นี้" };
+  }
+  const exec = await prisma.channelExecutive.findUnique({
+    where: { id: linkedChannelExecutiveId },
+  });
+  if (!exec) {
+    return { error: "ไม่พบผู้ดำเนินการช่องทางที่เลือก" };
+  }
+  return { value: linkedChannelExecutiveId };
 }
 
 export async function createUser(formData: FormData): Promise<ActionResult> {
@@ -41,12 +68,16 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
     name: formData.get("name"),
     role: formData.get("role"),
     password: formData.get("password"),
+    linkedChannelExecutiveId: formData.get("linkedChannelExecutiveId"),
   });
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
-  const { email, name, role, password } = parsed.data;
+  const { email, name, role, password, linkedChannelExecutiveId } = parsed.data;
   if (!password) {
     return { ok: false, error: "กรุณาระบุรหัสผ่าน (อย่างน้อย 8 ตัวอักษร)" };
   }
+
+  const link = await resolveChannelExecutiveLink(role, linkedChannelExecutiveId);
+  if ("error" in link) return { ok: false, error: link.error };
 
   const existing = await prisma.adminUser.findUnique({ where: { email } });
   if (existing) return { ok: false, error: "อีเมลนี้มีผู้ใช้แล้ว" };
@@ -58,7 +89,15 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
     entityType: "AdminUser",
     run: async () =>
       auditView(
-        await prisma.adminUser.create({ data: { email, name, role, passwordHash } })
+        await prisma.adminUser.create({
+          data: {
+            email,
+            name,
+            role,
+            passwordHash,
+            linkedChannelExecutiveId: link.value,
+          },
+        })
       ),
   });
 
@@ -80,9 +119,13 @@ export async function updateUser(
     name: formData.get("name"),
     role: formData.get("role"),
     password: formData.get("password"),
+    linkedChannelExecutiveId: formData.get("linkedChannelExecutiveId"),
   });
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
-  const { email, name, role, password } = parsed.data;
+  const { email, name, role, password, linkedChannelExecutiveId } = parsed.data;
+
+  const link = await resolveChannelExecutiveLink(role, linkedChannelExecutiveId);
+  if ("error" in link) return { ok: false, error: link.error };
 
   await withAudit({
     actorId: session.user.id,
@@ -97,6 +140,7 @@ export async function updateUser(
             email,
             name,
             role,
+            linkedChannelExecutiveId: link.value,
             ...(password ? { passwordHash: await bcrypt.hash(password, 12) } : {}),
           },
         })

@@ -20,8 +20,10 @@ export type LeadListItem = {
     | "INSTALLING"
     | "COMPLETED"
     | "DISQUALIFIED";
-  name: string;
-  phone: string;
+  // Omitted entirely (not just falsy) in API responses scoped to
+  // CHANNEL_EXECUTIVE sessions — see redactLeadPII().
+  name?: string;
+  phone?: string;
   province: string;
   buildingType: string;
   avgMonthlyBill: number | null;

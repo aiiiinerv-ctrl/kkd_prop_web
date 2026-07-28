@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { slugify } from "@/lib/admin-content";
 import { withAudit } from "@/lib/audit";
-import { requireAdmin } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import type { ActionResult } from "./users";
 
@@ -37,7 +37,7 @@ async function nextChannelRefCode(): Promise<string> {
 }
 
 export async function createChannel(formData: FormData): Promise<ActionResult> {
-  const session = await requireAdmin();
+  const session = await requireRole("ADMIN");
 
   const parsed = parseChannel(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
@@ -61,7 +61,7 @@ export async function updateChannel(
   id: string,
   formData: FormData
 ): Promise<ActionResult> {
-  const session = await requireAdmin();
+  const session = await requireRole("ADMIN");
 
   const before = await prisma.promoChannel.findUnique({ where: { id } });
   if (!before) return { ok: false, error: "ไม่พบช่องทาง" };
@@ -111,7 +111,7 @@ export async function createChannelExecutive(
   channelId: string,
   formData: FormData
 ): Promise<ActionResult> {
-  const session = await requireAdmin();
+  const session = await requireRole("ADMIN");
 
   const channel = await prisma.promoChannel.findUnique({
     where: { id: channelId },
@@ -140,7 +140,7 @@ export async function updateChannelExecutive(
   id: string,
   formData: FormData
 ): Promise<ActionResult> {
-  const session = await requireAdmin();
+  const session = await requireRole("ADMIN");
 
   const before = await prisma.channelExecutive.findUnique({ where: { id } });
   if (!before) return { ok: false, error: "ไม่พบผู้ดำเนินการ" };
@@ -162,7 +162,7 @@ export async function updateChannelExecutive(
 }
 
 export async function deleteChannelExecutive(id: string): Promise<ActionResult> {
-  const session = await requireAdmin();
+  const session = await requireRole("ADMIN");
 
   const before = await prisma.channelExecutive.findUnique({
     where: { id },
@@ -194,7 +194,7 @@ export async function deleteChannelExecutive(id: string): Promise<ActionResult> 
 }
 
 export async function deleteChannel(id: string): Promise<ActionResult> {
-  const session = await requireAdmin();
+  const session = await requireRole("ADMIN");
 
   const before = await prisma.promoChannel.findUnique({
     where: { id },

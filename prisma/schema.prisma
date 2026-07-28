@@ -86,6 +86,12 @@ model AdminUser {
   updatedAt    DateTime   @updatedAt
   auditLogs    AuditLog[]
 
+  // CHANNEL_EXECUTIVE-role accounts are scoped to the leads/status of one
+  // linked ChannelExecutive (and by extension its PromoChannel). Nullable
+  // because ADMIN/SALES/FINANCE accounts never set this.
+  linkedChannelExecutiveId String?
+  linkedChannelExecutive   ChannelExecutive? @relation("AdminUserLinkedExecutive", fields: [linkedChannelExecutiveId], references: [id])
+
   assignedLeads               Lead[]          @relation("LeadAssignedSales")
   assignedBookingsAsSales     SurveyBooking[] @relation("BookingAssignedSales")
   assignedBookingsAsEngineer  SurveyBooking[] @relation("BookingAssignedEngineer")
@@ -114,6 +120,7 @@ model ChannelExecutive {
   refCode   String       @unique
   createdAt DateTime     @default(now())
   autoLeads Lead[]       @relation("LeadAutoSourceExecutive")
+  linkedAdminUsers AdminUser[] @relation("AdminUserLinkedExecutive")
 }
 
 model Lead {

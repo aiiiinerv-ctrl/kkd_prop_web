@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { AuditClient } from "./audit-client";
 
@@ -9,7 +9,8 @@ export default async function AuditPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
-  await requireAdmin();
+  // Audit trail is ADMIN-only — matches the sidebar link visibility.
+  await requireRole("ADMIN");
   const { page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
 
