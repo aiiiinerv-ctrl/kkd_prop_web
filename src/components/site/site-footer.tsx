@@ -2,10 +2,8 @@
 
 import { Clock, Mail, MapPin, Phone } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
 import { BrandLogo } from "@/components/site/brand-logo";
-import { Link, usePathname } from "@/i18n/navigation";
-import { cn } from "@/lib/utils";
+import { Link } from "@/i18n/navigation";
 
 /* Minimal brand glyphs (lucide-react ships no brand/social icons) — kept local, no new dependency. */
 function IconFacebook(props: React.SVGProps<SVGSVGElement>) {
@@ -54,45 +52,13 @@ const SOCIAL_LINKS = [
 
 const FOOTER_SERVICE_LINKS = ["serviceOnGrid", "serviceHybrid", "serviceOffGrid", "serviceCleaning"] as const;
 
-function themePrefixForPath(pathname: string) {
-  if (pathname === "/theme-2" || pathname.startsWith("/theme-2/")) return "/theme-2";
-  if (pathname === "/theme-3" || pathname.startsWith("/theme-3/")) return "/theme-3";
-  if (pathname === "/theme-4" || pathname.startsWith("/theme-4/")) return "/theme-4";
-  if (pathname === "/theme-5" || pathname.startsWith("/theme-5/")) return "/theme-5";
-  if (pathname === "/theme-6" || pathname.startsWith("/theme-6/")) return "/theme-6";
-  if (pathname === "/theme-1" || pathname.startsWith("/theme-1/")) return "/theme-1";
-  return "";
-}
-
-function hrefForTheme(prefix: string, href: string) {
-  if (!prefix) return href;
-  return href === "/" ? prefix : `${prefix}${href}`;
-}
-
 export function SiteFooter() {
   const t = useTranslations("footer");
   const tNav = useTranslations("nav");
-  const pathname = usePathname();
-  const [pathForTheme, setPathForTheme] = useState(pathname);
-  const themePrefix = themePrefixForPath(pathname);
-  const shellThemePrefix = themePrefixForPath(pathForTheme);
   const year = new Date().getFullYear();
 
-  useEffect(() => {
-    // window.location.pathname still carries the locale segment (e.g. "/th/theme-4");
-    // themePrefixForPath expects the locale-stripped path that usePathname() returns.
-    setPathForTheme(window.location.pathname.replace(/^\/(th|en)(?=\/|$)/, "") || "/");
-  }, [pathname]);
-
   return (
-    <footer
-      className={cn(
-        "site-footer border-t border-border bg-muted/50",
-        (shellThemePrefix === "/theme-2" || shellThemePrefix === "/theme-4") &&
-          "theme-2-site-footer",
-        shellThemePrefix === "/theme-3" && "theme-3-site-footer"
-      )}
-    >
+    <footer className="site-footer border-t border-border bg-muted/50">
       <div className="site-footer-main mx-auto grid max-w-7xl gap-10 px-4 py-14 text-center sm:px-6 sm:text-left md:grid-cols-2 lg:grid-cols-[2fr_1fr_1.5fr_1.5fr]">
         <div className="flex flex-col items-center sm:items-start">
           <BrandLogo className="mb-4" />
@@ -119,7 +85,7 @@ export function SiteFooter() {
             {(["home", "about", "portfolio", "calculator"] as const).map((key) => (
               <li key={key}>
                 <Link
-                  href={hrefForTheme(themePrefix, key === "home" ? "/" : `/${key}`)}
+                  href={key === "home" ? "/" : `/${key}`}
                   className="transition-colors hover:text-brand-orange"
                 >
                   {tNav(key)}
@@ -135,7 +101,7 @@ export function SiteFooter() {
             {FOOTER_SERVICE_LINKS.map((key) => (
               <li key={key}>
                 <Link
-                  href={hrefForTheme(themePrefix, "/services")}
+                  href="/services"
                   className="transition-colors hover:text-brand-orange"
                 >
                   {t(key)}

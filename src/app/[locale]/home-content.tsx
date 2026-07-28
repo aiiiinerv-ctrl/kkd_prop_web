@@ -9,35 +9,22 @@ import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/db";
 import { pickLocale } from "@/lib/i18n-content";
 import { storage } from "@/lib/storage";
-import { cn } from "@/lib/utils";
-
-export type HomeThemeVariant = "theme-1" | "theme-2" | "theme-3" | "theme-4" | "theme-5" | "theme-6";
-
-const THEME_3_FAMILY = new Set<HomeThemeVariant>(["theme-3", "theme-4", "theme-5", "theme-6"]);
-
-function themedPath(themeVariant: HomeThemeVariant | undefined, path: string) {
-  return themeVariant ? `/${themeVariant}${path}` : path;
-}
 
 export async function HomeContent({
   params,
-  themeVariant,
 }: {
   params: Promise<{ locale: string }>;
-  themeVariant?: HomeThemeVariant;
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("home");
   const tCommon = await getTranslations("common");
-  const isTheme3Family = themeVariant !== undefined && THEME_3_FAMILY.has(themeVariant);
-  const isTheme6 = themeVariant === "theme-6";
   const bookingSurveyHref = {
-    pathname: themedPath(themeVariant, "/booking"),
+    pathname: "/booking",
     query: { tab: "survey" },
   };
   const bookingQuoteHref = {
-    pathname: themedPath(themeVariant, "/booking"),
+    pathname: "/booking",
     query: { tab: "quote" },
   };
 
@@ -61,25 +48,17 @@ export async function HomeContent({
   });
 
   return (
-    <main
-      className={
-        isTheme3Family
-          ? cn("theme-3-page", themeVariant !== "theme-3" && `${themeVariant}-page`)
-          : undefined
-      }
-    >
+    <main>
       <section className="home-hero flex min-h-[600px] flex-col lg:flex-row">
-        {isTheme6 && (
-          <svg
-            className="theme6-hero-chevron"
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            aria-hidden="true"
-          >
-            <polyline points="48,0 60,50 48,100" />
-            <polyline points="52,0 64,50 52,100" />
-          </svg>
-        )}
+        <svg
+          className="theme6-hero-chevron"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <polyline points="48,0 60,50 48,100" />
+          <polyline points="52,0 64,50 52,100" />
+        </svg>
         <div className="home-hero-media relative min-h-[320px] flex-[1.2]">
           <Image
             src="/marketing/hero-solar.jpg"
@@ -92,19 +71,11 @@ export async function HomeContent({
         </div>
         <div className="home-hero-content relative flex flex-1 flex-col items-center justify-center bg-gradient-to-br from-[#fff5e6] to-[#fbe2c0] px-6 py-14 text-center sm:px-12 lg:items-start lg:text-left">
           <div className="absolute top-[20%] left-0 hidden h-[60%] w-1.5 rounded-r bg-brand-orange lg:block" />
-          {isTheme3Family && (
-            <div className="theme3-hero-kicker">{t("theme3Kicker")}</div>
-          )}
+          <div className="theme3-hero-kicker">{t("theme3Kicker")}</div>
           <Reveal>
-            {isTheme6 ? (
-              <h1 className="theme6-hero-title">
-                <span>{t("theme6HeroTitleWhite")}</span> <em>{t("theme6HeroTitleGold")}</em>
-              </h1>
-            ) : (
-              <h1 className="text-3xl leading-snug font-extrabold tracking-[-0.01em] text-foreground sm:text-4xl">
-                {t("heroTitle")}
-              </h1>
-            )}
+            <h1 className="theme6-hero-title">
+              <span>{t("theme6HeroTitleWhite")}</span> <em>{t("theme6HeroTitleGold")}</em>
+            </h1>
           </Reveal>
           <Reveal delay={120}>
             <p className="mt-5 max-w-xl text-muted-foreground">{t("heroSubtitle")}</p>
@@ -120,39 +91,35 @@ export async function HomeContent({
               {tCommon("requestQuote")}
             </Link>
           </Reveal>
-          {isTheme6 && (
-            <div className="theme6-feature-row">
-              <div>
-                <Sun aria-hidden="true" />
-                <span>{t("theme6Feature1")}</span>
-              </div>
-              <div>
-                <ShieldCheck aria-hidden="true" />
-                <span>{t("theme6Feature2")}</span>
-              </div>
-              <div>
-                <Wrench aria-hidden="true" />
-                <span>{t("theme6Feature3")}</span>
-              </div>
-              <div>
-                <LineChart aria-hidden="true" />
-                <span>{t("theme6Feature4")}</span>
-              </div>
+          <div className="theme6-feature-row">
+            <div>
+              <Sun aria-hidden="true" />
+              <span>{t("theme6Feature1")}</span>
             </div>
-          )}
-          {isTheme3Family && (
-            <Reveal delay={320} className="theme3-proof-panel">
-              <div>
-                <span>{t("theme3ProofLabel")}</span>
-                <strong>{t("theme3ProofTitle")}</strong>
-              </div>
-              <ul>
-                <li>{t("theme3ProofItem1")}</li>
-                <li>{t("theme3ProofItem2")}</li>
-                <li>{t("theme3ProofItem3")}</li>
-              </ul>
-            </Reveal>
-          )}
+            <div>
+              <ShieldCheck aria-hidden="true" />
+              <span>{t("theme6Feature2")}</span>
+            </div>
+            <div>
+              <Wrench aria-hidden="true" />
+              <span>{t("theme6Feature3")}</span>
+            </div>
+            <div>
+              <LineChart aria-hidden="true" />
+              <span>{t("theme6Feature4")}</span>
+            </div>
+          </div>
+          <Reveal delay={320} className="theme3-proof-panel">
+            <div>
+              <span>{t("theme3ProofLabel")}</span>
+              <strong>{t("theme3ProofTitle")}</strong>
+            </div>
+            <ul>
+              <li>{t("theme3ProofItem1")}</li>
+              <li>{t("theme3ProofItem2")}</li>
+              <li>{t("theme3ProofItem3")}</li>
+            </ul>
+          </Reveal>
         </div>
       </section>
 
@@ -162,22 +129,20 @@ export async function HomeContent({
           headingClassName="font-extrabold tracking-[-0.01em]"
         />
 
-        {isTheme3Family && (
-          <Reveal className="theme3-decision-strip">
-            <div>
-              <span>{t("theme3Metric1Label")}</span>
-              <strong>{t("theme3Metric1Value")}</strong>
-            </div>
-            <div>
-              <span>{t("theme3Metric2Label")}</span>
-              <strong>{t("theme3Metric2Value")}</strong>
-            </div>
-            <div>
-              <span>{t("theme3Metric3Label")}</span>
-              <strong>{t("theme3Metric3Value")}</strong>
-            </div>
-          </Reveal>
-        )}
+        <Reveal className="theme3-decision-strip">
+          <div>
+            <span>{t("theme3Metric1Label")}</span>
+            <strong>{t("theme3Metric1Value")}</strong>
+          </div>
+          <div>
+            <span>{t("theme3Metric2Label")}</span>
+            <strong>{t("theme3Metric2Value")}</strong>
+          </div>
+          <div>
+            <span>{t("theme3Metric3Label")}</span>
+            <strong>{t("theme3Metric3Value")}</strong>
+          </div>
+        </Reveal>
 
         <HomePortfolioGrid items={portfolioItems} />
 
@@ -189,22 +154,22 @@ export async function HomeContent({
             <span className="text-sm font-bold tracking-[1px] text-brand-orange uppercase">
               {t("actionRowBadge")}
             </span>
-            <h3 className="mt-2 mb-2.5 text-[26px] font-bold text-[#D88100]">
+            <h3 className="mt-2 mb-2.5 text-[26px] font-bold">
               {t("actionRowTitle")}
             </h3>
-            <p className="mb-4 max-w-xl text-base text-[#B37700]">
+            <p className="mb-4 max-w-xl text-base">
               {t("actionRowText")}
             </p>
             <Link
-              href={themedPath(themeVariant, "/services")}
+              href="/services"
               className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-brand-orange transition-all hover:gap-2.5 hover:text-brand-orange-dark"
             >
               {t("actionRowLink")} <span aria-hidden="true">→</span>
             </Link>
           </div>
           <Link
-            href={themedPath(themeVariant, "/portfolio")}
-            className="inline-flex shrink-0 items-center justify-center gap-2.5 whitespace-nowrap rounded-[30px] border-2 border-brand-orange bg-transparent px-9 py-3.5 text-base font-semibold text-brand-orange transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-orange hover:text-white hover:shadow-[0_8px_20px_rgba(255,159,0,0.3)] max-lg:w-full"
+            href="/portfolio"
+            className="inline-flex shrink-0 items-center justify-center gap-2.5 whitespace-nowrap rounded-[30px] border-2 border-brand-orange bg-transparent px-9 py-3.5 text-base font-semibold text-brand-orange transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(255,159,0,0.3)] max-lg:w-full"
           >
             {t("viewAllPortfolio")} <span aria-hidden="true">→</span>
           </Link>
