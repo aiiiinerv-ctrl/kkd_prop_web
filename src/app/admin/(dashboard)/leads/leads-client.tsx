@@ -124,7 +124,8 @@ export function LeadsClient({
                   <TableHead>เบอร์โทร</TableHead>
                   <TableHead>ประเภท</TableHead>
                   <TableHead>จังหวัด</TableHead>
-                  <TableHead>ช่องทาง</TableHead>
+                  <TableHead>ช่องทาง (เลือกเอง)</TableHead>
+                  <TableHead>ช่องทาง (อัตโนมัติจากลิงก์)</TableHead>
                   <TableHead>วันที่</TableHead>
                   <TableHead>สถานะ</TableHead>
                 </TableRow>
@@ -133,7 +134,7 @@ export function LeadsClient({
                 {data.leads.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={7}
+                      colSpan={8}
                       className="py-10 text-center text-muted-foreground"
                     >
                       ไม่พบข้อมูล
@@ -167,6 +168,11 @@ export function LeadsClient({
                     </TableCell>
                     <TableCell>{lead.province}</TableCell>
                     <TableCell>{lead.sourceChannel?.nameTh ?? "-"}</TableCell>
+                    <TableCell>
+                      {lead.autoSourceExecutive
+                        ? `${lead.autoSourceChannel?.nameTh ?? "-"} · ${lead.autoSourceExecutive.name}`
+                        : (lead.autoSourceChannel?.nameTh ?? "เข้าโดยตรง")}
+                    </TableCell>
                     <TableCell>
                       {new Date(lead.createdAt).toLocaleDateString("th-TH")}
                     </TableCell>

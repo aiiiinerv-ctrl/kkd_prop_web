@@ -14,7 +14,12 @@ export default async function LeadDetailPage({
   const [lead, channels] = await Promise.all([
     prisma.lead.findUnique({
       where: { id },
-      include: { booking: true, sourceChannel: true },
+      include: {
+        booking: true,
+        sourceChannel: true,
+        autoSourceChannel: true,
+        autoSourceExecutive: true,
+      },
     }),
     prisma.promoChannel.findMany({
       orderBy: { sortOrder: "asc" },
@@ -38,6 +43,8 @@ export default async function LeadDetailPage({
         locale: lead.locale,
         notes: lead.notes,
         sourceChannelId: lead.sourceChannelId,
+        autoSourceChannelName: lead.autoSourceChannel?.nameTh ?? null,
+        autoSourceExecutiveName: lead.autoSourceExecutive?.name ?? null,
         createdAt: lead.createdAt.toISOString(),
         booking: lead.booking
           ? {

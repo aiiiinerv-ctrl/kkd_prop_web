@@ -81,6 +81,118 @@ export async function updateChannel(
   return { ok: true };
 }
 
+const executiveSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  phone: z.string().trim().min(1).max(30),
+});
+
+function parseExecutive(formData: FormData) {
+  return executiveSchema.safeParse({
+    name: formData.get("name"),
+    phone: formData.get("phone"),
+  });
+}
+
+// Sequential per-channel, e.g. first exec under CH001 -> CH001-EX01.
+async function nextExecutiveRefCode(
+  channelId: string,
+  channelRefCode: string
+): Promise<string> {
+  const last = await prisma.channelExecutive.findFirst({
+    where: { channelId },
+    orderBy: { refCode: "desc" },
+    select: { refCode: true },
+  });
+  const lastNum = last ? Number(last.refCode.split("-EX")[1]) || 0 : 0;
+  return `${channelRefCode}-EX${String(lastNum + 1).padStart(2, "0")}`;
+}
+
+export async function createChannelExecutive(
+  channelId: string,
+  formData: FormData
+): Promise<ActionResult> {
+  const session = await requireAdmin();
+
+  const channel = await prisma.promoChannel.findUnique({
+    where: { id: channelId },
+  });
+  if (!channel) return { ok: false, error: "ไม่พบช่องทาง" };
+
+  const parsed = parseExecutive(formData);
+  if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
+
+  const refCode = await nextExecutiveRefCode(channelId, channel.refCode);
+  await withAudit({
+    actorId: session.user.id,
+    action: "CREATE",
+    entityType: "ChannelExecutive",
+    run: () =>
+      prisma.channelExecutive.create({
+        data: { ...parsed.data, channelId, refCode },
+      }),
+  });
+
+  revalidatePath("/admin/channels");
+  return { ok: true };
+}
+
+export async function updateChannelExecutive(
+  id: string,
+  formData: FormData
+): Promise<ActionResult> {
+  const session = await requireAdmin();
+
+  const before = await prisma.channelExecutive.findUnique({ where: { id } });
+  if (!before) return { ok: false, error: "ไม่พบผู้ดำเนินการ" };
+
+  const parsed = parseExecutive(formData);
+  if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
+
+  await withAudit({
+    actorId: session.user.id,
+    action: "UPDATE",
+    entityType: "ChannelExecutive",
+    before,
+    run: () =>
+      prisma.channelExecutive.update({ where: { id }, data: parsed.data }),
+  });
+
+  revalidatePath("/admin/channels");
+  return { ok: true };
+}
+
+export async function deleteChannelExecutive(id: string): Promise<ActionResult> {
+  const session = await requireAdmin();
+
+  const before = await prisma.channelExecutive.findUnique({
+    where: { id },
+    include: { _count: { select: { autoLeads: true } } },
+  });
+  if (!before) return { ok: false, error: "ไม่พบผู้ดำเนินการ" };
+  if (before._count.autoLeads > 0) {
+    return {
+      ok: false,
+      error: `ลบไม่ได้ มี lead อ้างอิงผู้ดำเนินการนี้ ${before._count.autoLeads} รายการ`,
+    };
+  }
+
+  const { _count, ...beforeRow } = before;
+  void _count;
+  await withAudit({
+    actorId: session.user.id,
+    action: "DELETE",
+    entityType: "ChannelExecutive",
+    before: beforeRow,
+    run: async () => {
+      await prisma.channelExecutive.delete({ where: { id } });
+      return null;
+    },
+  });
+
+  revalidatePath("/admin/channels");
+  return { ok: true };
+}
+
 export async function deleteChannel(id: string): Promise<ActionResult> {
   const session = await requireAdmin();
 

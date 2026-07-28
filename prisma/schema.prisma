@@ -101,6 +101,7 @@ model PromoChannel {
   isActive   Boolean            @default(true)
   sortOrder  Int                @default(0)
   leads      Lead[]
+  autoLeads  Lead[]             @relation("LeadAutoSourceChannel")
   executives ChannelExecutive[]
 }
 
@@ -112,6 +113,7 @@ model ChannelExecutive {
   phone     String
   refCode   String       @unique
   createdAt DateTime     @default(now())
+  autoLeads Lead[]       @relation("LeadAutoSourceExecutive")
 }
 
 model Lead {
@@ -127,6 +129,10 @@ model Lead {
   locale          String         @default("th")
   sourceChannelId String?
   sourceChannel   PromoChannel?  @relation(fields: [sourceChannelId], references: [id])
+  autoSourceChannelId   String?
+  autoSourceChannel     PromoChannel?     @relation("LeadAutoSourceChannel", fields: [autoSourceChannelId], references: [id])
+  autoSourceExecutiveId String?
+  autoSourceExecutive   ChannelExecutive? @relation("LeadAutoSourceExecutive", fields: [autoSourceExecutiveId], references: [id])
   assignedSalesId String?
   assignedSales   AdminUser?     @relation("LeadAssignedSales", fields: [assignedSalesId], references: [id])
   lastFollowUpAt  DateTime?

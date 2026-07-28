@@ -28,6 +28,8 @@ export type LeadListItem = {
   createdAt: string;
   booking: { paymentStatus: string; preferredDate: string } | null;
   sourceChannel: { nameTh: string } | null;
+  autoSourceChannel: { nameTh: string } | null;
+  autoSourceExecutive: { name: string } | null;
 };
 
 type LeadListResponse = {

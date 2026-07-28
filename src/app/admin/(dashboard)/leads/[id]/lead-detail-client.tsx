@@ -66,6 +66,8 @@ type LeadDetail = {
   locale: string;
   notes: string | null;
   sourceChannelId: string | null;
+  autoSourceChannelName: string | null;
+  autoSourceExecutiveName: string | null;
   createdAt: string;
   booking: {
     id: string;
@@ -191,6 +193,18 @@ export function LeadDetailClient({
                   </option>
                 ))}
               </select>
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">
+              ช่องทางอัตโนมัติ (จากลิงก์โปรโมท)
+            </dt>
+            <dd className="font-medium">
+              {lead.autoSourceChannelName
+                ? lead.autoSourceExecutiveName
+                  ? `${lead.autoSourceChannelName} · ${lead.autoSourceExecutiveName}`
+                  : lead.autoSourceChannelName
+                : "เข้าโดยตรง"}
             </dd>
           </div>
         </dl>

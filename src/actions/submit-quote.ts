@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/db";
 import { notifyNewLead } from "@/lib/notifications";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { resolveRefAttribution } from "@/lib/ref-attribution";
 import { quoteSchema } from "@/lib/validations/lead";
 
 export type SubmitResult = { ok: true } | { ok: false; error: string };
@@ -29,6 +30,8 @@ export async function submitQuote(formData: FormData): Promise<SubmitResult> {
     return { ok: false, error: "validation" };
   }
   const data = parsed.data;
+  const { autoSourceChannelId, autoSourceExecutiveId } =
+    await resolveRefAttribution();
 
   const lead = await prisma.lead.create({
     data: {
@@ -41,6 +44,8 @@ export async function submitQuote(formData: FormData): Promise<SubmitResult> {
       avgMonthlyBill: data.avgMonthlyBill ?? null,
       locale: data.locale,
       sourceChannelId: data.sourceChannelId || null,
+      autoSourceChannelId,
+      autoSourceExecutiveId,
     },
   });
 

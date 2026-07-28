@@ -1,9 +1,16 @@
 "use client";
 
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, Copy, Pencil, Plus, Trash2, Users } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { createChannel, deleteChannel, updateChannel } from "@/actions/channels";
+import {
+  createChannel,
+  createChannelExecutive,
+  deleteChannel,
+  deleteChannelExecutive,
+  updateChannel,
+  updateChannelExecutive,
+} from "@/actions/channels";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,18 +41,69 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+type ExecutiveRow = {
+  id: string;
+  name: string;
+  phone: string;
+  refCode: string;
+};
+
 type ChannelRow = {
   id: string;
   nameTh: string;
   nameEn: string;
+  refCode: string;
   isActive: boolean;
   sortOrder: number;
   leadCount: number;
+  executives: ExecutiveRow[];
 };
 
-export function ChannelsClient({ channels }: { channels: ChannelRow[] }) {
+function promoLink(siteUrl: string, refCode: string) {
+  return `${siteUrl}/?ref=${refCode}`;
+}
+
+function CopyButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      className="p-2"
+      aria-label="คัดลอกลิงก์โปรโมท"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(value);
+          setCopied(true);
+          toast.success("คัดลอกลิงก์แล้ว");
+          setTimeout(() => setCopied(false), 1500);
+        } catch {
+          toast.error("คัดลอกไม่สำเร็จ");
+        }
+      }}
+    >
+      {copied ? (
+        <Check className="size-4 text-emerald-600" />
+      ) : (
+        <Copy className="size-4" />
+      )}
+    </Button>
+  );
+}
+
+export function ChannelsClient({
+  channels,
+  siteUrl,
+}: {
+  channels: ChannelRow[];
+  siteUrl: string;
+}) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ChannelRow | null>(null);
+  const [execDialogChannel, setExecDialogChannel] = useState<ChannelRow | null>(
+    null
+  );
+  const [editingExec, setEditingExec] = useState<ExecutiveRow | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const onSubmit = (formData: FormData) => {
@@ -71,6 +129,28 @@ export function ChannelsClient({ channels }: { channels: ChannelRow[] }) {
     });
   };
 
+  const onExecSubmit = (channelId: string, formData: FormData) => {
+    startTransition(async () => {
+      const result = editingExec
+        ? await updateChannelExecutive(editingExec.id, formData)
+        : await createChannelExecutive(channelId, formData);
+      if (result.ok) {
+        toast.success("บันทึกเรียบร้อย");
+        setEditingExec(null);
+      } else {
+        toast.error(result.error);
+      }
+    });
+  };
+
+  const onExecDelete = (id: string) => {
+    startTransition(async () => {
+      const result = await deleteChannelExecutive(id);
+      if (result.ok) toast.success("ลบเรียบร้อย");
+      else toast.error(result.error);
+    });
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -78,6 +158,7 @@ export function ChannelsClient({ channels }: { channels: ChannelRow[] }) {
           <h1 className="text-xl font-bold">ช่องทางโปรโมท</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             ช่องทางที่เปิดใช้งานจะแสดงในแบบฟอร์ม &quot;รู้จักเราจากช่องทางไหน&quot; บนหน้าเว็บ
+            และลิงก์โปรโมทด้านล่างจะบันทึกที่มาของลูกค้าอัตโนมัติเมื่อคลิกเข้ามา
           </p>
         </div>
         <Button
@@ -96,6 +177,7 @@ export function ChannelsClient({ channels }: { channels: ChannelRow[] }) {
             <TableRow>
               <TableHead>ชื่อ (TH)</TableHead>
               <TableHead>ชื่อ (EN)</TableHead>
+              <TableHead>รหัส / ลิงก์โปรโมท</TableHead>
               <TableHead>จำนวน Lead</TableHead>
               <TableHead>ลำดับ</TableHead>
               <TableHead>สถานะ</TableHead>
@@ -107,6 +189,15 @@ export function ChannelsClient({ channels }: { channels: ChannelRow[] }) {
               <TableRow key={c.id}>
                 <TableCell className="font-medium">{c.nameTh}</TableCell>
                 <TableCell>{c.nameEn}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="outline">{c.refCode}</Badge>
+                    <span className="max-w-40 truncate text-xs text-muted-foreground">
+                      {promoLink(siteUrl, c.refCode)}
+                    </span>
+                    <CopyButton value={promoLink(siteUrl, c.refCode)} />
+                  </div>
+                </TableCell>
                 <TableCell>{c.leadCount}</TableCell>
                 <TableCell>{c.sortOrder}</TableCell>
                 <TableCell>
@@ -115,6 +206,17 @@ export function ChannelsClient({ channels }: { channels: ChannelRow[] }) {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
+                  <Button
+                    variant="ghost"
+                    className="p-2"
+                    aria-label="ผู้ดำเนินการ"
+                    onClick={() => {
+                      setExecDialogChannel(c);
+                      setEditingExec(null);
+                    }}
+                  >
+                    <Users className="size-4" />
+                  </Button>
                   <Button
                     variant="ghost"
                     className="p-2"
@@ -202,6 +304,112 @@ export function ChannelsClient({ channels }: { channels: ChannelRow[] }) {
               {isPending ? "กำลังบันทึก..." : "บันทึก"}
             </Button>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!execDialogChannel}
+        onOpenChange={(open) => {
+          if (!open) {
+            setExecDialogChannel(null);
+            setEditingExec(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>
+              ผู้ดำเนินการช่องทาง &quot;{execDialogChannel?.nameTh}&quot;
+            </DialogTitle>
+          </DialogHeader>
+          {execDialogChannel && (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-border/70">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ชื่อ</TableHead>
+                      <TableHead>เบอร์โทร</TableHead>
+                      <TableHead>รหัส / ลิงก์โปรโมท</TableHead>
+                      <TableHead className="text-right">จัดการ</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {execDialogChannel.executives.length === 0 && (
+                      <TableRow>
+                        <TableCell
+                          colSpan={4}
+                          className="py-6 text-center text-sm text-muted-foreground"
+                        >
+                          ยังไม่มีผู้ดำเนินการ
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {execDialogChannel.executives.map((e) => (
+                      <TableRow key={e.id}>
+                        <TableCell className="font-medium">{e.name}</TableCell>
+                        <TableCell>{e.phone}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="outline">{e.refCode}</Badge>
+                            <CopyButton value={promoLink(siteUrl, e.refCode)} />
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            className="p-2"
+                            aria-label="แก้ไข"
+                            onClick={() => setEditingExec(e)}
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className="p-2"
+                            aria-label="ลบ"
+                            disabled={isPending}
+                            onClick={() => onExecDelete(e.id)}
+                          >
+                            <Trash2 className="size-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <form
+                action={(fd) => onExecSubmit(execDialogChannel.id, fd)}
+                className="grid grid-cols-1 gap-3 rounded-lg border border-dashed border-border p-4 sm:grid-cols-3"
+                key={editingExec?.id ?? "new-exec"}
+              >
+                <div className="space-y-1.5">
+                  <Label>ชื่อผู้ดำเนินการ</Label>
+                  <Input name="name" required defaultValue={editingExec?.name} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>เบอร์โทร</Label>
+                  <Input name="phone" required defaultValue={editingExec?.phone} />
+                </div>
+                <div className="flex items-end gap-2">
+                  <Button type="submit" disabled={isPending} className="flex-1">
+                    {editingExec ? "บันทึก" : "เพิ่ม"}
+                  </Button>
+                  {editingExec && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setEditingExec(null)}
+                    >
+                      ยกเลิก
+                    </Button>
+                  )}
+                </div>
+              </form>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

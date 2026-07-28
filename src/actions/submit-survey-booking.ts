@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/db";
 import { notifyNewLead } from "@/lib/notifications";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { resolveRefAttribution } from "@/lib/ref-attribution";
 import { storage, validateImage } from "@/lib/storage";
 import { surveySchema } from "@/lib/validations/lead";
 import type { SubmitResult } from "./submit-quote";
@@ -66,6 +67,8 @@ export async function submitSurveyBooking(
   });
 
   const bookingNumber = await nextBookingNumber();
+  const { autoSourceChannelId, autoSourceExecutiveId } =
+    await resolveRefAttribution();
   const lead = await prisma.lead.create({
     data: {
       type: "SURVEY",
@@ -76,6 +79,8 @@ export async function submitSurveyBooking(
       buildingType: data.buildingType,
       locale: data.locale,
       sourceChannelId: data.sourceChannelId || null,
+      autoSourceChannelId,
+      autoSourceExecutiveId,
       booking: {
         create: {
           bookingNumber,

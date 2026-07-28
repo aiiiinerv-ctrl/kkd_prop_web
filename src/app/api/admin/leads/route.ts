@@ -56,6 +56,8 @@ export async function GET(req: NextRequest) {
       include: {
         booking: { select: { paymentStatus: true, preferredDate: true } },
         sourceChannel: { select: { nameTh: true } },
+        autoSourceChannel: { select: { nameTh: true } },
+        autoSourceExecutive: { select: { name: true } },
       },
     }),
   ]);
