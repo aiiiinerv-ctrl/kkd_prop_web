@@ -36,56 +36,34 @@ async function shoot(url: string, file: string) {
   console.log(`SCREENSHOT: ${url} -> ${OUT_DIR}/${file} ✓`);
 }
 
-// Public site — home page in both locales
-await shoot("http://localhost:3000/th", "home-th.png");
-await shoot("http://localhost:3000/en", "home-en.png");
-
-// Public site — theme preview routes (both locales)
-const THEME_NUMBERS = [1, 2, 3, 4, 5, 6];
-for (const n of THEME_NUMBERS) {
-  await shoot(`http://localhost:3000/th/theme-${n}`, `theme-${n}-th.png`);
-  await shoot(`http://localhost:3000/en/theme-${n}`, `theme-${n}-en.png`);
-}
-
-// Public site — Phase 6 rollout pages (both locales)
+// Public site — current real routes only (both locales)
 const PUBLIC_PAGES = [
+  "",
   "about",
   "services",
   "packages",
-  "portfolio",
-  "booking",
   "calculator",
+  "testimonials",
+  "booking",
   "contact",
+  "portfolio",
 ];
 for (const p of PUBLIC_PAGES) {
-  await shoot(`http://localhost:3000/th/${p}`, `${p}-th.png`);
-  await shoot(`http://localhost:3000/en/${p}`, `${p}-en.png`);
+  const name = p === "" ? "home" : p;
+  await shoot(`http://localhost:3000/th${p ? `/${p}` : ""}`, `${name}-th.png`);
+  await shoot(`http://localhost:3000/en${p ? `/${p}` : ""}`, `${name}-en.png`);
 }
+
+// Mobile viewport — site-header with mobile nav menu OPEN
+const mobilePage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+await mobilePage.goto("http://localhost:3000/th", { waitUntil: "networkidle" });
+await mobilePage.click('button[aria-label="Toggle menu"]');
+await mobilePage.waitForTimeout(300);
+await mobilePage.screenshot({ path: `${OUT_DIR}/site-header-mobile-nav-open.png` });
+console.log(`SCREENSHOT: mobile nav open -> ${OUT_DIR}/site-header-mobile-nav-open.png ✓`);
+await mobilePage.close();
 
 // Admin login page
 await shoot("http://localhost:3000/admin/login", "admin-login.png");
-
-// Log in, then capture the dashboard
-await page.goto("http://localhost:3000/admin/login");
-await page.fill('input[name="email"]', "admin@kkdproperty.com");
-await page.fill('input[name="password"]', process.env.ADMIN_PASSWORD ?? "admin1234");
-await page.click('button[type="submit"]');
-await page.waitForURL("**/admin", { timeout: 15000 });
-await page.waitForSelector("text=แดชบอร์ด", { timeout: 10000 });
-await shoot("http://localhost:3000/admin", "admin-dashboard.png");
-
-// Admin — Phase 6 rollout pages
-const ADMIN_PAGES = [
-  ["leads", "Leads"],
-  ["packages", "Packages"],
-  ["services", "Services"],
-  ["portfolio", "Portfolio"],
-  ["channels", "Channels"],
-  ["audit", "Audit"],
-  ["users", "Users"],
-] as const;
-for (const [slug] of ADMIN_PAGES) {
-  await shoot(`http://localhost:3000/admin/${slug}`, `admin-${slug}.png`);
-}
 
 await browser.close();

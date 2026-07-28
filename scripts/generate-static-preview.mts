@@ -5,7 +5,6 @@ const LOCAL_HOST = "http://localhost:3000";
 const OUT_DIR = "static-preview";
 
 const LOCALES = ["th", "en"];
-const THEMES = ["theme-1", "theme-2", "theme-3", "theme-4", "theme-5", "theme-6"];
 const PAGES = ["about", "booking", "calculator", "contact", "packages", "portfolio", "services", "testimonials"];
 
 async function run() {
@@ -23,17 +22,8 @@ async function run() {
   for (const locale of LOCALES) {
     // Base pages
     paths.push(`/${locale}`);
-    paths.push(`/${locale}/themes`);
     for (const page of PAGES) {
       paths.push(`/${locale}/${page}`);
-    }
-
-    // Theme pages
-    for (const theme of THEMES) {
-      paths.push(`/${locale}/${theme}`);
-      for (const page of PAGES) {
-        paths.push(`/${locale}/${theme}/${page}`);
-      }
     }
   }
 
