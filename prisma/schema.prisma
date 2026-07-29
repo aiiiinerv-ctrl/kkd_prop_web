@@ -143,6 +143,13 @@ model Lead {
   assignedSalesId String?
   assignedSales   AdminUser?     @relation("LeadAssignedSales", fields: [assignedSalesId], references: [id])
   lastFollowUpAt  DateTime?
+  // Set once, the first time a lead's status transitions into SIGNED (see
+  // updateLeadStatus() in src/actions/leads.ts) — represents "วันที่ปิดการขาย"
+  // per the requirements PDF §4.5 export field list. Not cleared when the
+  // lead advances further (INSTALLING/COMPLETED); not backfilled for leads
+  // that were already SIGNED+ before this column existed (stays null, shown
+  // as "-" in the export).
+  closedAt        DateTime?
   notes           String?
   booking         SurveyBooking?
   createdAt       DateTime       @default(now())

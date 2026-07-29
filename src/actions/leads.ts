@@ -58,6 +58,17 @@ export async function updateLeadStatus(
   // lastFollowUpAt intentionally not touched here — a status change is not
   // necessarily a follow-up contact; it's only recorded when notes are
   // logged via updateLeadNotes() below.
+
+  // closedAt ("วันที่ปิดการขาย", PDF §4.5): set only the first time a lead
+  // enters SIGNED (= "เซ็นสัญญาแล้ว", the pipeline step that means "closed"
+  // per §4.3 — not COMPLETED, which is project handover, a later step).
+  // Left untouched on further transitions (INSTALLING/COMPLETED) so the date
+  // stays pinned to when the deal actually closed. If a lead somehow re-enters
+  // SIGNED after being moved out of it (no state-machine guard exists on this
+  // action), closedAt is overwritten with the new close date.
+  const closedAt =
+    (status as LeadStatus) === "SIGNED" && before.status !== "SIGNED" ? new Date() : undefined;
+
   await withAudit({
     actorId: session.user.id,
     action: "UPDATE",
@@ -68,6 +79,7 @@ export async function updateLeadStatus(
         where: { id },
         data: {
           status: status as LeadStatus,
+          ...(closedAt ? { closedAt } : {}),
         },
       }),
   });

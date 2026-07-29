@@ -3,6 +3,7 @@
 import {
   CalendarCheck,
   ClipboardList,
+  FileBarChart,
   Home,
   Images,
   LayoutDashboard,
@@ -71,6 +72,12 @@ const ITEMS = [
     label: "ช่องทางโปรโมท",
     icon: Megaphone,
     roles: ["ADMIN", "CHANNEL_EXECUTIVE"] as Role[],
+  },
+  {
+    href: "/admin/reports",
+    label: "รายงาน",
+    icon: FileBarChart,
+    roles: ["ADMIN", "FINANCE"] as Role[],
   },
   { href: "/admin/users", label: "ผู้ใช้ระบบ", icon: Users, roles: ["ADMIN"] as Role[] },
   {

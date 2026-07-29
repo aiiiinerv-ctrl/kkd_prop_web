@@ -47,7 +47,9 @@ Gap หลักที่พบ (รายละเอียดเต็มอ�
 | 2 — RBAC | ✅ เสร็จแล้ว | `getBookingScopeFilter()`/`canMutateBooking()`/`requireRole()` มีอยู่แล้ว; ยืนยันซ้ำรอบนี้ผ่าน `npx tsx scripts/e2e-rbac-sprint2.mts` (ทุกเช็ค role ผ่าน) |
 | 3 — แยกโมดูล Booking Management | ✅ เสร็จแล้ว (2026-07-28) | ดูรายละเอียดผลลัพธ์ท้าย Sprint 3 ด้านล่าง |
 | 4 — อัปเดตโมดูล Lead Management | ✅ เสร็จแล้ว (2026-07-29) | ดูรายละเอียดผลลัพธ์ท้าย Sprint 4 ด้านล่าง |
-| 5-9 | ⏳ ยังไม่เริ่ม | ตามลำดับเดิมในแผนนี้ |
+| 5 — แดชบอร์ด/รายงาน + Export Excel | ✅ เสร็จแล้ว (2026-07-29) | ดูรายละเอียดผลลัพธ์ท้าย Sprint 5 ด้านล่าง |
+| 5b — แก้ Gap รายงาน (วันที่ปิดการขาย + อัตราปิดการขาย) | ✅ เสร็จแล้ว (2026-07-29) | ดูรายละเอียดผลลัพธ์ท้าย Sprint 5b ด้านล่าง |
+| 6-9 | ⏳ ยังไม่เริ่ม | ตามลำดับเดิมในแผนนี้ |
 
 ## Sprint 0 — Schema & Role Foundation
 
@@ -143,8 +145,77 @@ Gap หลักที่พบ (รายละเอียดเต็มอ�
 
 ## Sprint 5 — แดชบอร์ด/รายงาน + Export Excel
 
+**สถานะ:** เสร็จสมบูรณ์ (2026-07-29) — ดู task breakdown แบบละเอียดที่ `docs/plans/sprint-5-reports-tasks.md`
+
 - `src/app/admin/reports/` (หน้าใหม่, ADMIN+FINANCE เข้าถึงได้): breakdown ตามช่องทาง/ผู้ดำเนินการ/เซลส์/ช่วงเวลา, คำนวณรายได้ (นัดยืนยันแล้ว × 199)
 - เพิ่ม dependency `exceljs` หรือเทียบเท่า, export field ตามที่ spec ระบุครบ (ชื่อ/เบอร์/ที่อยู่/ระบบ/ประเภทlead/ช่องทาง/ผู้ดำเนินการ/เซลส์/สถานะ/วันที่/เข้าสำรวจแล้วหรือไม่/ส่งของขวัญแล้วหรือไม่)
+
+### Sprint 5 — ผลลัพธ์ (2026-07-29)
+
+งานตาม task breakdown ใน `docs/plans/sprint-5-reports-tasks.md` (Task 4-12) เสร็จครบ ตามค่า default ที่ผู้ใช้ยืนยันแล้วสำหรับ Task 1-3 (revenue = `SUM(amountThb)` ของ booking สถานะไม่ใช่ `PENDING_CONFIRMATION`/`CANCELLED`, ข้ามคอลัมน์ "ระบบ" ไปก่อน, export รวมทั้ง `QUOTE`+`SURVEY`) สรุป:
+
+- เพิ่ม dependency `exceljs` ใน `package.json`
+- `src/lib/reports/labels.ts` (ใหม่) — label map ไทยกลาง (`LEAD_STATUS_LABELS_TH`/`BOOKING_STATUS_LABELS_TH`/`LEAD_TYPE_LABELS_TH`) ใช้ร่วมกันทั้ง server (export) และ client (dashboard)
+- `src/lib/reports/aggregate.ts` (ใหม่) — `CONFIRMED_BOOKING_STATUSES`/`isConfirmedBookingStatus()`/`sumConfirmedRevenue()` เป็นนิยาม "นัดยืนยันแล้ว" จุดเดียว, `buildLeadWhere()`/`buildBookingWhere()`/`parseReportFilters()`/`effectiveChannel()` ใช้ร่วมกันกับ `export-rows.ts` (ไม่ query/นิยามซ้ำสองที่ตามความเสี่ยงที่ระบุไว้ในแผน), `getReportAggregate()` คืน breakdown ตามช่องทาง/ผู้ดำเนินการ/เซลส์/สถานะ + ยอดรวม
+- `src/lib/reports/export-rows.ts` (ใหม่) — `getExportRows()` query Lead ทั้ง `QUOTE`+`SURVEY` พร้อม `include: booking` (LEFT JOIN-equivalent), field ที่ผูกกับ booking (ที่อยู่/เข้าสำรวจแล้วหรือไม่/ส่งของขวัญแล้วหรือไม่) แสดง `-` เมื่อไม่มี booking, import `isConfirmedBookingStatus`/`buildLeadWhere`/`effectiveChannel` จาก `aggregate.ts` แทนการเขียนซ้ำ
+- `src/app/api/admin/reports/summary/route.ts`, `src/app/api/admin/reports/export/route.ts` (ใหม่ทั้งคู่) — `requireRole` เทียบเท่า (manual role check คืน JSON 401/403 เหมือน pattern `/api/admin/leads`/`/api/admin/bookings` เดิม ไม่ใช้ `redirect()`), เรียก `getLeadScopeFilter()`/`getBookingScopeFilter()` แม้จะคืน `{}` เสมอสำหรับสอง role นี้ (เพื่อความสม่ำเสมอตามที่ระบุในแผน), `export/route.ts` import `exceljs` เฉพาะในไฟล์นี้ (server-only route handler) ไม่มีการ import จาก client component ใดๆ
+- `src/app/admin/(dashboard)/reports/page.tsx` + `reports-client.tsx`, `src/hooks/admin/use-reports.ts` (ใหม่ทั้งหมด) — filter (ช่วงวันที่/ช่องทาง/ผู้ดำเนินการ/เซลส์), การ์ดสรุป (ลูกค้าเป้าหมาย/นัดสำรวจ/นัดยืนยันแล้ว/รายได้รวม), ตาราง breakdown 4 มิติ (ช่องทาง/ผู้ดำเนินการ/เซลส์/สถานะนัดสำรวจ), ปุ่ม "Export Excel" ลิงก์ตรงไปยัง `/api/admin/reports/export` พร้อม filter params ปัจจุบัน
+- `src/app/admin/(dashboard)/admin-sidebar.tsx` — เพิ่มเมนู "รายงาน" (`roles: ["ADMIN", "FINANCE"]`) มิเรอร์ pattern item อื่นเป๊ะ
+- `scripts/e2e-admin-crud.mts` — เพิ่มส่วน REPORTS: หน้าโหลดได้, breakdown card render, summary API 200, **ยอดรายได้ตรงกับสูตร `SUM(amountThb)` ที่คำนวณตรงจาก DB แยกต่างหาก** (ground truth ไม่พึ่ง aggregate.ts), ยอดบนหน้า dashboard ตรงกับ API, export API 200 พร้อม `Content-Disposition: attachment`, header ไฟล์ Excel ตรงกับ field list ที่ implement, ไม่มีคอลัมน์ "ระบบ" หลอกๆ, จำนวนแถว export ตรงกับจำนวน Lead ทั้งหมดใน DB
+- `scripts/e2e-rbac-sprint2.mts` — เพิ่มเช็ค: SALES/CHANNEL_EXECUTIVE ถูกเด้งจาก `/admin/reports` และ API คืน 403, FINANCE เข้าถึง `/admin/reports` + ทั้งสอง API ได้ (200) — ยืนยันว่า RBAC ใหม่ของ Sprint 5 ไม่รั่วข้าม role และไม่พัง RBAC เดิม
+
+**PDF cross-check (Task ที่ผู้ใช้ขอให้ตรวจสอบ):** ตอนวางแผน Sprint 5 ไม่สามารถเปิด `docs/stuffs/KKD_เอกสารความต้องการเว็บไซต์_V1.2.pdf` ได้ (ไม่มี `poppler-utils`) — รอบนี้ติดตั้ง `poppler` ผ่าน Homebrew ได้สำเร็จและเปิดอ่านได้จริง (หัวข้อ 4.5 "โมดูลรายงานและส่งออกข้อมูล") พบ 2 จุดที่ field list ที่ implement ไปแล้ว (ตาม task breakdown เดิม) **ไม่ครบ 100% เทียบกับ PDF ต้นฉบับ** — ทั้งสองจุดมีอยู่ใน task breakdown ตั้งแต่ต้นแล้ว (ไม่ใช่บั๊กที่เกิดจากรอบ implement นี้) จึง **ไม่ได้แก้ระหว่าง sprint นี้** (นอกสโคปที่ตกลงไว้ + ต้องมีการตัดสินใจเพิ่มเพราะไม่มี field รองรับตรงๆ ใน schema) บันทึกเป็น follow-up ชัดเจนสำหรับ Sprint 6/9:
+  1. **ขาดคอลัมน์ export "วันที่ปิดการขาย"** — PDF ระบุ field list เต็ม 13 field: `ชื่อลูกค้า, เบอร์โทร, ที่อยู่, ประเภทระบบ, ประเภท Lead, ช่องทางที่มา, ผู้ดำเนินการช่องทาง, เซลส์ที่รับผิดชอบ, สถานะปัจจุบัน, วันที่ส่งฟอร์ม, วันที่ปิดการขาย, เข้าสำรวจแล้วหรือไม่, ส่งของขวัญแล้วหรือไม่` — ที่ implement ไปมี 11 field ตรงตาม task breakdown (ขาด "ประเภทระบบ" ตามที่ตกลงเลื่อนไป Sprint 6 อย่างตั้งใจ + ขาด **"วันที่ปิดการขาย" ที่ task breakdown ไม่ได้ระบุไว้เลย** ไม่ใช่การตัดสินใจที่ผู้ใช้ยืนยันแล้ว) — Lead/SurveyBooking schema ปัจจุบันไม่มี timestamp ที่บันทึก "วันที่ปิดการขาย" ตรงๆ (มีแค่ `updatedAt` ซึ่งเป็น proxy ไม่แม่นยำ เพราะเปลี่ยนทุกครั้งที่แก้ field ใดก็ได้ ไม่ใช่แค่ตอนปิดการขาย) ต้องตัดสินใจก่อนว่าจะเพิ่ม field ใหม่ (เช่น `Lead.closedAt`) หรือ derive จาก audit log
+  2. **แดชบอร์ดขาด "อัตราปิดการขาย" (close rate %)** — PDF ระบุมิติ "ตามช่องทาง"/"ตามผู้ดำเนินการ" ต้องมี "จำนวน Lead นัด ปิดการขาย **อัตราปิดการขาย**" แต่ task breakdown Task 5 เขียนแค่ "รวมนับจำนวน lead/booking ต่อ status และคำนวณรายได้" ไม่ได้พูดถึง % — dashboard ที่ implement ไปมีจำนวน lead/booking/revenue ต่อช่องทางแต่ไม่มี % ปิดการขายเป็นคอลัมน์แยก (คำนวณได้เองจากตัวเลขที่มีอยู่ แต่ยังไม่ได้ทำเป็น UI element ชัดเจน)
+  3. Task breakdown ระบุ "ตามช่วงเวลา" เป็น "เดือนนี้/เดือนที่แล้ว/กำหนดเองได้" (quick preset) แต่ implement เป็น date-range ปกติ (`from`/`to`) เท่านั้น ไม่มีปุ่ม preset — ใช้งานได้เหมือนกัน (`from`/`to` ครอบคลุม custom range ทุกกรณี) เพียงแต่ขาด quick-select UX
+
+  ทั้งสามข้อไม่ block sprint นี้ (revenue formula/scope ที่ยืนยันแล้วยังถูกต้องตรงกับ PDF 100%: "จำนวนนัดที่ยืนยัน × 199 บาท" ตรงกับ `SUM(amountThb)` ของ booking ที่ไม่ใช่ `PENDING_CONFIRMATION`/`CANCELLED` พอดี) แต่ควรหยิบไปพิจารณาก่อนปิด Sprint 9 (verification รอบสุดท้าย)
+
+**เบี่ยงจาก plan ที่ต้อง flag:** ไม่มีในส่วนที่ตกลงกันไว้แล้ว (ดู "PDF cross-check" ด้านบนสำหรับ gap ที่พบใหม่นอกเหนือจาก decision ที่ยืนยันแล้ว)
+
+**Verification (รอบสุดท้าย, ผ่านทั้งหมด):**
+- `npm run build` — `✓ Compiled successfully` + `Finished TypeScript` + exit code 0 (แก้ type error เล็กน้อยใน `scripts/e2e-admin-crud.mts` ระหว่างพัฒนา — `Buffer<ArrayBufferLike>` vs `Buffer` จาก playwright's `response.body()` เข้ากับ `exceljs`'s `.load()`)
+- `npx tsx scripts/verify-all.mts` (build → production server → `e2e-booking.mts` → `e2e-admin.mts` → `e2e-admin-crud.mts`) — ผ่านทั้งหมด รวมส่วน REPORTS ใหม่ทั้ง 10 เช็ค (revenue ตรง DB ground truth, export headers/row count ถูกต้อง)
+- `npx tsx scripts/e2e-rbac-sprint2.mts` (รันแยกกับ production server ตัวเดียวกัน) — ผ่านทุกเช็คทั้งเดิมและใหม่ (SALES/CE ถูกปฏิเสธจาก reports, FINANCE เข้าถึงได้, RBAC เดิม Sprint 2-4 ไม่พัง)
+- `npx prisma migrate dev` — ไม่รัน เพราะไม่มีการแก้ schema ใน sprint นี้ (ยืนยันตามแผนว่าทุก field ที่ต้องใช้มีอยู่แล้ว ยกเว้น "ระบบ"/"วันที่ปิดการขาย" ที่เลื่อนออกไปตามที่ระบุข้างต้น)
+- `git status` — ไม่มีการแก้ `src/messages/*.json` (หน้า reports เป็น admin-only ภาษาไทยล้วนตาม AGENTS.md ไม่มี string สาธารณะใหม่) จึงไม่ต้องรัน i18n parity check เพิ่ม
+
+## Sprint 5b — แก้ Gap รายงานที่พบจาก PDF spec ต้นฉบับ
+
+**สถานะ:** เริ่มงานแล้ว (2026-07-29)
+
+ระหว่างตรวจ Sprint 5 เทียบกับ `docs/stuffs/KKD_เอกสารความต้องการเว็บไซต์_V1.2.pdf` (§4.5) โดยตรง (อ่านได้จริงรอบนี้หลังติดตั้ง poppler-utils) พบว่า field list export มี **13 คอลัมน์ ไม่ใช่ 11** ตามที่วางแผนไว้ตอน Sprint 5 — เพิ่มเป็น sprint แยกแทนที่จะรอไปรวมกับ Sprint 9 ตามที่ผู้ใช้ตัดสินใจ
+
+- เพิ่มคอลัมน์ export **"วันที่ปิดการขาย"** — ปัจจุบันไม่มี field นี้ใน schema เลย (มีแค่ `updatedAt` ซึ่งไม่แม่นยำเพราะถูก touch โดย update อื่นที่ไม่ใช่การปิดการขาย) ต้องตัดสินใจว่าจะเพิ่ม field ใหม่ (เช่น `Lead.closedAt`, เซ็ตอัตโนมัติตอนสถานะเปลี่ยนเป็น `SIGNED`/`COMPLETED`) หรือ derive จาก `AuditLog` (หา entry แรกที่เปลี่ยนสถานะเป็นค่านั้น)
+- เพิ่ม **"อัตราปิดการขาย" (close-rate %)** ใน dashboard breakdown ต่อช่องทาง/ผู้ดำเนินการ/เซลส์ — สูตร: จำนวน lead ที่ปิดการขายแล้ว ÷ จำนวน lead ทั้งหมดในกลุ่มนั้น × 100
+- (Nice-to-have, ไม่บังคับ) เปลี่ยนตัวเลือกช่วงเวลาจาก date-range ธรรมดาเป็น month-preset ตาม spec เดิม — ฟังก์ชันเดิมทำงานถูกต้องอยู่แล้ว จึงเป็น priority ต่ำกว่า 2 ข้อบน
+
+Task breakdown ฉบับเต็มที่ `docs/plans/sprint-5b-reports-gap-tasks.md`
+
+### Sprint 5b — ผลลัพธ์ (2026-07-29)
+
+งานตาม task breakdown ใน `docs/plans/sprint-5b-reports-gap-tasks.md` (Task 2-11) เสร็จครบ ตามค่า default ทั้งสองข้อที่ผู้ใช้ยืนยันแล้ว (Task 1): `Lead.closedAt` เป็น field ใหม่ nullable ไม่ derive จาก `AuditLog`, close-rate นับจาก `status` ปัจจุบันของ lead ∈ `{SIGNED, INSTALLING, COMPLETED}` ไม่ใช่ `closedAt IS NOT NULL` สรุป:
+
+- `prisma/schema.prisma` — เพิ่ม `Lead.closedAt DateTime?` ถัดจาก `lastFollowUpAt` พร้อมคอมเมนต์อธิบาย (มิเรอร์สไตล์ที่มีอยู่แล้ว); `npx prisma migrate dev --name add_lead_closed_at` สร้าง migration ใหม่ 1 ตัว, ไม่มี backfill ข้อมูลเก่าตามที่ยืนยันแล้ว (lead เก่าที่เคย `SIGNED`/`INSTALLING`/`COMPLETED` อยู่แล้วจะมี `closedAt = null`); `npx prisma generate` ต้องรันแยกเพิ่ม (สังเกตว่า `migrate dev` ไม่ regenerate client บางกรณี — ตรวจพบจาก TypeScript error ที่ `LeadSelect` ไม่มี `closedAt` จนกว่าจะรัน `generate` เอง) ยืนยัน `src/generated/prisma` มี field ครบหลังรัน
+- `src/actions/leads.ts` `updateLeadStatus()` — เซ็ต `closedAt = new Date()` เฉพาะเมื่อ `status === "SIGNED" && before.status !== "SIGNED"` (เข้า SIGNED ครั้งแรกเท่านั้น) พร้อมคอมเมนต์อธิบาย nuance (ทำไมนับจาก SIGNED ไม่ใช่ COMPLETED, ทำไมไม่ clear ตอนเดินหน้าต่อ, edge case ย้อนกลับเข้า SIGNED ใหม่) ไม่แตะ `updateLeadNotes()`/`assignLeadSales()`/`updateLeadSourceChannel()` เลย
+- `src/lib/reports/aggregate.ts` — เพิ่ม `CLOSED_LEAD_STATUSES`/`isClosedLeadStatus()` มิเรอร์ `CONFIRMED_BOOKING_STATUSES`/`isConfirmedBookingStatus()` เป๊ะ, เพิ่ม `closedLeadCount`/`closeRatePercent` เข้า `ChannelAgg`/`ExecutiveAgg`/`SalesAgg` + `ReportAggregate` type และ logic คำนวณ (`closeRatePercent = leadCount > 0 ? (closedLeadCount / leadCount) * 100 : 0`, คำนวณหลังวน loop ครบทั้ง lead+booking ต่อกลุ่มเพื่อไม่พึ่งลำดับ loop)
+- `src/lib/reports/export-rows.ts` — เพิ่ม `closedAt` เข้า `select`, `ExportRow` type และ `EXPORT_COLUMNS` **ในตำแหน่งระหว่าง `createdAt` ("วันที่") กับ `surveyed` ("เข้าสำรวจแล้วหรือไม่")** ตรงตาม PDF §4.5 ที่ยืนยันแล้ว, header "วันที่ปิดการขาย", format เหมือน `createdAt` (`toLocaleDateString("th-TH")`), แสดง `-` เมื่อ `null` — **field list export ตอนนี้ครบ 13 คอลัมน์ตรงกับ PDF ทุกตำแหน่ง ยกเว้น "ประเภทระบบ" ที่ยังคงเลื่อนไป Sprint 6 ตามที่ตกลงไว้ตั้งแต่ Sprint 5 อย่างตั้งใจ**
+- `src/hooks/admin/use-reports.ts` — อัปเดต `ReportAggregate` type ให้ตรงกับ shape ใหม่ (`closedLeadCount`/`closeRatePercent` ใน 3 breakdown array)
+- `src/app/admin/(dashboard)/reports/reports-client.tsx` — เพิ่มคอลัมน์ "ปิดการขาย" (นับ) + "อัตราปิดการขาย (%)" เข้าทั้ง 3 การ์ด breakdown (ช่องทาง/ผู้ดำเนินการ/เซลส์), format % ด้วย `toFixed(1)`; **Task 9 (nice-to-have) ทำสำเร็จ** — เพิ่มปุ่ม preset "เดือนนี้"/"เดือนที่แล้ว"/"กำหนดเอง" เหนือ input `from`/`to` เดิม (คำนวณช่วงเดือนแบบ client-side ล้วน, ไม่แตะ `use-reports.ts`/API เลยเพราะ `from`/`to` ยังเป็น string shape เดิม; แก้ไข input ด้วยมือหลัง preset จะสลับกลับเป็น "กำหนดเอง" อัตโนมัติผ่าน `set()`)
+- `scripts/e2e-admin-crud.mts` — ขยายส่วน REPORTS เดิม: (ก) `closedAt` เป็น `null` ก่อนเข้า `SIGNED`, (ข) เซ็ตตอนเข้า `SIGNED` ครั้งแรก, (ค) ไม่เปลี่ยนตอนเดินหน้าไป `INSTALLING`/`COMPLETED`, (ง) export header "วันที่ปิดการขาย" อยู่ตำแหน่งถูกต้อง (ระหว่าง "วันที่" กับ "เข้าสำรวจแล้วหรือไม่"), (จ) `closedLeadCount`/`closeRatePercent` ต่อ channel/executive/sales จาก summary API ตรงกับ ground truth ที่คำนวณตรงจาก DB แยกต่างหาก (มิเรอร์ style ที่ Sprint 5 ทำกับ revenue), เพิ่มเช็ค month-preset button คลิกแล้ว fill ค่า from-date ได้จริง
+
+**เบี่ยงจาก plan ที่ต้อง flag:**
+- ระหว่าง Task 3 พบว่า `npx prisma migrate dev` ไม่ได้ regenerate `src/generated/prisma` ให้มี field ใหม่โดยอัตโนมัติในรอบนี้ (TypeScript ฟ้อง `closedAt` ไม่มีใน `LeadSelect`) ต้องรัน `npx prisma generate` แยกต่างหากเพิ่มเติม — ไม่ใช่การเบี่ยงจาก scope งาน เป็นแค่ขั้นตอนเสริมที่ AGENTS.md ระบุไว้อยู่แล้ว ("After schema changes: `npx prisma migrate dev` regenerates it") แต่รอบนี้ไม่เกิดอัตโนมัติจริง จึงบันทึกไว้เผื่อ sprint ถัดไปเจอซ้ำ
+- ไม่มีการเบี่ยงอื่นจากค่า default/decision ที่ยืนยันแล้วใน task breakdown
+
+**Known limitation (ตามที่ระบุไว้ในแผนแล้ว ไม่ใช่บั๊ก):** lead ที่มีสถานะ `SIGNED`/`INSTALLING`/`COMPLETED` อยู่แล้วก่อน migration นี้จะมี `closedAt = null` — export คอลัมน์ "วันที่ปิดการขาย" โชว์ `-` ให้กลุ่มนี้แม้ปิดการขายไปแล้วจริง ยอมรับได้เพราะยังไม่มี production data จริง
+
+**Verification (ผ่านทั้งหมด):**
+- `npm run build` — `✓ Compiled successfully` + `Finished TypeScript` ผ่าน, ไม่มี error
+- `npm run start` + `npx tsx scripts/e2e-admin-crud.mts` — ผ่านทุกเช็ครวมส่วนใหม่ 4 เช็ค closedAt (null ก่อน SIGNED / เซ็ตตอนเข้า SIGNED ครั้งแรก / ไม่เปลี่ยนตอน INSTALLING / ไม่เปลี่ยนตอน COMPLETED), เช็ค month-preset, เช็ค `closedLeadCount`/`closeRatePercent` ตรง DB ground truth ทั้ง 3 มิติ, เช็คตำแหน่งคอลัมน์ export "วันที่ปิดการขาย" ถูกต้อง — รวม 40 เช็ค ผ่านครบ (revenue ground truth ยังตรง 597 === 597 เหมือน Sprint 5 ยืนยันว่าไม่พังของเดิม)
+- `npx tsx scripts/e2e-rbac-sprint2.mts` — ผ่านทุกเช็คไม่มีการเปลี่ยนแปลง (ยืนยันว่า sprint นี้ไม่กระทบ RBAC เลยตามที่คาดไว้ในแผน)
+- `npx prisma migrate dev` — มี migration ใหม่ 1 ตัว (`20260729054021_add_lead_closed_at`) ไม่มี pending migration อื่นค้าง
+- `git status` — ไม่มีการแก้ `src/messages/*.json` (ไม่มี public-facing string ใหม่ใน sprint นี้ตามที่คาดไว้)
 
 ## Sprint 6 — แก้ฟิลด์ฟอร์มสาธารณะ + PromptPay QR
 

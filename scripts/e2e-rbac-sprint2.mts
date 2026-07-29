@@ -138,6 +138,20 @@ async function main() {
       `SALES detail: no sales-assignment dropdown rendered ${hasSalesAssignSelect === 0 ? "✓" : "✗ FAIL"}`
     );
 
+    // Sprint 5: Reports is ADMIN+FINANCE only — SALES must be redirected
+    // away from the page and rejected (JSON, not redirect) by both API routes.
+    await page.goto(`${BASE}/admin/reports`);
+    const reportsBlocked = page.url().endsWith("/admin");
+    console.log(`SALES: /admin/reports blocked (redirected to /admin) ${reportsBlocked ? "✓" : "✗ FAIL"}`);
+    const salesSummaryRes = await page.request.get(`${BASE}/api/admin/reports/summary`);
+    console.log(
+      `SALES: /api/admin/reports/summary rejected (403) ${salesSummaryRes.status() === 403 ? "✓" : "✗ FAIL"}`
+    );
+    const salesExportRes = await page.request.get(`${BASE}/api/admin/reports/export`);
+    console.log(
+      `SALES: /api/admin/reports/export rejected (403) ${salesExportRes.status() === 403 ? "✓" : "✗ FAIL"}`
+    );
+
     await page.close();
   }
 
@@ -180,6 +194,19 @@ async function main() {
     const usersBlocked = page.url().endsWith("/admin");
     console.log(`FINANCE: /admin/users blocked (redirected to /admin) ${usersBlocked ? "✓" : "✗ FAIL"}`);
 
+    // Sprint 5: FINANCE is one of the two roles allowed on Reports.
+    await page.goto(`${BASE}/admin/reports`);
+    const reportsAllowed = page.url().endsWith("/admin/reports");
+    console.log(`FINANCE: /admin/reports accessible ${reportsAllowed ? "✓" : "✗ FAIL"}`);
+    const financeSummaryRes = await page.request.get(`${BASE}/api/admin/reports/summary`);
+    console.log(
+      `FINANCE: /api/admin/reports/summary allowed (200) ${financeSummaryRes.status() === 200 ? "✓" : "✗ FAIL"}`
+    );
+    const financeExportRes = await page.request.get(`${BASE}/api/admin/reports/export`);
+    console.log(
+      `FINANCE: /api/admin/reports/export allowed (200) ${financeExportRes.status() === 200 ? "✓" : "✗ FAIL"}`
+    );
+
     await page.close();
   }
 
@@ -219,6 +246,18 @@ async function main() {
     await page.goto(`${BASE}/admin/channels`);
     const addButtonCount = await page.getByText("เพิ่มช่องทาง").count();
     console.log(`CE channels: no "add channel" button (read-only) ${addButtonCount === 0 ? "✓" : "✗ FAIL"}`);
+
+    // Sprint 5: Reports is ADMIN+FINANCE only — CHANNEL_EXECUTIVE excluded too.
+    // requireRole's redirect("/admin") lands CE on the dashboard, which
+    // itself redirects CE onward to /admin/leads (see admin dashboard
+    // page.tsx) — so the final URL is /admin/leads, not /admin.
+    await page.goto(`${BASE}/admin/reports`);
+    const ceReportsBlocked = page.url().endsWith("/admin/leads");
+    console.log(`CE: /admin/reports blocked (redirected away) ${ceReportsBlocked ? "✓" : "✗ FAIL"}`);
+    const ceSummaryRes = await page.request.get(`${BASE}/api/admin/reports/summary`);
+    console.log(
+      `CE: /api/admin/reports/summary rejected (403) ${ceSummaryRes.status() === 403 ? "✓" : "✗ FAIL"}`
+    );
 
     await page.close();
   }
