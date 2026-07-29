@@ -487,3 +487,91 @@ the real account, for the actual cost already paid.
   `schema.prisma` (`binaryTargets`), and the Passenger `app.js` wrapper are all described above as
   *proposed* changes, not yet applied. Only the throwaway test app + probe files (all since
   deleted/destroyed) were created directly on the hosting account.
+
+## Sprint 1 update — code changes applied, local verification only (no panel interaction)
+
+- **[VERIFIED — local build]** `output: "standalone"` added to `next.config.ts`. `npm run build`
+  succeeds and produces `.next/standalone/` (89MB unfiltered) containing a working `server.js`,
+  a traced `node_modules/` (43MB), and confirms `better-sqlite3`'s compiled native binary
+  (`node_modules/better-sqlite3/build/Release/better_sqlite3.node`) survives output tracing intact
+  — the `serverExternalPackages` entry works as expected for local macOS arm64.
+- **New finding, not previously known**: this project's `.next/standalone/` output mirrors the
+  **entire project root** (not just traced deps) — it was found to include `.env` (real local
+  secrets), `storage/private/slips/*` (real customer payment-slip images from local dev data),
+  `backups/*` (DB + private-storage snapshots), and assorted docs/screenshots/Dockerfile/etc that
+  have nothing to do with running the app. This appears to be Next 16's output-file-tracing
+  treating the lockfile directory as the trace root and copying its full tree, not respecting
+  `.gitignore`. **This means the deploy artifact must never be `.next/standalone/` copied
+  wholesale** — `scripts/build-shared-hosting-deploy.mts` (added this sprint) copies an explicit
+  allowlist instead and asserts `.env`/`storage`/`backups` are absent from the staged output before
+  zipping. Flagging this for `deploy-verify`'s Sprint 1 review as the most safety-relevant finding
+  of this sprint.
+- **[VERIFIED — repo/local]** Confirmed in the installed `prisma@7.8.0` CLI source
+  (`node_modules/prisma/build/index.js`) that `binaryTargets` is parsed from the schema's
+  `generator` block (`A.options?.generator.binaryTargets`), and `@prisma/config`'s `defineConfig`
+  (`prisma.config.ts`) has no such field — it has not moved. Added
+  `binaryTargets = ["native", "rhel-openssl-3.0.x"]` to `schema.prisma` and ran
+  `npx prisma generate` successfully.
+- **New finding, changes the risk picture for item 5 (Prisma binary target)**: this project uses
+  `@prisma/adapter-better-sqlite3` (a driver adapter, wired in `src/lib/db.ts`) with the
+  `prisma-client` generator. With this combination, `npx prisma generate` produces **zero** native
+  or WASM query-engine binaries in `src/generated/prisma` regardless of `binaryTargets` — verified
+  by searching the generated output for `*.node`/`*.wasm`/`query_engine*` files after generating
+  with both targets set: none exist. Prisma's driver-adapter model routes queries entirely through
+  the adapter package calling `better-sqlite3` directly; there is no separate native query engine
+  to mismatch. **Practical effect**: `binaryTargets` is likely inert for this project's actual
+  runtime (added anyway since it's cheap, documented as the plan's best guess, and costs nothing to
+  leave in) — the real and only native-compile risk on the shared host is `better-sqlite3` itself
+  (item 3, still open, needs Sprint 2's live "Run NPM Install" test). This is **not yet confirmed
+  against the live panel** — it's a repo/local-build finding, not a panel finding — but it does mean
+  a Prisma "wrong binary target" runtime error is now considered unlikely rather than a live open
+  risk; if the app fails to load on-panel, the far more likely cause is `better-sqlite3`'s own
+  native binary being incompatible with the panel's OS/arch/Node ABI, not a missing Prisma engine.
+- **Root cause of the "whole project traced" finding above, confirmed by the build's own
+  diagnostic**: `npm run build` emits a Turbopack warning naming the exact cause —
+  `src/lib/storage/local.ts`'s `root()` helper calls `path.resolve(process.env.STORAGE_ROOT ?? "./storage")`,
+  a dynamic `path.resolve` on an env var, which Next's file tracer cannot statically resolve and
+  so conservatively traces the entire project as a fallback. This is an application-code pattern
+  (`src/lib/storage/local.ts`), not a deploy-config issue, so fixing the tracing behavior itself is
+  out of this sprint's scope (code changes belong to `nextjs-dev`) — flagging it here so it's not
+  lost, and because `scripts/build-shared-hosting-deploy.mts`'s explicit-allowlist approach is the
+  correct mitigation regardless of whether that code pattern is ever changed.
+- **[VERIFIED — local]** `deploy/app.js` written as the Passenger startup-file fallback wrapper (used
+  only if `.next/standalone/server.js` doesn't work directly as the panel's configured startup
+  file — untested on-panel, still open per §2).
+- **[VERIFIED — local]** `scripts/build-shared-hosting-deploy.mts` written and run successfully.
+  Produces `deploy/dist/` (55MB staged directory) and `deploy/dist.zip` (19MB) containing exactly:
+  traced `node_modules/` (incl. the working `better-sqlite3` binary), `server.js`, `package.json`,
+  `.next/` (server output + `static/` copied in per Next's standalone docs), `public/`,
+  `prisma/schema.prisma` + `prisma/migrations/` (not `dev.db`), `src/generated/prisma/`, and
+  `deploy/app.js`. Confirmed absent: `.env`, `storage/`, `backups/`, `prisma/dev.db`. Both
+  `deploy/dist/` and `deploy/dist.zip` are gitignored (build output, not source).
+
+## Environment variables — required panel env-var UI entries
+
+Per §6 (closed — the Node.js Selector env-var UI stores these outside any web-server docroot):
+set these via the panel's per-app "Environment Variables" UI at deploy time, **never** in a file
+in this repo or in the uploaded deploy artifact (`.env` is explicitly excluded by
+`scripts/build-shared-hosting-deploy.mts`, see above). Names only, cross-checked against
+`.env.example` and `src/lib/notifications/`; no real values are recorded here or anywhere else in
+this repo.
+
+| Variable | Required? | Notes |
+|---|---|---|
+| `DATABASE_URL` | Required | SQLite `file:` path. **Deploy-time value, not decided in Sprint 1** — must point at a persistent path under the Node.js Selector Application Root (never under `public_html/`, per §7's closed conclusion). Matches `prisma.config.ts:11`'s `env("DATABASE_URL")`. |
+| `AUTH_SECRET` | Required | Auth.js v5 session secret. Generate fresh for production (`openssl rand -base64 33`) — do not reuse the local dev value. |
+| `AUTH_TRUST_HOST` | Required | `"true"` — needed behind the panel's Passenger/Apache proxy, matches `.env.example`. |
+| `RESEND_API_KEY` | Optional (enables email notifications) | `src/lib/notifications/resend-email.ts` `isEnabled()` requires this **and** `NOTIFY_EMAIL_FROM` **and** `NOTIFY_EMAIL_TO` all set together — partial config silently disables the channel, not an error. |
+| `NOTIFY_EMAIL_FROM` | Optional, pairs with `RESEND_API_KEY` | See above. |
+| `NOTIFY_EMAIL_TO` | Optional, pairs with `RESEND_API_KEY` | Comma-separated list, per `resend-email.ts`. |
+| `LINE_CHANNEL_ACCESS_TOKEN` | Optional (enables LINE notifications) | `src/lib/notifications/line-push.ts` `isEnabled()` requires this **and** `LINE_NOTIFY_TO` together. Note: this is a LINE Messaging API channel access token, not "LINE Notify" (discontinued April 2025, per the code comment in `line-push.ts`) — despite the `LINE_NOTIFY_TO` variable name, which is a naming holdover, not a live LINE Notify integration. |
+| `LINE_NOTIFY_TO` | Optional, pairs with `LINE_CHANNEL_ACCESS_TOKEN` | Comma-separated LINE userIds or a group id. |
+| `STORAGE_DRIVER` | Recommended (defaults to `"local"`) | Only `"local"` is implemented (`src/lib/storage/index.ts`) — set explicitly for clarity even though the default matches. |
+| `STORAGE_ROOT` | Required | **Deploy-time value, not a value to hardcode now.** Per §7's closed conclusion, must be a path under the Node.js Selector Application Root, e.g. `<app-root>/storage/private/` — never under `public_html/` or any other Apache/LiteSpeed-served docroot. Confirm the exact Application Root path when the real app is created in Sprint 2/3 before setting this. |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` | Only needed if running `prisma db seed` on first boot | Sprint 2/3 decision (per the PM plan) on whether production starts from a seed or a migrated copy of real data — not a Sprint 1 concern. |
+| `NEXT_PUBLIC_SITE_URL` | Recommended | Used in notification deep links and `sitemap.xml`/SEO metadata (`src/lib/seo.ts`) — set to the real `https://kkdproperty.co.th` once bound. |
+
+**Still open from §6** (unchanged by Sprint 1, no panel access in this sprint): confirm the exact
+persistent Application Root path for `STORAGE_ROOT` once a real (non-test) Node.js Selector app
+exists in Sprint 2/3, and confirm the SQLite DB file's directory survives restarts/redeploys —
+both require live panel testing, not something resolvable from the repo alone.

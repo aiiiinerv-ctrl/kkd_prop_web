@@ -53,6 +53,10 @@ prisma/*.db-journal
 # firebase CLI deploy cache
 /.firebase/
 
+# shared-hosting deploy artifact staging (scripts/build-shared-hosting-deploy.mts)
+/deploy/dist/
+/deploy/dist.zip
+
 # vercel
 .vercel
 

@@ -1,6 +1,12 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider      = "prisma-client"
+  output        = "../src/generated/prisma"
+  // "native" keeps local dev/build working on this machine; "rhel-openssl-3.0.x"
+  // is a best-guess target for the shared-hosting deploy (CloudLinux is
+  // RHEL-derived) — unverified against the real panel OS, see
+  // docs/plans/kkd-shared-hosting-deploy-guide.md §5. Update once a real
+  // deploy attempt names the correct target in an engine-load error.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
