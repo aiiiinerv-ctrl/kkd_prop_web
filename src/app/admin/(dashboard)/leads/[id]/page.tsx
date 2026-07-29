@@ -67,7 +67,11 @@ export default async function LeadDetailPage({
         lineId: lead.lineId,
         province: lead.province,
         buildingType: lead.buildingType,
+        buildingTypeOtherText: lead.buildingTypeOtherText,
         avgMonthlyBill: lead.avgMonthlyBill,
+        interestedSystems: Array.isArray(lead.interestedSystems)
+          ? (lead.interestedSystems as string[])
+          : null,
         locale: lead.locale,
         notes: lead.notes,
         sourceChannelId: lead.sourceChannelId,

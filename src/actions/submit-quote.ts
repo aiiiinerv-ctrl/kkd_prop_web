@@ -1,6 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { notifyNewLead } from "@/lib/notifications";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -22,7 +23,10 @@ export async function submitQuote(formData: FormData): Promise<SubmitResult> {
     lineId: formData.get("lineId") ?? "",
     province: formData.get("province"),
     buildingType: formData.get("buildingType"),
+    buildingTypeOtherText: formData.get("buildingTypeOtherText") ?? "",
+    notes: formData.get("notes") ?? "",
     avgMonthlyBill: formData.get("avgMonthlyBill") || undefined,
+    interestedSystems: formData.getAll("interestedSystems"),
     sourceChannelId: formData.get("sourceChannelId") ?? "",
     locale: formData.get("locale") ?? "th",
   });
@@ -41,7 +45,12 @@ export async function submitQuote(formData: FormData): Promise<SubmitResult> {
       lineId: data.lineId || null,
       province: data.province,
       buildingType: data.buildingType,
+      buildingTypeOtherText: data.buildingTypeOtherText || null,
+      notes: data.notes || null,
       avgMonthlyBill: data.avgMonthlyBill ?? null,
+      interestedSystems: data.interestedSystems?.length
+        ? data.interestedSystems
+        : Prisma.JsonNull,
       locale: data.locale,
       sourceChannelId: data.sourceChannelId || null,
       autoSourceChannelId,

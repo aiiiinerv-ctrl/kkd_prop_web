@@ -34,6 +34,7 @@ enum BuildingType {
   RESIDENTIAL
   COMMERCIAL
   INDUSTRIAL
+  OTHER
 }
 
 enum TimeSlot {
@@ -132,7 +133,14 @@ model Lead {
   lineId          String?
   province        String
   buildingType    BuildingType
+  // Free-text detail, required only when buildingType === OTHER (validated
+  // in src/lib/validations/lead.ts via superRefine).
+  buildingTypeOtherText String?
   avgMonthlyBill  Int?
+  // Array of "ON_GRID"|"HYBRID"|"OFF_GRID" — quote-form only ("ระบบที่สนใจ"
+  // multi-select). Used as the "ประเภทระบบ" export column (see
+  // src/lib/reports/export-rows.ts). Null for SURVEY-type leads.
+  interestedSystems Json?
   locale          String         @default("th")
   sourceChannelId String?
   sourceChannel   PromoChannel?  @relation(fields: [sourceChannelId], references: [id])
@@ -182,6 +190,17 @@ model BookingCapacitySetting {
   maxPerDay  Int      @default(4)
   maxPerSlot Int      @default(2)
   updatedAt  DateTime @updatedAt
+}
+
+// Singleton (mirrors BookingCapacitySetting) — admin-configurable payment
+// info shown on the public survey-booking form (bank transfer + PromptPay QR).
+model PaymentSettings {
+  id                String   @id @default(cuid())
+  promptpayId       String?
+  bankName          String?
+  bankAccountNumber String?
+  bankAccountName   String?
+  updatedAt         DateTime @updatedAt
 }
 
 model Service {

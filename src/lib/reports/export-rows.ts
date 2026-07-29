@@ -9,17 +9,16 @@ import { LEAD_STATUS_LABELS_TH, LEAD_TYPE_LABELS_TH } from "./labels";
  * booking (address / surveyed / gift-sent) fall back to "-" for QUOTE leads
  * that never booked a survey.
  *
- * The "ระบบ (ที่ลูกค้าสนใจ)" column from the original field list is
- * intentionally SKIPPED for Sprint 5 — Lead has no such column yet, it's
- * being added in Sprint 6 ("multi-select ระบบที่สนใจ" on the quote form).
- * Do not add an empty placeholder column here; add the real column when
- * Sprint 6 lands the field.
+ * "ประเภทระบบ" (interestedSystems) closes the gap Sprint 5 intentionally
+ * skipped — Lead.interestedSystems was added in Sprint 6 (quote-form-only
+ * "ระบบที่สนใจ" multi-select). SURVEY-type leads never set it, shown as "-".
  */
 export type ExportRow = {
   name: string;
   phone: string;
   address: string;
   leadType: string;
+  interestedSystems: string;
   channel: string;
   executive: string;
   sales: string;
@@ -30,11 +29,19 @@ export type ExportRow = {
   giftSent: string;
 };
 
+const INTERESTED_SYSTEM_LABELS_TH: Record<string, string> = {
+  ON_GRID: "On-Grid",
+  HYBRID: "Hybrid",
+  OFF_GRID: "Off-Grid",
+};
+
 export const EXPORT_COLUMNS: { key: keyof ExportRow; header: string; width: number }[] = [
   { key: "name", header: "ชื่อ", width: 24 },
   { key: "phone", header: "เบอร์โทร", width: 16 },
   { key: "address", header: "ที่อยู่", width: 32 },
   { key: "leadType", header: "ประเภท Lead", width: 16 },
+  // Position per PDF §4.5: directly after "ประเภท Lead".
+  { key: "interestedSystems", header: "ประเภทระบบ", width: 20 },
   { key: "channel", header: "ช่องทาง", width: 20 },
   { key: "executive", header: "ผู้ดำเนินการ", width: 20 },
   { key: "sales", header: "เซลส์", width: 18 },
@@ -64,6 +71,7 @@ export async function getExportRows(
       phone: true,
       type: true,
       status: true,
+      interestedSystems: true,
       createdAt: true,
       closedAt: true,
       sourceChannelId: true,
@@ -84,6 +92,12 @@ export async function getExportRows(
       phone: lead.phone,
       address: booking?.address ?? "-",
       leadType: LEAD_TYPE_LABELS_TH[lead.type] ?? lead.type,
+      interestedSystems:
+        Array.isArray(lead.interestedSystems) && lead.interestedSystems.length > 0
+          ? (lead.interestedSystems as string[])
+              .map((s) => INTERESTED_SYSTEM_LABELS_TH[s] ?? s)
+              .join(", ")
+          : "-",
       channel: channel.name,
       executive: lead.autoSourceExecutive?.name ?? "-",
       sales: lead.assignedSales?.name ?? "-",

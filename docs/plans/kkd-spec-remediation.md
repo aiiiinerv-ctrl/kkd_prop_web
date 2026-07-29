@@ -49,7 +49,8 @@ Gap หลักที่พบ (รายละเอียดเต็มอ�
 | 4 — อัปเดตโมดูล Lead Management | ✅ เสร็จแล้ว (2026-07-29) | ดูรายละเอียดผลลัพธ์ท้าย Sprint 4 ด้านล่าง |
 | 5 — แดชบอร์ด/รายงาน + Export Excel | ✅ เสร็จแล้ว (2026-07-29) | ดูรายละเอียดผลลัพธ์ท้าย Sprint 5 ด้านล่าง |
 | 5b — แก้ Gap รายงาน (วันที่ปิดการขาย + อัตราปิดการขาย) | ✅ เสร็จแล้ว (2026-07-29) | ดูรายละเอียดผลลัพธ์ท้าย Sprint 5b ด้านล่าง |
-| 6-9 | ⏳ ยังไม่เริ่ม | ตามลำดับเดิมในแผนนี้ |
+| 6 — แก้ฟิลด์ฟอร์มสาธารณะ + PromptPay QR | ✅ เสร็จแล้ว (2026-07-29) | ดูรายละเอียดผลลัพธ์ท้าย Sprint 6 ด้านล่าง |
+| 7-9 | ⏳ ยังไม่เริ่ม | ตามลำดับเดิมในแผนนี้ |
 
 ## Sprint 0 — Schema & Role Foundation
 
@@ -219,9 +220,39 @@ Task breakdown ฉบับเต็มที่ `docs/plans/sprint-5b-reports-g
 
 ## Sprint 6 — แก้ฟิลด์ฟอร์มสาธารณะ + PromptPay QR
 
+**สถานะ:** เสร็จสมบูรณ์ (2026-07-29) — ดู task breakdown แบบละเอียดที่ `docs/plans/sprint-6-public-forms-promptpay-tasks.md`
+
 - `booking-forms.tsx`: จังหวัดเปลี่ยนเป็น dropdown 77 จังหวัด, เพิ่มตัวเลือก "อื่นๆ" ในประเภทอาคาร, เพิ่ม multi-select "ระบบที่สนใจ" ในฟอร์ม quote, ค่าไฟเปลี่ยนเป็น dropdown ช่วง, เพิ่มฟิลด์ "หมายเหตุ" ทั้งสองฟอร์ม
 - เพิ่ม PromptPay QR generation library, สร้าง component แสดง QR แบบ dynamic
 - `src/app/admin/settings/`: field ตั้งค่า PromptPay ID + ข้อมูลบัญชีธนาคาร (admin-configurable แทน hardcode ใน messages)
+
+### Sprint 6 — ผลลัพธ์ (2026-07-29)
+
+งานตาม task breakdown ใน `docs/plans/sprint-6-public-forms-promptpay-tasks.md` (Task 1-11) เสร็จครบ ตามค่า default ที่ผู้ใช้ยืนยันแล้ว 3 ข้อ (ตัวเลือก "ระบบที่สนใจ" = On-Grid/Hybrid/Off-Grid, อาคาร "อื่นๆ" มี free-text field เพิ่ม, ค่าไฟ 5 ช่วง) สรุป:
+
+- `prisma/schema.prisma` — `BuildingType.OTHER`, `Lead.buildingTypeOtherText`, `Lead.interestedSystems Json?`, โมเดลใหม่ `PaymentSettings` (singleton มิเรอร์ `BookingCapacitySetting`); migration `20260729062555_sprint6_public_forms`; `prisma/seed.ts` seed `PaymentSettings` ด้วยข้อมูลปลอมชุดเดิมที่เคย hardcode ใน messages
+- `src/lib/data/provinces.ts` (ใหม่) — 77 จังหวัด TH/EN
+- `src/lib/validations/lead.ts` — เพิ่ม `buildingTypeOtherText`/`notes`/`interestedSystems` (quote เท่านั้น), `superRefine` บังคับกรอก `buildingTypeOtherText` เมื่อเลือก OTHER
+- `src/actions/submit-quote.ts`, `submit-survey-booking.ts` — persist ฟิลด์ใหม่ครบ
+- `src/lib/promptpay.ts` (ใหม่) — `generatePromptPayQrDataUrl()` ผ่าน `promptpay-qr`+`qrcode` ไม่มี network call ภายนอก
+- `src/actions/payment-settings.ts` (ใหม่) — `getPaymentSettings()` (public read, ไม่ requireRole เพราะ RSC หน้า booking เรียกตรง), `updatePaymentSettings()` (ADMIN-only ผ่าน `requireRole`+`withAudit`, มิเรอร์ `updateBookingCapacitySetting`); `src/actions/promptpay-preview.ts` (ใหม่) — live QR preview ฝั่ง admin settings
+- `src/app/admin/(dashboard)/settings/`, `booking/booking-forms.tsx`+`page.tsx` — UI ครบตาม task breakdown, แทนที่ `slipBankInfo` hardcode เดิมด้วยข้อมูล dynamic จาก `PaymentSettings`
+- `src/messages/th.json`/`en.json` — key parity ยืนยันแล้ว (ตรวจด้วย key-diff script, ไม่มี key ขาดฝั่งใดฝั่งหนึ่ง)
+- `src/app/admin/(dashboard)/leads/[id]/` — แสดง `buildingTypeOtherText`/`interestedSystems` (badge) ใหม่ในหน้า detail กันข้อมูล write-only
+- `src/lib/reports/export-rows.ts` — เพิ่มคอลัมน์ "ประเภทระบบ" (ปิด gap ที่ Sprint 5 ค้างไว้ — ตอนนี้ export ครบ 14 คอลัมน์)
+- `scripts/e2e-booking.mts`, `e2e-admin-crud.mts`, `e2e-rbac-sprint2.mts` — ขยายครอบคลุมฟิลด์ใหม่ทั้งหมด + payment settings RBAC (SALES/FINANCE/CHANNEL_EXECUTIVE โดน 403)
+
+**เบี่ยงจาก plan ที่ต้อง flag:**
+- `BuildingType` enum ใช้ร่วมกับ `PortfolioProject.category` — การเพิ่ม `OTHER` ทำให้ type ของ `PortfolioProject.category` กว้างขึ้นไปด้วย (ไม่ได้อยู่ใน task breakdown ตรงๆ) ต้องแก้ `ProjectRow.category` ใน `src/app/admin/(dashboard)/portfolio/portfolio-client.tsx` ให้รองรับ `"OTHER"` (ไม่มีทางเลือกนี้ในฟอร์ม portfolio จริง) ไม่งั้น build fail — จำเป็นต้องแก้ ไม่ใช่ scope creep
+
+**Verification (ผ่านทั้งหมด):**
+- `npx tsc --noEmit` — clean
+- `npm run build` — `✓ Compiled successfully` + `Finished TypeScript` ผ่าน, ไม่มี error
+- `npx prisma migrate dev` + `npx prisma db seed` — ผ่าน (seed idempotent)
+- i18n key-parity script — `th-only: []`, `en-only: []`
+- `npx tsx scripts/verify-all.mts` (build → production server → e2e-booking → e2e-admin → e2e-admin-crud) — ผ่านทั้งหมด
+- `npx tsx scripts/e2e-rbac-sprint2.mts` — ผ่านทุกเช็ครวม payment-settings ADMIN-only ใหม่
+- ตรวจ manual: `/th/booking`, `/en/booking` render province select/bank info dynamic/PromptPay QR ถูกต้อง
 
 ## Sprint 7 — แก้เนื้อหา/ตัวเลขให้ตรง Spec
 

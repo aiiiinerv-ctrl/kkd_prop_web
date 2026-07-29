@@ -38,6 +38,13 @@ const BUILDING_LABELS: Record<string, string> = {
   RESIDENTIAL: "บ้านพักอาศัย",
   COMMERCIAL: "เชิงพาณิชย์ / ออฟฟิศ",
   INDUSTRIAL: "อุตสาหกรรม / โกดัง",
+  OTHER: "อื่นๆ",
+};
+
+const INTERESTED_SYSTEM_LABELS: Record<string, string> = {
+  ON_GRID: "ออนกริด (On-Grid)",
+  HYBRID: "ไฮบริด (Hybrid)",
+  OFF_GRID: "ออฟกริด (Off-Grid)",
 };
 
 const SLOT_LABELS: Record<string, string> = {
@@ -63,7 +70,9 @@ type LeadDetail = {
   lineId: string | null;
   province: string;
   buildingType: string;
+  buildingTypeOtherText: string | null;
   avgMonthlyBill: number | null;
+  interestedSystems: string[] | null;
   locale: string;
   notes: string | null;
   sourceChannelId: string | null;
@@ -178,8 +187,23 @@ export function LeadDetailClient({
             <dt className="text-muted-foreground">ประเภทอาคาร</dt>
             <dd className="font-medium">
               {BUILDING_LABELS[lead.buildingType] ?? lead.buildingType}
+              {lead.buildingType === "OTHER" && lead.buildingTypeOtherText
+                ? ` (${lead.buildingTypeOtherText})`
+                : ""}
             </dd>
           </div>
+          {lead.interestedSystems && lead.interestedSystems.length > 0 && (
+            <div>
+              <dt className="text-muted-foreground">ระบบที่สนใจ</dt>
+              <dd className="flex flex-wrap gap-1.5">
+                {lead.interestedSystems.map((s) => (
+                  <Badge key={s} variant="secondary">
+                    {INTERESTED_SYSTEM_LABELS[s] ?? s}
+                  </Badge>
+                ))}
+              </dd>
+            </div>
+          )}
           {lead.avgMonthlyBill != null && (
             <div>
               <dt className="text-muted-foreground">ค่าไฟเฉลี่ย</dt>

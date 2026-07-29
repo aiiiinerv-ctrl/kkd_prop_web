@@ -42,7 +42,10 @@ type ProjectRow = {
   titleEn: string;
   descriptionTh: string;
   descriptionEn: string;
-  category: "RESIDENTIAL" | "COMMERCIAL" | "INDUSTRIAL";
+  // "OTHER" is part of the shared BuildingType enum (added in Sprint 6 for
+  // Lead.buildingType) but is never selectable in this form's <select> below
+  // — PortfolioProject.category has no "other" concept.
+  category: "RESIDENTIAL" | "COMMERCIAL" | "INDUSTRIAL" | "OTHER";
   province: string;
   systemSizeKw: number;
   imageKeys: string[];

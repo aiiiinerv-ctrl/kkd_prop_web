@@ -36,6 +36,43 @@ await page.click("text=ทดสอบ นัดสำรวจ");
 await page.waitForSelector("text=ข้อมูลการนัดสำรวจ", { timeout: 10000 });
 console.log("LEAD DETAIL: booking card shown ✓");
 
+// --- Sprint 6 Task 9: admin visibility of public-submitted fields
+// (buildingTypeOtherText, interestedSystems) — check against the QUOTE lead
+// created by e2e-booking.mts, which is the only lead with buildingType
+// OTHER + interestedSystems set.
+const quoteLeadForDisplay = await prisma.lead.findFirst({
+  where: { phone: "0812345678" },
+  orderBy: { createdAt: "desc" },
+});
+if (quoteLeadForDisplay) {
+  await page.goto(`http://localhost:3000/admin/leads/${quoteLeadForDisplay.id}`);
+  await page.waitForSelector("text=ขอใบเสนอราคา", { timeout: 10000 });
+  const bodyText = (await page.textContent("body")) ?? "";
+  console.log(
+    `LEAD DETAIL: buildingTypeOtherText shown for OTHER building type ${
+      bodyText.includes("โกดังเก็บของ") ? "✓" : "✗ FAIL"
+    }`
+  );
+  console.log(
+    `LEAD DETAIL: interestedSystems shown as badges ${
+      bodyText.includes("On-Grid") || bodyText.includes("ออนกริด") ? "✓" : "✗ FAIL"
+    }`
+  );
+  console.log(
+    `LEAD DETAIL: public-submitted notes pre-filled in notes box ${
+      bodyText.includes("ทดสอบหมายเหตุจากฟอร์มสาธารณะ") ? "✓" : "✗ FAIL"
+    }`
+  );
+} else {
+  console.log("LEAD DETAIL: Sprint 6 field checks ✗ FAIL (quote lead not found — run e2e-booking.mts first)");
+}
+
+// Navigate back to the SURVEY lead detail (the rest of this script's leads
+// section operates on it) since the block above detoured to the quote lead.
+await page.goto("http://localhost:3000/admin/leads");
+await page.click("text=ทดสอบ นัดสำรวจ");
+await page.waitForSelector("text=ข้อมูลการนัดสำรวจ", { timeout: 10000 });
+
 // Grab the lead id from the URL so we can assert DB-level field behavior
 // (lastFollowUpAt narrowing, assignedSalesId) directly rather than via
 // fragile UI text formatting.
@@ -198,14 +235,44 @@ const originalMaxPerDay = await maxPerDayInput.inputValue();
 const bumpedMaxPerDay = String(Number(originalMaxPerDay) + 1);
 
 await maxPerDayInput.fill(bumpedMaxPerDay);
-await page.click("text=บันทึก >> nth=-1");
+await page.click("#s-capacity-submit");
 await page.waitForSelector("text=บันทึกการตั้งค่าเรียบร้อย", { timeout: 10000 });
 console.log("SETTINGS: capacity updated ✓");
 
 await maxPerDayInput.fill(originalMaxPerDay);
-await page.click("text=บันทึก >> nth=-1");
+await page.click("#s-capacity-submit");
 await page.waitForSelector("text=บันทึกการตั้งค่าเรียบร้อย", { timeout: 10000 });
 console.log("SETTINGS: capacity restored ✓");
+
+// --- Payment settings (Sprint 6 Task 6): ADMIN edits via withAudit, saved
+// value matches DB directly (edit + restore, like capacity above). ---
+const promptpayIdInput = page.locator('input[name="promptpayId"]');
+await promptpayIdInput.waitFor({ timeout: 5000 });
+const originalPromptpayId = await promptpayIdInput.inputValue();
+const bumpedPromptpayId = "0899999999";
+
+await promptpayIdInput.fill(bumpedPromptpayId);
+await page.click("#p-payment-submit");
+await page.waitForSelector("text=บันทึกข้อมูลการชำระเงินเรียบร้อย", { timeout: 10000 });
+const paymentSettingsAfterUpdate = await prisma.paymentSettings.findFirst();
+console.log(
+  `PAYMENT SETTINGS: ADMIN edit persists in DB ${
+    paymentSettingsAfterUpdate?.promptpayId === bumpedPromptpayId ? "✓" : "✗ FAIL"
+  }`
+);
+
+const paymentAuditRow = await prisma.auditLog.findFirst({
+  where: { entityType: "PaymentSettings", action: "UPDATE" },
+  orderBy: { createdAt: "desc" },
+});
+console.log(
+  `PAYMENT SETTINGS: mutation recorded via withAudit ${paymentAuditRow ? "✓" : "✗ FAIL"}`
+);
+
+await promptpayIdInput.fill(originalPromptpayId);
+await page.click("#p-payment-submit");
+await page.waitForSelector("text=บันทึกข้อมูลการชำระเงินเรียบร้อย", { timeout: 10000 });
+console.log("PAYMENT SETTINGS: restored ✓");
 
 // --- Audit: entries with diff ---
 await page.goto("http://localhost:3000/admin/audit");
@@ -415,6 +482,7 @@ const expectedHeaders = [
   "เบอร์โทร",
   "ที่อยู่",
   "ประเภท Lead",
+  "ประเภทระบบ",
   "ช่องทาง",
   "ผู้ดำเนินการ",
   "เซลส์",
@@ -426,10 +494,15 @@ const expectedHeaders = [
 ];
 const headersMatch = expectedHeaders.every((h) => headerCells.includes(h));
 console.log(`REPORTS: export headers match field list ${headersMatch ? "✓" : "✗ FAIL"}`);
-// "ระบบ" is intentionally deferred to Sprint 6 (no Lead field yet) — must
-// NOT appear as an empty placeholder column.
+
+// Sprint 6 Task 10: "ประเภทระบบ" (interestedSystems) sits directly after
+// "ประเภท Lead", closing the gap Sprint 5 intentionally deferred.
+const leadTypeIdx = headerCells.indexOf("ประเภท Lead");
+const interestedSystemsIdx = headerCells.indexOf("ประเภทระบบ");
 console.log(
-  `REPORTS: export has no "ระบบ" placeholder column ${!headerCells.includes("ระบบ") ? "✓" : "✗ FAIL"}`
+  `REPORTS: export "ประเภทระบบ" column positioned right after "ประเภท Lead" ${
+    leadTypeIdx >= 0 && interestedSystemsIdx === leadTypeIdx + 1 ? "✓" : "✗ FAIL"
+  }`
 );
 
 // Sprint 5b Task 6: "วันที่ปิดการขาย" must sit between "วันที่" (createdAt)
@@ -442,6 +515,28 @@ console.log(
     createdAtIdx >= 0 && closedAtIdx === createdAtIdx + 1 && surveyedIdx === closedAtIdx + 1
       ? "✓"
       : "✗ FAIL"
+  }`
+);
+
+// The quote lead created by e2e-booking.mts has interestedSystems =
+// ["ON_GRID","HYBRID"] — verify the export row renders it as Thai labels,
+// comma-joined, not the raw enum values.
+const exportRows = (sheet?.getRows(2, (sheet.rowCount ?? 1) - 1) ?? []).map(
+  (row) => row.values as unknown[]
+);
+const quoteLeadRow = exportRows.find((row) =>
+  row.some((cell) => typeof cell === "string" && cell.includes("ทดสอบ ใบเสนอราคา"))
+);
+// row.values is a raw exceljs array where index 0 is always empty/unused —
+// headerCells was built by filtering out that undefined, so its indices are
+// shifted by -1 relative to raw row.values; +1 corrects for that.
+const quoteLeadSystemsCell =
+  quoteLeadRow && interestedSystemsIdx >= 0
+    ? quoteLeadRow[interestedSystemsIdx + 1]
+    : undefined;
+console.log(
+  `REPORTS: export "ประเภทระบบ" value for quote lead is "On-Grid, Hybrid" ${
+    quoteLeadSystemsCell === "On-Grid, Hybrid" ? "✓" : `✗ FAIL (got ${quoteLeadSystemsCell})`
   }`
 );
 

@@ -220,6 +220,23 @@ async function seedBookingCapacitySetting() {
   console.log("Booking capacity setting: ready");
 }
 
+// Placeholder values match the fake bank info previously hardcoded in
+// booking.slipBankInfo (src/messages/{th,en}.json) so the customer-facing
+// text doesn't change until an admin actually edits real payment info.
+async function seedPaymentSettings() {
+  const existing = await prisma.paymentSettings.findFirst();
+  if (existing) return;
+  await prisma.paymentSettings.create({
+    data: {
+      promptpayId: "0824731567",
+      bankName: "ธนาคารกสิกรไทย",
+      bankAccountNumber: "123-4-56789-0",
+      bankAccountName: "บจก. เคเคดี พร็อพเพอร์ตี้",
+    },
+  });
+  console.log("Payment settings: ready");
+}
+
 async function seedServices() {
   const services = [
     {
@@ -516,6 +533,7 @@ async function main() {
   await seedPromoChannels();
   await seedTestRoleAccounts();
   await seedBookingCapacitySetting();
+  await seedPaymentSettings();
   await seedServices();
   await seedPackages();
   await seedPortfolio();

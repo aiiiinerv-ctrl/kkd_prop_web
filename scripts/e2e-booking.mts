@@ -1,21 +1,68 @@
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { chromium } from "playwright";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { PrismaClient } from "../src/generated/prisma/client.js";
+
+const prisma = new PrismaClient({
+  adapter: new PrismaBetterSqlite3({ url: process.env.DATABASE_URL ?? "file:./prisma/dev.db" }),
+});
 
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 const page = await browser.newPage();
 
-// --- Route A: free quote ---
+// --- Route A: free quote (Sprint 6 fields: province dropdown, buildingType
+// OTHER + free text, avgMonthlyBill dropdown bucket value, interestedSystems
+// checkboxes, notes) ---
+const quotePhone = "0812345678";
 await page.goto("http://localhost:3000/th/booking?tab=quote");
 await page.fill('input[name="name"]', "ทดสอบ ใบเสนอราคา");
-await page.fill('input[name="phone"]', "0812345678");
-await page.fill('input[name="province"]', "สมุทรปราการ");
-await page.selectOption('select[name="buildingType"]', "RESIDENTIAL");
-await page.fill('input[name="avgMonthlyBill"]', "2500");
+await page.fill('input[name="phone"]', quotePhone);
+await page.selectOption('select[name="province"]', "สมุทรปราการ");
+await page.selectOption('select[name="buildingType"]', "OTHER");
+await page.fill('input[name="buildingTypeOtherText"]', "โกดังเก็บของ");
+await page.fill('textarea[name="notes"]', "ทดสอบหมายเหตุจากฟอร์มสาธารณะ");
+await page.selectOption('select[name="avgMonthlyBill"]', "7500"); // 5,000-10,000 bucket
+await page.check('input[name="interestedSystems"][value="ON_GRID"]');
+await page.check('input[name="interestedSystems"][value="HYBRID"]');
 await page.click('button[type="submit"]');
 await page.waitForSelector("text=ส่งข้อมูลสำเร็จ", { timeout: 15000 });
 console.log("QUOTE: success screen shown ✓");
+
+const quoteLead = await prisma.lead.findFirst({
+  where: { phone: quotePhone },
+  orderBy: { createdAt: "desc" },
+});
+console.log(
+  `QUOTE: province saved ✓ ${quoteLead?.province === "สมุทรปราการ" ? "" : "✗ FAIL"}`.trim()
+);
+console.log(
+  `QUOTE: buildingType=OTHER + buildingTypeOtherText saved ${
+    quoteLead?.buildingType === "OTHER" && quoteLead.buildingTypeOtherText === "โกดังเก็บของ"
+      ? "✓"
+      : "✗ FAIL"
+  }`
+);
+console.log(
+  `QUOTE: notes saved ${quoteLead?.notes === "ทดสอบหมายเหตุจากฟอร์มสาธารณะ" ? "✓" : "✗ FAIL"}`
+);
+console.log(
+  `QUOTE: avgMonthlyBill bucket value saved ${quoteLead?.avgMonthlyBill === 7500 ? "✓" : "✗ FAIL"}`
+);
+const interestedSystems = Array.isArray(quoteLead?.interestedSystems)
+  ? (quoteLead!.interestedSystems as string[])
+  : null;
+console.log(
+  `QUOTE: interestedSystems saved as ["ON_GRID","HYBRID"] ${
+    interestedSystems &&
+    interestedSystems.length === 2 &&
+    interestedSystems.includes("ON_GRID") &&
+    interestedSystems.includes("HYBRID")
+      ? "✓"
+      : "✗ FAIL"
+  }`
+);
 
 // --- Route B: survey with slip upload ---
 // 1x1 red pixel PNG
@@ -35,11 +82,13 @@ const daysOut = 2 + (Date.now() % 300);
 const surveyDate = new Date(Date.now() + daysOut * 86400000)
   .toISOString()
   .split("T")[0];
+const surveyPhone = "0898765432";
 await page.goto("http://localhost:3000/th/booking?tab=survey");
 await page.fill('input[name="name"]', "ทดสอบ นัดสำรวจ");
-await page.fill('input[name="phone"]', "0898765432");
-await page.fill('input[name="province"]', "กรุงเทพมหานคร");
+await page.fill('input[name="phone"]', surveyPhone);
+await page.selectOption('select[name="province"]', "กรุงเทพมหานคร");
 await page.selectOption('select[name="buildingType"]', "COMMERCIAL");
+await page.fill('textarea[name="notes"]', "หมายเหตุนัดสำรวจทดสอบ");
 await page.fill('textarea[name="address"]', "123/45 หมู่บ้านทดสอบ ถนนสุขุมวิท แขวงบางนา");
 await page.fill('input[name="preferredDate"]', surveyDate);
 await page.selectOption('select[name="timeSlot"]', "MORNING");
@@ -48,4 +97,22 @@ await page.click('button[type="submit"]');
 await page.waitForSelector("text=ส่งการนัดเรียบร้อยแล้ว", { timeout: 15000 });
 console.log("SURVEY: success screen shown ✓");
 
+const surveyLead = await prisma.lead.findFirst({
+  where: { phone: surveyPhone },
+  orderBy: { createdAt: "desc" },
+});
+console.log(
+  `SURVEY: province + notes saved ${
+    surveyLead?.province === "กรุงเทพมหานคร" && surveyLead.notes === "หมายเหตุนัดสำรวจทดสอบ"
+      ? "✓"
+      : "✗ FAIL"
+  }`
+);
+console.log(
+  `SURVEY: interestedSystems not set (quote-form-only field) ${
+    surveyLead?.interestedSystems == null ? "✓" : "✗ FAIL"
+  }`
+);
+
 await browser.close();
+await prisma.$disconnect();

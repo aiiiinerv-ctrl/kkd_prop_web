@@ -1,7 +1,9 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getPaymentSettings } from "@/actions/payment-settings";
 import { SectionHeading } from "@/components/site/section-heading";
 import { prisma } from "@/lib/db";
 import { pickLocale } from "@/lib/i18n-content";
+import { generatePromptPayQrDataUrl } from "@/lib/promptpay";
 import { BookingForms } from "./booking-forms";
 import { pageMetadata } from "@/lib/seo";
 
@@ -27,10 +29,17 @@ export default async function BookingPage({
   setRequestLocale(locale);
   const t = await getTranslations("booking");
 
-  const channels = await prisma.promoChannel.findMany({
-    where: { isActive: true },
-    orderBy: { sortOrder: "asc" },
-  });
+  const [channels, paymentSettings] = await Promise.all([
+    prisma.promoChannel.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: "asc" },
+    }),
+    getPaymentSettings(),
+  ]);
+
+  const promptpayQrDataUrl = paymentSettings?.promptpayId
+    ? await generatePromptPayQrDataUrl(paymentSettings.promptpayId)
+    : null;
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6">
@@ -45,6 +54,12 @@ export default async function BookingPage({
           id: c.id,
           name: pickLocale(c, "name", locale),
         }))}
+        bankInfo={{
+          bankName: paymentSettings?.bankName ?? "",
+          bankAccountNumber: paymentSettings?.bankAccountNumber ?? "",
+          bankAccountName: paymentSettings?.bankAccountName ?? "",
+        }}
+        promptpayQrDataUrl={promptpayQrDataUrl}
       />
     </main>
   );

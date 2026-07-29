@@ -143,6 +143,13 @@ async function main() {
     await page.goto(`${BASE}/admin/reports`);
     const reportsBlocked = page.url().endsWith("/admin");
     console.log(`SALES: /admin/reports blocked (redirected to /admin) ${reportsBlocked ? "✓" : "✗ FAIL"}`);
+
+    // Sprint 6 Task 6/11: /admin/settings (payment settings) is ADMIN-only.
+    await page.goto(`${BASE}/admin/settings`);
+    const salesSettingsBlocked = page.url().endsWith("/admin");
+    console.log(
+      `SALES: /admin/settings blocked (redirected to /admin) ${salesSettingsBlocked ? "✓" : "✗ FAIL"}`
+    );
     const salesSummaryRes = await page.request.get(`${BASE}/api/admin/reports/summary`);
     console.log(
       `SALES: /api/admin/reports/summary rejected (403) ${salesSummaryRes.status() === 403 ? "✓" : "✗ FAIL"}`
@@ -193,6 +200,12 @@ async function main() {
     await page.goto(`${BASE}/admin/users`);
     const usersBlocked = page.url().endsWith("/admin");
     console.log(`FINANCE: /admin/users blocked (redirected to /admin) ${usersBlocked ? "✓" : "✗ FAIL"}`);
+
+    // Sprint 6 Task 6/11: /admin/settings (booking capacity + payment
+    // settings) is ADMIN-only — FINANCE must never see or edit it.
+    await page.goto(`${BASE}/admin/settings`);
+    const settingsBlocked = page.url().endsWith("/admin");
+    console.log(`FINANCE: /admin/settings blocked (redirected to /admin) ${settingsBlocked ? "✓" : "✗ FAIL"}`);
 
     // Sprint 5: FINANCE is one of the two roles allowed on Reports.
     await page.goto(`${BASE}/admin/reports`);
@@ -258,6 +271,12 @@ async function main() {
     console.log(
       `CE: /api/admin/reports/summary rejected (403) ${ceSummaryRes.status() === 403 ? "✓" : "✗ FAIL"}`
     );
+
+    // Sprint 6 Task 6/11: /admin/settings is ADMIN-only — same redirect
+    // pattern as /admin/reports above.
+    await page.goto(`${BASE}/admin/settings`);
+    const ceSettingsBlocked = page.url().endsWith("/admin/leads");
+    console.log(`CE: /admin/settings blocked (redirected away) ${ceSettingsBlocked ? "✓" : "✗ FAIL"}`);
 
     await page.close();
   }

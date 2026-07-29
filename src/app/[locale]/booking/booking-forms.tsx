@@ -6,15 +6,35 @@ import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { submitQuote } from "@/actions/submit-quote";
 import { submitSurveyBooking } from "@/actions/submit-survey-booking";
+import { PROVINCES } from "@/lib/data/provinces";
 import { cn } from "@/lib/utils";
 
 type Channel = { id: string; name: string };
 type Tab = "quote" | "survey";
+type BankInfo = {
+  bankName: string;
+  bankAccountNumber: string;
+  bankAccountName: string;
+};
 
 const inputCls =
   "w-full rounded-lg border border-input bg-background px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/50";
 const labelCls = "mb-1.5 block text-sm font-semibold";
 const errorCls = "mt-1 text-xs text-destructive";
+
+const BILL_BUCKETS = [
+  { value: "1500", key: "billBucketUnder2k" },
+  { value: "3500", key: "billBucketRange2to5k" },
+  { value: "7500", key: "billBucketRange5to10k" },
+  { value: "15000", key: "billBucketRange10to20k" },
+  { value: "25000", key: "billBucketOver20k" },
+] as const;
+
+const INTERESTED_SYSTEMS = [
+  { value: "ON_GRID", key: "systemOnGrid" },
+  { value: "HYBRID", key: "systemHybrid" },
+  { value: "OFF_GRID", key: "systemOffGrid" },
+] as const;
 
 type QuoteFields = {
   name: string;
@@ -22,7 +42,10 @@ type QuoteFields = {
   lineId: string;
   province: string;
   buildingType: string;
+  buildingTypeOtherText: string;
+  notes: string;
   avgMonthlyBill: string;
+  interestedSystems: string[];
   sourceChannelId: string;
 };
 
@@ -32,6 +55,8 @@ type SurveyFields = {
   lineId: string;
   province: string;
   buildingType: string;
+  buildingTypeOtherText: string;
+  notes: string;
   address: string;
   preferredDate: string;
   timeSlot: string;
@@ -42,10 +67,14 @@ export function BookingForms({
   initialTab,
   initialBill,
   channels,
+  bankInfo,
+  promptpayQrDataUrl,
 }: {
   initialTab: Tab;
   initialBill: string;
   channels: Channel[];
+  bankInfo: BankInfo;
+  promptpayQrDataUrl: string | null;
 }) {
   const t = useTranslations("booking");
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -106,7 +135,12 @@ export function BookingForms({
           onSuccess={() => setSuccess("quote")}
         />
       ) : (
-        <SurveyForm channels={channels} onSuccess={() => setSuccess("survey")} />
+        <SurveyForm
+          channels={channels}
+          onSuccess={() => setSuccess("survey")}
+          bankInfo={bankInfo}
+          promptpayQrDataUrl={promptpayQrDataUrl}
+        />
       )}
     </div>
   );
@@ -115,14 +149,20 @@ export function BookingForms({
 function CommonFields({
   register,
   errors,
+  watch,
   t,
 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   register: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   errors: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  watch: any;
   t: ReturnType<typeof useTranslations<"booking">>;
 }) {
+  const locale = useLocale();
+  const buildingType = watch("buildingType");
+
   return (
     <>
       <div>
@@ -163,11 +203,20 @@ function CommonFields({
         <label className={labelCls}>
           {t("fieldProvince")} <span className="text-destructive">*</span>
         </label>
-        <input
+        <select
           className={inputCls}
-          placeholder={t("fieldProvincePlaceholder")}
-          {...register("province", { required: true, minLength: 2 })}
-        />
+          {...register("province", { required: true })}
+          defaultValue=""
+        >
+          <option value="" disabled>
+            {t("fieldProvincePlaceholder")}
+          </option>
+          {PROVINCES.map((p) => (
+            <option key={p.value} value={p.value}>
+              {locale === "en" ? p.en : p.th}
+            </option>
+          ))}
+        </select>
         {errors.province && <p className={errorCls}>{t("required")}</p>}
       </div>
       <div>
@@ -185,8 +234,28 @@ function CommonFields({
           <option value="RESIDENTIAL">{t("buildingResidential")}</option>
           <option value="COMMERCIAL">{t("buildingCommercial")}</option>
           <option value="INDUSTRIAL">{t("buildingIndustrial")}</option>
+          <option value="OTHER">{t("buildingOther")}</option>
         </select>
         {errors.buildingType && <p className={errorCls}>{t("required")}</p>}
+      </div>
+      {buildingType === "OTHER" && (
+        <div>
+          <input
+            className={inputCls}
+            placeholder={t("fieldBuildingTypeOtherPlaceholder")}
+            {...register("buildingTypeOtherText", { required: true })}
+          />
+          {errors.buildingTypeOtherText && <p className={errorCls}>{t("required")}</p>}
+        </div>
+      )}
+      <div>
+        <label className={labelCls}>{t("fieldNotes")}</label>
+        <textarea
+          className={inputCls}
+          rows={3}
+          placeholder={t("fieldNotesPlaceholder")}
+          {...register("notes")}
+        />
       </div>
     </>
   );
@@ -234,16 +303,23 @@ function QuoteForm({
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<QuoteFields>({
-    defaultValues: { avgMonthlyBill: initialBill },
+    defaultValues: { avgMonthlyBill: initialBill, interestedSystems: [] },
   });
 
   const onSubmit = (values: QuoteFields) => {
     setServerError(false);
     startTransition(async () => {
       const formData = new FormData();
-      Object.entries(values).forEach(([k, v]) => formData.set(k, v));
+      Object.entries(values).forEach(([k, v]) => {
+        if (k === "interestedSystems") {
+          (v as string[]).forEach((system) => formData.append("interestedSystems", system));
+        } else {
+          formData.set(k, v as string);
+        }
+      });
       formData.set("locale", locale);
       const result = await submitQuote(formData);
       if (result.ok) onSuccess();
@@ -253,16 +329,33 @@ function QuoteForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-      <CommonFields register={register} errors={errors} t={t} />
+      <CommonFields register={register} errors={errors} watch={watch} t={t} />
       <div>
         <label className={labelCls}>{t("fieldBill")}</label>
-        <input
-          className={inputCls}
-          type="number"
-          min={0}
-          placeholder={t("fieldBillPlaceholder")}
-          {...register("avgMonthlyBill")}
-        />
+        <select className={inputCls} {...register("avgMonthlyBill")} defaultValue={initialBill}>
+          <option value="">{t("fieldBillPlaceholder")}</option>
+          {BILL_BUCKETS.map((b) => (
+            <option key={b.value} value={b.value}>
+              {t(b.key)}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className={labelCls}>{t("fieldInterestedSystems")}</label>
+        <div className="flex flex-col gap-2">
+          {INTERESTED_SYSTEMS.map((s) => (
+            <label key={s.value} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                value={s.value}
+                {...register("interestedSystems")}
+                className="size-4 rounded border-input"
+              />
+              {t(s.key)}
+            </label>
+          ))}
+        </div>
       </div>
       <SourceChannelField register={register} channels={channels} t={t} />
       {serverError && <p className={errorCls}>{t("errorGeneric")}</p>}
@@ -286,9 +379,13 @@ function QuoteForm({
 function SurveyForm({
   channels,
   onSuccess,
+  bankInfo,
+  promptpayQrDataUrl,
 }: {
   channels: Channel[];
   onSuccess: () => void;
+  bankInfo: BankInfo;
+  promptpayQrDataUrl: string | null;
 }) {
   const t = useTranslations("booking");
   const locale = useLocale();
@@ -373,7 +470,7 @@ function SurveyForm({
         </ul>
       </div>
 
-      <CommonFields register={register} errors={errors} t={t} />
+      <CommonFields register={register} errors={errors} watch={watch} t={t} />
 
       <div>
         <label className={labelCls}>
@@ -430,7 +527,28 @@ function SurveyForm({
         <label className={labelCls}>
           {t("fieldSlip")} <span className="text-destructive">*</span>
         </label>
-        <p className="mb-2 text-xs font-semibold text-primary">{t("slipBankInfo")}</p>
+        <div className="mb-3 flex flex-col gap-3 rounded-lg border border-border/70 bg-muted/40 p-3 text-xs sm:flex-row sm:items-center">
+          <div className="flex-1 space-y-1">
+            {(bankInfo.bankName || bankInfo.bankAccountNumber || bankInfo.bankAccountName) && (
+              <p className="font-semibold text-primary">
+                {t("bankTransferLabel")}: {bankInfo.bankName}{" "}
+                {bankInfo.bankAccountNumber && `เลขที่ ${bankInfo.bankAccountNumber}`}{" "}
+                {bankInfo.bankAccountName && `ชื่อบัญชี ${bankInfo.bankAccountName}`}
+              </p>
+            )}
+          </div>
+          {promptpayQrDataUrl && (
+            <div className="flex flex-col items-center gap-1">
+              <span className="font-semibold text-primary">{t("promptpayLabel")}</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={promptpayQrDataUrl}
+                alt={t("promptpayLabel")}
+                className="size-28 rounded-lg border border-border/70 bg-white p-1"
+              />
+            </div>
+          )}
+        </div>
         <input
           className={inputCls}
           type="file"
