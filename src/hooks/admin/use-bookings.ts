@@ -3,6 +3,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 export type BookingFilters = {
   page: number;
   status: string;
+  paymentStatus: string;
   search: string;
 };
 
@@ -41,6 +42,7 @@ export function useBookings(filters: BookingFilters) {
       const params = new URLSearchParams();
       params.set("page", String(filters.page));
       if (filters.status) params.set("status", filters.status);
+      if (filters.paymentStatus) params.set("paymentStatus", filters.paymentStatus);
       if (filters.search) params.set("search", filters.search);
       const res = await fetch(`/api/admin/bookings?${params}`);
       if (!res.ok) throw new Error("Failed to load bookings");

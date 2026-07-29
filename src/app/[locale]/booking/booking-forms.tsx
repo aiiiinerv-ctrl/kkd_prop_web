@@ -532,8 +532,10 @@ function SurveyForm({
             {(bankInfo.bankName || bankInfo.bankAccountNumber || bankInfo.bankAccountName) && (
               <p className="font-semibold text-primary">
                 {t("bankTransferLabel")}: {bankInfo.bankName}{" "}
-                {bankInfo.bankAccountNumber && `เลขที่ ${bankInfo.bankAccountNumber}`}{" "}
-                {bankInfo.bankAccountName && `ชื่อบัญชี ${bankInfo.bankAccountName}`}
+                {bankInfo.bankAccountNumber &&
+                  `${t("bankAccountNoLabel")} ${bankInfo.bankAccountNumber}`}{" "}
+                {bankInfo.bankAccountName &&
+                  `${t("bankAccountNameLabel")} ${bankInfo.bankAccountName}`}
               </p>
             )}
           </div>
@@ -544,8 +546,15 @@ function SurveyForm({
               <img
                 src={promptpayQrDataUrl}
                 alt={t("promptpayLabel")}
-                className="size-28 rounded-lg border border-border/70 bg-white p-1"
+                className="size-40 rounded-lg border border-border/70 bg-white p-1 sm:size-48"
               />
+              <a
+                href={promptpayQrDataUrl}
+                download="promptpay-qr.png"
+                className="text-xs font-medium text-primary underline underline-offset-2"
+              >
+                {t("downloadQrLabel")}
+              </a>
             </div>
           )}
         </div>

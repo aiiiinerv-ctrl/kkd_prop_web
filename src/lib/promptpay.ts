@@ -7,8 +7,9 @@ import QRCode from "qrcode";
  * tax ID, or e-Wallet ID per the promptpay-qr package.
  */
 export async function generatePromptPayQrDataUrl(
-  promptpayId: string
+  promptpayId: string,
+  amount?: number
 ): Promise<string> {
-  const payload = generatePayload(promptpayId, {});
+  const payload = generatePayload(promptpayId, amount ? { amount } : {});
   return QRCode.toDataURL(payload, { margin: 1, width: 240 });
 }

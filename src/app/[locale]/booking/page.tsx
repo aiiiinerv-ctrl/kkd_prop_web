@@ -37,8 +37,10 @@ export default async function BookingPage({
     getPaymentSettings(),
   ]);
 
+  // Survey booking fee is a fixed ฿199 (same constant used in the UI copy
+  // and lib/notifications/format.ts) — embed it so scanning apps prefill it.
   const promptpayQrDataUrl = paymentSettings?.promptpayId
-    ? await generatePromptPayQrDataUrl(paymentSettings.promptpayId)
+    ? await generatePromptPayQrDataUrl(paymentSettings.promptpayId, 199)
     : null;
 
   return (

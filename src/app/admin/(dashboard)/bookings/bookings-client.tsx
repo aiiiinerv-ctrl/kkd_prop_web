@@ -16,6 +16,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useBookings, type BookingFilters } from "@/hooks/admin/use-bookings";
+import {
+  PAYMENT_STATUS_LABELS,
+  PAYMENT_STATUS_META,
+} from "@/lib/payment-status-labels";
 
 export const BOOKING_STATUS_LABELS: Record<string, string> = {
   PENDING_CONFIRMATION: "รอยืนยัน",
@@ -39,6 +43,7 @@ export function BookingsClient() {
   const [filters, setFilters] = useState<BookingFilters>({
     page: 1,
     status: "",
+    paymentStatus: "",
     search: "",
   });
   const [searchInput, setSearchInput] = useState("");
@@ -79,6 +84,18 @@ export function BookingsClient() {
             </option>
           ))}
         </select>
+        <select
+          className={selectCls}
+          value={filters.paymentStatus}
+          onChange={(e) => set({ paymentStatus: e.target.value })}
+        >
+          <option value="">ทุกสถานะการชำระเงิน</option>
+          {Object.entries(PAYMENT_STATUS_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="rounded-xl border border-border/70 bg-card">
@@ -106,13 +123,14 @@ export function BookingsClient() {
                   <TableHead>วิศวกร</TableHead>
                   <TableHead>เซลส์</TableHead>
                   <TableHead>ของขวัญ</TableHead>
+                  <TableHead>สถานะการชำระเงิน</TableHead>
                   <TableHead>สถานะ</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {data.bookings.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={10} className="py-10 text-center text-muted-foreground">
+                    <TableCell colSpan={11} className="py-10 text-center text-muted-foreground">
                       ไม่พบข้อมูล
                     </TableCell>
                   </TableRow>
@@ -139,6 +157,13 @@ export function BookingsClient() {
                     <TableCell>
                       <Badge variant={booking.giftSent ? "secondary" : "outline"}>
                         {booking.giftSent ? "ส่งแล้ว" : "ยังไม่ส่ง"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={PAYMENT_STATUS_META[booking.paymentStatus]?.variant}
+                      >
+                        {PAYMENT_STATUS_LABELS[booking.paymentStatus]}
                       </Badge>
                     </TableCell>
                     <TableCell>

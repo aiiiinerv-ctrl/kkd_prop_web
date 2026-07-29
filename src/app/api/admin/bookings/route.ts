@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { auth, getBookingScopeFilter } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
-import type { BookingStatus } from "@/generated/prisma/enums";
+import type { BookingStatus, PaymentStatus } from "@/generated/prisma/enums";
 
 const PAGE_SIZE = 20;
 
@@ -15,6 +15,8 @@ const BOOKING_STATUSES: BookingStatus[] = [
   "SIGNED",
   "CANCELLED",
 ];
+
+const PAYMENT_STATUSES: PaymentStatus[] = ["PENDING_REVIEW", "VERIFIED", "REJECTED"];
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -31,6 +33,7 @@ export async function GET(req: NextRequest) {
   const params = req.nextUrl.searchParams;
   const page = Math.max(1, Number(params.get("page")) || 1);
   const status = params.get("status");
+  const paymentStatus = params.get("paymentStatus");
   const search = params.get("search")?.trim();
 
   // Scope filter is the single source of truth for role-based visibility —
@@ -42,6 +45,9 @@ export async function GET(req: NextRequest) {
       {
         ...(BOOKING_STATUSES.includes(status as BookingStatus)
           ? { status: status as BookingStatus }
+          : {}),
+        ...(PAYMENT_STATUSES.includes(paymentStatus as PaymentStatus)
+          ? { paymentStatus: paymentStatus as PaymentStatus }
           : {}),
         ...(search
           ? {

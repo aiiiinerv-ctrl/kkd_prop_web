@@ -22,6 +22,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { PAYMENT_STATUS_META } from "@/lib/payment-status-labels";
 
 const STATUS_LABELS: Record<string, string> = {
   NEW: "ใหม่ รอมอบหมาย",
@@ -124,7 +125,7 @@ export function LeadDetailClient({
     });
 
   const payment = lead.booking
-    ? PAYMENT_LABELS[lead.booking.paymentStatus]
+    ? PAYMENT_STATUS_META[lead.booking.paymentStatus]
     : null;
 
   return (

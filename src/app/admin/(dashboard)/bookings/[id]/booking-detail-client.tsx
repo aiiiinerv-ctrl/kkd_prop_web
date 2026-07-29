@@ -23,19 +23,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { PAYMENT_STATUS_META } from "@/lib/payment-status-labels";
 
 const SLOT_LABELS: Record<string, string> = {
   MORNING: "เช้า 9:00 - 12:00",
   AFTERNOON: "บ่าย 13:00 - 17:00",
-};
-
-const PAYMENT_LABELS: Record<
-  string,
-  { label: string; variant: "default" | "secondary" | "destructive" }
-> = {
-  PENDING_REVIEW: { label: "รอตรวจสอบ", variant: "default" },
-  VERIFIED: { label: "ตรวจสอบแล้ว", variant: "secondary" },
-  REJECTED: { label: "ปฏิเสธ", variant: "destructive" },
 };
 
 const selectCls =
@@ -82,7 +74,7 @@ export function BookingDetailClient({
       }
     });
 
-  const payment = PAYMENT_LABELS[booking.paymentStatus];
+  const payment = PAYMENT_STATUS_META[booking.paymentStatus];
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
