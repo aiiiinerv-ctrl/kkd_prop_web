@@ -44,6 +44,9 @@ prisma/*.db-journal
 # uploaded files
 /storage/
 
+# local backup snapshots (scripts/backup-db.mts)
+/backups/
+
 # generated screenshots (verification output, not source)
 /screenshots/
 
