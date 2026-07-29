@@ -289,15 +289,68 @@ Task breakdown ฉบับเต็มที่ `docs/plans/sprint-5b-reports-g
 
 ## Sprint 8 — สคริปต์ Backup
 
+**สถานะ:** เสร็จสมบูรณ์ (2026-07-29)
+
 - `scripts/backup-db.mts` (ใหม่): copy SQLite file + storage/private ไปยัง timestamped snapshot, พร้อม instruction สำหรับผูก cron ตอน deploy จริง
 
+### Sprint 8 — ผลลัพธ์ (2026-07-29)
+
+- `scripts/backup-db.mts` (ใหม่) — resolve `DATABASE_URL`/`STORAGE_ROOT` จาก env (fallback ตาม `.env.example`), copy ไฟล์ SQLite + `${STORAGE_ROOT}/private` ทั้งโฟลเดอร์ (ข้าม `public` เพราะ reproducible จาก seed) ไปยัง `backups/<ISO-timestamp>/`, handle error กรณี SQLite ไม่มี (hard fail) และ `storage/private` ไม่มี (warn แล้วทำ DB-only backup ต่อ), retention แบบ opt-in ผ่าน `BACKUP_RETENTION_DAYS` (ไม่ตั้งค่า = ไม่ลบอะไรอัตโนมัติ), comment หัวไฟล์อธิบายวิธีผูก cron จริงบน production (`0 3 * * * cd /path/to/app && npx tsx scripts/backup-db.mts >> /var/log/kkd-backup.log 2>&1`)
+- `.gitignore` — เพิ่ม `/backups/`
+- ทดสอบรันจริงกับ `prisma/dev.db` + `storage/private` จริง — snapshot สร้างสำเร็จ ครบทั้ง DB (644.0 KB) และ private storage (23 slip folders ตรงกับต้นฉบับเป๊ะ)
+- **ไม่ผูก cron จริง** ตามที่ยืนยันไว้ในแผนเดิม — เป็น manual step ของผู้ใช้บน production host จริง (แยกจาก session นี้)
+
+**Verification (ผ่านทั้งหมด):** `npx tsc --noEmit` clean, `npm run build` ผ่าน — ไม่ต้องรัน e2e scripts เพราะเป็นสคริปต์ ops แบบ standalone ไม่แตะ `src/`/schema/runtime app
+
 ## Sprint 9 — Verification รอบสุดท้าย
+
+**สถานะ:** เสร็จสมบูรณ์ (2026-07-29)
 
 - **เช็คก่อนอื่น**: เทียบ `BookingStatus` enum (ปัจจุบัน 7 ค่าในโค้ด) กับ `docs/stuffs/KKD_เอกสารความต้องการเว็บไซต์_V1.2.pdf` ว่า spec ต้องการ 8 ค่าจริงหรือไม่ และค่าที่ขาดคืออะไร (ดู note ที่ท้าย Sprint 3 ด้านบน) — ตัดสินใจว่าต้อง migrate schema เพิ่มหรือแก้เอกสารแผนให้ตรงของจริง
 - `i18n-parity-checker` — TH/EN parity หลังเพิ่มฟิลด์/หน้าใหม่จำนวนมาก
 - `audit-compliance-reviewer` — ตรวจ role scoping ใหม่ทั้งหมด (จุดเสี่ยงสูงสุดของ sprint นี้คือ data leak ข้าม role)
 - E2E: ขยาย `scripts/e2e-admin-crud.mts` ให้ครอบคลุม booking module ใหม่, เพิ่ม script ทดสอบ channel-tracking (`?ref=` → cookie → lead attribution)
 - `design-business-reviewer` — real render ของหน้าใหม่ (reports, bookings, PromptPay QR)
+
+### Sprint 9 — ผลลัพธ์ (2026-07-29)
+
+**1. BookingStatus enum — เช็คแล้ว, ไม่ต้อง migrate schema:** เปิด `docs/stuffs/KKD_เอกสารความต้องการเว็บไซต์_V1.2.pdf` ด้วย `pdftotext -layout` (หัวข้อ "การเปลี่ยนสถานะการนัด") พบว่า spec ระบุ **7 สถานะพอดี** ตรงกับ enum ปัจจุบันในโค้ด (`PENDING_CONFIRMATION, CONFIRMED, PREPARED, SURVEYED, DESIGNED, SIGNED, CANCELLED`) 1:1 — **สรุป: ตัวเลข "8 ค่า" ในแผน Sprint 0/note ท้าย Sprint 3 เป็นการพิมพ์ผิด/สับสนกับ `LeadStatus`** (ซึ่งมี 8 ค่าจริง) ไม่ใช่บั๊ก ไม่มีการแก้ schema ในรอบนี้ — ถือว่าปิด open question นี้แล้ว
+
+**2. E2E coverage ขยายเพิ่ม:**
+- `scripts/e2e-admin-crud.mts` — เพิ่มเช็ค booking status-filter dropdown + รูปแบบ `bookingNumber` (`KKD-YYYYMMDD-NNN`)
+- `scripts/e2e-channel-tracking.mts` (ใหม่) — ทดสอบ `?ref=` → cookie → lead attribution ครบ 6 เคส (executive-code attribution, channel-only attribution, no-ref fallback, unknown-ref handling, 30-day cookie stickiness)
+
+**3. Reviewer chain:**
+- `i18n-parity-checker` — **PASS** (357 key เท่ากันทั้งสอง locale, DB paired columns ครบ, ไม่มี orphaned key reference)
+- `audit-compliance-reviewer` — **PASS, ไม่พบ violation** ตรวจครบ 13 action files: ทุก mutation เรียก `requireAdmin()`/`requireRole()` ก่อนเสมอ, `withAudit()` wrap ครบ, ไม่มี secret รั่วเข้า audit snapshot, storage discipline ถูกต้อง, role-scoping (SALES/FINANCE/CHANNEL_EXECUTIVE) fail-closed ทุกจุด (จุดเดียวที่เจอ: comment ค้างที่ `src/app/files/[...key]/route.ts:6` ไม่ตรงกับโค้ดจริงแล้ว — cosmetic ไม่กระทบความปลอดภัย)
+- `design-business-reviewer` (รอบแรก, source-only เพราะ screenshot เดิม stale ก่อน Sprint 3/6) — พบ **บั๊ก severity สูง 5 จุด**: PromptPay QR ไม่ฝังจำนวนเงิน 199 บาท, ข้อความไทย hardcode บนหน้า `/en/booking`, QR เล็กเกินไป (112px), `/admin/bookings` ไม่มีคอลัมน์/filter สถานะการชำระเงิน, ตาราง reports คอลัมน์ "อัตราปิดการขาย" หลุดจอที่ 1440px — ผู้ใช้ยืนยันให้แก้ทั้งหมดก่อนปิด sprint
+
+**4. แก้บั๊ก 5 จุด (nextjs-dev):**
+- `src/lib/promptpay.ts` — `generatePromptPayQrDataUrl()` รับ `amount` parameter, `src/app/[locale]/booking/page.tsx` เรียกด้วย `amount: 199`
+- `src/app/[locale]/booking/booking-forms.tsx` + `src/messages/{th,en}.json` — เพิ่ม key `bankAccountNoLabel`/`bankAccountNameLabel`/`downloadQrLabel` แทน string literal ไทย hardcode
+- QR ขยายจาก `size-28` (112px) → `size-40 sm:size-48` (192px ที่ desktop) พร้อมเพิ่มปุ่มดาวน์โหลด QR
+- `src/app/admin/(dashboard)/bookings/bookings-client.tsx` + `use-bookings.ts` + `src/app/api/admin/bookings/route.ts` — เพิ่มคอลัมน์ + filter dropdown "สถานะการชำระเงิน"
+- `src/app/admin/(dashboard)/reports/reports-client.tsx` — การ์ด breakdown เปลี่ยนเป็นเต็มความกว้าง แก้ปัญหา scroll แนวนอนที่ 1440px
+
+**5. ขยาย screenshot script + ถ่ายภาพใหม่:** `scripts/screenshot-pages.mts` เพิ่ม login flow (มิเรอร์ `e2e-admin.mts`) + shot หน้า `/admin/reports`, `/admin/bookings` (list+detail), `/admin/settings`, `/th/booking?tab=survey`, `/en/booking?tab=survey` — ถ่ายที่ 1440×900 พร้อมข้อมูลจริงจาก DB (ไม่ใช่ empty state)
+
+**6. Real-render re-review (design-business-reviewer รอบ 2):** **PASS ทั้ง 5/5 finding เดิม** ยืนยันจาก screenshot จริง — พบ regression ใหม่เล็กน้อย 2 จุด (medium): badge สถานะชำระเงินแยก "รอตรวจสลิป"/"สลิปไม่ผ่าน" ไม่ออกด้วยสี (ทั้งคู่เป็น `destructive`), label สถานะชำระเงินไม่ตรงกัน 3 จุด (list/booking-detail/lead-detail คนละคำ) + 1 จุด (low): การ์ด "สถานะนัดสำรวจ" ในหน้า reports ค้างครึ่งจอ
+
+**7. แก้ regression 3 จุด (nextjs-dev):**
+- `src/lib/payment-status-labels.ts` (ใหม่) — รวม label + badge variant เป็นจุดเดียว (`PENDING_REVIEW` → outline / `VERIFIED` → default / `REJECTED` → destructive) ใช้ร่วมกันทั้ง `bookings-client.tsx`, `booking-detail-client.tsx`, `lead-detail-client.tsx` แทนที่ label map แยก 3 ชุดเดิม
+- `reports-client.tsx` — grid เปลี่ยนเป็น `grid-cols-1` ทุกการ์ดเต็มความกว้างเสมอ ลบ `lg:col-span-2` ที่ไม่จำเป็นออก
+
+**Deviation จากแผนเดิมที่ต้อง flag:** ไม่มี — ทุกอย่างอยู่ในสโคปที่ผู้ใช้ยืนยันแล้วระหว่างทาง (แก้บั๊ก severity สูง 5 จุด + regression ที่เกิดจากการแก้เอง)
+
+**Known low-priority gap ที่ยังไม่แก้ (นอกสโคปรอบนี้ตามที่ผู้ใช้ตัดสินใจ):** badge สถานะ booking (7 ค่า, 6 ใน 7 สีเดียวกัน), container style drift ระหว่าง reports กับหน้า admin อื่น, ปุ่ม "กำหนดเอง" ใน reports เป็น dead control เมื่อ disabled, ปุ่ม "Export Excel" เป็นภาษาอังกฤษกลางหน้าไทยล้วน, คอลัมน์ตาราง breakdown ไม่เท่ากันระหว่างช่องทาง/ผู้ดำเนินการ/เซลส์, ประโยค EN ของข้อมูลบัญชีธนาคารไม่มีตัวคั่นระหว่าง field
+
+**Verification (ผ่านทั้งหมด, รวมทุกรอบแก้):**
+- `npx tsc --noEmit` — clean ทุกรอบ
+- `npm run build` — `✓ Compiled successfully` + `Finished TypeScript` ทุกรอบ, exit 0
+- i18n key-parity — PASS (357 key คงเดิมทั้งสอง locale หลังเพิ่ม key ใหม่)
+- `npx tsx scripts/e2e-booking.mts`, `e2e-channel-tracking.mts`, `e2e-admin.mts`, `e2e-admin-crud.mts` (52 เช็ค), `e2e-rbac-sprint2.mts` — ผ่านทั้งหมด ไม่มี regression
+- `audit-compliance-reviewer` — PASS (clean)
+- `design-business-reviewer` — PASS ทั้งรอบ source-review (นำไปสู่การแก้บั๊ก) และรอบ real-render re-review (ยืนยัน 5/5 fix ถูกต้อง + regression ที่ตามมาได้รับการแก้แล้ว)
 
 ## Verification (ทุก sprint)
 
