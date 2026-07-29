@@ -218,12 +218,29 @@ await page.waitForSelector("text=ฟิลด์", { timeout: 5000 });
 console.log("AUDIT: diff table expands ✓");
 
 // --- closedAt narrowing (Sprint 5b Task 4): set only on first entry into
-// SIGNED, untouched on further transitions to INSTALLING/COMPLETED. Reuse
-// the same leadId (currently CONTACTED) from the earlier lead-detail block.
-await page.goto(`http://localhost:3000/admin/leads/${leadId}`);
-await page.waitForSelector("text=ข้อมูลการนัดสำรวจ", { timeout: 10000 });
+// SIGNED, untouched on further transitions to INSTALLING/COMPLETED. This
+// permanently drives status forward to COMPLETED (closedAt is sticky by
+// design — see docs/plans/sprint-5b-reports-gap-tasks.md), so unlike the
+// CONTACTED toggle above, reusing the shared seed lead here would make the
+// "closedAt is null before SIGNED" assertion fail on every re-run after the
+// first. Create a disposable QUOTE lead instead, mirroring the CHANNELS
+// "create fresh with unique data" idempotency pattern above.
+const closedAtLead = await prisma.lead.create({
+  data: {
+    type: "QUOTE",
+    status: "CONTACTED",
+    name: `ทดสอบ closedAt ${Date.now().toString(36)}`,
+    phone: "0800000000",
+    province: "กรุงเทพมหานคร",
+    buildingType: "RESIDENTIAL",
+  },
+});
+const closedAtLeadId = closedAtLead.id;
 
-const leadBeforeSigned = await prisma.lead.findUniqueOrThrow({ where: { id: leadId } });
+await page.goto(`http://localhost:3000/admin/leads/${closedAtLeadId}`);
+await page.waitForSelector("text=ขอใบเสนอราคา", { timeout: 10000 });
+
+const leadBeforeSigned = await prisma.lead.findUniqueOrThrow({ where: { id: closedAtLeadId } });
 console.log(
   `LEAD DETAIL: closedAt is null before entering SIGNED ${
     leadBeforeSigned.closedAt === null ? "✓" : "✗ FAIL"
@@ -232,7 +249,7 @@ console.log(
 
 await page.selectOption("select >> nth=0", "SIGNED");
 await page.waitForSelector("text=อัปเดตสถานะแล้ว", { timeout: 10000 });
-const leadAfterSigned = await prisma.lead.findUniqueOrThrow({ where: { id: leadId } });
+const leadAfterSigned = await prisma.lead.findUniqueOrThrow({ where: { id: closedAtLeadId } });
 console.log(
   `LEAD DETAIL: closedAt set on first transition to SIGNED ${
     leadAfterSigned.closedAt !== null ? "✓" : "✗ FAIL"
@@ -242,7 +259,7 @@ const closedAtAfterSigned = leadAfterSigned.closedAt?.getTime() ?? null;
 
 await page.selectOption("select >> nth=0", "INSTALLING");
 await page.waitForSelector("text=อัปเดตสถานะแล้ว", { timeout: 10000 });
-const leadAfterInstalling = await prisma.lead.findUniqueOrThrow({ where: { id: leadId } });
+const leadAfterInstalling = await prisma.lead.findUniqueOrThrow({ where: { id: closedAtLeadId } });
 console.log(
   `LEAD DETAIL: closedAt unchanged on transition to INSTALLING ${
     leadAfterInstalling.closedAt?.getTime() === closedAtAfterSigned ? "✓" : "✗ FAIL"
@@ -251,7 +268,7 @@ console.log(
 
 await page.selectOption("select >> nth=0", "COMPLETED");
 await page.waitForSelector("text=อัปเดตสถานะแล้ว", { timeout: 10000 });
-const leadAfterCompleted = await prisma.lead.findUniqueOrThrow({ where: { id: leadId } });
+const leadAfterCompleted = await prisma.lead.findUniqueOrThrow({ where: { id: closedAtLeadId } });
 console.log(
   `LEAD DETAIL: closedAt unchanged on transition to COMPLETED ${
     leadAfterCompleted.closedAt?.getTime() === closedAtAfterSigned ? "✓" : "✗ FAIL"
