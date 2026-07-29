@@ -90,10 +90,10 @@ console.log("LEAD DETAIL: slip dialog renders image ✓");
 const verifyBtn = page.locator("text=ยืนยันการชำระเงิน");
 if (await verifyBtn.count()) {
   await verifyBtn.click();
-  await page.waitForSelector("text=ตรวจสอบแล้ว", { timeout: 10000 });
+  await page.waitForSelector("text=ตรวจสลิปแล้ว", { timeout: 10000 });
   console.log("LEAD DETAIL: payment verified ✓");
 } else {
-  await page.waitForSelector("text=ตรวจสอบแล้ว", { timeout: 5000 });
+  await page.waitForSelector("text=ตรวจสลิปแล้ว", { timeout: 5000 });
   console.log("LEAD DETAIL: payment already verified (skipped) ✓");
 }
 
@@ -196,9 +196,40 @@ await page.keyboard.press("Enter");
 await page.waitForSelector("text=ทดสอบ นัดสำรวจ", { timeout: 10000 });
 console.log("BOOKINGS: search filter works ✓");
 
+// Clear the search filter, then exercise the status filter dropdown
+// separately (Sprint 9 gap: previously only the search filter was covered).
+await page.fill('input[placeholder="ค้นหาเลขที่จอง/ชื่อ/เบอร์..."]', "");
+await page.keyboard.press("Enter");
+await page.waitForSelector("text=ทดสอบ ใบเสนอราคา", { timeout: 10000 }).catch(() => {});
+
+const bookingsBeforeFilter = await prisma.surveyBooking.count({
+  where: { status: "PENDING_CONFIRMATION" },
+});
+await page.selectOption("select >> nth=0", "PENDING_CONFIRMATION");
+await page.waitForTimeout(500); // debounced query settle
+const filteredRowCount = await page.locator("table tbody tr").count();
+console.log(
+  `BOOKINGS: status filter narrows results (${filteredRowCount} rows, ${bookingsBeforeFilter} PENDING_CONFIRMATION in DB) ${
+    filteredRowCount <= bookingsBeforeFilter ? "✓" : "✗ FAIL"
+  }`
+);
+// Reset the filter back to "ทุกสถานะ" for the rest of the script.
+await page.selectOption("select >> nth=0", "");
+
 await page.locator("table tbody tr td a").first().click();
 await page.waitForSelector("text=มอบหมายงาน", { timeout: 10000 });
 console.log("BOOKING DETAIL: loaded ✓");
+
+// bookingNumber format (Sprint 3 spec: auto "KKD-YYYYMMDD-NNN")
+const bookingIdFromUrl = page.url().split("/").pop()!;
+const bookingRow = await prisma.surveyBooking.findUniqueOrThrow({
+  where: { id: bookingIdFromUrl },
+});
+console.log(
+  `BOOKING DETAIL: bookingNumber matches KKD-YYYYMMDD-NNN format ${
+    /^KKD-\d{8}-\d{3}$/.test(bookingRow.bookingNumber) ? "✓" : "✗ FAIL"
+  }`
+);
 
 // Status update via the (only, unnamed) status select at the top of the page
 await page.selectOption("select >> nth=0", "CONFIRMED");
