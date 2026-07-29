@@ -1,14 +1,19 @@
-import { LineChart, ShieldCheck, Sun, Wrench } from "lucide-react";
+import { LineChart, MessageCircle, Phone, ShieldCheck, Sun, Wrench } from "lucide-react";
 import Image from "next/image";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { FaqSection } from "@/components/site/faq-section";
 import { HomePortfolioGrid } from "@/components/site/home-portfolio-grid";
+import { IconFacebook } from "@/components/site/icon-facebook";
 import { Reveal } from "@/components/site/reveal";
 import { SectionHeading } from "@/components/site/section-heading";
 import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/db";
 import { pickLocale } from "@/lib/i18n-content";
 import { storage } from "@/lib/storage";
+
+/* Same hrefs as the contact page so quick-contact info never drifts out of sync. */
+const QUICK_CONTACT_LINE_URL = "https://line.me/R/ti/p/@kkdsolar";
+const QUICK_CONTACT_FACEBOOK_URL = "https://facebook.com/kkdsolar";
 
 export async function HomeContent({
   params,
@@ -19,6 +24,7 @@ export async function HomeContent({
   setRequestLocale(locale);
   const t = await getTranslations("home");
   const tCommon = await getTranslations("common");
+  const tContact = await getTranslations("contact");
   const bookingSurveyHref = {
     pathname: "/booking",
     query: { tab: "survey" },
@@ -90,6 +96,39 @@ export async function HomeContent({
             <Link href={bookingQuoteHref} className="btn-pill">
               {tCommon("requestQuote")}
             </Link>
+          </Reveal>
+          <Reveal
+            delay={280}
+            className="mt-5 flex flex-wrap items-center justify-center gap-3 lg:justify-start"
+          >
+            <span className="text-xs font-semibold text-muted-foreground">
+              {t("quickContactTitle")}
+            </span>
+            <a
+              href="tel:0824731567"
+              aria-label={tContact("phone")}
+              className="flex size-9 items-center justify-center rounded-full border border-border/70 bg-card text-primary transition-colors hover:border-brand-orange hover:text-brand-orange"
+            >
+              <Phone className="size-4" />
+            </a>
+            <a
+              href={QUICK_CONTACT_LINE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={tContact("line")}
+              className="flex size-9 items-center justify-center rounded-full border border-border/70 bg-card text-primary transition-colors hover:border-brand-orange hover:text-brand-orange"
+            >
+              <MessageCircle className="size-4" />
+            </a>
+            <a
+              href={QUICK_CONTACT_FACEBOOK_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={tContact("facebook")}
+              className="flex size-9 items-center justify-center rounded-full border border-border/70 bg-card text-primary transition-colors hover:border-brand-orange hover:text-brand-orange"
+            >
+              <IconFacebook className="size-4" />
+            </a>
           </Reveal>
           <div className="theme6-feature-row">
             <div>

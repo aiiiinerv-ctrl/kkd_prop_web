@@ -84,8 +84,9 @@
     "statsYearsValue": "—",
     "statsEngineers": "วิศวกรมีใบอนุญาต",
     "statsEngineersValue": "—",
-    "statsSatisfaction": "ความพึงพอใจลูกค้า",
-    "statsSatisfactionValue": "—",
+    "statsCustomers": "ลูกค้าที่ไว้วางใจ",
+    "statsCustomersValue": "—",
+    "quickContactTitle": "ติดต่อเราได้ทันที",
     "ctaTitle": "พร้อมเริ่มประหยัดค่าไฟแล้วหรือยัง?",
     "ctaSubtitle": "ปรึกษาฟรี ไม่มีข้อผูกมัด ทีมงานติดต่อกลับภายใน 24 ชั่วโมง"
   },
@@ -177,7 +178,13 @@
     "seasonEarlyRainy": "ต้นฤดูฝน",
     "seasonRainy": "กลางฤดูฝน",
     "seasonWinter": "ฤดูหนาว",
-    "priceFrom": "เริ่มต้น"
+    "priceFrom": "เริ่มต้น",
+    "paybackTitle": "ระยะเวลาคืนทุน (ประมาณการ)",
+    "paybackOnGrid": "ออนกริด (On-Grid): 6-7 ปี",
+    "paybackHybrid": "ไฮบริด (Hybrid, มีแบตเตอรี่): 6-8 ปี",
+    "paybackOffGrid": "ออฟกริด (Off-Grid): 8-12 ปี",
+    "featuresTitle": "รายละเอียดแพ็กเกจ",
+    "backToPackages": "กลับไปหน้าแพ็กเกจทั้งหมด"
   },
   "portfolio": {
     "title": "ผลงานการติดตั้งของเรา",
@@ -266,8 +273,11 @@
     "phoneValue": "082-473-1567",
     "line": "LINE OA",
     "lineValue": "@kkdsolar",
+    "facebook": "Facebook",
+    "facebookValue": "KKD Solar",
     "hours": "เวลาทำการ",
-    "hoursValue": "จันทร์ - เสาร์ (9:00 - 18:00 น.)"
+    "hoursValue": "จันทร์ - เสาร์ (9:00 - 18:00 น.)",
+    "mapTitle": "แผนที่"
   },
   "calculator": {
     "eyebrow": "คำนวณก่อนตัดสินใจ",

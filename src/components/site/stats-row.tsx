@@ -5,10 +5,17 @@ const STATS = [
   { valueKey: "statsProjectsValue", labelKey: "statsProjects" },
   { valueKey: "statsYearsValue", labelKey: "statsYears" },
   { valueKey: "statsEngineersValue", labelKey: "statsEngineers" },
-  { valueKey: "statsSatisfactionValue", labelKey: "statsSatisfaction" },
+  { valueKey: "statsCustomersValue", labelKey: "statsCustomers" },
 ] as const;
 
-export async function StatsRow() {
+type OverridableStatKey = "statsProjectsValue" | "statsCustomersValue";
+
+export async function StatsRow({
+  overrides,
+}: {
+  /** Real DB-derived numbers that replace the placeholder message-file value. */
+  overrides?: Partial<Record<OverridableStatKey, string>>;
+} = {}) {
   const t = await getTranslations("home");
 
   return (
@@ -17,7 +24,7 @@ export async function StatsRow() {
         {STATS.map((stat, i) => (
           <Reveal key={stat.valueKey} delay={i * 100} className="text-center">
             <p className="text-3xl font-extrabold tracking-[-0.01em] text-primary sm:text-4xl">
-              {t(stat.valueKey)}
+              {overrides?.[stat.valueKey as OverridableStatKey] ?? t(stat.valueKey)}
             </p>
             <p className="mt-2 text-sm text-muted-foreground">{t(stat.labelKey)}</p>
           </Reveal>

@@ -50,7 +50,8 @@ Gap หลักที่พบ (รายละเอียดเต็มอ�
 | 5 — แดชบอร์ด/รายงาน + Export Excel | ✅ เสร็จแล้ว (2026-07-29) | ดูรายละเอียดผลลัพธ์ท้าย Sprint 5 ด้านล่าง |
 | 5b — แก้ Gap รายงาน (วันที่ปิดการขาย + อัตราปิดการขาย) | ✅ เสร็จแล้ว (2026-07-29) | ดูรายละเอียดผลลัพธ์ท้าย Sprint 5b ด้านล่าง |
 | 6 — แก้ฟิลด์ฟอร์มสาธารณะ + PromptPay QR | ✅ เสร็จแล้ว (2026-07-29) | ดูรายละเอียดผลลัพธ์ท้าย Sprint 6 ด้านล่าง |
-| 7-9 | ⏳ ยังไม่เริ่ม | ตามลำดับเดิมในแผนนี้ |
+| 7 — แก้เนื้อหา/ตัวเลขให้ตรง Spec | ✅ เสร็จสมบูรณ์ (2026-07-29) | ดูรายละเอียดผลลัพธ์ท้าย Sprint 7 ด้านล่าง |
+| 8-9 | ⏳ ยังไม่เริ่ม | ตามลำดับเดิมในแผนนี้ |
 
 ## Sprint 0 — Schema & Role Foundation
 
@@ -261,6 +262,30 @@ Task breakdown ฉบับเต็มที่ `docs/plans/sprint-5b-reports-g
 - `about/page.tsx`: wire `StatsRow` (มีอยู่แล้วแต่ไม่ได้ใช้) ด้วยตัวเลขจาก DB จริง (project count, won-lead count)
 - `contact/page.tsx`: เพิ่ม Google Maps embed + ลิงก์ Facebook จริง (รอข้อมูลจากลูกค้า)
 - `home-content.tsx`: เพิ่มแถวไอคอนติดต่อด่วน (โทร/LINE/Facebook) ที่หน้าแรกเอง ไม่ใช่แค่ใน footer
+
+### Sprint 7 — ผลลัพธ์ (2026-07-29)
+
+งานตาม task breakdown ใน `docs/plans/sprint-7-content-numbers-tasks.md` เสร็จครบ ตัวเลขยืนยันตรงจาก PDF ผ่าน `pdftotext -layout` โดยตรงรอบนี้ (ก่อนหน้านี้เปิด PDF ไม่ได้จนกว่าจะติดตั้ง poppler ใน Sprint 5) สรุป:
+
+- `prisma/seed.ts` — `seasonal()` เปลี่ยนจากค่าเดียวเป็น `unitsPerDayMin`/`unitsPerDayMax` ตามตัวเลขจาก PDF (ฤดูร้อน 20/20, ต้นฤดูฝน 16/17, กลางฤดูฝน 12/14, ฤดูหนาว 15/17 คูณ scale ตามขนาดระบบ); `featuresTh`/`featuresEn` ทั้ง 3 แพ็กเกจขึ้นต้นด้วย 4 แบรนด์เดียวกัน (LONGi/Trina/Jinko/JA Solar); เปลี่ยน `Package` upsert จาก `update: {}` เป็น `update: p` — จำเป็นเพื่อให้ reseed แก้ข้อมูลแพ็กเกจเดิมใน `dev.db` จริง (ไม่มี admin edit UI สำหรับแพ็กเกจ, seed.ts คือ source of truth)
+- `src/lib/packages-seasonal.ts`, `src/components/site/seasonal-production-table.tsx` (ใหม่ทั้งคู่) — shared types/component ระหว่างหน้า list กับหน้า detail (ไม่ query/render ซ้ำสองที่)
+- `src/app/[locale]/packages/page.tsx` — แสดงช่วงตัวเลขผลิตไฟ, เพิ่มกล่องระยะคืนทุน 3 ประเภท (ออนกริด 6-7ปี/ไฮบริด 6-8ปี/ออฟกริด 8-12ปี — ไม่ผูกกับแพ็กเกจใดเพราะ schema ไม่มี field แยกประเภทระบบ), เพิ่มปุ่ม "ดูรายละเอียด"
+- `src/app/[locale]/packages/[slug]/page.tsx` (ใหม่) — หน้ารายละเอียดแพ็กเกจ, `notFound()` ถ้า slug ไม่พบ/`isPublished:false`
+- `src/components/site/stats-row.tsx` — เพิ่ม `overrides` prop, เปลี่ยน `statsSatisfaction` (วัดไม่ได้จริง) เป็น `statsCustomers`
+- `src/app/[locale]/about/page.tsx` — render `<StatsRow>` จริง (ก่อนหน้านี้ import ไว้แต่ไม่เคยใช้เลย) ผูกกับ `portfolioProject.count()` และ `lead.count()` (status ∈ `CLOSED_LEAD_STATUSES` — import จาก `src/lib/reports/aggregate.ts` แทนนิยามซ้ำ)
+- `src/app/[locale]/contact/page.tsx` — เพิ่มไอเทม Facebook + Google Maps iframe embed (placeholder, query จาก `addressValue`)
+- `src/app/[locale]/home-content.tsx`, `src/components/site/icon-facebook.tsx` (ใหม่) — แถวไอคอนติดต่อด่วน (โทร/LINE/Facebook) ใต้ hero CTA
+- `src/messages/th.json`/`en.json` — key parity ยืนยันแล้ว (313 key เท่ากันทั้งสองไฟล์), เพิ่ม key ใหม่สำหรับกล่องคืนทุน/หน้ารายละเอียด/quick-contact/Facebook/Maps ครบคู่ TH/EN
+
+**เบี่ยงจาก plan ที่ต้อง flag:** การเปลี่ยน `update: {}` → `update: p` ใน seed ไม่ได้อยู่ใน task list เดิมตรงๆ แต่จำเป็นเพื่อให้ค่าที่แก้ไปมีผลจริงกับข้อมูลที่ seed ไปแล้วก่อนหน้า
+
+**Verification (ผ่านทั้งหมด):**
+- `npx tsc --noEmit` — clean
+- `npm run build` — `✓ Compiled successfully` + `Finished TypeScript`, exit 0
+- i18n key-parity script — `th-only: []`, `en-only: []`
+- `npx prisma db seed` — idempotent, ผ่าน
+- Manual: `/th/packages`, `/en/packages`, `/th/packages/5kw` (200), `/th/packages/does-not-exist` (404), `/th/about`, `/th/contact`, `/th` — ทั้งหมด render ถูกต้อง; ตัวเลข seasonal บน `/th/packages/5kw` ตรง PDF เป๊ะ (~20 / 16-17 / 12-14 / 15-17); `/th/about` แสดงตัวเลขจริงจาก DB (ไม่ใช่ `—` placeholder อีกต่อไป)
+- `npx tsx scripts/e2e-booking.mts`, `npx tsx scripts/e2e-admin-crud.mts` — ผ่านทั้งหมด ไม่มี regression
 
 ## Sprint 8 — สคริปต์ Backup
 

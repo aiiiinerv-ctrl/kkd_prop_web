@@ -3,8 +3,13 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CtaBanner } from "@/components/site/cta-banner";
 import { Reveal } from "@/components/site/reveal";
 import { SectionHeading } from "@/components/site/section-heading";
+import { StatsRow } from "@/components/site/stats-row";
 import { TestimonialsSection } from "@/components/site/testimonials-section";
+import { prisma } from "@/lib/db";
+import { CLOSED_LEAD_STATUSES } from "@/lib/reports/aggregate";
 import { pageMetadata } from "@/lib/seo";
+
+export const revalidate = 300;
 
 export async function generateMetadata({
   params,
@@ -23,6 +28,11 @@ export default async function AboutPage({
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("about");
+
+  const [projectCount, closedLeadCount] = await Promise.all([
+    prisma.portfolioProject.count({ where: { isPublished: true } }),
+    prisma.lead.count({ where: { status: { in: CLOSED_LEAD_STATUSES } } }),
+  ]);
 
   const CREDENTIALS = [
     { icon: Building2, title: t("credRegisteredTitle"), desc: t("credRegisteredDesc") },
@@ -86,6 +96,13 @@ export default async function AboutPage({
           ))}
         </div>
       </section>
+
+      <StatsRow
+        overrides={{
+          statsProjectsValue: String(projectCount),
+          statsCustomersValue: String(closedLeadCount),
+        }}
+      />
 
       <TestimonialsSection />
 

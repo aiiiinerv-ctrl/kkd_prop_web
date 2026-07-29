@@ -1,8 +1,12 @@
 import { Clock, MapPin, MessageCircle, Phone } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CtaBanner } from "@/components/site/cta-banner";
+import { IconFacebook } from "@/components/site/icon-facebook";
 import { SectionHeading } from "@/components/site/section-heading";
 import { pageMetadata } from "@/lib/seo";
+
+/** Placeholder location query — real coordinates pending from the customer (see remediation plan). */
+const CONTACT_FACEBOOK_URL = "https://facebook.com/kkdsolar";
 
 
 export async function generateMetadata({
@@ -37,8 +41,16 @@ export default async function ContactPage({
       value: t("lineValue"),
       href: "https://line.me/R/ti/p/@kkdsolar",
     },
+    {
+      icon: IconFacebook,
+      label: t("facebook"),
+      value: t("facebookValue"),
+      href: CONTACT_FACEBOOK_URL,
+    },
     { icon: Clock, label: t("hours"), value: t("hoursValue") },
   ];
+
+  const mapQuery = encodeURIComponent(t("addressValue"));
 
   return (
     <main>
@@ -74,6 +86,17 @@ export default async function ContactPage({
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="mt-10 overflow-hidden rounded-xl border border-border/70 shadow-sm">
+          <h3 className="sr-only">{t("mapTitle")}</h3>
+          <iframe
+            title={t("mapTitle")}
+            src={`https://maps.google.com/maps?q=${mapQuery}&output=embed`}
+            loading="lazy"
+            className="h-80 w-full border-0"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
         </div>
       </section>
 

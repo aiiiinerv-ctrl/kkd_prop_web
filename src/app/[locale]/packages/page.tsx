@@ -1,25 +1,16 @@
 import { Check } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CtaBanner } from "@/components/site/cta-banner";
+import { SeasonalProductionTable } from "@/components/site/seasonal-production-table";
 import { SectionHeading } from "@/components/site/section-heading";
 import { Link } from "@/i18n/navigation";
 import { prisma } from "@/lib/db";
 import { pickLocale, pickLocaleList } from "@/lib/i18n-content";
+import type { Seasonal } from "@/lib/packages-seasonal";
 import { pageMetadata } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
 export const revalidate = 300;
-
-type SeasonRow = { monthsTh: string; monthsEn: string; unitsPerDay: number };
-type Seasonal = Record<"summer" | "earlyRainy" | "rainy" | "winter", SeasonRow>;
-
-const SEASON_KEYS = [
-  ["summer", "seasonSummer"],
-  ["earlyRainy", "seasonEarlyRainy"],
-  ["rainy", "seasonRainy"],
-  ["winter", "seasonWinter"],
-] as const;
-
 
 export async function generateMetadata({
   params,
@@ -93,11 +84,17 @@ export default async function PackagesPage({
                 ))}
               </ul>
               <Link
+                href={`/packages/${pkg.slug}`}
+                className="mt-5 text-center text-sm font-semibold text-brand-orange hover:text-brand-orange-dark"
+              >
+                {tCommon("learnMore")}
+              </Link>
+              <Link
                 href={{
                   pathname: "/booking",
                   query: { tab: "quote", package: pkg.slug },
                 }}
-                className={cn("mt-7", pkg.isPopular ? "btn-pill" : "btn-pill-outline")}
+                className={cn("mt-3", pkg.isPopular ? "btn-pill" : "btn-pill-outline")}
               >
                 {tCommon("requestQuote")}
               </Link>
@@ -105,50 +102,37 @@ export default async function PackagesPage({
           ))}
         </div>
 
-        {seasonal && popular && (
-          <div className="mx-auto mt-14 max-w-3xl rounded-xl border border-border/70 bg-card p-7 shadow-sm">
-            <h3 className="text-lg font-bold text-primary">{t("seasonalTitle")}</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {t("seasonalSubtitle", { size: pickLocale(popular, "name", locale) })}
-            </p>
-            <div className="mt-5 overflow-x-auto">
-              <table className="w-full border-collapse text-sm">
-                <thead>
-                  <tr className="bg-primary text-white">
-                    <th className="border border-border px-4 py-2.5 font-semibold">
-                      {t("colSeason")}
-                    </th>
-                    <th className="border border-border px-4 py-2.5 font-semibold">
-                      {t("colMonths")}
-                    </th>
-                    <th className="border border-border px-4 py-2.5 font-semibold">
-                      {t("colProduction")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {SEASON_KEYS.map(([dataKey, labelKey]) => {
-                    const row = seasonal[dataKey];
-                    if (!row) return null;
-                    return (
-                      <tr key={dataKey} className="text-center even:bg-muted/40">
-                        <td className="border border-border px-4 py-2.5">
-                          {t(labelKey)}
-                        </td>
-                        <td className="border border-border px-4 py-2.5">
-                          {locale === "en" ? row.monthsEn : row.monthsTh}
-                        </td>
-                        <td className="border border-border px-4 py-2.5">
-                          ~{row.unitsPerDay} {tCommon("unitsPerDay")}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+        <div className="mx-auto mt-14 grid max-w-3xl gap-7">
+          {seasonal && popular && (
+            <div className="rounded-xl border border-border/70 bg-card p-7 shadow-sm">
+              <h3 className="text-lg font-bold text-primary">{t("seasonalTitle")}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t("seasonalSubtitle", { size: pickLocale(popular, "name", locale) })}
+              </p>
+              <div className="mt-5">
+                <SeasonalProductionTable seasonal={seasonal} locale={locale} t={t} tCommon={tCommon} />
+              </div>
             </div>
+          )}
+
+          <div className="rounded-xl border border-border/70 bg-card p-7 shadow-sm">
+            <h3 className="text-lg font-bold text-primary">{t("paybackTitle")}</h3>
+            <ul className="mt-4 space-y-2.5 text-sm">
+              <li className="flex items-start gap-2">
+                <Check className="mt-0.5 size-4 shrink-0 text-brand-orange" />
+                {t("paybackOnGrid")}
+              </li>
+              <li className="flex items-start gap-2">
+                <Check className="mt-0.5 size-4 shrink-0 text-brand-orange" />
+                {t("paybackHybrid")}
+              </li>
+              <li className="flex items-start gap-2">
+                <Check className="mt-0.5 size-4 shrink-0 text-brand-orange" />
+                {t("paybackOffGrid")}
+              </li>
+            </ul>
           </div>
-        )}
+        </div>
       </section>
 
       <CtaBanner />

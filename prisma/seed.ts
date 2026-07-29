@@ -311,14 +311,36 @@ async function seedServices() {
   console.log(`Services: ${services.length}`);
 }
 
-// Seasonal production per demo data (5KW baseline ~ units/day), scaled by size
+// Seasonal production, PDF-verified ranges (5KW baseline units/day), scaled by size.
+// Source: KKD_เอกสารความต้องการเว็บไซต์_V1.2.pdf §3.3 — "ต้องใช้ตัวเลขนี้เท่านั้น ห้ามแก้ไข"
+// Summer uses min=max=20 to render as "~20"; the other three seasons are true ranges.
 function seasonal(sizeKw: number) {
   const scale = sizeKw / 5;
   return {
-    summer: { monthsTh: "มี.ค. - พ.ค.", monthsEn: "Mar - May", unitsPerDay: Math.round(20 * scale) },
-    earlyRainy: { monthsTh: "มิ.ย. - ก.ค.", monthsEn: "Jun - Jul", unitsPerDay: Math.round(16.5 * scale) },
-    rainy: { monthsTh: "ส.ค. - ต.ค.", monthsEn: "Aug - Oct", unitsPerDay: Math.round(13 * scale) },
-    winter: { monthsTh: "พ.ย. - ก.พ.", monthsEn: "Nov - Feb", unitsPerDay: Math.round(16 * scale) },
+    summer: {
+      monthsTh: "มี.ค. - พ.ค.",
+      monthsEn: "Mar - May",
+      unitsPerDayMin: Math.round(20 * scale),
+      unitsPerDayMax: Math.round(20 * scale),
+    },
+    earlyRainy: {
+      monthsTh: "มิ.ย. - ก.ค.",
+      monthsEn: "Jun - Jul",
+      unitsPerDayMin: Math.round(16 * scale),
+      unitsPerDayMax: Math.round(17 * scale),
+    },
+    rainy: {
+      monthsTh: "ส.ค. - ต.ค.",
+      monthsEn: "Aug - Oct",
+      unitsPerDayMin: Math.round(12 * scale),
+      unitsPerDayMax: Math.round(14 * scale),
+    },
+    winter: {
+      monthsTh: "พ.ย. - ก.พ.",
+      monthsEn: "Nov - Feb",
+      unitsPerDayMin: Math.round(15 * scale),
+      unitsPerDayMax: Math.round(17 * scale),
+    },
   };
 }
 
@@ -333,8 +355,8 @@ async function seedPackages() {
       isPopular: false,
       suitableTh: "เหมาะกับบ้านค่าไฟ 1,000 - 1,500 บาท/เดือน",
       suitableEn: "For homes with bills of ฿1,000 - 1,500/month",
-      featuresTh: ["แผงโซลาร์ LONGi / Jinko", "อินเวอร์เตอร์ Tier 1", "ประกันแผง 25 ปี", "ติดตั้งโดยวิศวกรมีใบอนุญาต"],
-      featuresEn: ["LONGi / Jinko panels", "Tier 1 inverter", "25-year panel warranty", "Installed by licensed engineers"],
+      featuresTh: ["แผงโซลาร์ LONGi / Trina / Jinko / JA Solar", "อินเวอร์เตอร์ Tier 1", "ประกันแผง 25 ปี", "ติดตั้งโดยวิศวกรมีใบอนุญาต"],
+      featuresEn: ["LONGi / Trina / Jinko / JA Solar panels", "Tier 1 inverter", "25-year panel warranty", "Installed by licensed engineers"],
       seasonalProduction: seasonal(3),
       sortOrder: 1,
     },
@@ -347,8 +369,8 @@ async function seedPackages() {
       isPopular: true,
       suitableTh: "เหมาะกับบ้านค่าไฟ 1,500 - 3,000 บาท/เดือน",
       suitableEn: "For homes with bills of ฿1,500 - 3,000/month",
-      featuresTh: ["แผงโซลาร์ Trina / JA Solar", "อินเวอร์เตอร์ Tier 1", "ประกันแผง 25 ปี", "Monitoring ผ่านแอป", "ติดตั้งโดยวิศวกรมีใบอนุญาต"],
-      featuresEn: ["Trina / JA Solar panels", "Tier 1 inverter", "25-year panel warranty", "App monitoring", "Installed by licensed engineers"],
+      featuresTh: ["แผงโซลาร์ LONGi / Trina / Jinko / JA Solar", "อินเวอร์เตอร์ Tier 1", "ประกันแผง 25 ปี", "Monitoring ผ่านแอป", "ติดตั้งโดยวิศวกรมีใบอนุญาต"],
+      featuresEn: ["LONGi / Trina / Jinko / JA Solar panels", "Tier 1 inverter", "25-year panel warranty", "App monitoring", "Installed by licensed engineers"],
       seasonalProduction: seasonal(5),
       sortOrder: 2,
     },
@@ -361,14 +383,17 @@ async function seedPackages() {
       isPopular: false,
       suitableTh: "เหมาะกับบ้านใหญ่/โฮมออฟฟิศ ค่าไฟ 3,500+ บาท/เดือน",
       suitableEn: "For large homes / home offices with bills of ฿3,500+/month",
-      featuresTh: ["แผงโซลาร์ Tier 1 Brands", "อินเวอร์เตอร์ 3 เฟสรองรับ", "ประกันแผง 25 ปี", "Monitoring ผ่านแอป", "ติดตั้งโดยวิศวกรมีใบอนุญาต"],
-      featuresEn: ["Tier 1 brand panels", "3-phase inverter support", "25-year panel warranty", "App monitoring", "Installed by licensed engineers"],
+      featuresTh: ["แผงโซลาร์ LONGi / Trina / Jinko / JA Solar", "อินเวอร์เตอร์ 3 เฟสรองรับ", "ประกันแผง 25 ปี", "Monitoring ผ่านแอป", "ติดตั้งโดยวิศวกรมีใบอนุญาต"],
+      featuresEn: ["LONGi / Trina / Jinko / JA Solar panels", "3-phase inverter support", "25-year panel warranty", "App monitoring", "Installed by licensed engineers"],
       seasonalProduction: seasonal(10),
       sortOrder: 3,
     },
   ];
   for (const p of packages) {
-    await prisma.package.upsert({ where: { slug: p.slug }, update: {}, create: p });
+    // update (not `{}`) so re-running the seed applies content/number fixes to
+    // already-seeded rows — packages have no admin edit UI yet, so seed.ts is
+    // the source of truth for this content.
+    await prisma.package.upsert({ where: { slug: p.slug }, update: p, create: p });
   }
   console.log(`Packages: ${packages.length}`);
 }
