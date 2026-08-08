@@ -649,23 +649,54 @@ manual wrapper) is not needed; kept only as a documented fallback.
    native JS `confirm()` dialog — a browser-automation script must register a dialog handler that
    accepts it, or the delete silently no-ops.
 
-### Still open — deferred to Sprint 3 (not blockers, decisions needed)
+### Follow-up session, same day — deploy-verify fixes + DB-provisioning decision + full smoke test
 
-- **DB provisioning on first boot**: confirmed Prisma-dependent pages correctly error with a clear
-  `TableDoesNotExist` message (not a crash) when `DATABASE_URL` points to an unmigrated file — this
-  is the expected state before `prisma migrate deploy` runs against the real deploy-time DB path.
-  Running it requires `prisma.config.ts` in the artifact (added to the allowlist this sprint — it
-  was missing before, `prisma migrate deploy` failed with "the datasource.url property is
-  required" without it). Whether Sprint 3 seeds fresh or migrates a real data copy is still an open
-  decision per the original PM plan, not resolved here.
-- **`package-lock.json` is currently out of sync with `package.json`** (missing
-  `@swc/helpers@0.5.23` as of 2026-08-08) — `npm ci` fails on it, in both this new Dockerfile and
-  the existing project-root Dockerfile. Worked around here with `npm install` instead of `npm ci`;
-  the lockfile itself should be regenerated (`npm install` locally, commit the updated lock) as a
-  separate, unrelated fix.
-- Admin login and `/files/...` round-trip smoke tests (per the original Sprint 2 plan step 5) were
-  not completed this session — deferred alongside the DB-provisioning decision above, since both
-  need a real seeded/migrated DB to test meaningfully.
+`deploy-verify` reviewed the Sprint 2 diff and found two real issues, both fixed and re-verified
+(full Docker build re-run, `better-sqlite3` binary re-confirmed as Linux ELF):
+
+- **`.dockerignore` was missing `backups/`** — this machine's `backups/` directory contains a real
+  `dev.db` and real customer payment-slip images; without the exclusion, any Docker build (this new
+  Dockerfile *and* the existing project-root one, same build context) would bake that PII into an
+  image layer. Fixed: added `backups/` and `deploy/linux-build/` to `.dockerignore`.
+- **`package-lock.json` was genuinely missing an entry** — `@swc/helpers@0.5.23`, an optional peer
+  dependency of `next-intl`'s bundled `@swc/core` that only gets resolved when `npm install` runs on
+  Linux (confirmed: regenerating the lockfile via `npm install --package-lock-only` inside a Linux
+  container added it; running the same command on macOS reported "up to date" and changed nothing).
+  Fixed: regenerated the lockfile from Linux, switched `Dockerfile.shared-hosting` back to `npm ci`,
+  confirmed a full clean rebuild passes.
+
+**DB provisioning decision** (was open, now resolved): production will **migrate the real, existing
+`prisma/dev.db` content** rather than start from a fresh seed. Before touching the real domain, this
+was validated on a fresh disposable test app (`kkd-app-test-3`, destroyed and fully cleaned up after
+— confirmed zero leftover files, unlike the earlier `kkd-app-test`/`nodevenv` cleanup in Sprint 2
+which needed a second pass) using a **scrubbed copy** of `dev.db`, not the real file: `Lead`,
+`SurveyBooking`, and `AuditLog` (customer PII) were deleted; `PaymentSettings` (real bank account
+details) and `ChannelExecutive` (partner phone numbers) were also deleted since they're not needed
+for this test and aren't "content"; all 5 real `AdminUser` accounts were replaced with one synthetic
+test-only admin (bcrypt hash generated locally, never a real staff password). Content tables
+(`Service`, `Package`, `PortfolioProject`, `PromoChannel`, `BookingCapacitySetting`) were kept as-is
+since they're public site content, not PII. A dummy `storage/private/slips/dummy-slip.txt` (plain
+test text, not a real slip image) stood in for the `/files/...` round-trip test.
+
+**Full smoke test result — all passed**, driven via the same internal spawn-and-HTTP-client
+diagnostic technique used earlier in Sprint 2 (bypasses the subpath-mount Apache routing artifact
+that a real bare-domain deploy won't have):
+
+| Check | Result |
+|---|---|
+| Homepage renders migrated content (`/th/packages`) | 200, real package content present |
+| `GET /api/auth/csrf` | 200, token issued |
+| `POST /api/auth/callback/credentials` (test admin) | 302 → `/admin`, session cookie set |
+| `GET /admin` with session cookie | 200, dashboard rendered (not the login page) |
+| `GET /files/private/slips/dummy-slip.txt` without auth | 401 |
+| Same, with session cookie | 200, correct file content returned |
+
+This closes the "admin login + `/files` round-trip" item from the original Sprint 2 plan step 5,
+and validates the real-data-migration path end-to-end before it's attempted against the actual
+`kkdproperty.co.th` domain in Sprint 3. **For the real Sprint 3 cutover, the full unscrubbed
+`dev.db` (or a fresh `prisma migrate deploy` + real data import) is what actually ships** — the
+scrubbing above was specific to keeping PII off a disposable *test* slot, not a recommendation to
+scrub production.
 
 ### Updated Go/No-Go
 
