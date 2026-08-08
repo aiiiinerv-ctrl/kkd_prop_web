@@ -70,6 +70,20 @@ Escalation is by role, not by retry: sonnet implements → independent reviewers
 - `TabsContent` has `keepMounted` on purpose — TH/EN tabbed admin forms submit hidden-tab fields. Removing it silently breaks content editing.
 - Tabbed dialog forms use `noValidate` deliberately; zod on the server is the source of truth.
 
+## Agent skills
+
+### Issue tracker
+
+Issues live in this repo's GitHub Issues (`aiiiinerv-ctrl/kkd_prop_web`), via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context — `CONTEXT.md` + `docs/adr/` at the repo root (already exist). See `docs/agents/domain.md`.
+
 ## Commands
 
 ```bash
