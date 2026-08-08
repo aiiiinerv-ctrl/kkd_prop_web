@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link } from "@/i18n/navigation";
 import {
   type CalcPackage,
@@ -17,19 +17,13 @@ export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
   const t = useTranslations("calculator");
   const tCommon = useTranslations("common");
   const locale = useLocale();
-  const { bill, result, setBill, calculate } = useCalculatorStore();
-  const [error, setError] = useState(false);
-
-  const onCalculate = () => {
-    setError(!calculate(packages));
-  };
+  const { bill, setBill } = useCalculatorStore();
 
   const billValue = Number(bill);
-  const liveResult = useMemo(() => {
+  const displayedResult = useMemo(() => {
     if (!Number.isFinite(billValue) || billValue <= 0) return null;
     return recommendSystem(billValue, packages);
   }, [billValue, packages]);
-  const displayedResult = result ?? liveResult;
   const afterBill = displayedResult
     ? Math.max(billValue - displayedResult.monthlySaving, 0)
     : null;
@@ -59,7 +53,6 @@ export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
               step={STEP_BILL}
               value={bill}
               onChange={(e) => setBill(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && onCalculate()}
               placeholder={t("billPlaceholder")}
               className="min-w-0 flex-1 bg-transparent text-2xl font-extrabold text-primary outline-none"
             />
@@ -67,7 +60,6 @@ export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
               / {t("month")}
             </span>
           </div>
-          {error && <p className="mt-2 text-sm text-destructive">{t("invalidBill")}</p>}
 
           <input
             type="range"
@@ -76,16 +68,9 @@ export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
             max={MAX_BILL}
             step={STEP_BILL}
             value={Number.isFinite(billValue) ? billValue : MIN_BILL}
-            onChange={(e) => {
-              setError(false);
-              setBill(e.target.value);
-            }}
+            onChange={(e) => setBill(e.target.value)}
             className="mt-5 w-full accent-primary"
           />
-
-          <button type="button" onClick={onCalculate} className="btn-pill mt-6 w-full">
-            {t("calculateDetailed")} <span aria-hidden="true">→</span>
-          </button>
         </div>
 
         <div className="flex items-center bg-accent p-8 sm:p-10 lg:px-[30px]">

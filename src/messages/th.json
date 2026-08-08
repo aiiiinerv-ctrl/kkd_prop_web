@@ -291,8 +291,6 @@
     "billLabel": "ค่าไฟต่อเดือน (บาท)",
     "billPlaceholder": "ระบุค่าไฟ (บาท/เดือน)",
     "calculate": "คำนวณระบบที่เหมาะสม",
-    "calculateDetailed": "คำนวณแบบละเอียด",
-    "invalidBill": "กรุณาระบุค่าไฟที่ถูกต้อง",
     "resultSystem": "ขนาดระบบที่แนะนำ: {system}",
     "resultSave": "ประหยัดค่าไฟได้ประมาณ: {amount} บาท/เดือน",
     "beforeLabel": "ค่าไฟก่อนติดตั้ง",

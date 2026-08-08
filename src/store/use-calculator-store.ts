@@ -43,22 +43,10 @@ export function recommendSystem(bill: number, packages: CalcPackage[] = []): Cal
 
 type CalculatorState = {
   bill: string;
-  result: CalcResult | null;
   setBill: (bill: string) => void;
-  calculate: (packages?: CalcPackage[]) => boolean;
 };
 
-export const useCalculatorStore = create<CalculatorState>((set, get) => ({
+export const useCalculatorStore = create<CalculatorState>((set) => ({
   bill: "3500",
-  result: null,
   setBill: (bill) => set({ bill }),
-  calculate: (packages = []) => {
-    const value = Number(get().bill);
-    if (!Number.isFinite(value) || value <= 0) {
-      set({ result: null });
-      return false;
-    }
-    set({ result: recommendSystem(value, packages) });
-    return true;
-  },
 }));

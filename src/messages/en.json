@@ -291,8 +291,6 @@
     "billLabel": "Monthly electricity bill (THB)",
     "billPlaceholder": "Monthly bill (THB)",
     "calculate": "Calculate Recommended System",
-    "calculateDetailed": "Calculate Details",
-    "invalidBill": "Please enter a valid bill amount",
     "resultSystem": "Recommended system: {system}",
     "resultSave": "Estimated savings: {amount} THB/month",
     "beforeLabel": "Bill before installation",
