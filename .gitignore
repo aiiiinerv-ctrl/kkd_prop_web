@@ -58,6 +58,9 @@ prisma/*.db-journal
 /deploy/dist.zip
 /deploy/linux-build/
 
+# local Claude Code settings overrides (may contain machine-specific permission rules)
+.claude/settings.local.json
+
 # vercel
 .vercel
 
