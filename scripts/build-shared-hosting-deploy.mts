@@ -5,6 +5,23 @@
  * docs/plans/kkd-shared-hosting-deploy-guide.md for the full feasibility
  * writeup this script executes against.
  *
+ * BUILDS VIA DOCKER, NOT LOCALLY. A live test against the real panel
+ * (Sprint 2, 2026-08-08) found that a local macOS build's `node_modules`
+ * cannot simply be swapped for a separately-`npm install`-ed Linux one on
+ * the panel: `.next/standalone`'s server chunks bake in content-hashed
+ * references (e.g. `@prisma/adapter-better-sqlite3-<hash>`) that only
+ * resolve against the exact `node_modules` tree Next traced at build time.
+ * The whole build — `npm ci`, `prisma generate`, `next build` — must
+ * therefore happen on the same OS/arch/Node-ABI as the panel. This script
+ * runs `deploy/docker-build/Dockerfile.shared-hosting` (AlmaLinux 8 +
+ * gcc-toolset-12 + Node 20.20.0 — see that file's header for why plain
+ * AlmaLinux 8 gcc isn't enough for better-sqlite3 12.x) and copies the
+ * resulting `.next/standalone`, `.next/static`, and
+ * `src/generated/prisma` out of the container into `deploy/linux-build/`
+ * before assembling the upload artifact from there. This also means the
+ * `better-sqlite3` native binary is compiled fresh, correctly, every build
+ * — no manual FTP binary patch needed on the panel afterward.
+ *
  * IMPORTANT — this does NOT just copy `.next/standalone/` wholesale.
  * Next's output-file-tracing for this project's `output: "standalone"`
  * build was observed (Sprint 1, local verification) to mirror the ENTIRE
@@ -21,8 +38,9 @@
  *                                        binary and the Prisma adapter)
  *   - .next/standalone/package.json
  *   - .next/standalone/server.js       (Next's own standalone entry point —
- *                                        try this as the Passenger startup
- *                                        file first, per the deploy guide)
+ *                                        confirmed live, Sprint 2, to work
+ *                                        directly as the Passenger startup
+ *                                        file — no wrapper needed)
  *   - .next/standalone/.next/          (compiled server output, excluding
  *                                        the wholesale project mirror)
  *   - .next/static/          -> staged as .next/static/  (NOT included in
@@ -34,10 +52,10 @@
  *                                dev SQLite file must never ship)
  *   - src/generated/prisma/  (generated Prisma client, incl. binaryTargets
  *                                per schema.prisma)
- *   - deploy/app.js           (Passenger fallback wrapper, only needed if
- *                                server.js doesn't work as the startup file
- *                                — included anyway so it's available
- *                                on-panel without a second upload)
+ *   - deploy/app.js           (Passenger fallback wrapper — not needed per
+ *                                the Sprint 2 live test, kept as a documented
+ *                                fallback only, available on-panel without a
+ *                                second upload)
  *
  * Deliberately EXCLUDED even though present under `.next/standalone/`:
  *   .env, storage/, backups/, docs/, screenshots/, static-preview/,
@@ -47,20 +65,28 @@
  * None of these are needed to run the app under Passenger, and several
  * (`.env`, `storage/`, `backups/`) are actively sensitive.
  *
+ * IMPORTANT — file names containing `[` `]` (Next's dynamic-route
+ * convention: `[locale]`, `[id]`, `[turbopack]_runtime.js`, etc.) need
+ * `curl --globoff` (or equivalent) when uploading over FTP — plain `curl`
+ * parses `[...]` in a URL as a glob range and silently drops those files.
+ * Confirmed live, Sprint 2: 226 such files failed to upload silently
+ * without this flag, breaking every dynamic route.
+ *
  * Usage:
- *   npm run build                              # produces .next/standalone,
- *                                               # .next/static
- *   npx prisma generate                        # produces src/generated/prisma
  *   npx tsx scripts/build-shared-hosting-deploy.mts
+ *   # Docker must be running. No separate "npm run build" needed — this
+ *   # script does the full build itself, inside the container.
  *
  * Output:
+ *   deploy/linux-build/          — raw Docker build output (standalone/,
+ *                                  static/, generated-prisma/), Linux-native
  *   deploy/dist/                — staged directory, ready to upload as-is
  *                                  via FTP, or zip manually
  *   deploy/dist.zip             — same contents zipped, if the `zip` CLI is
  *                                  available (skipped with a warning if not)
  *
- * Both `deploy/dist/` and `deploy/dist.zip` are build output, not source —
- * see .gitignore.
+ * `deploy/linux-build/`, `deploy/dist/`, and `deploy/dist.zip` are all build
+ * output, not source — see .gitignore.
  */
 import { existsSync, mkdirSync, rmSync, cpSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -68,10 +94,13 @@ import path from "node:path";
 import process from "node:process";
 
 const ROOT = process.cwd();
-const STANDALONE_DIR = path.join(ROOT, ".next", "standalone");
+const DOCKERFILE = path.join(ROOT, "deploy", "docker-build", "Dockerfile.shared-hosting");
+const IMAGE_TAG = "kkd-shared-hosting-build";
+const LINUX_BUILD_DIR = path.join(ROOT, "deploy", "linux-build");
+const STANDALONE_DIR = path.join(LINUX_BUILD_DIR, "standalone");
 const STANDALONE_NEXT_DIR = path.join(STANDALONE_DIR, ".next");
-const STATIC_DIR = path.join(ROOT, ".next", "static");
-const GENERATED_PRISMA_DIR = path.join(ROOT, "src", "generated", "prisma");
+const STATIC_DIR = path.join(LINUX_BUILD_DIR, "static");
+const GENERATED_PRISMA_DIR = path.join(LINUX_BUILD_DIR, "generated-prisma");
 const DIST_DIR = path.join(ROOT, "deploy", "dist");
 const ZIP_PATH = path.join(ROOT, "deploy", "dist.zip");
 
@@ -95,11 +124,54 @@ function copyInto(src: string, destRelative: string) {
 
 console.log("Starting shared-hosting deploy artifact assembly...");
 
-// 1. Preconditions.
-requireExists(
-  STANDALONE_DIR,
-  'run "npm run build" first (requires output: "standalone" in next.config.ts)'
+// 0. Build inside a Linux container matching the panel (AlmaLinux 8, x64,
+//    Node 20.20.0) — see file header for why this can't be a local macOS
+//    build. Requires Docker running (OrbStack/Docker Desktop/etc).
+requireExists(DOCKERFILE, "deploy/docker-build/Dockerfile.shared-hosting is missing");
+console.log("Building inside Linux container (this can take a few minutes)...");
+const dockerInfo = spawnSync("docker", ["info"], { stdio: "ignore" });
+if (dockerInfo.status !== 0) {
+  fail("Docker is not running — start Docker/OrbStack and retry");
+}
+const dockerBuild = spawnSync(
+  "docker",
+  ["build", "--platform", "linux/amd64", "-f", DOCKERFILE, "-t", IMAGE_TAG, ROOT],
+  { stdio: "inherit" }
 );
+if (dockerBuild.status !== 0) {
+  fail(`docker build failed with exit code ${dockerBuild.status}`);
+}
+
+const containerName = `${IMAGE_TAG}-extract`;
+spawnSync("docker", ["rm", "-f", containerName], { stdio: "ignore" }); // clean up any stale container
+const dockerCreate = spawnSync(
+  "docker",
+  ["create", "--platform", "linux/amd64", "--name", containerName, IMAGE_TAG],
+  { stdio: "inherit" }
+);
+if (dockerCreate.status !== 0) {
+  fail(`docker create failed with exit code ${dockerCreate.status}`);
+}
+
+rmSync(LINUX_BUILD_DIR, { recursive: true, force: true });
+mkdirSync(LINUX_BUILD_DIR, { recursive: true });
+for (const [containerPath, hostDir] of [
+  ["/app/.next/standalone", STANDALONE_DIR],
+  ["/app/.next/static", STATIC_DIR],
+  ["/app/src/generated/prisma", GENERATED_PRISMA_DIR],
+] as const) {
+  const cp = spawnSync("docker", ["cp", `${containerName}:${containerPath}`, hostDir], {
+    stdio: "inherit",
+  });
+  if (cp.status !== 0) {
+    spawnSync("docker", ["rm", "-f", containerName], { stdio: "ignore" });
+    fail(`docker cp ${containerPath} failed with exit code ${cp.status}`);
+  }
+}
+spawnSync("docker", ["rm", "-f", containerName], { stdio: "ignore" });
+console.log(`✓ Linux build extracted to ${path.relative(ROOT, LINUX_BUILD_DIR)}`);
+
+// 1. Preconditions.
 requireExists(STANDALONE_NEXT_DIR, "unexpected: .next/standalone/.next missing after build");
 requireExists(
   path.join(STANDALONE_DIR, "server.js"),
@@ -113,10 +185,10 @@ requireExists(
   path.join(STANDALONE_DIR, "node_modules", "better-sqlite3", "build", "Release", "better_sqlite3.node"),
   "better-sqlite3 native binary not found in traced output — serverExternalPackages tracing may have broken"
 );
-requireExists(STATIC_DIR, 'run "npm run build" first — .next/static missing');
+requireExists(STATIC_DIR, "unexpected: docker cp of .next/static failed silently");
 requireExists(
   GENERATED_PRISMA_DIR,
-  'run "npx prisma generate" first — src/generated/prisma missing'
+  "unexpected: docker cp of src/generated/prisma failed silently"
 );
 requireExists(path.join(ROOT, "prisma", "schema.prisma"), "prisma/schema.prisma missing");
 requireExists(path.join(ROOT, "deploy", "app.js"), "deploy/app.js missing");
@@ -134,6 +206,7 @@ copyInto(STANDALONE_NEXT_DIR, ".next");
 copyInto(STATIC_DIR, path.join(".next", "static"));
 copyInto(path.join(ROOT, "public"), "public");
 copyInto(path.join(ROOT, "prisma", "schema.prisma"), path.join("prisma", "schema.prisma"));
+copyInto(path.join(ROOT, "prisma.config.ts"), "prisma.config.ts");
 const migrationsDir = path.join(ROOT, "prisma", "migrations");
 if (existsSync(migrationsDir)) {
   copyInto(migrationsDir, path.join("prisma", "migrations"));

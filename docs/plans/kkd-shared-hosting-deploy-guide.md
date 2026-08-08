@@ -575,3 +575,101 @@ this repo.
 persistent Application Root path for `STORAGE_ROOT` once a real (non-test) Node.js Selector app
 exists in Sprint 2/3, and confirm the SQLite DB file's directory survives restarts/redeploys —
 both require live panel testing, not something resolvable from the repo alone.
+
+## Sprint 2 update — both remaining open items closed by live testing, 2026-08-08
+
+Executed against a disposable test app (`kkd-app-test-2`, Application Root
+`/home/kkdprop1/kkd-app-test-2`, bound to `kkdproperty.co.th/nodetest2` — **not** the bare domain),
+Node 20.20.0. Destroyed and fully cleaned up (panel app + FTP files, permanent delete) at the end
+of this session; nothing left on the account.
+
+### Item 3 — `better-sqlite3` native binary: closed, real root cause found
+
+**Not a toolchain-availability problem** — `python3`, `make`, `gcc`, `g++` are all present on the
+panel, and outbound network to GitHub works. The actual cause: **`better-sqlite3@12.11.1`'s
+published release ships no prebuilt binary for Node ABI v115 (Node 20.x) at all** — only ABI v127+
+(Node 22+). `prebuild-install` correctly reports "No prebuilt binaries found" and falls through to
+`node-gyp rebuild --release`, which — via the panel's own "Run NPM Install" button — completed
+with exit code 0 but produced **no `.node` file anywhere** `bindings` searches. Root cause of *that*
+silent failure not fully isolated (suspected CloudLinux LVE resource limit killing the compile
+child process without normal error propagation) — not pursued further since a working mitigation
+was found.
+
+**Mitigation, confirmed working**: compile `better_sqlite3.node` in a Docker container matching the
+panel (AlmaLinux 8 base — CloudLinux is RHEL8-derived — with `gcc-toolset-12` for the `-std=c++20`
+support better-sqlite3 12.x needs; AlmaLinux 8's *default* `g++` is too old), then upload the
+compiled binary directly into `node_modules/better-sqlite3/build/Release/better_sqlite3.node`. This
+is now automated as part of the build (see below) rather than a manual per-deploy step. Confirmed
+via panel OS string: `Linux 4.18.0-553.107.1.lve.el8.x86_64` (el8, x86_64) — matches the Docker
+build target.
+
+### Item 5 — Prisma binary target: confirmed inert (per Sprint 1 finding), and superseded by a
+bigger finding
+
+`binaryTargets` in `schema.prisma` is confirmed genuinely unused at runtime for this project (no
+native/WASM query engine in `src/generated/prisma` — the driver-adapter model routes queries
+through `better-sqlite3` directly). Not the risk. The real risk that surfaced: **`.next/standalone`'s
+compiled server chunks bake in content-hash-suffixed module references** (e.g.
+`@prisma/adapter-better-sqlite3-da039dd0f7229020`) **that only resolve against the exact
+`node_modules` tree Next traced at build time.** A local macOS build's `.next/standalone` output
+cannot be paired with a separately-`npm install`-ed Linux `node_modules` — confirmed live: doing
+so produces `Cannot find package '@prisma/adapter-better-sqlite3-<hash>'` / `Cannot find module
+'@prisma/client-<hash>/runtime/client'` on every Prisma-touching route, while non-DB routes (locale
+redirect, static home page render) work fine.
+
+**Fix, confirmed working**: the entire build (`npm install`, `prisma generate`,
+`prisma migrate deploy` against a dummy build DB, `next build`) now happens *inside* the same
+Docker container used for the `better-sqlite3` fix, so the traced `.next/standalone` output and its
+`node_modules` are guaranteed to match. One Linux build environment closes both item 3 and item 5.
+See `deploy/docker-build/Dockerfile.shared-hosting` and the rewritten
+`scripts/build-shared-hosting-deploy.mts` (now builds via Docker itself — no separate local
+`npm run build` step).
+
+### Passenger entry-point contract (§2) — fully closed, no wrapper needed
+
+`.next/standalone/server.js` (Next's own generated entry point) works directly as the Passenger
+startup file — confirmed live, real homepage HTML rendered (`/th` route, 71KB, correct Thai
+content) through the actual compiled build with matching `node_modules`. `deploy/app.js` (the
+manual wrapper) is not needed; kept only as a documented fallback.
+
+### Two tooling gotchas found, now fixed/documented for whoever automates the real upload
+
+1. **`curl`'s default glob parsing silently drops files with `[`/`]` in their path** — exactly
+   Next's dynamic-route naming convention (`[locale]`, `[id]`, `[turbopack]_runtime.js`). 226 such
+   files failed to upload with no error in a naive per-file `curl -T` loop. Needs `curl -g`
+   (`--globoff`), or avoid per-file FTP entirely (see next point).
+2. **Per-file FTP upload does not scale** — the real deploy artifact is ~1,950 files; one-by-one
+   `curl -T` uploads (even successful ones) are too slow / time out. **Upload the zip
+   (`deploy/dist.zip`, single ~27MB transfer) and extract server-side via DirectAdmin's classic
+   File Manager** (`Extract` action next to the zip file) instead — confirmed available and
+   working on this panel. The File Manager extract flow requires: select all files on the
+   confirmation/preview page (thousands of checkboxes — check via one `document.querySelectorAll`
+   pass, not one at a time) and click the actual "Extract" submit button (distinct from the
+   `Extract` action link that opens the preview). Also: DirectAdmin's file-delete action fires a
+   native JS `confirm()` dialog — a browser-automation script must register a dialog handler that
+   accepts it, or the delete silently no-ops.
+
+### Still open — deferred to Sprint 3 (not blockers, decisions needed)
+
+- **DB provisioning on first boot**: confirmed Prisma-dependent pages correctly error with a clear
+  `TableDoesNotExist` message (not a crash) when `DATABASE_URL` points to an unmigrated file — this
+  is the expected state before `prisma migrate deploy` runs against the real deploy-time DB path.
+  Running it requires `prisma.config.ts` in the artifact (added to the allowlist this sprint — it
+  was missing before, `prisma migrate deploy` failed with "the datasource.url property is
+  required" without it). Whether Sprint 3 seeds fresh or migrates a real data copy is still an open
+  decision per the original PM plan, not resolved here.
+- **`package-lock.json` is currently out of sync with `package.json`** (missing
+  `@swc/helpers@0.5.23` as of 2026-08-08) — `npm ci` fails on it, in both this new Dockerfile and
+  the existing project-root Dockerfile. Worked around here with `npm install` instead of `npm ci`;
+  the lockfile itself should be regenerated (`npm install` locally, commit the updated lock) as a
+  separate, unrelated fix.
+- Admin login and `/files/...` round-trip smoke tests (per the original Sprint 2 plan step 5) were
+  not completed this session — deferred alongside the DB-provisioning decision above, since both
+  need a real seeded/migrated DB to test meaningfully.
+
+### Updated Go/No-Go
+
+Both originally-open items (3, 5) are now **closed** — with the Docker-build fix rather than the
+speculative mitigations in the table above (pre-compiled binary upload for §3 turned out right in
+spirit; §5 was reframed and fixed at the build-pipeline level, not `binaryTargets`). No remaining
+item blocks Sprint 3 cutover; the two "still open" items above are decisions, not unknowns.

@@ -10,4 +10,6 @@ storage/private
 .env
 deploy/dist
 deploy/dist.zip
+deploy/linux-build
+backups
 

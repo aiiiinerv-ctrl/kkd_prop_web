@@ -1,0 +1,45 @@
+# Build image for the DirectAdmin/CloudLinux Node.js Selector shared-hosting
+# target (kkdproperty.co.th). NOT used to run the app — only to produce a
+# deploy artifact whose node_modules (incl. the compiled better-sqlite3
+# native binary) and .next/standalone output are ABI-matched to the real
+# panel: AlmaLinux/CloudLinux 8 (RHEL 8 family, glibc), x64, Node 20.20.0.
+#
+# Why not the existing project-root Dockerfile (node:20-bookworm-slim)?
+# That image is Debian glibc, built for the Fly.io target. It was NOT used
+# for shared hosting because a live test (Sprint 2, 2026-08-08) proved the
+# panel needs gcc-toolset-12 specifically — its default AlmaLinux 8 g++ is
+# too old for better-sqlite3 12.x's `-std=c++20` requirement, and there is
+# no prebuilt binary at all for Node ABI v115 (Node 20.x) in this
+# better-sqlite3 version, so compiling from source is mandatory. Building
+# on Debian would risk a glibc symbol-version mismatch against the RHEL8
+# host that only surfaces at runtime.
+FROM almalinux:8
+
+RUN dnf install -y gcc-toolset-12-gcc-c++ make python3 tar gzip which curl && dnf clean all
+ENV PATH="/opt/rh/gcc-toolset-12/root/usr/bin:${PATH}"
+ENV CC="/opt/rh/gcc-toolset-12/root/usr/bin/gcc"
+ENV CXX="/opt/rh/gcc-toolset-12/root/usr/bin/g++"
+
+RUN curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - && \
+    dnf install -y nodejs-20.20.0 || dnf install -y nodejs
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+ENV NEXT_TELEMETRY_DISABLED=1
+# Dummy value so prisma.config.ts (which requires DATABASE_URL to resolve at
+# config-load time) doesn't fail during `prisma generate` — client generation
+# only reads the schema, it never connects. The real DATABASE_URL is supplied
+# at deploy time via the panel's env-var UI.
+ENV DATABASE_URL="file:./build.db"
+RUN npx prisma generate
+# Public pages read Prisma directly during static generation, so the dummy
+# build database needs its schema (empty tables are fine — content pages
+# just render empty). Matches the project-root Dockerfile's same step.
+RUN npx prisma migrate deploy
+RUN npm run build
+
+CMD ["true"]
