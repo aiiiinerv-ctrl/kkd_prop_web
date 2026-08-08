@@ -313,9 +313,9 @@
     "colBillRange": "Avg. Monthly Bill",
     "colSystemSize": "Recommended System",
     "colEstSaving": "Est. Savings",
-    "billRange3kw": "Below ฿1,500",
-    "billRange5kw": "฿1,500 - ฿3,500",
-    "billRange10kw": "Above ฿3,500"
+    "billRange3kw": "Below ฿3,000",
+    "billRange5kw": "฿3,000 - ฿6,000",
+    "billRange10kw": "Above ฿6,000"
   },
   "testimonials": {
     "title": "What Our Customers Say",

@@ -1,8 +1,18 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link } from "@/i18n/navigation";
+import { calculateTheoreticalMonthlySavingThb } from "@/lib/calculator";
+import { cn } from "@/lib/utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   type CalcPackage,
   recommendSystem,
@@ -13,15 +23,33 @@ const MIN_BILL = 500;
 const MAX_BILL = 8000;
 const STEP_BILL = 100;
 
+// Mirrors the bracket sizes in src/lib/calculator.ts's recommendSystemSizeKw —
+// used to render the comparison table in the "detail" panel below.
+const BRACKET_ROWS = [
+  { sizeKw: 3, systemKey: "system3kw", billRangeKey: "billRange3kw" },
+  { sizeKw: 5, systemKey: "system5kw", billRangeKey: "billRange5kw" },
+  { sizeKw: 10, systemKey: "system10kw", billRangeKey: "billRange10kw" },
+] as const;
+
 export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
   const t = useTranslations("calculator");
   const tCommon = useTranslations("common");
   const locale = useLocale();
   const { bill, result, setBill, calculate } = useCalculatorStore();
   const [error, setError] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
+  const detailRef = useRef<HTMLDivElement>(null);
 
   const onCalculate = () => {
-    setError(!calculate(packages));
+    const ok = calculate(packages);
+    setError(!ok);
+    if (ok) {
+      setShowDetail(true);
+      // Scroll after the panel has actually rendered, so the target height exists.
+      requestAnimationFrame(() => {
+        detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
   };
 
   const billValue = Number(bill);
@@ -39,6 +67,7 @@ export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
     : "0";
 
   return (
+    <>
     <div className="mx-auto max-w-[1140px] overflow-hidden rounded-[18px] border border-border bg-card text-left shadow-[0_18px_55px_rgba(13,71,161,0.08)]">
       <div className="grid lg:grid-cols-[1.08fr_0.92fr]">
         <div className="bg-muted p-8 sm:p-10 lg:p-[30px]">
@@ -144,5 +173,43 @@ export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
         </div>
       </div>
     </div>
+
+    {showDetail && (
+      <div
+        ref={detailRef}
+        className="mx-auto mt-6 max-w-[1140px] scroll-mt-6 rounded-[18px] border border-border bg-card p-8 sm:p-10"
+      >
+        <h3 className="text-xl font-bold text-primary">{t("methodologyTitle")}</h3>
+        <p className="mt-2 text-sm text-muted-foreground">{t("methodologyDesc")}</p>
+
+        <Table className="mt-6">
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t("colBillRange")}</TableHead>
+              <TableHead>{t("colSystemSize")}</TableHead>
+              <TableHead>{t("colEstSaving")}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {BRACKET_ROWS.map((row) => (
+              <TableRow
+                key={row.sizeKw}
+                className={cn(displayedResult?.systemKey === row.systemKey && "bg-accent")}
+              >
+                <TableCell>{t(row.billRangeKey)}</TableCell>
+                <TableCell className="font-semibold text-primary">{t(row.systemKey)}</TableCell>
+                <TableCell>
+                  ~฿{calculateTheoreticalMonthlySavingThb(row.sizeKw).toLocaleString(locale)} /{" "}
+                  {t("month")}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+
+        <p className="mt-4 text-xs text-muted-foreground">{t("disclaimer")}</p>
+      </div>
+    )}
+    </>
   );
 }
