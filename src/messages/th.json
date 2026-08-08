@@ -313,9 +313,9 @@
     "colBillRange": "ค่าไฟเฉลี่ยต่อเดือน",
     "colSystemSize": "ขนาดระบบแนะนำ",
     "colEstSaving": "ประหยัดโดยประมาณ",
-    "billRange3kw": "ต่ำกว่า 3,000 บาท",
-    "billRange5kw": "3,000 - 6,000 บาท",
-    "billRange10kw": "มากกว่า 6,000 บาท"
+    "billRange3kw": "ต่ำกว่า 1,500 บาท",
+    "billRange5kw": "1,500 - 3,500 บาท",
+    "billRange10kw": "มากกว่า 3,500 บาท"
   },
   "testimonials": {
     "title": "เสียงจากลูกค้าของเรา",
