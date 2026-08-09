@@ -69,6 +69,7 @@ type LeadDetail = {
   name: string;
   phone: string;
   lineId: string | null;
+  referrerName: string | null;
   province: string;
   buildingType: string;
   buildingTypeOtherText: string | null;
@@ -178,6 +179,12 @@ export function LeadDetailClient({
             <div>
               <dt className="text-muted-foreground">LINE ID</dt>
               <dd className="font-medium">{lead.lineId}</dd>
+            </div>
+          )}
+          {lead.referrerName && (
+            <div>
+              <dt className="text-muted-foreground">ผู้แนะนำ</dt>
+              <dd className="font-medium">{lead.referrerName}</dd>
             </div>
           )}
           <div>

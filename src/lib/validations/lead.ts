@@ -10,6 +10,7 @@ const baseLeadSchema = z.object({
   name: z.string().trim().min(2).max(120),
   phone: phoneSchema,
   lineId: z.string().trim().max(80).optional().or(z.literal("")),
+  referrerName: z.string().trim().max(120).optional().or(z.literal("")),
   province: z.string().trim().min(2).max(80),
   buildingType: z.enum(["RESIDENTIAL", "COMMERCIAL", "INDUSTRIAL", "OTHER"]),
   buildingTypeOtherText: z.string().trim().max(120).optional().or(z.literal("")),

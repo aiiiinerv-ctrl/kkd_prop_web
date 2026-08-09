@@ -113,6 +113,7 @@ model PromoChannel {
   refCode    String             @unique
   isActive   Boolean            @default(true)
   sortOrder  Int                @default(0)
+  createdAt  DateTime           @default(now())
   leads      Lead[]
   autoLeads  Lead[]             @relation("LeadAutoSourceChannel")
   executives ChannelExecutive[]
@@ -137,6 +138,9 @@ model Lead {
   name            String
   phone           String
   lineId          String?
+  // Free-text name of whoever personally referred this lead — supplementary
+  // info, distinct from sourceChannelId (a marketing channel from a dropdown).
+  referrerName    String?
   province        String
   buildingType    BuildingType
   // Free-text detail, required only when buildingType === OTHER (validated

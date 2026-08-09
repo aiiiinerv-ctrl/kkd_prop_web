@@ -7,7 +7,11 @@ import { useForm } from "react-hook-form";
 import { submitQuote } from "@/actions/submit-quote";
 import { submitSurveyBooking } from "@/actions/submit-survey-booking";
 import { PROVINCES } from "@/lib/data/provinces";
+import { clearDraft, loadDraft, saveDraft } from "@/lib/form-draft";
 import { cn } from "@/lib/utils";
+
+const QUOTE_DRAFT_KEY = "kkd-booking-draft-quote";
+const SURVEY_DRAFT_KEY = "kkd-booking-draft-survey";
 
 type Channel = { id: string; name: string };
 type Tab = "quote" | "survey";
@@ -40,6 +44,7 @@ type QuoteFields = {
   name: string;
   phone: string;
   lineId: string;
+  referrerName: string;
   province: string;
   buildingType: string;
   buildingTypeOtherText: string;
@@ -53,6 +58,7 @@ type SurveyFields = {
   name: string;
   phone: string;
   lineId: string;
+  referrerName: string;
   province: string;
   buildingType: string;
   buildingTypeOtherText: string;
@@ -287,6 +293,26 @@ function SourceChannelField({
   );
 }
 
+function ReferrerField({
+  register,
+  t,
+}: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  register: any;
+  t: ReturnType<typeof useTranslations<"booking">>;
+}) {
+  return (
+    <div>
+      <label className={labelCls}>{t("fieldReferrer")}</label>
+      <input
+        className={inputCls}
+        placeholder={t("fieldReferrerPlaceholder")}
+        {...register("referrerName")}
+      />
+    </div>
+  );
+}
+
 function QuoteForm({
   channels,
   initialBill,
@@ -304,10 +330,22 @@ function QuoteForm({
     register,
     handleSubmit,
     watch,
+    reset,
     formState: { errors },
   } = useForm<QuoteFields>({
     defaultValues: { avgMonthlyBill: initialBill, interestedSystems: [] },
   });
+
+  useEffect(() => {
+    const draft = loadDraft<QuoteFields>(QUOTE_DRAFT_KEY);
+    if (draft) reset(draft);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const subscription = watch((values) => saveDraft(QUOTE_DRAFT_KEY, values));
+    return () => subscription.unsubscribe();
+  }, [watch]);
 
   const onSubmit = (values: QuoteFields) => {
     setServerError(false);
@@ -322,8 +360,12 @@ function QuoteForm({
       });
       formData.set("locale", locale);
       const result = await submitQuote(formData);
-      if (result.ok) onSuccess();
-      else setServerError(true);
+      if (result.ok) {
+        clearDraft(QUOTE_DRAFT_KEY);
+        onSuccess();
+      } else {
+        setServerError(true);
+      }
     });
   };
 
@@ -358,6 +400,7 @@ function QuoteForm({
         </div>
       </div>
       <SourceChannelField register={register} channels={channels} t={t} />
+      <ReferrerField register={register} t={t} />
       {serverError && <p className={errorCls}>{t("errorGeneric")}</p>}
       <p className="text-center text-xs text-muted-foreground">
         {t("reassurance")}{" "}
@@ -401,8 +444,20 @@ function SurveyForm({
     register,
     handleSubmit,
     watch,
+    reset,
     formState: { errors },
   } = useForm<SurveyFields>();
+
+  useEffect(() => {
+    const draft = loadDraft<SurveyFields>(SURVEY_DRAFT_KEY);
+    if (draft) reset(draft);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const subscription = watch((values) => saveDraft(SURVEY_DRAFT_KEY, values));
+    return () => subscription.unsubscribe();
+  }, [watch]);
 
   const preferredDate = watch("preferredDate");
   const timeSlot = watch("timeSlot");
@@ -571,6 +626,7 @@ function SurveyForm({
       </div>
 
       <SourceChannelField register={register} channels={channels} t={t} />
+      <ReferrerField register={register} t={t} />
       {serverError && <p className={errorCls}>{t("errorGeneric")}</p>}
       {dateFullError && <p className={errorCls}>{t("dateFull")}</p>}
       <p className="text-center text-xs text-muted-foreground">

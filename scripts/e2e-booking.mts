@@ -23,6 +23,7 @@ await page.selectOption('select[name="province"]', "สมุทรปราก�
 await page.selectOption('select[name="buildingType"]', "OTHER");
 await page.fill('input[name="buildingTypeOtherText"]', "โกดังเก็บของ");
 await page.fill('textarea[name="notes"]', "ทดสอบหมายเหตุจากฟอร์มสาธารณะ");
+await page.fill('input[name="referrerName"]', "คุณทดสอบ ผู้แนะนำ");
 await page.selectOption('select[name="avgMonthlyBill"]', "7500"); // 5,000-10,000 bucket
 await page.check('input[name="interestedSystems"][value="ON_GRID"]');
 await page.check('input[name="interestedSystems"][value="HYBRID"]');
@@ -49,6 +50,11 @@ console.log(
 );
 console.log(
   `QUOTE: avgMonthlyBill bucket value saved ${quoteLead?.avgMonthlyBill === 7500 ? "✓" : "✗ FAIL"}`
+);
+console.log(
+  `QUOTE: referrerName saved ${
+    quoteLead?.referrerName === "คุณทดสอบ ผู้แนะนำ" ? "✓" : "✗ FAIL"
+  }`
 );
 const interestedSystems = Array.isArray(quoteLead?.interestedSystems)
   ? (quoteLead!.interestedSystems as string[])
@@ -89,6 +95,7 @@ await page.fill('input[name="phone"]', surveyPhone);
 await page.selectOption('select[name="province"]', "กรุงเทพมหานคร");
 await page.selectOption('select[name="buildingType"]', "COMMERCIAL");
 await page.fill('textarea[name="notes"]', "หมายเหตุนัดสำรวจทดสอบ");
+await page.fill('input[name="referrerName"]', "คุณทดสอบ ผู้แนะนำ 2");
 await page.fill('textarea[name="address"]', "123/45 หมู่บ้านทดสอบ ถนนสุขุมวิท แขวงบางนา");
 await page.fill('input[name="preferredDate"]', surveyDate);
 await page.selectOption('select[name="timeSlot"]', "MORNING");
@@ -111,6 +118,11 @@ console.log(
 console.log(
   `SURVEY: interestedSystems not set (quote-form-only field) ${
     surveyLead?.interestedSystems == null ? "✓" : "✗ FAIL"
+  }`
+);
+console.log(
+  `SURVEY: referrerName saved ${
+    surveyLead?.referrerName === "คุณทดสอบ ผู้แนะนำ 2" ? "✓" : "✗ FAIL"
   }`
 );
 

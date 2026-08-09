@@ -217,6 +217,8 @@
     "fieldPhonePlaceholder": "08X-XXX-XXXX",
     "fieldLineId": "LINE ID",
     "fieldLineIdPlaceholder": "ระบุ LINE ID (ถ้ามี)",
+    "fieldReferrer": "ผู้แนะนำ",
+    "fieldReferrerPlaceholder": "ชื่อผู้แนะนำ (ถ้ามี)",
     "fieldProvince": "จังหวัดที่อยู่",
     "fieldProvincePlaceholder": "เลือกจังหวัด",
     "fieldBuildingType": "ประเภทอาคาร",

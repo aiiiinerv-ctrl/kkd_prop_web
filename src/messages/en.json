@@ -217,6 +217,8 @@
     "fieldPhonePlaceholder": "08X-XXX-XXXX",
     "fieldLineId": "LINE ID",
     "fieldLineIdPlaceholder": "Enter LINE ID (optional)",
+    "fieldReferrer": "Referred by",
+    "fieldReferrerPlaceholder": "Referrer's name (optional)",
     "fieldProvince": "Province",
     "fieldProvincePlaceholder": "Select your province",
     "fieldBuildingType": "Building Type",

@@ -65,6 +65,7 @@ export default async function LeadDetailPage({
         name: lead.name,
         phone: lead.phone,
         lineId: lead.lineId,
+        referrerName: lead.referrerName,
         province: lead.province,
         buildingType: lead.buildingType,
         buildingTypeOtherText: lead.buildingTypeOtherText,
