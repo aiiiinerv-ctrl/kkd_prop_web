@@ -50,6 +50,7 @@ export async function HomeContent({
       systemSizeKw: p.systemSizeKw,
       category: p.category,
       imageUrl: imageKeys[0] ? storage.publicUrl(imageKeys[0]) : null,
+      imageUrls: imageKeys.map((key) => storage.publicUrl(key)),
     };
   });
 

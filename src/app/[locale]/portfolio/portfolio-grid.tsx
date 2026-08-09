@@ -22,6 +22,7 @@ export type PortfolioItem = {
   systemSizeKw: number;
   category: string;
   imageUrl: string | null;
+  imageUrls: string[];
 };
 
 export function PortfolioGrid({
@@ -73,13 +74,20 @@ export function PortfolioGrid({
               style={{ animationDelay: `${i * 60}ms` }}
             >
               {p.imageUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={p.imageUrl}
-                  alt={p.title}
-                  className="h-64 w-full object-cover"
-                  loading="lazy"
-                />
+                <div className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={p.imageUrl}
+                    alt={p.title}
+                    className="h-64 w-full object-cover"
+                    loading="lazy"
+                  />
+                  {p.imageUrls.length > 1 && (
+                    <span className="absolute top-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-xs font-semibold text-white">
+                      +{p.imageUrls.length - 1}
+                    </span>
+                  )}
+                </div>
               )}
               <div className="p-5 text-center">
                 <h3 className="font-semibold text-foreground">{p.title}</h3>

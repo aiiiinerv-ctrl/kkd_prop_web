@@ -122,12 +122,19 @@ export function PortfolioClient({ projects }: { projects: ProjectRow[] }) {
               <TableRow key={p.id}>
                 <TableCell>
                   {p.imageKeys[0] && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={`/files/${p.imageKeys[0]}`}
-                      alt=""
-                      className="h-10 w-14 rounded object-cover"
-                    />
+                    <div className="relative inline-block">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`/files/${p.imageKeys[0]}`}
+                        alt=""
+                        className="h-10 w-14 rounded object-cover"
+                      />
+                      {p.imageKeys.length > 1 && (
+                        <span className="absolute -top-1.5 -right-1.5 rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
+                          +{p.imageKeys.length - 1}
+                        </span>
+                      )}
+                    </div>
                   )}
                 </TableCell>
                 <TableCell className="font-medium">{p.titleTh}</TableCell>
@@ -285,10 +292,14 @@ export function PortfolioClient({ projects }: { projects: ProjectRow[] }) {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>รูปผลงาน{editing ? " (เว้นว่างถ้าไม่เปลี่ยน)" : ""}</Label>
+                <Label>
+                  รูปผลงาน (เลือกได้หลายรูป)
+                  {editing ? " — เว้นว่างถ้าไม่เปลี่ยน, เลือกใหม่จะแทนที่ทั้งหมด" : ""}
+                </Label>
                 <input
-                  name="image"
+                  name="images"
                   type="file"
+                  multiple
                   accept="image/jpeg,image/png,image/webp"
                   className={inputCls}
                 />

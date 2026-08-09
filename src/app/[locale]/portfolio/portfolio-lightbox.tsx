@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { PortfolioItem } from "./portfolio-grid";
 
 export function PortfolioLightbox({
@@ -18,6 +18,15 @@ export function PortfolioLightbox({
   const t = useTranslations("portfolio");
   const isOpen = openIndex !== null;
   const item = openIndex !== null ? items[openIndex] : null;
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const [lastOpenIndex, setLastOpenIndex] = useState(openIndex);
+  if (openIndex !== lastOpenIndex) {
+    setLastOpenIndex(openIndex);
+    setPhotoIndex(0);
+  }
+
+  const photos = item?.imageUrls.length ? item.imageUrls : item?.imageUrl ? [item.imageUrl] : [];
+  const activePhoto = photos[photoIndex] ?? null;
 
   const goPrev = () => {
     if (openIndex === null) return;
@@ -96,13 +105,29 @@ export function PortfolioLightbox({
           ×
         </button>
 
-        {item.imageUrl && (
+        {activePhoto && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={item.imageUrl}
+            key={activePhoto}
+            src={activePhoto}
             alt={item.title}
             className="lightbox-zoom-in max-h-[75vh] w-auto rounded-lg object-contain shadow-2xl"
           />
+        )}
+        {photos.length > 1 && (
+          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+            {photos.map((photo, i) => (
+              <button
+                key={photo}
+                type="button"
+                aria-label={`${i + 1}/${photos.length}`}
+                onClick={() => setPhotoIndex(i)}
+                className={`size-2.5 rounded-full transition-colors ${
+                  i === photoIndex ? "bg-white" : "bg-white/40 hover:bg-white/70"
+                }`}
+              />
+            ))}
+          </div>
         )}
         <div className="text-center text-white">
           <h3 className="text-xl font-medium sm:text-2xl">{item.title}</h3>

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { slugify, storePublicImage } from "@/lib/admin-content";
+import { slugify, storePublicImages } from "@/lib/admin-content";
 import { withAudit } from "@/lib/audit";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -49,9 +49,9 @@ export async function createProject(formData: FormData): Promise<ActionResult> {
   const parsed = parseProject(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
 
-  const image = await storePublicImage(formData.get("image"), "portfolio");
-  if (!image.ok) return { ok: false, error: image.error };
-  if (!image.key) return { ok: false, error: "กรุณาแนบรูปผลงาน" };
+  const images = await storePublicImages(formData.getAll("images"), "portfolio");
+  if (!images.ok) return { ok: false, error: images.error };
+  if (images.keys.length === 0) return { ok: false, error: "กรุณาแนบรูปผลงาน" };
 
   await withAudit({
     actorId: session.user.id,
@@ -62,7 +62,7 @@ export async function createProject(formData: FormData): Promise<ActionResult> {
         data: {
           ...parsed.data,
           slug: slugify(parsed.data.titleEn),
-          imageKeys: [image.key],
+          imageKeys: images.keys,
         },
       }),
   });
@@ -83,8 +83,8 @@ export async function updateProject(
   const parsed = parseProject(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
 
-  const image = await storePublicImage(formData.get("image"), "portfolio");
-  if (!image.ok) return { ok: false, error: image.error };
+  const images = await storePublicImages(formData.getAll("images"), "portfolio");
+  if (!images.ok) return { ok: false, error: images.error };
 
   const oldKeys = before.imageKeys as string[];
   await withAudit({
@@ -97,12 +97,12 @@ export async function updateProject(
         where: { id },
         data: {
           ...parsed.data,
-          ...(image.key ? { imageKeys: [image.key] } : {}),
+          ...(images.keys.length > 0 ? { imageKeys: images.keys } : {}),
         },
       }),
   });
 
-  if (image.key) {
+  if (images.keys.length > 0) {
     for (const key of oldKeys) {
       await storage.delete(key);
     }

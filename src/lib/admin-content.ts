@@ -43,3 +43,28 @@ export async function storePublicImage(
   });
   return { ok: true, key };
 }
+
+/**
+ * Validates and stores zero or more uploaded images under a public prefix.
+ * Returns the storage keys in submission order; empty array when no files
+ * were provided.
+ */
+export async function storePublicImages(
+  files: FormDataEntryValue[],
+  prefix: string
+): Promise<{ ok: true; keys: string[] } | { ok: false; error: string }> {
+  const keys: string[] = [];
+  for (const file of files) {
+    if (!(file instanceof File) || file.size === 0) continue;
+    const check = validateImage(file, { maxMb: 5 });
+    if (!check.ok) return { ok: false, error: check.error };
+
+    const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+    const key = `public/${prefix}/${createId()}${ext}`;
+    await storage.put(key, Buffer.from(await file.arrayBuffer()), {
+      contentType: file.type,
+    });
+    keys.push(key);
+  }
+  return { ok: true, keys };
+}
