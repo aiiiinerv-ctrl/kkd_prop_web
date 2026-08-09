@@ -6,8 +6,17 @@ import { Link } from "@/i18n/navigation";
 import {
   BILL_THRESHOLD_3KW_TO_5KW,
   BILL_THRESHOLD_5KW_TO_10KW,
+  calculateTheoreticalMonthlySavingThb,
 } from "@/lib/calculator";
 import { cn } from "@/lib/utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   type CalcPackage,
   recommendSystem,
@@ -17,6 +26,14 @@ import {
 const MIN_BILL = 500;
 const MAX_BILL = 8000;
 const STEP_BILL = 100;
+
+// Mirrors the bracket sizes in src/lib/calculator.ts's recommendSystemSizeKw
+// — renders the static comparison table below the calculator.
+const BRACKET_ROWS = [
+  { sizeKw: 3, systemKey: "system3kw", billRangeKey: "billRange3kw" },
+  { sizeKw: 5, systemKey: "system5kw", billRangeKey: "billRange5kw" },
+  { sizeKw: 10, systemKey: "system10kw", billRangeKey: "billRange10kw" },
+] as const;
 
 function billToPercent(bill: number) {
   return ((bill - MIN_BILL) / (MAX_BILL - MIN_BILL)) * 100;
@@ -42,6 +59,7 @@ export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
     : "0";
 
   return (
+    <>
     <div className="mx-auto max-w-[1140px] overflow-hidden rounded-[18px] border border-border bg-card text-left shadow-[0_18px_55px_rgba(13,71,161,0.08)]">
       <div className="grid lg:grid-cols-[1.08fr_0.92fr]">
         <div className="bg-muted p-8 sm:p-10 lg:p-[30px]">
@@ -189,5 +207,38 @@ export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
         </div>
       </div>
     </div>
+
+    <div className="mx-auto mt-6 max-w-[1140px] rounded-[18px] border border-border bg-card p-8 sm:p-10">
+      <h3 className="text-xl font-bold text-primary">{t("methodologyTitle")}</h3>
+      <p className="mt-2 text-sm text-muted-foreground">{t("methodologyDesc")}</p>
+
+      <Table className="mt-6">
+        <TableHeader>
+          <TableRow>
+            <TableHead>{t("colBillRange")}</TableHead>
+            <TableHead>{t("colSystemSize")}</TableHead>
+            <TableHead>{t("colEstSaving")}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {BRACKET_ROWS.map((row) => (
+            <TableRow
+              key={row.sizeKw}
+              className={cn(displayedResult?.systemKey === row.systemKey && "bg-accent")}
+            >
+              <TableCell>{t(row.billRangeKey)}</TableCell>
+              <TableCell className="font-semibold text-primary">{t(row.systemKey)}</TableCell>
+              <TableCell>
+                ~฿{calculateTheoreticalMonthlySavingThb(row.sizeKw).toLocaleString(locale)} /{" "}
+                {t("month")}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+
+      <p className="mt-4 text-xs text-muted-foreground">{t("disclaimer")}</p>
+    </div>
+    </>
   );
 }
