@@ -50,9 +50,24 @@ export async function POST(req: NextRequest) {
       .sort();
 
     const schemaLog: string[] = [];
+    const skippedLog: string[] = [];
     for (const folder of migrationFolders) {
       const sqlPath = path.join(migrationsDir, folder, "migration.sql");
       const sql = readFileSync(sqlPath, "utf-8");
+
+      // Leftover SQLite-flavored migration folders from before the MySQL
+      // migration (wayfinder map #1) are still sitting in this directory on
+      // production — extraction only overwrites/adds files, it never
+      // deletes ones missing from the new zip, so old deploys' artifacts
+      // accumulate here. Rather than requiring a destructive cleanup on
+      // production first, skip anything that isn't MySQL DDL: this
+      // project's SQLite migrations quote identifiers with double quotes
+      // (`"TableName"`), MySQL's with backticks (`` `TableName` ``).
+      if (/^\s*CREATE TABLE "/m.test(sql)) {
+        skippedLog.push(`${folder} (SQLite-flavored, skipped)`);
+        continue;
+      }
+
       const statements = sql
         .split(";")
         .map((s) =>
@@ -131,7 +146,7 @@ export async function POST(req: NextRequest) {
       prisma.auditLog.upsert({ where: { id: row.id }, create: row, update: row })
     );
 
-    return NextResponse.json({ ok: true, schemaLog, counts });
+    return NextResponse.json({ ok: true, schemaLog, skippedLog, counts });
   } catch (err) {
     // Surface the real error in the response — this route is temporary,
     // internal-only, and secret-gated, so returning stack details here is
