@@ -96,6 +96,8 @@ npx tsx scripts/e2e-booking.mts  # E2E: public lead forms (server must be runnin
 npx tsx scripts/e2e-admin.mts    # E2E: auth guard, login, slip access
 npx tsx scripts/e2e-admin-crud.mts  # E2E: leads pipeline, content CRUD, audit
 npx tsx scripts/verify-calculator.mts  # regression check: calculator formulas vs. reference Excel
+# before redeploying to production, always read docs/plans/kkd-shared-hosting-redeploy-runbook.md
+npx tsx scripts/smoke-test-production.mts  # verify production after deploy (4 standard checks + optional --check/--expect-text)
 ```
 
 E2E scripts drive system Chrome (`channel: "chrome"`) — no Playwright browser download needed. They are idempotent against the persistent `prisma/dev.db`.
