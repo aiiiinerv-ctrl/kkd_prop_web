@@ -28,13 +28,24 @@ export function PortfolioLightbox({
   const photos = item?.imageUrls.length ? item.imageUrls : item?.imageUrl ? [item.imageUrl] : [];
   const activePhoto = photos[photoIndex] ?? null;
 
+  // Arrows page through the open project's own photos first; only once
+  // you're at that project's first/last photo do they move to the
+  // previous/next project (resetting back to that project's first photo).
   const goPrev = () => {
     if (openIndex === null) return;
+    if (photoIndex > 0) {
+      setPhotoIndex(photoIndex - 1);
+      return;
+    }
     onOpenIndexChange((openIndex - 1 + items.length) % items.length);
   };
 
   const goNext = () => {
     if (openIndex === null) return;
+    if (photoIndex < photos.length - 1) {
+      setPhotoIndex(photoIndex + 1);
+      return;
+    }
     onOpenIndexChange((openIndex + 1) % items.length);
   };
 
@@ -64,7 +75,7 @@ export function PortfolioLightbox({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
       onClick={() => onOpenIndexChange(null)}
     >
-      {items.length > 1 && (
+      {(items.length > 1 || photos.length > 1) && (
         <button
           type="button"
           aria-label={t("lightboxPrev")}
@@ -78,7 +89,7 @@ export function PortfolioLightbox({
         </button>
       )}
 
-      {items.length > 1 && (
+      {(items.length > 1 || photos.length > 1) && (
         <button
           type="button"
           aria-label={t("lightboxNext")}
