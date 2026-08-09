@@ -11,6 +11,7 @@ import type { ActionResult } from "./users";
 const channelSchema = z.object({
   nameTh: z.string().trim().min(1).max(120),
   nameEn: z.string().trim().min(1).max(120),
+  type: z.enum(["INDIVIDUAL", "COMPANY", "PLATFORM"]),
   isActive: z.coerce.boolean(),
   sortOrder: z.coerce.number().int().min(0).max(999).default(0),
 });
@@ -19,14 +20,12 @@ function parseChannel(formData: FormData) {
   return channelSchema.safeParse({
     nameTh: formData.get("nameTh"),
     nameEn: formData.get("nameEn"),
+    type: formData.get("type"),
     isActive: formData.get("isActive") === "on",
     sortOrder: formData.get("sortOrder") || 0,
   });
 }
 
-// TODO(sprint 1): move to a dedicated refCode generator once channel type +
-// executive CRUD UI lands; for now this just keeps `refCode` populated so the
-// schema's required/unique constraint is satisfied.
 async function nextChannelRefCode(): Promise<string> {
   const last = await prisma.promoChannel.findFirst({
     orderBy: { refCode: "desc" },

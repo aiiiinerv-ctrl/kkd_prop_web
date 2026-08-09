@@ -41,26 +41,45 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+type ChannelType = "INDIVIDUAL" | "COMPANY" | "PLATFORM";
+
+const CHANNEL_TYPE_LABELS: Record<ChannelType, string> = {
+  INDIVIDUAL: "บุคคล",
+  COMPANY: "บริษัท",
+  PLATFORM: "แพลตฟอร์มออนไลน์",
+};
+
 type ExecutiveRow = {
   id: string;
   name: string;
   phone: string;
   refCode: string;
+  createdAt: string;
 };
 
 type ChannelRow = {
   id: string;
   nameTh: string;
   nameEn: string;
+  type: ChannelType;
   refCode: string;
   isActive: boolean;
   sortOrder: number;
+  createdAt: string;
   leadCount: number;
   executives: ExecutiveRow[];
 };
 
 function promoLink(siteUrl: string, refCode: string) {
   return `${siteUrl}/?ref=${refCode}`;
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("th-TH", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 
 function CopyButton({ value }: { value: string }) {
@@ -182,10 +201,12 @@ export function ChannelsClient({
             <TableRow>
               <TableHead>ชื่อ (TH)</TableHead>
               <TableHead>ชื่อ (EN)</TableHead>
+              <TableHead>ประเภท</TableHead>
               <TableHead>รหัส / ลิงก์โปรโมท</TableHead>
               <TableHead>จำนวน Lead</TableHead>
               <TableHead>ลำดับ</TableHead>
               <TableHead>สถานะ</TableHead>
+              <TableHead>วันที่สร้าง</TableHead>
               <TableHead className="text-right">จัดการ</TableHead>
             </TableRow>
           </TableHeader>
@@ -194,6 +215,7 @@ export function ChannelsClient({
               <TableRow key={c.id}>
                 <TableCell className="font-medium">{c.nameTh}</TableCell>
                 <TableCell>{c.nameEn}</TableCell>
+                <TableCell>{CHANNEL_TYPE_LABELS[c.type]}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1.5">
                     <Badge variant="outline">{c.refCode}</Badge>
@@ -209,6 +231,9 @@ export function ChannelsClient({
                   <Badge variant={c.isActive ? "secondary" : "destructive"}>
                     {c.isActive ? "เปิดใช้งาน" : "ปิด"}
                   </Badge>
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {formatDate(c.createdAt)}
                 </TableCell>
                 <TableCell className="text-right">
                   <Button
@@ -295,6 +320,21 @@ export function ChannelsClient({
               <Input name="nameEn" required defaultValue={editing?.nameEn} />
             </div>
             <div className="space-y-1.5">
+              <Label>ประเภทช่องทาง</Label>
+              <select
+                name="type"
+                required
+                defaultValue={editing?.type ?? "INDIVIDUAL"}
+                className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/50"
+              >
+                {(Object.keys(CHANNEL_TYPE_LABELS) as ChannelType[]).map((type) => (
+                  <option key={type} value={type}>
+                    {CHANNEL_TYPE_LABELS[type]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
               <Label>ลำดับการแสดง</Label>
               <Input
                 name="sortOrder"
@@ -342,6 +382,7 @@ export function ChannelsClient({
                       <TableHead>ชื่อ</TableHead>
                       <TableHead>เบอร์โทร</TableHead>
                       <TableHead>รหัส / ลิงก์โปรโมท</TableHead>
+                      <TableHead>วันที่สร้าง</TableHead>
                       {!readOnly && <TableHead className="text-right">จัดการ</TableHead>}
                     </TableRow>
                   </TableHeader>
@@ -349,7 +390,7 @@ export function ChannelsClient({
                     {execDialogChannel.executives.length === 0 && (
                       <TableRow>
                         <TableCell
-                          colSpan={readOnly ? 3 : 4}
+                          colSpan={readOnly ? 4 : 5}
                           className="py-6 text-center text-sm text-muted-foreground"
                         >
                           ยังไม่มีผู้ดำเนินการ
@@ -365,6 +406,9 @@ export function ChannelsClient({
                             <Badge variant="outline">{e.refCode}</Badge>
                             <CopyButton value={promoLink(siteUrl, e.refCode)} />
                           </div>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {formatDate(e.createdAt)}
                         </TableCell>
                         {!readOnly && (
                           <TableCell className="text-right">

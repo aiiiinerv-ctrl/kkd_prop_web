@@ -29,15 +29,18 @@ export default async function AdminChannelsPage() {
         id: c.id,
         nameTh: c.nameTh,
         nameEn: c.nameEn,
+        type: c.type,
         refCode: c.refCode,
         isActive: c.isActive,
         sortOrder: c.sortOrder,
+        createdAt: c.createdAt.toISOString(),
         leadCount: c._count.leads + c._count.autoLeads,
         executives: c.executives.map((e) => ({
           id: e.id,
           name: e.name,
           phone: e.phone,
           refCode: e.refCode,
+          createdAt: e.createdAt.toISOString(),
         })),
       }))}
     />
