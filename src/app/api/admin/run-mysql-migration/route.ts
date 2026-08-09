@@ -60,10 +60,17 @@ export async function POST(req: NextRequest) {
       // production — extraction only overwrites/adds files, it never
       // deletes ones missing from the new zip, so old deploys' artifacts
       // accumulate here. Rather than requiring a destructive cleanup on
-      // production first, skip anything that isn't MySQL DDL: this
-      // project's SQLite migrations quote identifiers with double quotes
-      // (`"TableName"`), MySQL's with backticks (`` `TableName` ``).
-      if (/^\s*CREATE TABLE "/m.test(sql)) {
+      // production first, skip anything that isn't MySQL DDL. Checking only
+      // for `CREATE TABLE "` isn't enough — some old migrations open with
+      // `ALTER TABLE "..." ADD COLUMN` instead. The reliable discriminator:
+      // every Prisma-generated MySQL migration quotes identifiers with
+      // backticks throughout; SQLite ones never use a backtick in actual
+      // SQL — but some old migrations' "Warnings:" header comment happens
+      // to use backtick-style Markdown emphasis around a column name, so
+      // that block comment must be stripped before checking, or it's a
+      // false negative.
+      const sqlWithoutComments = sql.replace(/\/\*[\s\S]*?\*\//g, "");
+      if (!sqlWithoutComments.includes("`")) {
         skippedLog.push(`${folder} (SQLite-flavored, skipped)`);
         continue;
       }
