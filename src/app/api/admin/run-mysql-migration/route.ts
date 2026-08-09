@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
@@ -33,57 +33,111 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const dumpPath = path.join(process.cwd(), "migration-data.json");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const dump: Record<string, any[]> = JSON.parse(readFileSync(dumpPath, "utf-8"));
+  try {
+    // Apply the schema before writing data — the production database is
+    // freshly created and has no tables yet. No SSH/external MySQL access on
+    // this host means `prisma migrate deploy` can't run from a local
+    // machine either, and the `prisma` CLI package itself isn't in this
+    // traced standalone deploy artifact (it's a build-time devDependency,
+    // never `require()`d at runtime, so Next's output tracer correctly
+    // excludes it) — so this executes each migration's raw SQL directly
+    // through the same DB connection the app already has, instead of
+    // shelling out to a CLI that isn't there.
+    const migrationsDir = path.join(process.cwd(), "prisma", "migrations");
+    const migrationFolders = readdirSync(migrationsDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async function upsertAll(rows: any[], upsertOne: (row: any) => Promise<unknown>) {
-    for (const row of rows) {
-      await upsertOne(row);
+    const schemaLog: string[] = [];
+    for (const folder of migrationFolders) {
+      const sqlPath = path.join(migrationsDir, folder, "migration.sql");
+      const sql = readFileSync(sqlPath, "utf-8");
+      const statements = sql
+        .split(";")
+        .map((s) =>
+          s
+            .split("\n")
+            .filter((line) => !line.trim().startsWith("--"))
+            .join("\n")
+            .trim()
+        )
+        .filter((s) => s.length > 0);
+      for (const statement of statements) {
+        try {
+          await prisma.$executeRawUnsafe(statement);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          // Tolerate re-running against a database this already applied to
+          // — this route is meant to be safely retriable. MySQL phrases
+          // "already applied" differently depending on the object kind
+          // (tables: "already exists"; constraints/indexes: "Duplicate ...
+          // constraint/key name").
+          if (!/already exists|duplicate.*(constraint|key) name/i.test(message)) throw err;
+        }
+      }
+      schemaLog.push(folder);
     }
-    return rows.length;
+
+    const dumpPath = path.join(process.cwd(), "migration-data.json");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const dump: Record<string, any[]> = JSON.parse(readFileSync(dumpPath, "utf-8"));
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async function upsertAll(rows: any[], upsertOne: (row: any) => Promise<unknown>) {
+      for (const row of rows) {
+        await upsertOne(row);
+      }
+      return rows.length;
+    }
+
+    const counts: Record<string, number> = {};
+
+    // Insertion order respects foreign keys, same as migrate-sqlite-to-mysql.mts.
+    counts.promoChannels = await upsertAll(dump.promoChannels, (row) =>
+      prisma.promoChannel.upsert({ where: { id: row.id }, create: row, update: row })
+    );
+    counts.channelExecutives = await upsertAll(dump.channelExecutives, (row) =>
+      prisma.channelExecutive.upsert({ where: { id: row.id }, create: row, update: row })
+    );
+    counts.adminUsers = await upsertAll(dump.adminUsers, (row) =>
+      prisma.adminUser.upsert({ where: { id: row.id }, create: row, update: row })
+    );
+    counts.leads = await upsertAll(dump.leads, (row) =>
+      prisma.lead.upsert({ where: { id: row.id }, create: row, update: row })
+    );
+    counts.surveyBookings = await upsertAll(dump.surveyBookings, (row) =>
+      prisma.surveyBooking.upsert({ where: { id: row.id }, create: row, update: row })
+    );
+    counts.bookingCapacitySettings = await upsertAll(dump.bookingCapacitySettings, (row) =>
+      prisma.bookingCapacitySetting.upsert({ where: { id: row.id }, create: row, update: row })
+    );
+    counts.paymentSettings = await upsertAll(dump.paymentSettings, (row) =>
+      prisma.paymentSettings.upsert({ where: { id: row.id }, create: row, update: row })
+    );
+    counts.services = await upsertAll(dump.services, (row) =>
+      prisma.service.upsert({ where: { id: row.id }, create: row, update: row })
+    );
+    counts.packages = await upsertAll(dump.packages, (row) =>
+      prisma.package.upsert({ where: { id: row.id }, create: row, update: row })
+    );
+    counts.portfolioProjects = await upsertAll(dump.portfolioProjects, (row) =>
+      prisma.portfolioProject.upsert({ where: { id: row.id }, create: row, update: row })
+    );
+    counts.testimonials = await upsertAll(dump.testimonials, (row) =>
+      prisma.testimonial.upsert({ where: { id: row.id }, create: row, update: row })
+    );
+    counts.auditLogs = await upsertAll(dump.auditLogs, (row) =>
+      prisma.auditLog.upsert({ where: { id: row.id }, create: row, update: row })
+    );
+
+    return NextResponse.json({ ok: true, schemaLog, counts });
+  } catch (err) {
+    // Surface the real error in the response — this route is temporary,
+    // internal-only, and secret-gated, so returning stack details here is
+    // acceptable and much faster to debug than digging through the
+    // Passenger log file each time.
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
-
-  const counts: Record<string, number> = {};
-
-  // Insertion order respects foreign keys, same as migrate-sqlite-to-mysql.mts.
-  counts.promoChannels = await upsertAll(dump.promoChannels, (row) =>
-    prisma.promoChannel.upsert({ where: { id: row.id }, create: row, update: row })
-  );
-  counts.channelExecutives = await upsertAll(dump.channelExecutives, (row) =>
-    prisma.channelExecutive.upsert({ where: { id: row.id }, create: row, update: row })
-  );
-  counts.adminUsers = await upsertAll(dump.adminUsers, (row) =>
-    prisma.adminUser.upsert({ where: { id: row.id }, create: row, update: row })
-  );
-  counts.leads = await upsertAll(dump.leads, (row) =>
-    prisma.lead.upsert({ where: { id: row.id }, create: row, update: row })
-  );
-  counts.surveyBookings = await upsertAll(dump.surveyBookings, (row) =>
-    prisma.surveyBooking.upsert({ where: { id: row.id }, create: row, update: row })
-  );
-  counts.bookingCapacitySettings = await upsertAll(dump.bookingCapacitySettings, (row) =>
-    prisma.bookingCapacitySetting.upsert({ where: { id: row.id }, create: row, update: row })
-  );
-  counts.paymentSettings = await upsertAll(dump.paymentSettings, (row) =>
-    prisma.paymentSettings.upsert({ where: { id: row.id }, create: row, update: row })
-  );
-  counts.services = await upsertAll(dump.services, (row) =>
-    prisma.service.upsert({ where: { id: row.id }, create: row, update: row })
-  );
-  counts.packages = await upsertAll(dump.packages, (row) =>
-    prisma.package.upsert({ where: { id: row.id }, create: row, update: row })
-  );
-  counts.portfolioProjects = await upsertAll(dump.portfolioProjects, (row) =>
-    prisma.portfolioProject.upsert({ where: { id: row.id }, create: row, update: row })
-  );
-  counts.testimonials = await upsertAll(dump.testimonials, (row) =>
-    prisma.testimonial.upsert({ where: { id: row.id }, create: row, update: row })
-  );
-  counts.auditLogs = await upsertAll(dump.auditLogs, (row) =>
-    prisma.auditLog.upsert({ where: { id: row.id }, create: row, update: row })
-  );
-
-  return NextResponse.json({ ok: true, counts });
 }
