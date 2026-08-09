@@ -288,8 +288,12 @@ model AuditLog {
   actorId    String
   actor      AdminUser   @relation(fields: [actorId], references: [id])
   action     AuditAction
-  entityType String
-  entityId   String
+  // Explicit shorter lengths (longest real value is a model name / cuid,
+  // both well under these caps) — the composite index below on two
+  // default VARCHAR(191) utf8mb4 columns exceeds this host's InnoDB
+  // key-length limit (confirmed live against production, error 1071).
+  entityType String @db.VarChar(50)
+  entityId   String @db.VarChar(40)
   before     Json?
   after      Json?
   createdAt  DateTime    @default(now())
