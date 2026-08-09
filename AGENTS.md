@@ -87,6 +87,7 @@ Single-context — `CONTEXT.md` + `docs/adr/` at the repo root (already exist). 
 ## Commands
 
 ```bash
+docker compose up -d mysql       # start local MySQL (once per machine / after a reboot)
 npm run dev                      # dev server
 npm run build && npm run start   # production (catches proxy/static issues dev hides)
 npx prisma migrate dev           # after schema changes
