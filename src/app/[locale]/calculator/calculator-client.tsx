@@ -4,6 +4,11 @@ import { useLocale, useTranslations } from "next-intl";
 import { useMemo } from "react";
 import { Link } from "@/i18n/navigation";
 import {
+  BILL_THRESHOLD_3KW_TO_5KW,
+  BILL_THRESHOLD_5KW_TO_10KW,
+} from "@/lib/calculator";
+import { cn } from "@/lib/utils";
+import {
   type CalcPackage,
   recommendSystem,
   useCalculatorStore,
@@ -12,6 +17,10 @@ import {
 const MIN_BILL = 500;
 const MAX_BILL = 8000;
 const STEP_BILL = 100;
+
+function billToPercent(bill: number) {
+  return ((bill - MIN_BILL) / (MAX_BILL - MIN_BILL)) * 100;
+}
 
 export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
   const t = useTranslations("calculator");
@@ -61,16 +70,67 @@ export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
             </span>
           </div>
 
-          <input
-            type="range"
-            aria-label={t("billLabel")}
-            min={MIN_BILL}
-            max={MAX_BILL}
-            step={STEP_BILL}
-            value={Number.isFinite(billValue) ? billValue : MIN_BILL}
-            onChange={(e) => setBill(e.target.value)}
-            className="mt-5 w-full accent-primary"
-          />
+          <div className="relative mt-5">
+            <input
+              type="range"
+              aria-label={t("billLabel")}
+              min={MIN_BILL}
+              max={MAX_BILL}
+              step={STEP_BILL}
+              value={Number.isFinite(billValue) ? billValue : MIN_BILL}
+              onChange={(e) => setBill(e.target.value)}
+              className="relative z-10 w-full accent-primary"
+            />
+            <div className="pointer-events-none absolute inset-x-0 top-1/2 h-3 -translate-y-1/2">
+              <div
+                className="absolute top-0 h-3 w-px bg-primary/40"
+                style={{ left: `${billToPercent(BILL_THRESHOLD_3KW_TO_5KW)}%` }}
+              />
+              <div
+                className="absolute top-0 h-3 w-px bg-primary/40"
+                style={{ left: `${billToPercent(BILL_THRESHOLD_5KW_TO_10KW)}%` }}
+              />
+            </div>
+          </div>
+          <div className="relative mt-1.5 h-4 text-[11px] text-muted-foreground">
+            <span
+              className={cn(
+                "absolute -translate-x-1/2",
+                displayedResult?.systemKey === "system3kw" && "font-bold text-primary"
+              )}
+              style={{ left: `${billToPercent((MIN_BILL + BILL_THRESHOLD_3KW_TO_5KW) / 2)}%` }}
+            >
+              {t("tierZone3kw")}
+            </span>
+            <span
+              className={cn(
+                "absolute -translate-x-1/2",
+                displayedResult?.systemKey === "system5kw" && "font-bold text-primary"
+              )}
+              style={{
+                left: `${billToPercent(
+                  (BILL_THRESHOLD_3KW_TO_5KW + BILL_THRESHOLD_5KW_TO_10KW) / 2
+                )}%`,
+              }}
+            >
+              {t("tierZone5kw")}
+            </span>
+            <span
+              className={cn(
+                "absolute -translate-x-1/2",
+                displayedResult?.systemKey === "system10kw" && "font-bold text-primary"
+              )}
+              style={{ left: `${billToPercent((BILL_THRESHOLD_5KW_TO_10KW + MAX_BILL) / 2)}%` }}
+            >
+              {t("tierZone10kw")}
+            </span>
+          </div>
+
+          {displayedResult && (
+            <p className="mt-3 text-sm text-muted-foreground">
+              {t("resultSystem", { system: t(displayedResult.systemKey) })}
+            </p>
+          )}
         </div>
 
         <div className="flex items-center bg-accent p-8 sm:p-10 lg:px-[30px]">
