@@ -1,12 +1,13 @@
 // Ad-hoc Sprint 2 RBAC verification — not a permanent e2e suite. Sets up
 // scoped test data via Prisma, then drives the real admin UI/API as each
 // non-admin role to check the access-control plumbing end to end.
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import "dotenv/config";
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { chromium } from "playwright";
 import { PrismaClient } from "../src/generated/prisma/client.js";
 
 const prisma = new PrismaClient({
-  adapter: new PrismaBetterSqlite3({ url: process.env.DATABASE_URL ?? "file:./prisma/dev.db" }),
+  adapter: new PrismaMariaDb(process.env.DATABASE_URL!),
 });
 
 const BASE = "http://localhost:3000";

@@ -9,18 +9,25 @@
  * (Sprint 2, 2026-08-08) found that a local macOS build's `node_modules`
  * cannot simply be swapped for a separately-`npm install`-ed Linux one on
  * the panel: `.next/standalone`'s server chunks bake in content-hashed
- * references (e.g. `@prisma/adapter-better-sqlite3-<hash>`) that only
+ * module references (e.g. `@prisma/adapter-mariadb-<hash>`) that only
  * resolve against the exact `node_modules` tree Next traced at build time.
  * The whole build — `npm ci`, `prisma generate`, `next build` — must
  * therefore happen on the same OS/arch/Node-ABI as the panel. This script
- * runs `deploy/docker-build/Dockerfile.shared-hosting` (AlmaLinux 8 +
- * gcc-toolset-12 + Node 20.20.0 — see that file's header for why plain
- * AlmaLinux 8 gcc isn't enough for better-sqlite3 12.x) and copies the
- * resulting `.next/standalone`, `.next/static`, and
- * `src/generated/prisma` out of the container into `deploy/linux-build/`
- * before assembling the upload artifact from there. This also means the
- * `better-sqlite3` native binary is compiled fresh, correctly, every build
- * — no manual FTP binary patch needed on the panel afterward.
+ * runs `deploy/docker-build/Dockerfile.shared-hosting` (AlmaLinux 8, Node
+ * 20.20.0 — see that file's header for why the database migration to MySQL,
+ * wayfinder map #1, dropped the gcc-toolset-12 compiler toolchain that used
+ * to live there) and copies the resulting `.next/standalone`, `.next/static`,
+ * and `src/generated/prisma` out of the container into `deploy/linux-build/`
+ * before assembling the upload artifact from there. This also means
+ * `sharp`'s prebuilt native binary is guaranteed to match the panel's Linux
+ * target every build, same as it did before.
+ *
+ * Requires the local docker-compose MySQL (`docker compose up -d mysql`)
+ * running before this script — the build reaches it via
+ * `host.docker.internal` (the port docker-compose.yml already publishes to
+ * the host) so `prisma migrate deploy` inside the build has a real database
+ * to apply the schema to (unlike SQLite, a bare file path needed no running
+ * server for this step).
  *
  * IMPORTANT — this does NOT just copy `.next/standalone/` wholesale.
  * Next's output-file-tracing for this project's `output: "standalone"`
@@ -33,9 +40,9 @@
  * and local secrets into the deploy artifact. This script instead copies an
  * explicit allowlist of exactly what the Passenger-run app needs:
  *
- *   - .next/standalone/node_modules/   (traced runtime deps incl. the
- *                                        compiled better-sqlite3 native
- *                                        binary and the Prisma adapter)
+ *   - .next/standalone/node_modules/   (traced runtime deps incl. sharp's
+ *                                        prebuilt native binary and the
+ *                                        Prisma MySQL adapter)
  *   - .next/standalone/package.json
  *   - .next/standalone/server.js       (Next's own standalone entry point —
  *                                        confirmed live, Sprint 2, to work
@@ -133,6 +140,10 @@ const dockerInfo = spawnSync("docker", ["info"], { stdio: "ignore" });
 if (dockerInfo.status !== 0) {
   fail("Docker is not running — start Docker/OrbStack and retry");
 }
+// The build's `prisma migrate deploy` step reaches the local docker-compose
+// MySQL via `host.docker.internal` (see the Dockerfile's header comment) —
+// no special --network flag needed, since that's just the host's published
+// port, not a custom Docker network.
 const dockerBuild = spawnSync(
   "docker",
   ["build", "--platform", "linux/amd64", "-f", DOCKERFILE, "-t", IMAGE_TAG, ROOT],
@@ -182,8 +193,8 @@ requireExists(
   "unexpected: standalone output missing traced node_modules"
 );
 requireExists(
-  path.join(STANDALONE_DIR, "node_modules", "better-sqlite3", "build", "Release", "better_sqlite3.node"),
-  "better-sqlite3 native binary not found in traced output — serverExternalPackages tracing may have broken"
+  path.join(STANDALONE_DIR, "node_modules", "@img", "sharp-linux-x64", "lib", "sharp-linux-x64.node"),
+  "sharp's native binary not found in traced output — serverExternalPackages tracing may have broken"
 );
 requireExists(STATIC_DIR, "unexpected: docker cp of .next/static failed silently");
 requireExists(

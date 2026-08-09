@@ -6,7 +6,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # KKD PROPERTY — Solar Installation Website
 
-Bilingual (TH default / EN) company site + admin backend. Stack: Next.js 16 App Router, TypeScript, Tailwind v4, Prisma 7 + SQLite (better-sqlite3 adapter), next-intl v4, Auth.js v5 beta, shadcn/ui base-nova, Zustand, TanStack Query.
+Bilingual (TH default / EN) company site + admin backend. Stack: Next.js 16 App Router, TypeScript, Tailwind v4, Prisma 7 + MySQL (mariadb driver adapter — MySQL/MariaDB-compatible), next-intl v4, Auth.js v5 beta, shadcn/ui base-nova, Zustand, TanStack Query.
 
 ## Architecture
 

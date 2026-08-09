@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  serverExternalPackages: ["@prisma/adapter-better-sqlite3", "better-sqlite3"],
+  serverExternalPackages: ["@prisma/adapter-mariadb", "mariadb"],
   // Shared-hosting (DirectAdmin + CloudLinux Node.js Selector / Passenger)
   // deploy target has no SSH/git and only FTP/File Manager upload — a
   // minimal, output-traced node_modules keeps the upload small. See

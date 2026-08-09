@@ -1,24 +1,24 @@
 # Build image for the DirectAdmin/CloudLinux Node.js Selector shared-hosting
 # target (kkdproperty.co.th). NOT used to run the app — only to produce a
-# deploy artifact whose node_modules (incl. the compiled better-sqlite3
-# native binary) and .next/standalone output are ABI-matched to the real
-# panel: AlmaLinux/CloudLinux 8 (RHEL 8 family, glibc), x64, Node 20.20.0.
+# deploy artifact whose node_modules and .next/standalone output are
+# ABI-matched to the real panel: AlmaLinux/CloudLinux 8 (RHEL 8 family,
+# glibc), x64, Node 20.20.0.
 #
-# Why not the existing project-root Dockerfile (node:20-bookworm-slim)?
-# That image is Debian glibc, built for the Fly.io target. It was NOT used
-# for shared hosting because a live test (Sprint 2, 2026-08-08) proved the
-# panel needs gcc-toolset-12 specifically — its default AlmaLinux 8 g++ is
-# too old for better-sqlite3 12.x's `-std=c++20` requirement, and there is
-# no prebuilt binary at all for Node ABI v115 (Node 20.x) in this
-# better-sqlite3 version, so compiling from source is mandatory. Building
-# on Debian would risk a glibc symbol-version mismatch against the RHEL8
-# host that only surfaces at runtime.
+# Base image kept as AlmaLinux 8 (matching the panel exactly) even though the
+# database migration to MySQL removed the one thing that forced this image's
+# extra complexity: `better-sqlite3` needed gcc-toolset-12 specifically (its
+# default AlmaLinux 8 g++ was too old for `-std=c++20`) to compile from
+# source, since no prebuilt binary existed for Node ABI v115 (Node 20.x).
+# `mariadb` (the MySQL driver, wayfinder map #1) has zero native
+# dependencies, and `sharp` (still a real dependency via `next/image`) ships
+# prebuilt Linux binaries needing no compiler at all — so the gcc-toolset-12
+# install and CC/CXX overrides below are gone. Still matching AlmaLinux 8 as
+# the base OS rather than switching families, since that's a zero-risk way
+# to keep sharp's prebuilt-binary glibc compatibility exactly as verified in
+# production, rather than assuming a different glibc-based distro also works.
 FROM almalinux:8
 
-RUN dnf install -y gcc-toolset-12-gcc-c++ make python3 tar gzip which curl && dnf clean all
-ENV PATH="/opt/rh/gcc-toolset-12/root/usr/bin:${PATH}"
-ENV CC="/opt/rh/gcc-toolset-12/root/usr/bin/gcc"
-ENV CXX="/opt/rh/gcc-toolset-12/root/usr/bin/g++"
+RUN dnf install -y tar gzip which curl && dnf clean all
 
 RUN curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - && \
     dnf install -y nodejs-20.20.0 || dnf install -y nodejs
@@ -30,15 +30,18 @@ RUN npm ci
 
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-# Dummy value so prisma.config.ts (which requires DATABASE_URL to resolve at
-# config-load time) doesn't fail during `prisma generate` — client generation
-# only reads the schema, it never connects. The real DATABASE_URL is supplied
-# at deploy time via the panel's env-var UI.
-ENV DATABASE_URL="file:./build.db"
+# Real MySQL connection, not a dummy value — unlike SQLite (a file path that
+# doesn't need a running server), `prisma migrate deploy` here actually
+# connects. `host.docker.internal` is Docker Desktop/OrbStack's built-in DNS
+# name for reaching the host machine — it works here because docker-compose.yml
+# publishes MySQL's port to the host already; no custom Docker network wiring
+# needed (BuildKit's default builder doesn't support attaching `docker build`
+# to an arbitrary compose network via --network). Public pages read Prisma
+# directly during static generation, so the build-time database needs its
+# schema applied (empty tables are fine — content pages just render empty) —
+# this is local-dev-only data, never shipped anywhere.
+ENV DATABASE_URL="mysql://kkd_prop:kkd_prop_dev_password@host.docker.internal:3306/kkd_prop_dev"
 RUN npx prisma generate
-# Public pages read Prisma directly during static generation, so the dummy
-# build database needs its schema (empty tables are fine — content pages
-# just render empty). Matches the project-root Dockerfile's same step.
 RUN npx prisma migrate deploy
 RUN npm run build
 
