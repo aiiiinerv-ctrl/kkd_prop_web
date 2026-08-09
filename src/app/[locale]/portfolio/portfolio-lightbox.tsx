@@ -31,14 +31,16 @@ export function PortfolioLightbox({
   // Arrows are scoped strictly to the open project's own photos — they
   // never switch to a different project. Closing the lightbox is the only
   // way to view a different project.
+  const photoCount = photos.length;
+
   const goPrev = () => {
-    if (photos.length < 2) return;
-    setPhotoIndex((photoIndex - 1 + photos.length) % photos.length);
+    if (photoCount < 2) return;
+    setPhotoIndex((i) => (i - 1 + photoCount) % photoCount);
   };
 
   const goNext = () => {
-    if (photos.length < 2) return;
-    setPhotoIndex((photoIndex + 1) % photos.length);
+    if (photoCount < 2) return;
+    setPhotoIndex((i) => (i + 1) % photoCount);
   };
 
   useEffect(() => {
@@ -58,7 +60,7 @@ export function PortfolioLightbox({
       window.removeEventListener("keydown", handleKeyDown);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, openIndex, items.length]);
+  }, [isOpen, openIndex, photoCount]);
 
   if (!isOpen || !item) return null;
 
@@ -95,15 +97,12 @@ export function PortfolioLightbox({
         </button>
       )}
 
-      <div
-        className="relative flex max-h-[75%] w-full max-w-[85%] flex-col items-center gap-5 px-10 sm:px-16"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="relative flex h-full max-h-[92vh] w-full max-w-[85%] flex-col items-center gap-4 px-10 pt-16 pb-6 sm:px-16">
         <button
           type="button"
           aria-label={t("lightboxClose")}
           onClick={() => onOpenIndexChange(null)}
-          className="absolute -top-12 right-0 select-none text-3xl font-light text-white/70 transition-colors hover:text-white sm:-top-14 sm:text-4xl"
+          className="absolute top-2 right-0 select-none text-3xl font-light text-white/70 transition-colors hover:text-white sm:text-4xl"
         >
           ×
         </button>
@@ -114,11 +113,12 @@ export function PortfolioLightbox({
             key={activePhoto}
             src={activePhoto}
             alt={item.title}
-            className="lightbox-zoom-in max-h-[75vh] w-auto rounded-lg object-contain shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            className="lightbox-zoom-in min-h-0 w-auto flex-1 rounded-lg object-contain shadow-2xl"
           />
         )}
         {photos.length > 1 && (
-          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+          <div className="flex shrink-0 gap-2" onClick={(e) => e.stopPropagation()}>
             {photos.map((photo, i) => (
               <button
                 key={photo}

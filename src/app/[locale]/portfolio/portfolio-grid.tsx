@@ -64,7 +64,13 @@ export function PortfolioGrid({
       {visible.length === 0 ? (
         <p className="py-16 text-center text-muted-foreground">{t("empty")}</p>
       ) : (
-        <div key={filter} className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          key={filter}
+          className={cn(
+            "mx-auto grid max-w-6xl gap-7 sm:grid-cols-2",
+            visible.length >= 3 ? "lg:grid-cols-3" : "lg:max-w-[860px]"
+          )}
+        >
           {visible.map((p, i) => (
             <button
               key={p.id}
