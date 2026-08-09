@@ -47,6 +47,10 @@ prisma/*.db-journal
 # local backup snapshots (scripts/backup-db.mts)
 /backups/
 
+# one-off SQLite-to-JSON dump for the MySQL cutover (scripts/dump-sqlite-to-json.mts)
+# — contains real customer PII when generated from a production backup, never commit
+/migration-data.json
+
 # generated screenshots (verification output, not source)
 /screenshots/
 
