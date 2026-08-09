@@ -209,10 +209,7 @@ export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
     </div>
 
     <div className="mx-auto mt-6 max-w-[1140px] rounded-[18px] border border-border bg-card p-8 sm:p-10">
-      <h3 className="text-xl font-bold text-primary">{t("methodologyTitle")}</h3>
-      <p className="mt-2 text-sm text-muted-foreground">{t("methodologyDesc")}</p>
-
-      <Table className="mt-6">
+      <Table>
         <TableHeader>
           <TableRow>
             <TableHead>{t("colBillRange")}</TableHead>
