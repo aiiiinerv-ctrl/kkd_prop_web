@@ -1,16 +1,10 @@
 generator client {
-  provider      = "prisma-client"
-  output        = "../src/generated/prisma"
-  // "native" keeps local dev/build working on this machine; "rhel-openssl-3.0.x"
-  // is a best-guess target for the shared-hosting deploy (CloudLinux is
-  // RHEL-derived) — unverified against the real panel OS, see
-  // docs/plans/kkd-shared-hosting-deploy-guide.md §5. Update once a real
-  // deploy attempt names the correct target in an engine-load error.
-  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
 }
 
 enum Role {
@@ -168,7 +162,7 @@ model Lead {
   // that were already SIGNED+ before this column existed (stays null, shown
   // as "-" in the export).
   closedAt        DateTime?
-  notes           String?
+  notes           String?        @db.Text
   booking         SurveyBooking?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -181,7 +175,7 @@ model SurveyBooking {
   leadId             String        @unique
   lead               Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
   bookingNumber      String        @unique
-  address            String
+  address            String        @db.Text
   preferredDate      DateTime
   timeSlot           TimeSlot
   amountThb          Int           @default(199)
@@ -219,8 +213,8 @@ model Service {
   kind          ServiceKind
   titleTh       String
   titleEn       String
-  descriptionTh String
-  descriptionEn String
+  descriptionTh String      @db.Text
+  descriptionEn String      @db.Text
   featuresTh    Json?
   featuresEn    Json?
   imageKey      String?
@@ -238,8 +232,8 @@ model Package {
   sizeKw             Float
   priceThb           Int
   isPopular          Boolean  @default(false)
-  suitableTh         String
-  suitableEn         String
+  suitableTh         String   @db.Text
+  suitableEn         String   @db.Text
   featuresTh         Json
   featuresEn         Json
   seasonalProduction Json
@@ -255,8 +249,8 @@ model PortfolioProject {
   slug          String        @unique
   titleTh       String
   titleEn       String
-  descriptionTh String
-  descriptionEn String
+  descriptionTh String        @db.Text
+  descriptionEn String        @db.Text
   category      BuildingType
   province      String
   systemSizeKw  Float
@@ -274,8 +268,8 @@ model PortfolioProject {
 model Testimonial {
   id           String           @id @default(cuid())
   customerName String
-  quoteTh      String
-  quoteEn      String
+  quoteTh      String           @db.Text
+  quoteEn      String           @db.Text
   role         String?
   province     String?
   photoKey     String?

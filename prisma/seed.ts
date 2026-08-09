@@ -4,13 +4,11 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import bcrypt from "bcryptjs";
 import sharp from "sharp";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient } from "../src/generated/prisma/client";
 
 const prisma = new PrismaClient({
-  adapter: new PrismaBetterSqlite3({
-    url: process.env.DATABASE_URL ?? "file:./prisma/dev.db",
-  }),
+  adapter: new PrismaMariaDb(process.env.DATABASE_URL!),
 });
 
 const STORAGE_ROOT = process.env.STORAGE_ROOT ?? "./storage";
