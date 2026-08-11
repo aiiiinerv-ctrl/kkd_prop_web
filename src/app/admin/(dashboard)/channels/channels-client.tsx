@@ -12,17 +12,7 @@ import {
   updateChannel,
   updateChannelExecutive,
 } from "@/actions/channels";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { DeleteConfirm } from "@/components/admin/crud-page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -255,36 +245,16 @@ export function ChannelsClient({
                       >
                         <Pencil className="size-4" />
                       </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger
-                          render={
-                            <Button variant="ghost" className="p-2" aria-label="ลบ">
-                              <Trash2 className="size-4 text-destructive" />
-                            </Button>
-                          }
-                        />
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              ลบช่องทาง &quot;{c.nameTh}&quot;?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              {c.leadCount > 0
-                                ? `มี lead อ้างอิงช่องทางนี้ ${c.leadCount} รายการ — ระบบจะไม่อนุญาตให้ลบ แนะนำให้ปิดการใช้งานแทน`
-                                : "การลบจะถูกบันทึกในประวัติการแก้ไข"}
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => onDelete(c.id)}
-                              disabled={isPending}
-                            >
-                              ลบ
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <DeleteConfirm
+                        title={`ลบช่องทาง "${c.nameTh}"?`}
+                        description={
+                          c.leadCount > 0
+                            ? `มี lead อ้างอิงช่องทางนี้ ${c.leadCount} รายการ — ระบบจะไม่อนุญาตให้ลบ แนะนำให้ปิดการใช้งานแทน`
+                            : "การลบจะถูกบันทึกในประวัติการแก้ไข"
+                        }
+                        disabled={isPending}
+                        onConfirm={() => onDelete(c.id)}
+                      />
                     </>
                   )}
                 </TableCell>
