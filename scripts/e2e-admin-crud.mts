@@ -174,6 +174,106 @@ await page.click("text=บันทึก >> nth=-1");
 await page.waitForSelector("text=บันทึกเรียบร้อย", { timeout: 10000 });
 console.log("SERVICES: title restored ✓");
 
+// --- Services: create + delete round trip, asserting the audit rows the
+// audited-mutation module writes for each. The edit test above only exercises
+// UPDATE; without this, the CREATE and DELETE paths (and their snapshot
+// shapes) are never run. Self-cleaning: the row it creates is the row it
+// deletes. ---
+const throwawayTitle = `บริการทดสอบ ${Date.now().toString(36)}`;
+await page.click("text=เพิ่มบริการ");
+await page.locator('input[name="titleTh"]').waitFor({ timeout: 5000 });
+await page.fill('input[name="titleTh"]', throwawayTitle);
+await page.fill('textarea[name="descriptionTh"]', "รายละเอียดทดสอบสำหรับสคริปต์ e2e");
+// The EN fields live in the other tab panel — kept mounted so they submit with
+// the form, but not visible until the tab is selected.
+await page.click('button:text-is("English")');
+await page.fill('input[name="titleEn"]', `E2E Throwaway Service ${Date.now().toString(36)}`);
+await page.fill('textarea[name="descriptionEn"]', "Throwaway description for the e2e script");
+await page.click("text=บันทึก >> nth=-1");
+// Wait for the row itself, not the toast: the previous step's toast is still
+// on screen and would match immediately, letting the DB read below race the
+// server action.
+await page.waitForSelector(`tr:has-text("${throwawayTitle}")`, { timeout: 10000 });
+
+const created = await prisma.service.findFirst({
+  where: { titleTh: throwawayTitle },
+  orderBy: { createdAt: "desc" },
+});
+console.log(`SERVICES: created via dialog ${created ? "✓" : "✗ FAIL"}`);
+
+const createLog = created
+  ? await prisma.auditLog.findFirst({
+      where: { entityType: "Service", entityId: created.id, action: "CREATE" },
+    })
+  : null;
+console.log(
+  `SERVICES: CREATE audit row written with an after snapshot and no before ${
+    createLog && createLog.after != null && createLog.before == null ? "✓" : "✗ FAIL"
+  }`
+);
+
+await page.click(`tr:has-text("${throwawayTitle}") button[aria-label="ลบ"]`);
+await page.click('button:text-is("ลบ")');
+await page.waitForSelector(`tr:has-text("${throwawayTitle}")`, {
+  state: "detached",
+  timeout: 10000,
+});
+
+const stillThere = created
+  ? await prisma.service.findUnique({ where: { id: created.id } })
+  : null;
+console.log(`SERVICES: deleted via dialog ${stillThere === null ? "✓" : "✗ FAIL"}`);
+
+const deleteLog = created
+  ? await prisma.auditLog.findFirst({
+      where: { entityType: "Service", entityId: created.id, action: "DELETE" },
+    })
+  : null;
+console.log(
+  `SERVICES: DELETE audit row written with a before snapshot and no after ${
+    deleteLog && deleteLog.before != null && deleteLog.after == null ? "✓" : "✗ FAIL"
+  }`
+);
+
+// --- Users: toggle a non-admin account off and back on, so the AdminUser
+// projection snapshot (which must never carry passwordHash) is actually
+// produced by a run rather than asserted vacuously. ---
+const salesUser = await prisma.adminUser.findFirst({
+  where: { role: "SALES", isActive: true },
+});
+if (!salesUser) {
+  console.log("USERS: no active SALES user seeded — skipping toggle test ✗ FAIL");
+} else {
+  await page.goto("http://localhost:3000/admin/users");
+  await page.waitForSelector(`text=${salesUser.email}`, { timeout: 10000 });
+  const rowSel = `tr:has-text("${salesUser.email}")`;
+  await page.click(`${rowSel} button[aria-label="ปิดใช้งาน"]`);
+  await page.waitForSelector("text=ปิดการใช้งานแล้ว", { timeout: 10000 });
+  const disabled = await prisma.adminUser.findUnique({ where: { id: salesUser.id } });
+  console.log(`USERS: toggled inactive ${disabled?.isActive === false ? "✓" : "✗ FAIL"}`);
+
+  await page.click(`${rowSel} button[aria-label="เปิดใช้งาน"]`);
+  await page.waitForSelector("text=เปิดการใช้งานแล้ว", { timeout: 10000 });
+  const restored = await prisma.adminUser.findUnique({ where: { id: salesUser.id } });
+  console.log(`USERS: toggled back to active ${restored?.isActive === true ? "✓" : "✗ FAIL"}`);
+
+  const userLog = await prisma.auditLog.findFirst({
+    where: { entityType: "AdminUser", entityId: salesUser.id, action: "UPDATE" },
+    orderBy: { createdAt: "desc" },
+  });
+  const snapshotKeys = userLog?.after ? Object.keys(userLog.after as object).sort() : [];
+  console.log(
+    `USERS: AdminUser snapshot is the declared projection, no passwordHash ${
+      JSON.stringify(snapshotKeys) ===
+      JSON.stringify(
+        ["id", "email", "name", "role", "isActive", "linkedChannelExecutiveId"].sort()
+      )
+        ? "✓"
+        : `✗ FAIL (${JSON.stringify(snapshotKeys)})`
+    }`
+  );
+}
+
 // --- Channels: create one ---
 await page.goto("http://localhost:3000/admin/channels");
 await page.click("text=เพิ่มช่องทาง");

@@ -36,10 +36,10 @@ async function waitForServer(url: string, timeoutMs: number) {
   throw new Error(`Server did not become ready at ${url} within ${timeoutMs}ms`);
 }
 
-console.log("=== 1/3: build ===");
+console.log("=== 1/4: build ===");
 run("npm", ["run", "build"]);
 
-console.log("\n=== 2/3: start production server ===");
+console.log("\n=== 2/4: start production server ===");
 if (!(await isPortFree(3000))) {
   console.error(
     "FAILED: port 3000 is already in use by another process — verify-all needs a clean production server, not a stray dev/other server. Stop whatever is bound to :3000 and re-run.\n" +
@@ -59,7 +59,7 @@ let failed = false;
 try {
   await waitForServer("http://localhost:3000/th", 30_000);
 
-  console.log("\n=== 3/3: e2e suites ===");
+  console.log("\n=== 3/4: e2e suites ===");
   for (const suite of suites) {
     console.log(`\n--- ${suite} ---`);
     const result = spawnSync("npx", ["tsx", suite], { stdio: "inherit" });
@@ -70,6 +70,16 @@ try {
   }
 } finally {
   server.kill("SIGTERM");
+}
+
+// After the suites, so it inspects the audit rows they just produced.
+console.log("\n=== 4/4: audit-log invariants ===");
+const auditCheck = spawnSync("npx", ["tsx", "scripts/verify-audit-module.mts"], {
+  stdio: "inherit",
+});
+if (auditCheck.status !== 0) {
+  console.error("FAILED: scripts/verify-audit-module.mts");
+  failed = true;
 }
 
 if (failed) {
