@@ -4,17 +4,7 @@ import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { getLeadScopeFilter, getBookingScopeFilter, requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-
-const STATUS_LABELS: Record<string, string> = {
-  NEW: "ใหม่ รอมอบหมาย",
-  ASSIGNED: "มอบหมายแล้ว",
-  CONTACTED: "กำลังติดตาม",
-  QUOTED: "เสนอราคาแล้ว",
-  SIGNED: "เซ็นสัญญาแล้ว",
-  INSTALLING: "กำลังติดตั้ง",
-  COMPLETED: "เสร็จสิ้น",
-  DISQUALIFIED: "ไม่มีคุณภาพ",
-};
+import { LEAD_STATUS_LABELS } from "@/lib/enum-labels";
 
 export default async function AdminDashboardPage() {
   const session = await requireAdmin();
@@ -105,7 +95,7 @@ export default async function AdminDashboardPage() {
                   </div>
                 </div>
                 <Badge variant={lead.status === "NEW" ? "default" : "secondary"}>
-                  {STATUS_LABELS[lead.status] ?? lead.status}
+                  {LEAD_STATUS_LABELS[lead.status] ?? lead.status}
                 </Badge>
               </Link>
             </li>

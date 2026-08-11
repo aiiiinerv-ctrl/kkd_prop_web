@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { buildLeadWhere, effectiveChannel, isConfirmedBookingStatus, type ReportFilters } from "./aggregate";
-import { LEAD_STATUS_LABELS_TH, LEAD_TYPE_LABELS_TH } from "./labels";
+import { LEAD_STATUS_LABELS, LEAD_TYPE_LABELS } from "@/lib/enum-labels";
 
 /**
  * Row-level export data. Scope = all Lead types (QUOTE + SURVEY, decision
@@ -91,7 +91,7 @@ export async function getExportRows(
       name: lead.name,
       phone: lead.phone,
       address: booking?.address ?? "-",
-      leadType: LEAD_TYPE_LABELS_TH[lead.type] ?? lead.type,
+      leadType: LEAD_TYPE_LABELS[lead.type] ?? lead.type,
       interestedSystems:
         Array.isArray(lead.interestedSystems) && lead.interestedSystems.length > 0
           ? (lead.interestedSystems as string[])
@@ -101,7 +101,7 @@ export async function getExportRows(
       channel: channel.name,
       executive: lead.autoSourceExecutive?.name ?? "-",
       sales: lead.assignedSales?.name ?? "-",
-      status: LEAD_STATUS_LABELS_TH[lead.status] ?? lead.status,
+      status: LEAD_STATUS_LABELS[lead.status] ?? lead.status,
       createdAt: lead.createdAt.toLocaleDateString("th-TH"),
       closedAt: lead.closedAt ? lead.closedAt.toLocaleDateString("th-TH") : "-",
       surveyed: !booking

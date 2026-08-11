@@ -3,19 +3,9 @@
 import { auditedEntity } from "@/lib/audit";
 import { canMutateLead, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { LEAD_STATUSES } from "@/lib/enums";
 import type { LeadStatus } from "@/generated/prisma/enums";
 import type { ActionResult } from "./users";
-
-const LEAD_STATUSES: LeadStatus[] = [
-  "NEW",
-  "ASSIGNED",
-  "CONTACTED",
-  "QUOTED",
-  "SIGNED",
-  "INSTALLING",
-  "COMPLETED",
-  "DISQUALIFIED",
-];
 
 const NO_PERMISSION_ERROR = "ไม่มีสิทธิ์แก้ไข lead นี้";
 

@@ -2,6 +2,7 @@
 
 import { Check, Copy, Pencil, Plus, Trash2, Users } from "lucide-react";
 import { useState, useTransition } from "react";
+import { CHANNEL_TYPE_LABELS } from "@/lib/enum-labels";
 import { toast } from "sonner";
 import {
   createChannel,
@@ -42,12 +43,6 @@ import {
 } from "@/components/ui/table";
 
 type ChannelType = "INDIVIDUAL" | "COMPANY" | "PLATFORM";
-
-const CHANNEL_TYPE_LABELS: Record<ChannelType, string> = {
-  INDIVIDUAL: "บุคคล",
-  COMPANY: "บริษัท",
-  PLATFORM: "แพลตฟอร์มออนไลน์",
-};
 
 type ExecutiveRow = {
   id: string;

@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isDateFull } from "@/lib/bookings/capacity";
+import { TIME_SLOTS } from "@/lib/enums";
 import type { TimeSlot } from "@/generated/prisma/enums";
 
 // Public, unauthenticated — the booking form calls this while the customer
 // picks a date, before any session exists. Only ever returns a full/not-full
 // boolean per time slot, never counts or booking details (privacy).
-const TIME_SLOTS: TimeSlot[] = ["MORNING", "AFTERNOON"];
 
 export async function GET(req: NextRequest) {
   const dateParam = req.nextUrl.searchParams.get("date");

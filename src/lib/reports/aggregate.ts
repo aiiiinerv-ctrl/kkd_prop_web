@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import type { BookingStatus, LeadStatus } from "@/generated/prisma/enums";
-import { BOOKING_STATUS_LABELS_TH, LEAD_STATUS_LABELS_TH } from "./labels";
+import { BOOKING_STATUS_LABELS, LEAD_STATUS_LABELS } from "@/lib/enum-labels";
+import { BOOKING_STATUSES, LEAD_STATUSES } from "@/lib/enums";
 
 /**
  * BookingStatus values that count as "นัดยืนยันแล้ว" for revenue purposes —
@@ -193,8 +194,6 @@ export type ReportAggregate = {
   }[];
 };
 
-const LEAD_STATUSES = Object.keys(LEAD_STATUS_LABELS_TH) as LeadStatus[];
-const BOOKING_STATUSES = Object.keys(BOOKING_STATUS_LABELS_TH) as BookingStatus[];
 
 /**
  * The single query+aggregation path for the reports dashboard. `scope`
@@ -259,7 +258,7 @@ export async function getReportAggregate(
   for (const l of leads) leadStatusCounts.set(l.status, (leadStatusCounts.get(l.status) ?? 0) + 1);
   const leadStatusBreakdown = LEAD_STATUSES.map((status) => ({
     status,
-    label: LEAD_STATUS_LABELS_TH[status],
+    label: LEAD_STATUS_LABELS[status],
     count: leadStatusCounts.get(status) ?? 0,
   }));
 
@@ -268,7 +267,7 @@ export async function getReportAggregate(
     bookingStatusCounts.set(b.status, (bookingStatusCounts.get(b.status) ?? 0) + 1);
   const bookingStatusBreakdown = BOOKING_STATUSES.map((status) => ({
     status,
-    label: BOOKING_STATUS_LABELS_TH[status],
+    label: BOOKING_STATUS_LABELS[status],
     count: bookingStatusCounts.get(status) ?? 0,
   }));
 

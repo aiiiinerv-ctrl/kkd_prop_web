@@ -19,10 +19,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { cn } from "@/lib/utils";
+import { ROLES } from "@/lib/enums";
 
 type Role = "ADMIN" | "SALES" | "FINANCE" | "CHANNEL_EXECUTIVE";
 
-const ALL_ROLES: Role[] = ["ADMIN", "SALES", "FINANCE", "CHANNEL_EXECUTIVE"];
+const ALL_ROLES: Role[] = ROLES;
 
 // Each item lists the roles allowed to see it. CHANNEL_EXECUTIVE is scoped
 // to leads (read-only, aggregate view) + their own channel; FINANCE loses

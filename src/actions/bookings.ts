@@ -4,19 +4,9 @@ import { z } from "zod";
 import { auditedEntity } from "@/lib/audit";
 import { canMutateBooking, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { BOOKING_STATUSES, PAYMENT_STATUSES } from "@/lib/enums";
 import type { BookingStatus, PaymentStatus } from "@/generated/prisma/enums";
 import type { ActionResult } from "./users";
-
-const BOOKING_STATUSES: BookingStatus[] = [
-  "PENDING_CONFIRMATION",
-  "CONFIRMED",
-  "PREPARED",
-  "SURVEYED",
-  "DESIGNED",
-  "SIGNED",
-  "CANCELLED",
-];
-const PAYMENT_STATUSES: PaymentStatus[] = ["PENDING_REVIEW", "VERIFIED", "REJECTED"];
 
 const NO_PERMISSION_ERROR = "ไม่มีสิทธิ์แก้ไขการจองนี้";
 

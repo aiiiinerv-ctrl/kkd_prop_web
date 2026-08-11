@@ -2,21 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { auth, getBookingScopeFilter } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
+import { BOOKING_STATUSES, PAYMENT_STATUSES } from "@/lib/enums";
 import type { BookingStatus, PaymentStatus } from "@/generated/prisma/enums";
 
 const PAGE_SIZE = 20;
 
-const BOOKING_STATUSES: BookingStatus[] = [
-  "PENDING_CONFIRMATION",
-  "CONFIRMED",
-  "PREPARED",
-  "SURVEYED",
-  "DESIGNED",
-  "SIGNED",
-  "CANCELLED",
-];
 
-const PAYMENT_STATUSES: PaymentStatus[] = ["PENDING_REVIEW", "VERIFIED", "REJECTED"];
 
 export async function GET(req: NextRequest) {
   const session = await auth();

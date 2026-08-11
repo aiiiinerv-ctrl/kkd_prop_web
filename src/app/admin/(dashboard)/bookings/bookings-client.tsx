@@ -17,24 +17,11 @@ import {
 } from "@/components/ui/table";
 import { useBookings, type BookingFilters } from "@/hooks/admin/use-bookings";
 import {
+  BOOKING_STATUS_LABELS,
   PAYMENT_STATUS_LABELS,
   PAYMENT_STATUS_META,
-} from "@/lib/payment-status-labels";
-
-export const BOOKING_STATUS_LABELS: Record<string, string> = {
-  PENDING_CONFIRMATION: "รอยืนยัน",
-  CONFIRMED: "ยืนยันแล้ว",
-  PREPARED: "เตรียมอุปกรณ์แล้ว",
-  SURVEYED: "สำรวจแล้ว",
-  DESIGNED: "ออกแบบแล้ว",
-  SIGNED: "เซ็นสัญญาแล้ว",
-  CANCELLED: "ยกเลิก",
-};
-
-const SLOT_LABELS: Record<string, string> = {
-  MORNING: "เช้า",
-  AFTERNOON: "บ่าย",
-};
+  TIME_SLOT_LABELS,
+} from "@/lib/enum-labels";
 
 const selectCls =
   "rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none";
@@ -151,7 +138,7 @@ export function BookingsClient() {
                     <TableCell>
                       {new Date(booking.preferredDate).toLocaleDateString("th-TH")}
                     </TableCell>
-                    <TableCell>{SLOT_LABELS[booking.timeSlot]}</TableCell>
+                    <TableCell>{TIME_SLOT_LABELS[booking.timeSlot]}</TableCell>
                     <TableCell>{booking.assignedEngineer?.name ?? "-"}</TableCell>
                     <TableCell>{booking.assignedSales?.name ?? "-"}</TableCell>
                     <TableCell>

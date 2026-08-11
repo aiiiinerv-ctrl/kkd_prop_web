@@ -4,13 +4,14 @@ import { z } from "zod";
 import { slugify } from "@/lib/admin-content";
 import { auditedEntity } from "@/lib/audit";
 import { requireRole } from "@/lib/auth";
+import { CHANNEL_TYPES, zodEnum } from "@/lib/enums";
 import { prisma } from "@/lib/db";
 import type { ActionResult } from "./users";
 
 const channelSchema = z.object({
   nameTh: z.string().trim().min(1).max(120),
   nameEn: z.string().trim().min(1).max(120),
-  type: z.enum(["INDIVIDUAL", "COMPANY", "PLATFORM"]),
+  type: zodEnum(CHANNEL_TYPES),
   isActive: z.coerce.boolean(),
   sortOrder: z.coerce.number().int().min(0).max(999).default(0),
 });

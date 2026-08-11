@@ -2,20 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { auth, getLeadScopeFilter, redactLeadPII } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
+import { LEAD_STATUSES } from "@/lib/enums";
 import type { LeadStatus, LeadType } from "@/generated/prisma/enums";
 
 const PAGE_SIZE = 20;
 
-const LEAD_STATUSES: LeadStatus[] = [
-  "NEW",
-  "ASSIGNED",
-  "CONTACTED",
-  "QUOTED",
-  "SIGNED",
-  "INSTALLING",
-  "COMPLETED",
-  "DISQUALIFIED",
-];
 
 export async function GET(req: NextRequest) {
   const session = await auth();

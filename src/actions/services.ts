@@ -4,11 +4,12 @@ import { z } from "zod";
 import { linesToList, slugify, storePublicImage } from "@/lib/admin-content";
 import { auditedEntity } from "@/lib/audit";
 import { requireAdmin } from "@/lib/auth";
+import { SERVICE_KINDS, zodEnum } from "@/lib/enums";
 import { storage } from "@/lib/storage";
 import type { ActionResult } from "./users";
 
 const serviceSchema = z.object({
-  kind: z.enum(["SYSTEM", "MAINTENANCE"]),
+  kind: zodEnum(SERVICE_KINDS),
   titleTh: z.string().trim().min(2).max(200),
   titleEn: z.string().trim().min(2).max(200),
   descriptionTh: z.string().trim().min(2).max(2000),

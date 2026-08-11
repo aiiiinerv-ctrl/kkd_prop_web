@@ -39,6 +39,7 @@ async function waitForServer(url: string, timeoutMs: number) {
 console.log("=== 1/5: pure assertion scripts (no server needed) ===");
 run("npx", ["tsx", "scripts/verify-lead-intake.mts"]);
 run("npx", ["tsx", "scripts/verify-content.mts"]);
+run("npx", ["tsx", "scripts/verify-enums.mts"]);
 
 console.log("\n=== 2/5: build ===");
 run("npm", ["run", "build"]);

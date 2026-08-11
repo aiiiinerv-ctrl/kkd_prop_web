@@ -1,14 +1,10 @@
+import { TIME_SLOT_RANGE_LABELS } from "@/lib/enum-labels";
 import type { LeadNotification } from "./types";
 
 const BUILDING_LABELS: Record<string, string> = {
   RESIDENTIAL: "บ้านพักอาศัย",
   COMMERCIAL: "เชิงพาณิชย์",
   INDUSTRIAL: "อุตสาหกรรม",
-};
-
-const SLOT_LABELS: Record<string, string> = {
-  MORNING: "เช้า 9:00-12:00",
-  AFTERNOON: "บ่าย 13:00-17:00",
 };
 
 export function leadAdminUrl(leadId: string): string {
@@ -39,7 +35,7 @@ export function formatLeadSummary(event: LeadNotification): {
       ? [
           `ที่อยู่: ${booking.address}`,
           `วันนัด: ${booking.preferredDate.toLocaleDateString("th-TH", { dateStyle: "long" })}`,
-          `ช่วงเวลา: ${SLOT_LABELS[booking.timeSlot] ?? booking.timeSlot}`,
+          `ช่วงเวลา: ${TIME_SLOT_RANGE_LABELS[booking.timeSlot] ?? booking.timeSlot}`,
           `สลิปโอนเงิน: รอตรวจสอบ`,
         ]
       : []),

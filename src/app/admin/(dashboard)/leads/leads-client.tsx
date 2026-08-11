@@ -15,18 +15,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { LEAD_STATUS_LABELS } from "@/lib/enum-labels";
 import { useLeads, type LeadFilters } from "@/hooks/admin/use-leads";
-
-export const LEAD_STATUS_LABELS: Record<string, string> = {
-  NEW: "ใหม่ รอมอบหมาย",
-  ASSIGNED: "มอบหมายแล้ว",
-  CONTACTED: "กำลังติดตาม",
-  QUOTED: "เสนอราคาแล้ว",
-  SIGNED: "เซ็นสัญญาแล้ว",
-  INSTALLING: "กำลังติดตั้ง",
-  COMPLETED: "เสร็จสิ้น",
-  DISQUALIFIED: "ไม่มีคุณภาพ",
-};
 
 const selectCls =
   "rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none";

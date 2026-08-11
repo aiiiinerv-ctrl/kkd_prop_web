@@ -12,7 +12,6 @@ import {
   updateGiftSent,
   updatePaymentStatus,
 } from "@/actions/bookings";
-import { BOOKING_STATUS_LABELS } from "../bookings-client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,12 +22,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { PAYMENT_STATUS_META } from "@/lib/payment-status-labels";
-
-const SLOT_LABELS: Record<string, string> = {
-  MORNING: "เช้า 9:00 - 12:00",
-  AFTERNOON: "บ่าย 13:00 - 17:00",
-};
+import {
+  BOOKING_STATUS_LABELS,
+  PAYMENT_STATUS_META,
+  TIME_SLOT_LABELS,
+} from "@/lib/enum-labels";
+import type {
+  BookingStatus,
+  PaymentStatus,
+  TimeSlot,
+} from "@/generated/prisma/enums";
 
 const selectCls =
   "rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none";
@@ -38,14 +41,14 @@ type StaffOption = { id: string; name: string; role: string };
 type BookingDetail = {
   id: string;
   bookingNumber: string;
-  status: string;
+  status: BookingStatus;
   giftSent: boolean;
   address: string;
   preferredDate: string;
-  timeSlot: string;
+  timeSlot: TimeSlot;
   amountThb: number;
   paymentSlipKey: string;
-  paymentStatus: string;
+  paymentStatus: PaymentStatus;
   assignedEngineerId: string | null;
   assignedSalesId: string | null;
   lead: { id: string; name: string; phone: string; province: string };
@@ -151,7 +154,7 @@ export function BookingDetailClient({
           </div>
           <div>
             <dt className="text-muted-foreground">ช่วงเวลา</dt>
-            <dd className="font-medium">{SLOT_LABELS[booking.timeSlot]}</dd>
+            <dd className="font-medium">{TIME_SLOT_LABELS[booking.timeSlot]}</dd>
           </div>
         </dl>
       </div>

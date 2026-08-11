@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { auditedEntity } from "@/lib/audit";
 import { requireRole } from "@/lib/auth";
+import { ROLES, zodEnum } from "@/lib/enums";
 import { prisma } from "@/lib/db";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -11,7 +12,7 @@ export type ActionResult = { ok: true } | { ok: false; error: string };
 const userSchema = z.object({
   email: z.string().trim().toLowerCase().pipe(z.email()),
   name: z.string().trim().min(2).max(120),
-  role: z.enum(["ADMIN", "SALES", "FINANCE", "CHANNEL_EXECUTIVE"]),
+  role: zodEnum(ROLES),
   password: z.string().min(8).max(200).optional().or(z.literal("")),
   linkedChannelExecutiveId: z.string().trim().optional().or(z.literal("")),
 });

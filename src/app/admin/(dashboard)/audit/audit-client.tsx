@@ -13,6 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { AUDIT_ENTITY_LABELS } from "@/lib/enum-labels";
+import type { AuditEntityType } from "@/lib/audit";
 
 type AuditRow = {
   id: string;
@@ -34,16 +36,6 @@ const ACTION_STYLE: Record<
   UPDATE: { label: "แก้ไข", variant: "secondary" },
   DELETE: { label: "ลบ", variant: "destructive" },
   LOGIN: { label: "เข้าสู่ระบบ", variant: "secondary" },
-};
-
-const ENTITY_LABELS: Record<string, string> = {
-  Lead: "Lead",
-  SurveyBooking: "การนัดสำรวจ",
-  Service: "บริการ",
-  Package: "แพ็กเกจ",
-  PortfolioProject: "ผลงาน",
-  PromoChannel: "ช่องทางโปรโมท",
-  AdminUser: "ผู้ใช้ระบบ",
 };
 
 /** Field-level diff computed from the two stored snapshots. */
@@ -142,7 +134,7 @@ export function AuditClient({
                       <Badge variant={style.variant}>{style.label}</Badge>
                     </TableCell>
                     <TableCell>
-                      {ENTITY_LABELS[log.entityType] ?? log.entityType}
+                      {AUDIT_ENTITY_LABELS[log.entityType as AuditEntityType] ?? log.entityType}
                       <span className="ml-1.5 text-xs text-muted-foreground">
                         {log.entityId.slice(0, 8)}…
                       </span>

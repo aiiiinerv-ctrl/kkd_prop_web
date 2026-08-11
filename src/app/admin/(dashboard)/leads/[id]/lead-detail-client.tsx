@@ -22,42 +22,19 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { PAYMENT_STATUS_META } from "@/lib/payment-status-labels";
-
-const STATUS_LABELS: Record<string, string> = {
-  NEW: "ใหม่ รอมอบหมาย",
-  ASSIGNED: "มอบหมายแล้ว",
-  CONTACTED: "กำลังติดตาม",
-  QUOTED: "เสนอราคาแล้ว",
-  SIGNED: "เซ็นสัญญาแล้ว",
-  INSTALLING: "กำลังติดตั้ง",
-  COMPLETED: "เสร็จสิ้น",
-  DISQUALIFIED: "ไม่มีคุณภาพ",
-};
-
-const BUILDING_LABELS: Record<string, string> = {
-  RESIDENTIAL: "บ้านพักอาศัย",
-  COMMERCIAL: "เชิงพาณิชย์ / ออฟฟิศ",
-  INDUSTRIAL: "อุตสาหกรรม / โกดัง",
-  OTHER: "อื่นๆ",
-};
-
-const INTERESTED_SYSTEM_LABELS: Record<string, string> = {
-  ON_GRID: "ออนกริด (On-Grid)",
-  HYBRID: "ไฮบริด (Hybrid)",
-  OFF_GRID: "ออฟกริด (Off-Grid)",
-};
-
-const SLOT_LABELS: Record<string, string> = {
-  MORNING: "เช้า 9:00 - 12:00",
-  AFTERNOON: "บ่าย 13:00 - 17:00",
-};
-
-const PAYMENT_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" }> = {
-  PENDING_REVIEW: { label: "รอตรวจสอบ", variant: "default" },
-  VERIFIED: { label: "ตรวจสอบแล้ว", variant: "secondary" },
-  REJECTED: { label: "ปฏิเสธ", variant: "destructive" },
-};
+import {
+  BUILDING_TYPE_LABELS,
+  INTERESTED_SYSTEM_LABELS,
+  LEAD_STATUS_LABELS,
+  TIME_SLOT_RANGE_LABELS,
+  PAYMENT_STATUS_META,
+} from "@/lib/enum-labels";
+import type {
+  BuildingType,
+  LeadStatus,
+  PaymentStatus,
+  TimeSlot,
+} from "@/generated/prisma/enums";
 
 const selectCls =
   "rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none";
@@ -65,13 +42,13 @@ const selectCls =
 type LeadDetail = {
   id: string;
   type: "QUOTE" | "SURVEY";
-  status: string;
+  status: LeadStatus;
   name: string;
   phone: string;
   lineId: string | null;
   referrerName: string | null;
   province: string;
-  buildingType: string;
+  buildingType: BuildingType;
   buildingTypeOtherText: string | null;
   avgMonthlyBill: number | null;
   interestedSystems: string[] | null;
@@ -88,10 +65,10 @@ type LeadDetail = {
     id: string;
     address: string;
     preferredDate: string;
-    timeSlot: string;
+    timeSlot: TimeSlot;
     amountThb: number;
     paymentSlipKey: string;
-    paymentStatus: string;
+    paymentStatus: PaymentStatus;
   } | null;
 };
 
@@ -147,14 +124,14 @@ export function LeadDetailClient({
               run(() => updateLeadStatus(lead.id, e.target.value), "อัปเดตสถานะแล้ว")
             }
           >
-            {Object.entries(STATUS_LABELS).map(([value, label]) => (
+            {Object.entries(LEAD_STATUS_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>
             ))}
           </select>
         ) : (
-          <Badge variant="secondary">{STATUS_LABELS[lead.status] ?? lead.status}</Badge>
+          <Badge variant="secondary">{LEAD_STATUS_LABELS[lead.status] ?? lead.status}</Badge>
         )}
       </div>
 
@@ -194,7 +171,7 @@ export function LeadDetailClient({
           <div>
             <dt className="text-muted-foreground">ประเภทอาคาร</dt>
             <dd className="font-medium">
-              {BUILDING_LABELS[lead.buildingType] ?? lead.buildingType}
+              {BUILDING_TYPE_LABELS[lead.buildingType] ?? lead.buildingType}
               {lead.buildingType === "OTHER" && lead.buildingTypeOtherText
                 ? ` (${lead.buildingTypeOtherText})`
                 : ""}
@@ -324,7 +301,7 @@ export function LeadDetailClient({
             <div>
               <dt className="text-muted-foreground">ช่วงเวลา</dt>
               <dd className="font-medium">
-                {SLOT_LABELS[lead.booking.timeSlot] ?? lead.booking.timeSlot}
+                {TIME_SLOT_RANGE_LABELS[lead.booking.timeSlot] ?? lead.booking.timeSlot}
               </dd>
             </div>
           </dl>
