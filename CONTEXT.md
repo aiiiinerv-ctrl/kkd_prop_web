@@ -26,6 +26,10 @@ _Avoid_: Stage, phase
 The marketing source a Lead was attributed to (e.g. a specific ad campaign or referral slug). A Lead has at most one Channel.
 _Avoid_: Source, campaign (campaign is a property of a Channel, not the concept itself)
 
+**Lead Intake**:
+The module that accepts Leads from the public site: the shared quote/survey schemas (`src/lib/validations/lead.ts`) are its single validation interface — driving both the booking form's `zodResolver` and the submit actions' server-side re-validation — and the capacity rule, slip compression, and rate limit all sit behind its seam. Validation failures cross the seam as per-field machine codes translated by the client.
+_Avoid_: Booking flow, form submission pipeline
+
 **Payment Status**:
 State of a Survey Booking's uploaded payment slip as staff review it: `PENDING_REVIEW → VERIFIED` or `REJECTED`. Distinct from Lead Status — a booking can be `VERIFIED` while its parent Lead is still `NEW`.
 

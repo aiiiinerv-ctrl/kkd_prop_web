@@ -6,33 +6,26 @@ import { prisma } from "@/lib/db";
 import { notifyNewLead } from "@/lib/notifications";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { resolveRefAttribution } from "@/lib/ref-attribution";
-import { quoteSchema } from "@/lib/validations/lead";
+import { quoteSchema, zodFieldErrors } from "@/lib/validations/lead";
 
-export type SubmitResult = { ok: true } | { ok: false; error: string };
+export type SubmitResult =
+  | { ok: true }
+  | { ok: false; error: string; fieldErrors?: Record<string, string> };
 
-export async function submitQuote(formData: FormData): Promise<SubmitResult> {
+// Accepts a plain object (already shaped by the shared quoteSchema on the
+// client) rather than FormData — the quote flow carries no file, so there is
+// nothing FormData would buy. zod on the server remains the source of truth:
+// the input is re-validated in full regardless of what the client did.
+export async function submitQuote(input: unknown): Promise<SubmitResult> {
   const hdrs = await headers();
   const ip = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   if (!checkRateLimit(ip)) {
     return { ok: false, error: "rate_limited" };
   }
 
-  const parsed = quoteSchema.safeParse({
-    name: formData.get("name"),
-    phone: formData.get("phone"),
-    lineId: formData.get("lineId") ?? "",
-    referrerName: formData.get("referrerName") ?? "",
-    province: formData.get("province"),
-    buildingType: formData.get("buildingType"),
-    buildingTypeOtherText: formData.get("buildingTypeOtherText") ?? "",
-    notes: formData.get("notes") ?? "",
-    avgMonthlyBill: formData.get("avgMonthlyBill") || undefined,
-    interestedSystems: formData.getAll("interestedSystems"),
-    sourceChannelId: formData.get("sourceChannelId") ?? "",
-    locale: formData.get("locale") ?? "th",
-  });
+  const parsed = quoteSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: "validation" };
+    return { ok: false, error: "validation", fieldErrors: zodFieldErrors(parsed.error) };
   }
   const data = parsed.data;
   const { autoSourceChannelId, autoSourceExecutiveId } =

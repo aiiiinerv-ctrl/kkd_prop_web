@@ -19,6 +19,16 @@ const page = await browser.newPage();
 const quotePhone = "0812345678";
 await page.goto("http://localhost:3000/th/booking?tab=quote");
 await page.fill('input[name="name"]', "ทดสอบ ใบเสนอราคา");
+
+// Invalid submit first: an 11-digit phone passed the old hand-written client
+// rules but always failed the server schema — with the shared schema driving
+// zodResolver, the form must now reject it inline with a field-level message
+// (booking.errInvalidPhone) instead of the old opaque generic error.
+await page.fill('input[name="phone"]', "0 12-345-67890");
+await page.click('button[type="submit"]');
+await page.waitForSelector("text=เบอร์โทรไม่ถูกต้อง", { timeout: 15000 });
+console.log("QUOTE: invalid phone shows field-level error ✓");
+
 await page.fill('input[name="phone"]', quotePhone);
 await page.selectOption('select[name="province"]', "สมุทรปราการ");
 await page.selectOption('select[name="buildingType"]', "OTHER");

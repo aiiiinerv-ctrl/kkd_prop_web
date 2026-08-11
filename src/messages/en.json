@@ -266,6 +266,11 @@
     "successSurveyDesc": "We typically confirm via LINE within 2 hours after verifying your ฿199 payment slip.",
     "errorGeneric": "Something went wrong. Please try again.",
     "required": "Required",
+    "errTooShort": "Too short",
+    "errTooLong": "Too long",
+    "errInvalidPhone": "Invalid phone number",
+    "errInvalidDate": "Invalid date — please pick a date that hasn't passed",
+    "errInvalid": "Invalid value",
     "reassurance": "Free consultation, no obligation. Our team will contact you within 24 hours.",
     "callUs": "Or call 082-473-1567"
   },

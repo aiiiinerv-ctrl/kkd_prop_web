@@ -10,9 +10,12 @@ import { notifyNewLead } from "@/lib/notifications";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { resolveRefAttribution } from "@/lib/ref-attribution";
 import { storage, validateImage } from "@/lib/storage";
-import { surveySchema } from "@/lib/validations/lead";
+import { surveySchema, zodFieldErrors } from "@/lib/validations/lead";
 import type { SubmitResult } from "./submit-quote";
 
+// FormData is used here only because the flow carries a file: two entries,
+// `payload` (JSON of the shared surveySchema fields) and `paymentSlip` (File).
+// The field list itself is spelled once, in surveySchema.
 export async function submitSurveyBooking(
   formData: FormData
 ): Promise<SubmitResult> {
@@ -22,23 +25,16 @@ export async function submitSurveyBooking(
     return { ok: false, error: "rate_limited" };
   }
 
-  const parsed = surveySchema.safeParse({
-    name: formData.get("name"),
-    phone: formData.get("phone"),
-    lineId: formData.get("lineId") ?? "",
-    referrerName: formData.get("referrerName") ?? "",
-    province: formData.get("province"),
-    buildingType: formData.get("buildingType"),
-    buildingTypeOtherText: formData.get("buildingTypeOtherText") ?? "",
-    notes: formData.get("notes") ?? "",
-    address: formData.get("address"),
-    preferredDate: formData.get("preferredDate"),
-    timeSlot: formData.get("timeSlot"),
-    sourceChannelId: formData.get("sourceChannelId") ?? "",
-    locale: formData.get("locale") ?? "th",
-  });
+  const rawPayload = formData.get("payload");
+  let payload: unknown;
+  try {
+    payload = typeof rawPayload === "string" ? JSON.parse(rawPayload) : null;
+  } catch {
+    payload = null;
+  }
+  const parsed = surveySchema.safeParse(payload);
   if (!parsed.success) {
-    return { ok: false, error: "validation" };
+    return { ok: false, error: "validation", fieldErrors: zodFieldErrors(parsed.error) };
   }
   const data = parsed.data;
 

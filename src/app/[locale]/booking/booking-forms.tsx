@@ -1,14 +1,32 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, CheckCircle2, Gift } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import {
+  useForm,
+  type FieldError,
+  type FieldErrors,
+  type FieldPath,
+  type UseFormRegister,
+  type UseFormSetError,
+  type UseFormWatch,
+} from "react-hook-form";
 import { submitQuote } from "@/actions/submit-quote";
 import { submitSurveyBooking } from "@/actions/submit-survey-booking";
 import { PROVINCES } from "@/lib/data/provinces";
 import { clearDraft, loadDraft, saveDraft } from "@/lib/form-draft";
 import { cn } from "@/lib/utils";
+import {
+  quoteSchema,
+  surveySchema,
+  type BaseLeadFormInput,
+  type QuoteFormInput,
+  type QuoteInput,
+  type SurveyFormInput,
+  type SurveyInput,
+} from "@/lib/validations/lead";
 
 const QUOTE_DRAFT_KEY = "kkd-booking-draft-quote";
 const SURVEY_DRAFT_KEY = "kkd-booking-draft-survey";
@@ -40,33 +58,45 @@ const INTERESTED_SYSTEMS = [
   { value: "OFF_GRID", key: "systemOffGrid" },
 ] as const;
 
-type QuoteFields = {
-  name: string;
-  phone: string;
-  lineId: string;
-  referrerName: string;
-  province: string;
-  buildingType: string;
-  buildingTypeOtherText: string;
-  notes: string;
-  avgMonthlyBill: string;
-  interestedSystems: string[];
-  sourceChannelId: string;
-};
+type Translator = ReturnType<typeof useTranslations<"booking">>;
 
-type SurveyFields = {
-  name: string;
-  phone: string;
-  lineId: string;
-  referrerName: string;
-  province: string;
-  buildingType: string;
-  buildingTypeOtherText: string;
-  notes: string;
-  address: string;
-  preferredDate: string;
-  timeSlot: string;
-  sourceChannelId: string;
+// Both validation directions speak in the machine codes set by the shared
+// schemas in lib/validations/lead.ts — zodResolver puts them in
+// `errors.<field>.message`, and a server-side failure arrives as
+// `fieldErrors` with the same codes (fed back in via setError).
+const ERR_MESSAGE_KEYS = {
+  required: "required",
+  too_short: "errTooShort",
+  too_long: "errTooLong",
+  invalid_phone: "errInvalidPhone",
+  invalid_date: "errInvalidDate",
+} as const;
+
+function FieldErrorText({ error, t }: { error?: FieldError; t: Translator }) {
+  if (!error) return null;
+  const key =
+    ERR_MESSAGE_KEYS[error.message as keyof typeof ERR_MESSAGE_KEYS] ?? "errInvalid";
+  return <p className={errorCls}>{t(key)}</p>;
+}
+
+function applyServerFieldErrors<T extends BaseLeadFormInput>(
+  fieldErrors: Record<string, string> | undefined,
+  setError: UseFormSetError<T>
+): boolean {
+  const entries = Object.entries(fieldErrors ?? {});
+  for (const [field, code] of entries) {
+    setError(field as FieldPath<T>, { type: "server", message: code });
+  }
+  return entries.length > 0;
+}
+
+// The shared fieldsets only touch fields present on both forms, so they are
+// typed against the base shape; each form casts its (superset-typed) form API
+// down once when rendering them.
+type BaseLeadFormApi = {
+  register: UseFormRegister<BaseLeadFormInput>;
+  errors: FieldErrors<BaseLeadFormInput>;
+  watch: UseFormWatch<BaseLeadFormInput>;
 };
 
 export function BookingForms({
@@ -157,15 +187,7 @@ function CommonFields({
   errors,
   watch,
   t,
-}: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  register: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  errors: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  watch: any;
-  t: ReturnType<typeof useTranslations<"booking">>;
-}) {
+}: BaseLeadFormApi & { t: Translator }) {
   const locale = useLocale();
   const buildingType = watch("buildingType");
 
@@ -178,9 +200,9 @@ function CommonFields({
         <input
           className={inputCls}
           placeholder={t("fieldNamePlaceholder")}
-          {...register("name", { required: true, minLength: 2 })}
+          {...register("name")}
         />
-        {errors.name && <p className={errorCls}>{t("required")}</p>}
+        <FieldErrorText error={errors.name} t={t} />
       </div>
       <div>
         <label className={labelCls}>
@@ -190,12 +212,9 @@ function CommonFields({
           className={inputCls}
           type="tel"
           placeholder={t("fieldPhonePlaceholder")}
-          {...register("phone", {
-            required: true,
-            pattern: /^0[\d\s-]{8,12}$/,
-          })}
+          {...register("phone")}
         />
-        {errors.phone && <p className={errorCls}>{t("required")}</p>}
+        <FieldErrorText error={errors.phone} t={t} />
       </div>
       <div>
         <label className={labelCls}>{t("fieldLineId")}</label>
@@ -211,7 +230,7 @@ function CommonFields({
         </label>
         <select
           className={inputCls}
-          {...register("province", { required: true })}
+          {...register("province")}
           defaultValue=""
         >
           <option value="" disabled>
@@ -223,7 +242,7 @@ function CommonFields({
             </option>
           ))}
         </select>
-        {errors.province && <p className={errorCls}>{t("required")}</p>}
+        <FieldErrorText error={errors.province} t={t} />
       </div>
       <div>
         <label className={labelCls}>
@@ -231,7 +250,7 @@ function CommonFields({
         </label>
         <select
           className={inputCls}
-          {...register("buildingType", { required: true })}
+          {...register("buildingType")}
           defaultValue=""
         >
           <option value="" disabled>
@@ -242,16 +261,16 @@ function CommonFields({
           <option value="INDUSTRIAL">{t("buildingIndustrial")}</option>
           <option value="OTHER">{t("buildingOther")}</option>
         </select>
-        {errors.buildingType && <p className={errorCls}>{t("required")}</p>}
+        <FieldErrorText error={errors.buildingType} t={t} />
       </div>
       {buildingType === "OTHER" && (
         <div>
           <input
             className={inputCls}
             placeholder={t("fieldBuildingTypeOtherPlaceholder")}
-            {...register("buildingTypeOtherText", { required: true })}
+            {...register("buildingTypeOtherText")}
           />
-          {errors.buildingTypeOtherText && <p className={errorCls}>{t("required")}</p>}
+          <FieldErrorText error={errors.buildingTypeOtherText} t={t} />
         </div>
       )}
       <div>
@@ -272,10 +291,9 @@ function SourceChannelField({
   channels,
   t,
 }: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  register: any;
+  register: UseFormRegister<BaseLeadFormInput>;
   channels: Channel[];
-  t: ReturnType<typeof useTranslations<"booking">>;
+  t: Translator;
 }) {
   if (channels.length === 0) return null;
   return (
@@ -297,9 +315,8 @@ function ReferrerField({
   register,
   t,
 }: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  register: any;
-  t: ReturnType<typeof useTranslations<"booking">>;
+  register: UseFormRegister<BaseLeadFormInput>;
+  t: Translator;
 }) {
   return (
     <div>
@@ -331,13 +348,16 @@ function QuoteForm({
     handleSubmit,
     watch,
     reset,
+    setError,
     formState: { errors },
-  } = useForm<QuoteFields>({
+  } = useForm<QuoteFormInput, undefined, QuoteInput>({
+    resolver: zodResolver(quoteSchema),
     defaultValues: { avgMonthlyBill: initialBill, interestedSystems: [] },
   });
+  const baseApi = { register, errors, watch } as unknown as BaseLeadFormApi;
 
   useEffect(() => {
-    const draft = loadDraft<QuoteFields>(QUOTE_DRAFT_KEY);
+    const draft = loadDraft<QuoteFormInput>(QUOTE_DRAFT_KEY);
     if (draft) reset(draft);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -347,23 +367,14 @@ function QuoteForm({
     return () => subscription.unsubscribe();
   }, [watch]);
 
-  const onSubmit = (values: QuoteFields) => {
+  const onSubmit = (values: QuoteInput) => {
     setServerError(false);
     startTransition(async () => {
-      const formData = new FormData();
-      Object.entries(values).forEach(([k, v]) => {
-        if (k === "interestedSystems") {
-          (v as string[]).forEach((system) => formData.append("interestedSystems", system));
-        } else {
-          formData.set(k, v as string);
-        }
-      });
-      formData.set("locale", locale);
-      const result = await submitQuote(formData);
+      const result = await submitQuote({ ...values, locale });
       if (result.ok) {
         clearDraft(QUOTE_DRAFT_KEY);
         onSuccess();
-      } else {
+      } else if (!applyServerFieldErrors(result.fieldErrors, setError)) {
         setServerError(true);
       }
     });
@@ -371,7 +382,7 @@ function QuoteForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-      <CommonFields register={register} errors={errors} watch={watch} t={t} />
+      <CommonFields {...baseApi} t={t} />
       <div>
         <label className={labelCls}>{t("fieldBill")}</label>
         <select className={inputCls} {...register("avgMonthlyBill")} defaultValue={initialBill}>
@@ -399,8 +410,8 @@ function QuoteForm({
           ))}
         </div>
       </div>
-      <SourceChannelField register={register} channels={channels} t={t} />
-      <ReferrerField register={register} t={t} />
+      <SourceChannelField register={baseApi.register} channels={channels} t={t} />
+      <ReferrerField register={baseApi.register} t={t} />
       {serverError && <p className={errorCls}>{t("errorGeneric")}</p>}
       <p className="text-center text-xs text-muted-foreground">
         {t("reassurance")}{" "}
@@ -445,11 +456,15 @@ function SurveyForm({
     handleSubmit,
     watch,
     reset,
+    setError,
     formState: { errors },
-  } = useForm<SurveyFields>();
+  } = useForm<SurveyFormInput, undefined, SurveyInput>({
+    resolver: zodResolver(surveySchema),
+  });
+  const baseApi = { register, errors, watch } as unknown as BaseLeadFormApi;
 
   useEffect(() => {
-    const draft = loadDraft<SurveyFields>(SURVEY_DRAFT_KEY);
+    const draft = loadDraft<SurveyFormInput>(SURVEY_DRAFT_KEY);
     if (draft) reset(draft);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -459,8 +474,10 @@ function SurveyForm({
     return () => subscription.unsubscribe();
   }, [watch]);
 
-  const preferredDate = watch("preferredDate");
-  const timeSlot = watch("timeSlot");
+  // Inputs hold pre-coercion values (z.input), so these are the raw strings
+  // from the date/select controls.
+  const preferredDate = watch("preferredDate") as string | undefined;
+  const timeSlot = watch("timeSlot") as string | undefined;
 
   useEffect(() => {
     if (!preferredDate) {
@@ -483,7 +500,7 @@ function SurveyForm({
 
   const isSelectedSlotFull = Boolean(timeSlot && availability?.[timeSlot]);
 
-  const onSubmit = (values: SurveyFields) => {
+  const onSubmit = (values: SurveyInput) => {
     if (!slip) {
       setSlipError(true);
       return;
@@ -496,8 +513,7 @@ function SurveyForm({
     setDateFullError(false);
     startTransition(async () => {
       const formData = new FormData();
-      Object.entries(values).forEach(([k, v]) => formData.set(k, v));
-      formData.set("locale", locale);
+      formData.set("payload", JSON.stringify({ ...values, locale }));
       formData.set("paymentSlip", slip);
       const result = await submitSurveyBooking(formData);
       if (result.ok) {
@@ -505,7 +521,7 @@ function SurveyForm({
         onSuccess();
       } else if (result.error === "date_full") {
         setDateFullError(true);
-      } else {
+      } else if (!applyServerFieldErrors(result.fieldErrors, setError)) {
         setServerError(true);
       }
     });
@@ -530,7 +546,7 @@ function SurveyForm({
         </ul>
       </div>
 
-      <CommonFields register={register} errors={errors} watch={watch} t={t} />
+      <CommonFields {...baseApi} t={t} />
 
       <div>
         <label className={labelCls}>
@@ -539,9 +555,9 @@ function SurveyForm({
         <textarea
           className={inputCls}
           rows={3}
-          {...register("address", { required: true, minLength: 10 })}
+          {...register("address")}
         />
-        {errors.address && <p className={errorCls}>{t("required")}</p>}
+        <FieldErrorText error={errors.address} t={t} />
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
@@ -553,9 +569,9 @@ function SurveyForm({
             className={inputCls}
             type="date"
             min={new Date().toISOString().split("T")[0]}
-            {...register("preferredDate", { required: true })}
+            {...register("preferredDate")}
           />
-          {errors.preferredDate && <p className={errorCls}>{t("required")}</p>}
+          <FieldErrorText error={errors.preferredDate as FieldError | undefined} t={t} />
         </div>
         <div>
           <label className={labelCls}>
@@ -563,7 +579,7 @@ function SurveyForm({
           </label>
           <select
             className={inputCls}
-            {...register("timeSlot", { required: true })}
+            {...register("timeSlot")}
             defaultValue=""
           >
             <option value="" disabled>
@@ -578,7 +594,7 @@ function SurveyForm({
               {availability?.AFTERNOON === true ? ` (${t("slotFull")})` : ""}
             </option>
           </select>
-          {errors.timeSlot && <p className={errorCls}>{t("required")}</p>}
+          <FieldErrorText error={errors.timeSlot} t={t} />
           {isSelectedSlotFull && <p className={errorCls}>{t("dateFull")}</p>}
         </div>
       </div>
@@ -630,8 +646,8 @@ function SurveyForm({
         {slipError && <p className={errorCls}>{t("required")}</p>}
       </div>
 
-      <SourceChannelField register={register} channels={channels} t={t} />
-      <ReferrerField register={register} t={t} />
+      <SourceChannelField register={baseApi.register} channels={channels} t={t} />
+      <ReferrerField register={baseApi.register} t={t} />
       {serverError && <p className={errorCls}>{t("errorGeneric")}</p>}
       {dateFullError && <p className={errorCls}>{t("dateFull")}</p>}
       <p className="text-center text-xs text-muted-foreground">
