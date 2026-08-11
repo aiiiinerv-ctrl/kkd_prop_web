@@ -3,7 +3,9 @@
 import { createId } from "@paralleldrive/cuid2";
 import { headers } from "next/headers";
 import { nextBookingNumber } from "@/lib/bookings/booking-number";
+import { isDateFull } from "@/lib/bookings/capacity";
 import { prisma } from "@/lib/db";
+import { compressImage } from "@/lib/images";
 import { notifyNewLead } from "@/lib/notifications";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { resolveRefAttribution } from "@/lib/ref-attribution";
@@ -49,11 +51,19 @@ export async function submitSurveyBooking(
     return { ok: false, error: "slip_invalid" };
   }
 
-  const ext = slip.name.slice(slip.name.lastIndexOf(".")).toLowerCase();
-  const slipKey = `private/slips/${createId()}${ext}`;
-  await storage.put(slipKey, Buffer.from(await slip.arrayBuffer()), {
-    contentType: slip.type,
-  });
+  // Server-side capacity check — the availability endpoint only informs the
+  // form; this is the check that actually protects the calendar. See
+  // capacity.ts for why the residual check-then-create race is accepted.
+  if (await isDateFull(data.preferredDate, data.timeSlot)) {
+    return { ok: false, error: "date_full" };
+  }
+
+  // Same compression pipeline as admin uploads — slips come from the one path
+  // an unauthenticated visitor controls, so storing raw buffers here was the
+  // worst place to skip it.
+  const compressed = await compressImage(Buffer.from(await slip.arrayBuffer()));
+  const slipKey = `private/slips/${createId()}.jpg`;
+  await storage.put(slipKey, compressed, { contentType: "image/jpeg" });
 
   const bookingNumber = await nextBookingNumber();
   const { autoSourceChannelId, autoSourceExecutiveId } =

@@ -500,9 +500,14 @@ function SurveyForm({
       formData.set("locale", locale);
       formData.set("paymentSlip", slip);
       const result = await submitSurveyBooking(formData);
-      if (result.ok) onSuccess();
-      else if (result.error === "date_full") setDateFullError(true);
-      else setServerError(true);
+      if (result.ok) {
+        clearDraft(SURVEY_DRAFT_KEY);
+        onSuccess();
+      } else if (result.error === "date_full") {
+        setDateFullError(true);
+      } else {
+        setServerError(true);
+      }
     });
   };
 
