@@ -1,6 +1,9 @@
 import "dotenv/config";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { chromium } from "playwright";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { PrismaClient } from "../src/generated/prisma/client.js";
 
 const prisma = new PrismaClient({
@@ -273,6 +276,173 @@ if (!salesUser) {
     }`
   );
 }
+
+// --- Packages / Portfolio / Testimonials: create → edit → delete round trips.
+// These three admin pages had no browser coverage at all: their dialogs, form
+// submission, delete confirmation and toasts were exercised by nothing. Each
+// block below creates its own throwaway row and deletes it again, so repeated
+// runs leave the seed data untouched. ---
+
+// A 1x1 PNG for the forms that require an upload.
+const uploadPng = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+  "base64"
+);
+const uploadDir = mkdtempSync(path.join(tmpdir(), "admin-crud-"));
+const uploadPath = path.join(uploadDir, "upload.png");
+writeFileSync(uploadPath, uploadPng);
+
+const stamp = Date.now().toString(36);
+
+// --- Packages ---
+const packageName = `แพ็กเกจทดสอบ ${stamp}`;
+await page.goto("http://localhost:3000/admin/packages");
+await page.click("text=เพิ่มแพ็กเกจ");
+await page.locator('input[name="nameTh"]').waitFor({ timeout: 5000 });
+await page.fill('input[name="sizeKw"]', "7");
+await page.fill('input[name="priceThb"]', "222000");
+await page.fill('input[name="nameTh"]', packageName);
+await page.fill('input[name="suitableTh"]', "สำหรับสคริปต์ทดสอบ");
+await page.click('button:text-is("English")');
+await page.fill('input[name="nameEn"]', `E2E Package ${stamp}`);
+await page.fill('input[name="suitableEn"]', "For the e2e script");
+await page.click("text=บันทึก >> nth=-1");
+await page.waitForSelector(`tr:has-text("${packageName}")`, { timeout: 10000 });
+
+const createdPackage = await prisma.package.findFirst({ where: { nameTh: packageName } });
+console.log(`PACKAGES: created via dialog ${createdPackage ? "✓" : "✗ FAIL"}`);
+console.log(
+  `PACKAGES: fields saved ${
+    createdPackage?.sizeKw === 7 && createdPackage.priceThb === 222000 ? "✓" : "✗ FAIL"
+  }`
+);
+
+await page.click(`tr:has-text("${packageName}") button[aria-label="แก้ไข"]`);
+await page.locator('input[name="suitableTh"]').waitFor({ timeout: 5000 });
+await page.fill('input[name="suitableTh"]', "แก้ไขแล้วโดยสคริปต์");
+await page.click("text=บันทึก >> nth=-1");
+// The dialog closes only on success — a stale "saved" toast from the create
+// above would otherwise satisfy a text wait before the action had committed.
+await page.locator('input[name="suitableTh"]').waitFor({ state: "detached", timeout: 10000 });
+const editedPackage = await prisma.package.findFirst({ where: { nameTh: packageName } });
+console.log(
+  `PACKAGES: edited via dialog ${
+    editedPackage?.suitableTh === "แก้ไขแล้วโดยสคริปต์" ? "✓" : "✗ FAIL"
+  }`
+);
+
+await page.click(`tr:has-text("${packageName}") button[aria-label="ลบ"]`);
+await page.click('button:text-is("ลบ")');
+await page.waitForSelector(`tr:has-text("${packageName}")`, {
+  state: "detached",
+  timeout: 10000,
+});
+console.log(
+  `PACKAGES: deleted via dialog ${
+    (await prisma.package.count({ where: { nameTh: packageName } })) === 0 ? "✓" : "✗ FAIL"
+  }`
+);
+
+// --- Portfolio (the only one of the three whose create requires an upload) ---
+const projectTitle = `ผลงานทดสอบ ${stamp}`;
+await page.goto("http://localhost:3000/admin/portfolio");
+await page.click("text=เพิ่มผลงาน");
+await page.locator('input[name="titleTh"]').waitFor({ timeout: 5000 });
+await page.fill('input[name="titleTh"]', projectTitle);
+await page.fill('textarea[name="descriptionTh"]', "รายละเอียดผลงานทดสอบ");
+await page.click('button:text-is("English")');
+await page.fill('input[name="titleEn"]', `E2E Project ${stamp}`);
+await page.fill('textarea[name="descriptionEn"]', "E2E project description");
+await page.selectOption('select[name="category"]', "COMMERCIAL");
+await page.fill('input[name="province"]', "ระยอง");
+await page.fill('input[name="systemSizeKw"]', "25");
+await page.setInputFiles('input[name="images"]', uploadPath);
+await page.click("text=บันทึก >> nth=-1");
+await page.waitForSelector(`tr:has-text("${projectTitle}")`, { timeout: 15000 });
+
+const createdProject = await prisma.portfolioProject.findFirst({
+  where: { titleTh: projectTitle },
+});
+console.log(`PORTFOLIO: created via dialog ${createdProject ? "✓" : "✗ FAIL"}`);
+console.log(
+  `PORTFOLIO: image stored under a public key ${
+    (createdProject?.imageKeys as string[] | undefined)?.[0]?.startsWith("public/portfolio/")
+      ? "✓"
+      : "✗ FAIL"
+  }`
+);
+
+await page.click(`tr:has-text("${projectTitle}") button[aria-label="แก้ไข"]`);
+await page.locator('input[name="province"]').waitFor({ timeout: 5000 });
+await page.fill('input[name="province"]', "ชลบุรี");
+await page.click("text=บันทึก >> nth=-1");
+await page.locator('input[name="province"]').waitFor({ state: "detached", timeout: 10000 });
+console.log(
+  `PORTFOLIO: edited via dialog ${
+    (await prisma.portfolioProject.findFirst({ where: { titleTh: projectTitle } }))
+      ?.province === "ชลบุรี"
+      ? "✓"
+      : "✗ FAIL"
+  }`
+);
+
+await page.click(`tr:has-text("${projectTitle}") button[aria-label="ลบ"]`);
+await page.click('button:text-is("ลบ")');
+await page.waitForSelector(`tr:has-text("${projectTitle}")`, {
+  state: "detached",
+  timeout: 10000,
+});
+console.log(
+  `PORTFOLIO: deleted via dialog ${
+    (await prisma.portfolioProject.count({ where: { titleTh: projectTitle } })) === 0
+      ? "✓"
+      : "✗ FAIL"
+  }`
+);
+
+// --- Testimonials (unpublished by default — the create form's checkbox is the
+// only thing that publishes one, per the approval rule in CONTEXT.md) ---
+const customerName = `ลูกค้าทดสอบ ${stamp}`;
+await page.goto("http://localhost:3000/admin/testimonials");
+await page.click("text=เพิ่มรีวิว");
+await page.locator('input[name="customerName"]').waitFor({ timeout: 5000 });
+await page.fill('input[name="customerName"]', customerName);
+await page.fill('textarea[name="quoteTh"]', "ประทับใจบริการมากครับ");
+await page.click('button:text-is("English")');
+await page.fill('textarea[name="quoteEn"]', "Very happy with the service");
+await page.click("text=บันทึก >> nth=-1");
+await page.waitForSelector(`tr:has-text("${customerName}")`, { timeout: 10000 });
+
+const createdTestimonial = await prisma.testimonial.findFirst({
+  where: { customerName },
+});
+console.log(`TESTIMONIALS: created via dialog ${createdTestimonial ? "✓" : "✗ FAIL"}`);
+
+await page.click(`tr:has-text("${customerName}") button[aria-label="แก้ไข"]`);
+await page.locator('textarea[name="quoteTh"]').waitFor({ timeout: 5000 });
+await page.fill('textarea[name="quoteTh"]', "แก้ไขคำรีวิวแล้ว");
+await page.click("text=บันทึก >> nth=-1");
+await page.locator('textarea[name="quoteTh"]').waitFor({ state: "detached", timeout: 10000 });
+console.log(
+  `TESTIMONIALS: edited via dialog ${
+    (await prisma.testimonial.findFirst({ where: { customerName } }))?.quoteTh ===
+    "แก้ไขคำรีวิวแล้ว"
+      ? "✓"
+      : "✗ FAIL"
+  }`
+);
+
+await page.click(`tr:has-text("${customerName}") button[aria-label="ลบ"]`);
+await page.click('button:text-is("ลบ")');
+await page.waitForSelector(`tr:has-text("${customerName}")`, {
+  state: "detached",
+  timeout: 10000,
+});
+console.log(
+  `TESTIMONIALS: deleted via dialog ${
+    (await prisma.testimonial.count({ where: { customerName } })) === 0 ? "✓" : "✗ FAIL"
+  }`
+);
 
 // --- Channels: create one ---
 await page.goto("http://localhost:3000/admin/channels");
