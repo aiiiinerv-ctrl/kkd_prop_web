@@ -1,46 +1,11 @@
 import { create } from "zustand";
-import {
-  ANNUAL_SAVING_MONTHS_MULTIPLIER,
-  calculateTheoreticalMonthlySavingThb,
-  recommendSystemSizeKw,
-} from "@/lib/calculator";
 
-export type CalcPackage = {
-  sizeKw: number;
-  priceThb: number;
-};
-
-export type CalcResult = {
-  systemKey: "system3kw" | "system5kw" | "system10kw";
-  monthlySaving: number;
-  paybackYears: number | null;
-};
-
-const SYSTEM_KEY_BY_SIZE_KW: Record<number, CalcResult["systemKey"]> = {
-  3: "system3kw",
-  5: "system5kw",
-  10: "system10kw",
-};
-
-export function recommendSystem(bill: number, packages: CalcPackage[] = []): CalcResult {
-  const sizeKw = recommendSystemSizeKw(bill);
-  const systemKey = SYSTEM_KEY_BY_SIZE_KW[sizeKw];
-
-  // Cap the displayed saving at the customer's actual bill — a system whose
-  // theoretical production exceeds what they currently pay shouldn't show a
-  // "saving" larger than the bill itself, or the "after" figure would go negative.
-  const theoreticalMonthlySaving = calculateTheoreticalMonthlySavingThb(sizeKw);
-  const monthlySaving = Math.min(theoreticalMonthlySaving, bill);
-
-  const matchedPackage = packages.find((pkg) => pkg.sizeKw === sizeKw);
-  const paybackYears =
-    matchedPackage && monthlySaving > 0
-      ? matchedPackage.priceThb / (monthlySaving * ANNUAL_SAVING_MONTHS_MULTIPLIER)
-      : null;
-
-  return { systemKey, monthlySaving, paybackYears };
-}
-
+/**
+ * UI state only: the raw text of the bill field, shared between the input and
+ * the slider. What that text means — whether it's usable, what system it
+ * implies, what the customer would save — belongs to src/lib/calculator.ts,
+ * which is plain functions and testable without this store.
+ */
 type CalculatorState = {
   bill: string;
   setBill: (bill: string) => void;

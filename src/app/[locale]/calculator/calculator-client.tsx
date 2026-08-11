@@ -6,18 +6,16 @@ import { Link } from "@/i18n/navigation";
 import {
   BILL_THRESHOLD_3KW_TO_5KW,
   BILL_THRESHOLD_5KW_TO_10KW,
+  MAX_BILL,
+  MIN_BILL,
+  STEP_BILL,
+  calculateSavings,
+  type CalcPackage,
 } from "@/lib/calculator";
 import { cn } from "@/lib/utils";
-import {
-  type CalcPackage,
-  recommendSystem,
-  useCalculatorStore,
-} from "@/store/use-calculator-store";
+import { useCalculatorStore } from "@/store/use-calculator-store";
 
-const MIN_BILL = 500;
-const MAX_BILL = 8000;
-const STEP_BILL = 100;
-
+/** Where a bill sits along the slider track, as a percentage. */
 function billToPercent(bill: number) {
   return ((bill - MIN_BILL) / (MAX_BILL - MIN_BILL)) * 100;
 }
@@ -29,13 +27,10 @@ export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
   const { bill, setBill } = useCalculatorStore();
 
   const billValue = Number(bill);
-  const displayedResult = useMemo(() => {
-    if (!Number.isFinite(billValue) || billValue <= 0) return null;
-    return recommendSystem(billValue, packages);
-  }, [billValue, packages]);
-  const afterBill = displayedResult
-    ? Math.max(billValue - displayedResult.monthlySaving, 0)
-    : null;
+  const displayedResult = useMemo(
+    () => calculateSavings(bill, packages),
+    [bill, packages]
+  );
 
   const formattedBill = Number.isFinite(billValue)
     ? billValue.toLocaleString(locale)
@@ -149,7 +144,10 @@ export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
                 {t("afterLabel")} / {t("month")}
               </span>
               <span className="text-xl font-extrabold text-emerald-600">
-                ฿{afterBill !== null ? afterBill.toLocaleString(locale) : "0"}
+                ฿
+                {displayedResult
+                  ? displayedResult.afterBill.toLocaleString(locale)
+                  : "0"}
               </span>
             </div>
 

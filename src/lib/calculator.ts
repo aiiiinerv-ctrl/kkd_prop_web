@@ -19,10 +19,17 @@ export const PRICE_PER_KWH_THB = 4.5;
 // number we use"), presumably a conservative buffer for lower-output months.
 export const ANNUAL_SAVING_MONTHS_MULTIPLIER = 10;
 
+// The bill range the calculator answers for: the slider's ends, and the bounds
+// the number input accepts. Both tier thresholds must sit strictly inside this
+// range or the tier markers render off the track — asserted in
+// scripts/verify-calculator.mts.
+export const MIN_BILL = 500;
+export const MAX_BILL = 8000;
+export const STEP_BILL = 100;
+
 // Theoretical monthly saving if the system's full production offset electricity
-// otherwise bought at PRICE_PER_KWH_THB. Not capped to any particular bill — see
-// use-calculator-store.ts for where the cap against the customer's actual bill is
-// applied before display.
+// otherwise bought at PRICE_PER_KWH_THB. Not capped to any particular bill —
+// calculateSavings() below applies the cap against the customer's actual bill.
 export function calculateTheoreticalMonthlySavingThb(sizeKw: number): number {
   const dailyProductionKwh = sizeKw * SUN_HOURS_PER_DAY;
   const monthlyProductionKwh = dailyProductionKwh * DAYS_PER_MONTH;
@@ -48,4 +55,62 @@ export function recommendSystemSizeKw(bill: number): 3 | 5 | 10 {
   if (bill < BILL_THRESHOLD_3KW_TO_5KW) return 3;
   if (bill < BILL_THRESHOLD_5KW_TO_10KW) return 5;
   return 10;
+}
+
+export type CalcPackage = {
+  sizeKw: number;
+  priceThb: number;
+};
+
+export type CalcResult = {
+  systemKey: "system3kw" | "system5kw" | "system10kw";
+  /** Capped at the customer's bill — never more than they currently pay. */
+  monthlySaving: number;
+  /** What's left of the bill after that saving. */
+  afterBill: number;
+  paybackYears: number | null;
+};
+
+const SYSTEM_KEY_BY_SIZE_KW: Record<number, CalcResult["systemKey"]> = {
+  3: "system3kw",
+  5: "system5kw",
+  10: "system10kw",
+};
+
+/**
+ * Everything the calculator UI shows for one bill, from the raw input string
+ * the field holds. Returns null when the input isn't a bill we can answer for
+ * (blank, non-numeric, zero or negative) — the caller shows nothing rather
+ * than deciding what "valid" means itself.
+ */
+export function calculateSavings(
+  billInput: string,
+  packages: CalcPackage[] = []
+): CalcResult | null {
+  const bill = Number(billInput);
+  if (billInput.trim() === "" || !Number.isFinite(bill) || bill <= 0) return null;
+
+  const sizeKw = recommendSystemSizeKw(bill);
+
+  // Cap the displayed saving at the customer's actual bill — a system whose
+  // theoretical production exceeds what they currently pay shouldn't show a
+  // "saving" larger than the bill itself. afterBill is the same fact from the
+  // other side, which is why the two live together: the cap is what keeps it
+  // from going negative.
+  const theoreticalMonthlySaving = calculateTheoreticalMonthlySavingThb(sizeKw);
+  const monthlySaving = Math.min(theoreticalMonthlySaving, bill);
+  const afterBill = bill - monthlySaving;
+
+  const matchedPackage = packages.find((pkg) => pkg.sizeKw === sizeKw);
+  const paybackYears =
+    matchedPackage && monthlySaving > 0
+      ? matchedPackage.priceThb / (monthlySaving * ANNUAL_SAVING_MONTHS_MULTIPLIER)
+      : null;
+
+  return {
+    systemKey: SYSTEM_KEY_BY_SIZE_KW[sizeKw],
+    monthlySaving,
+    afterBill,
+    paybackYears,
+  };
 }
