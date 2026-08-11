@@ -5,9 +5,7 @@ import { CtaBanner } from "@/components/site/cta-banner";
 import { SeasonalProductionTable } from "@/components/site/seasonal-production-table";
 import { SectionHeading } from "@/components/site/section-heading";
 import { Link } from "@/i18n/navigation";
-import { prisma } from "@/lib/db";
-import { pickLocale, pickLocaleList } from "@/lib/i18n-content";
-import type { Seasonal } from "@/lib/packages-seasonal";
+import { getPackageBySlug } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
 
 export const revalidate = 300;
@@ -31,12 +29,12 @@ export default async function PackageDetailPage({
   const t = await getTranslations("packages");
   const tCommon = await getTranslations("common");
 
-  const pkg = await prisma.package.findUnique({ where: { slug } });
-  if (!pkg || !pkg.isPublished) {
+  const pkg = await getPackageBySlug(slug, locale);
+  if (!pkg) {
     notFound();
   }
 
-  const seasonal = pkg.seasonalProduction as Seasonal;
+  const seasonal = pkg.seasonal;
 
   return (
     <main>
@@ -49,8 +47,8 @@ export default async function PackageDetailPage({
         </Link>
 
         <SectionHeading
-          title={pickLocale(pkg, "name", locale)}
-          subtitle={pickLocale(pkg, "suitable", locale)}
+          title={pkg.name}
+          subtitle={pkg.suitable}
           headingClassName="font-extrabold tracking-[-0.01em]"
         />
 
@@ -65,7 +63,7 @@ export default async function PackageDetailPage({
               {t("featuresTitle")}
             </h3>
             <ul className="mt-4 space-y-2.5 text-left text-sm">
-              {pickLocaleList(pkg, "features", locale).map((f) => (
+              {pkg.features.map((f) => (
                 <li key={f} className="flex items-start gap-2">
                   <Check className="mt-0.5 size-4 shrink-0 text-brand-orange" />
                   {f}
@@ -84,15 +82,17 @@ export default async function PackageDetailPage({
             </Link>
           </div>
 
-          <div className="rounded-xl border border-border/70 bg-card p-7 shadow-sm">
-            <h3 className="text-lg font-bold text-primary">{t("seasonalTitle")}</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {t("seasonalSubtitle", { size: pickLocale(pkg, "name", locale) })}
-            </p>
-            <div className="mt-5">
-              <SeasonalProductionTable seasonal={seasonal} locale={locale} t={t} tCommon={tCommon} />
+          {seasonal && (
+            <div className="rounded-xl border border-border/70 bg-card p-7 shadow-sm">
+              <h3 className="text-lg font-bold text-primary">{t("seasonalTitle")}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t("seasonalSubtitle", { size: pkg.name })}
+              </p>
+              <div className="mt-5">
+                <SeasonalProductionTable seasonal={seasonal} locale={locale} t={t} tCommon={tCommon} />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="rounded-xl border border-border/70 bg-card p-7 shadow-sm">
             <h3 className="text-lg font-bold text-primary">{t("paybackTitle")}</h3>

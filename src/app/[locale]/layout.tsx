@@ -6,7 +6,7 @@ import { setRequestLocale } from "next-intl/server";
 import { LocalBusinessJsonLd } from "@/components/site/local-business-jsonld";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteHeader } from "@/components/site/site-header";
-import { prisma } from "@/lib/db";
+import { getPublishedTestimonials } from "@/lib/content";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
 
@@ -45,9 +45,11 @@ export default async function LocaleLayout({
   }
   setRequestLocale(locale);
 
-  const publishedTestimonialCount = await prisma.testimonial.count({
-    where: { isPublished: true },
-  });
+  // Whether to offer the testimonials nav link. Same cached reader the
+  // testimonials page and section use, so the three places that ask "is there
+  // anything published?" share one query per request and one definition of the
+  // answer.
+  const testimonials = await getPublishedTestimonials(locale);
 
   return (
     <html
@@ -58,7 +60,7 @@ export default async function LocaleLayout({
       <body className="site-shell min-h-full flex flex-col">
         <LocalBusinessJsonLd />
         <NextIntlClientProvider>
-          <SiteHeader showTestimonials={publishedTestimonialCount > 0} />
+          <SiteHeader showTestimonials={testimonials.length > 0} />
           <div className="flex-1 flex flex-col">{children}</div>
           <SiteFooter />
         </NextIntlClientProvider>

@@ -50,8 +50,16 @@ A customer quote, optionally attached to a Portfolio Project. Unpublished by def
 ### Localized content
 
 **Paired locale columns**:
-The pattern for DB-stored bilingual content: every user-facing text field exists twice as `xxxTh`/`xxxEn` (e.g. `titleTh`/`titleEn`), read through `pickLocale()` rather than a separate translation table. Static UI strings use a different mechanism (`src/messages/{th,en}.json`) — the two are not interchangeable.
+The pattern for DB-stored bilingual content: every user-facing text field exists twice as `xxxTh`/`xxxEn` (e.g. `titleTh`/`titleEn`), rather than a separate translation table. Resolving a pair to one string is the **Content module**'s job — pages receive a **Content view-model** and never see the pair. Static UI strings use a different mechanism (`src/messages/{th,en}.json`) — the two are not interchangeable.
 _Avoid_: i18n field, translation column
+
+**Content module**:
+`src/lib/content/` — the only way public pages read content. Each reader answers one question a page asks (`getPublishedPackages`, `getLatestProjects`, …) and owns what counts as published, how rows are ordered, how paired locale columns resolve, and how storage keys become URLs. Readers are memoized per request, so callers may repeat them freely.
+_Avoid_: repository, data layer
+
+**Content view-model**:
+What a reader returns: a display-ready object (`PackageView`, `ProjectView`, …) with one resolved string per field and image URLs already built. Public pages render these directly — a page that reaches past them for a DB row has bypassed the module.
+_Avoid_: DTO, presenter
 
 ### Admin & audit
 

@@ -3,8 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Reveal } from "@/components/site/reveal";
 import { Link } from "@/i18n/navigation";
 import { CalculatorClient } from "./calculator-client";
-import { prisma } from "@/lib/db";
-import { pickLocale, pickLocaleList } from "@/lib/i18n-content";
+import { getPublishedPackages } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
@@ -30,10 +29,7 @@ export default async function CalculatorPage({
   const t = await getTranslations("calculator");
   const tCommon = await getTranslations("common");
 
-  const packages = await prisma.package.findMany({
-    where: { isPublished: true },
-    orderBy: { sortOrder: "asc" },
-  });
+  const packages = await getPublishedPackages(locale);
 
   return (
     <main className="bg-background">
@@ -80,10 +76,10 @@ export default async function CalculatorPage({
                     </span>
                   )}
                   <h3 className="text-center text-xl font-bold text-primary">
-                    {pickLocale(pkg, "name", locale)}
+                    {pkg.name}
                   </h3>
                   <p className="mt-2 text-center text-sm text-muted-foreground">
-                    {pickLocale(pkg, "suitable", locale)}
+                    {pkg.suitable}
                   </p>
                   <div className="mt-5 text-center">
                     <span className="text-sm text-muted-foreground">{t("priceFrom")} </span>
@@ -92,7 +88,7 @@ export default async function CalculatorPage({
                     </span>
                   </div>
                   <ul className="mt-6 flex-1 space-y-3">
-                    {pickLocaleList(pkg, "features", locale).map((feature) => (
+                    {pkg.features.map((feature) => (
                       <li key={feature} className="flex items-start gap-2 text-sm">
                         <Check className="mt-0.5 size-4 shrink-0 text-brand-orange" />
                         <span>{feature}</span>

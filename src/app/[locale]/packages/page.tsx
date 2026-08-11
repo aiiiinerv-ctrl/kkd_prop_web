@@ -4,9 +4,7 @@ import { CtaBanner } from "@/components/site/cta-banner";
 import { SeasonalProductionTable } from "@/components/site/seasonal-production-table";
 import { SectionHeading } from "@/components/site/section-heading";
 import { Link } from "@/i18n/navigation";
-import { prisma } from "@/lib/db";
-import { pickLocale, pickLocaleList } from "@/lib/i18n-content";
-import type { Seasonal } from "@/lib/packages-seasonal";
+import { getPublishedPackages } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 
@@ -31,13 +29,10 @@ export default async function PackagesPage({
   const t = await getTranslations("packages");
   const tCommon = await getTranslations("common");
 
-  const packages = await prisma.package.findMany({
-    where: { isPublished: true },
-    orderBy: { sortOrder: "asc" },
-  });
+  const packages = await getPublishedPackages(locale);
 
   const popular = packages.find((p) => p.isPopular) ?? packages[0];
-  const seasonal = popular?.seasonalProduction as Seasonal | undefined;
+  const seasonal = popular?.seasonal;
 
   return (
     <main>
@@ -64,10 +59,10 @@ export default async function PackagesPage({
                 </span>
               )}
               <h3 className="text-center text-xl font-bold text-primary">
-                {pickLocale(pkg, "name", locale)}
+                {pkg.name}
               </h3>
               <p className="mt-1 text-center text-sm text-muted-foreground">
-                {pickLocale(pkg, "suitable", locale)}
+                {pkg.suitable}
               </p>
               <div className="mt-4 text-center">
                 <span className="text-xs text-muted-foreground">{t("priceFrom")} </span>
@@ -76,7 +71,7 @@ export default async function PackagesPage({
                 </span>
               </div>
               <ul className="mt-5 flex-1 space-y-2.5">
-                {pickLocaleList(pkg, "features", locale).map((f) => (
+                {pkg.features.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm">
                     <Check className="mt-0.5 size-4 shrink-0 text-brand-orange" />
                     {f}
@@ -107,7 +102,7 @@ export default async function PackagesPage({
             <div className="rounded-xl border border-border/70 bg-card p-7 shadow-sm">
               <h3 className="text-lg font-bold text-primary">{t("seasonalTitle")}</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                {t("seasonalSubtitle", { size: pickLocale(popular, "name", locale) })}
+                {t("seasonalSubtitle", { size: popular.name })}
               </p>
               <div className="mt-5">
                 <SeasonalProductionTable seasonal={seasonal} locale={locale} t={t} tCommon={tCommon} />

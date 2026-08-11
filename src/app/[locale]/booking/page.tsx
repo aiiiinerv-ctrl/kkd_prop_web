@@ -1,8 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getPaymentSettings } from "@/actions/payment-settings";
 import { SectionHeading } from "@/components/site/section-heading";
-import { prisma } from "@/lib/db";
-import { pickLocale } from "@/lib/i18n-content";
+import { getActiveChannels } from "@/lib/content";
 import { generatePromptPayQrDataUrl } from "@/lib/promptpay";
 import { BookingForms } from "./booking-forms";
 import { pageMetadata } from "@/lib/seo";
@@ -30,10 +29,7 @@ export default async function BookingPage({
   const t = await getTranslations("booking");
 
   const [channels, paymentSettings] = await Promise.all([
-    prisma.promoChannel.findMany({
-      where: { isActive: true },
-      orderBy: { sortOrder: "asc" },
-    }),
+    getActiveChannels(locale),
     getPaymentSettings(),
   ]);
 
@@ -52,10 +48,7 @@ export default async function BookingPage({
       <BookingForms
         initialTab={tab === "survey" ? "survey" : "quote"}
         initialBill={bill && /^\d+$/.test(bill) ? bill : ""}
-        channels={channels.map((c) => ({
-          id: c.id,
-          name: pickLocale(c, "name", locale),
-        }))}
+        channels={channels}
         bankInfo={{
           bankName: paymentSettings?.bankName ?? "",
           bankAccountNumber: paymentSettings?.bankAccountNumber ?? "",

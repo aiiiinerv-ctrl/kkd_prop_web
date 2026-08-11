@@ -3,8 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CtaBanner } from "@/components/site/cta-banner";
 import { SectionHeading } from "@/components/site/section-heading";
 import { Link } from "@/i18n/navigation";
-import { prisma } from "@/lib/db";
-import { pickLocale, pickLocaleList } from "@/lib/i18n-content";
+import { getPublishedServices, type ServiceView } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
 
 export const revalidate = 300;
@@ -37,14 +36,11 @@ export default async function ServicesPage({
   const t = await getTranslations("services");
   const tCommon = await getTranslations("common");
 
-  const services = await prisma.service.findMany({
-    where: { isPublished: true },
-    orderBy: { sortOrder: "asc" },
-  });
+  const services = await getPublishedServices(locale);
   const systems = services.filter((s) => s.kind === "SYSTEM");
   const maintenance = services.filter((s) => s.kind === "MAINTENANCE");
 
-  const ServiceCard = ({ service }: { service: (typeof services)[number] }) => {
+  const ServiceCard = ({ service }: { service: ServiceView }) => {
     const Icon = SERVICE_ICONS[service.slug] ?? Wrench;
     const isMaintenance = service.kind === "MAINTENANCE";
 
@@ -55,14 +51,14 @@ export default async function ServicesPage({
             <Icon className="size-5" />
           </span>
           <h3 className="text-lg font-bold text-primary">
-            {pickLocale(service, "title", locale)}
+            {service.title}
           </h3>
         </div>
         <p className="mt-3 flex-1 text-sm text-muted-foreground">
-          {pickLocale(service, "description", locale)}
+          {service.description}
         </p>
         <ul className="mt-4 space-y-2">
-          {pickLocaleList(service, "features", locale).map((f) => (
+          {service.features.map((f) => (
             <li key={f} className="flex items-start gap-2 text-sm">
               <Check className="mt-0.5 size-4 shrink-0 text-brand-orange" />
               {f}

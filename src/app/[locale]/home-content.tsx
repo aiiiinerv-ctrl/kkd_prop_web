@@ -7,9 +7,7 @@ import { IconFacebook } from "@/components/site/icon-facebook";
 import { Reveal } from "@/components/site/reveal";
 import { SectionHeading } from "@/components/site/section-heading";
 import { Link } from "@/i18n/navigation";
-import { prisma } from "@/lib/db";
-import { pickLocale } from "@/lib/i18n-content";
-import { storage } from "@/lib/storage";
+import { getLatestProjects } from "@/lib/content";
 
 /* Same hrefs as the contact page so quick-contact info never drifts out of sync. */
 const QUICK_CONTACT_LINE_URL = "https://line.me/R/ti/p/@kkdsolar";
@@ -34,25 +32,7 @@ export async function HomeContent({
     query: { tab: "quote" },
   };
 
-  const projects = await prisma.portfolioProject.findMany({
-    where: { isPublished: true },
-    orderBy: [{ completedAt: "desc" }, { createdAt: "desc" }],
-    take: 4,
-  });
-
-  const portfolioItems = projects.map((p) => {
-    const imageKeys = p.imageKeys as string[];
-    return {
-      id: p.id,
-      title: pickLocale(p, "title", locale),
-      description: pickLocale(p, "description", locale),
-      province: p.province,
-      systemSizeKw: p.systemSizeKw,
-      category: p.category,
-      imageUrl: imageKeys[0] ? storage.publicUrl(imageKeys[0]) : null,
-      imageUrls: imageKeys.map((key) => storage.publicUrl(key)),
-    };
-  });
+  const portfolioItems = await getLatestProjects(locale, 4);
 
   return (
     <main>
