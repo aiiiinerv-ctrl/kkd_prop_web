@@ -100,38 +100,6 @@ export async function recordAuditEvent(event: {
 }
 
 /**
- * @deprecated Superseded by `auditedEntity()`. Still in place only while the
- * remaining action files are converted — it leaves the mutation and its audit
- * row in separate transactions, and pushes the actor, the before-load and the
- * snapshot policy onto every caller.
- */
-export async function withAudit<T extends AuditableRow | null>(opts: {
-  actorId: string;
-  action: AuditAction;
-  entityType: AuditEntityType;
-  before?: AuditableRow | null;
-  run: () => Promise<T>;
-}): Promise<T> {
-  const result = await opts.run();
-
-  const entityId = result?.id ?? opts.before?.id;
-  if (!entityId) {
-    throw new Error("withAudit: could not determine entityId");
-  }
-
-  await writeAuditRow(prisma, {
-    actorId: opts.actorId,
-    action: opts.action,
-    entityType: opts.entityType,
-    entityId,
-    before: (opts.before ?? undefined) as Prisma.InputJsonValue | undefined,
-    after: (result ?? undefined) as Prisma.InputJsonValue | undefined,
-  });
-
-  return result;
-}
-
-/**
  * Declares an entity's audited mutations. The returned create/update/remove
  * each run their mutation and its audit row inside one transaction, so a
  * mutation can never be committed without its audit trail, then refresh the

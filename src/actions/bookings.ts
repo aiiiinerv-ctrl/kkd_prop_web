@@ -1,8 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { withAudit } from "@/lib/audit";
+import { auditedEntity } from "@/lib/audit";
 import { canMutateBooking, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import type { BookingStatus, PaymentStatus } from "@/generated/prisma/enums";
@@ -21,6 +20,28 @@ const PAYMENT_STATUSES: PaymentStatus[] = ["PENDING_REVIEW", "VERIFIED", "REJECT
 
 const NO_PERMISSION_ERROR = "ไม่มีสิทธิ์แก้ไขการจองนี้";
 
+// The revalidate list is the union of what the individual mutations below used
+// to refresh, including the parent lead's page (payment status shows there).
+const bookings = auditedEntity({
+  entityType: "SurveyBooking",
+  model: (client) => client.surveyBooking,
+  snapshot: "full",
+  revalidate: (booking) => [
+    `/admin/bookings/${booking.id}`,
+    "/admin/bookings",
+    `/admin/leads/${booking.leadId}`,
+  ],
+});
+
+/**
+ * Loads a booking for the permission decision that has to happen before the
+ * mutation. The module re-reads the row inside its transaction, so the audit
+ * snapshot is still the row as of the write — this read only feeds
+ * canMutateBooking().
+ *
+ * Same narrow staleness window as loadLeadForGuard() in leads.ts, and accepted
+ * for the same reason: assignedSalesId is ADMIN-only to change.
+ */
 async function loadBookingForMutation(id: string) {
   return prisma.surveyBooking.findUnique({ where: { id } });
 }
@@ -48,26 +69,15 @@ export async function updateBookingStatus(
     return { ok: false, error: "สถานะไม่ถูกต้อง" };
   }
 
-  const before = await loadBookingForMutation(id);
-  if (!before) return { ok: false, error: "ไม่พบการจอง" };
-  if (!canMutateBooking(session, before)) {
+  const guard = await loadBookingForMutation(id);
+  if (!guard) return { ok: false, error: "ไม่พบการจอง" };
+  if (!canMutateBooking(session, guard)) {
     return { ok: false, error: NO_PERMISSION_ERROR };
   }
 
-  await withAudit({
-    actorId: session.user.id,
-    action: "UPDATE",
-    entityType: "SurveyBooking",
-    before,
-    run: () =>
-      prisma.surveyBooking.update({
-        where: { id },
-        data: { status: status as BookingStatus },
-      }),
-  });
+  const updated = await bookings.update(id, { status: status as BookingStatus });
+  if (!updated) return { ok: false, error: "ไม่พบการจอง" };
 
-  revalidatePath(`/admin/bookings/${id}`);
-  revalidatePath("/admin/bookings");
   return { ok: true };
 }
 
@@ -77,22 +87,15 @@ export async function updateGiftSent(
 ): Promise<ActionResult> {
   const session = await requireRole("ADMIN", "SALES");
 
-  const before = await loadBookingForMutation(id);
-  if (!before) return { ok: false, error: "ไม่พบการจอง" };
-  if (!canMutateBooking(session, before)) {
+  const guard = await loadBookingForMutation(id);
+  if (!guard) return { ok: false, error: "ไม่พบการจอง" };
+  if (!canMutateBooking(session, guard)) {
     return { ok: false, error: NO_PERMISSION_ERROR };
   }
 
-  await withAudit({
-    actorId: session.user.id,
-    action: "UPDATE",
-    entityType: "SurveyBooking",
-    before,
-    run: () => prisma.surveyBooking.update({ where: { id }, data: { giftSent } }),
-  });
+  const updated = await bookings.update(id, { giftSent });
+  if (!updated) return { ok: false, error: "ไม่พบการจอง" };
 
-  revalidatePath(`/admin/bookings/${id}`);
-  revalidatePath("/admin/bookings");
   return { ok: true };
 }
 
@@ -102,29 +105,18 @@ export async function assignBookingEngineer(
 ): Promise<ActionResult> {
   const session = await requireRole("ADMIN", "SALES");
 
-  const before = await loadBookingForMutation(id);
-  if (!before) return { ok: false, error: "ไม่พบการจอง" };
-  if (!canMutateBooking(session, before)) {
+  const guard = await loadBookingForMutation(id);
+  if (!guard) return { ok: false, error: "ไม่พบการจอง" };
+  if (!canMutateBooking(session, guard)) {
     return { ok: false, error: NO_PERMISSION_ERROR };
   }
 
   const resolved = await resolveAssignee(engineerId);
   if ("error" in resolved) return { ok: false, error: resolved.error };
 
-  await withAudit({
-    actorId: session.user.id,
-    action: "UPDATE",
-    entityType: "SurveyBooking",
-    before,
-    run: () =>
-      prisma.surveyBooking.update({
-        where: { id },
-        data: { assignedEngineerId: resolved.value },
-      }),
-  });
+  const updated = await bookings.update(id, { assignedEngineerId: resolved.value });
+  if (!updated) return { ok: false, error: "ไม่พบการจอง" };
 
-  revalidatePath(`/admin/bookings/${id}`);
-  revalidatePath("/admin/bookings");
   return { ok: true };
 }
 
@@ -134,29 +126,18 @@ export async function assignBookingSales(
 ): Promise<ActionResult> {
   const session = await requireRole("ADMIN", "SALES");
 
-  const before = await loadBookingForMutation(id);
-  if (!before) return { ok: false, error: "ไม่พบการจอง" };
-  if (!canMutateBooking(session, before)) {
+  const guard = await loadBookingForMutation(id);
+  if (!guard) return { ok: false, error: "ไม่พบการจอง" };
+  if (!canMutateBooking(session, guard)) {
     return { ok: false, error: NO_PERMISSION_ERROR };
   }
 
   const resolved = await resolveAssignee(salesId);
   if ("error" in resolved) return { ok: false, error: resolved.error };
 
-  await withAudit({
-    actorId: session.user.id,
-    action: "UPDATE",
-    entityType: "SurveyBooking",
-    before,
-    run: () =>
-      prisma.surveyBooking.update({
-        where: { id },
-        data: { assignedSalesId: resolved.value },
-      }),
-  });
+  const updated = await bookings.update(id, { assignedSalesId: resolved.value });
+  if (!updated) return { ok: false, error: "ไม่พบการจอง" };
 
-  revalidatePath(`/admin/bookings/${id}`);
-  revalidatePath("/admin/bookings");
   return { ok: true };
 }
 
@@ -175,27 +156,17 @@ export async function updatePaymentStatus(
     return { ok: false, error: "สถานะไม่ถูกต้อง" };
   }
 
-  const before = await loadBookingForMutation(bookingId);
-  if (!before) return { ok: false, error: "ไม่พบการจอง" };
-  if (!canMutateBooking(session, before)) {
+  const guard = await loadBookingForMutation(bookingId);
+  if (!guard) return { ok: false, error: "ไม่พบการจอง" };
+  if (!canMutateBooking(session, guard)) {
     return { ok: false, error: NO_PERMISSION_ERROR };
   }
 
-  await withAudit({
-    actorId: session.user.id,
-    action: "UPDATE",
-    entityType: "SurveyBooking",
-    before,
-    run: () =>
-      prisma.surveyBooking.update({
-        where: { id: bookingId },
-        data: { paymentStatus: status as PaymentStatus },
-      }),
+  const updated = await bookings.update(bookingId, {
+    paymentStatus: status as PaymentStatus,
   });
+  if (!updated) return { ok: false, error: "ไม่พบการจอง" };
 
-  revalidatePath(`/admin/leads/${before.leadId}`);
-  revalidatePath(`/admin/bookings/${bookingId}`);
-  revalidatePath("/admin/bookings");
   return { ok: true };
 }
 
@@ -204,10 +175,17 @@ const capacitySchema = z.object({
   maxPerSlot: z.coerce.number().int().min(1).max(100),
 });
 
+const capacitySettings = auditedEntity({
+  entityType: "BookingCapacitySetting",
+  model: (client) => client.bookingCapacitySetting,
+  snapshot: "full",
+  revalidate: () => ["/admin/settings"],
+});
+
 export async function updateBookingCapacitySetting(
   formData: FormData
 ): Promise<ActionResult> {
-  const session = await requireRole("ADMIN");
+  await requireRole("ADMIN");
 
   const parsed = capacitySchema.safeParse({
     maxPerDay: formData.get("maxPerDay"),
@@ -215,21 +193,15 @@ export async function updateBookingCapacitySetting(
   });
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
 
-  const before = await prisma.bookingCapacitySetting.findFirst();
-  if (!before) return { ok: false, error: "ไม่พบการตั้งค่า" };
-
-  await withAudit({
-    actorId: session.user.id,
-    action: "UPDATE",
-    entityType: "BookingCapacitySetting",
-    before,
-    run: () =>
-      prisma.bookingCapacitySetting.update({
-        where: { id: before.id },
-        data: parsed.data,
-      }),
+  // Single-row settings table: find the row's id, then mutate it by id like
+  // any other entity.
+  const existing = await prisma.bookingCapacitySetting.findFirst({
+    select: { id: true },
   });
+  if (!existing) return { ok: false, error: "ไม่พบการตั้งค่า" };
 
-  revalidatePath("/admin/settings");
+  const updated = await capacitySettings.update(existing.id, parsed.data);
+  if (!updated) return { ok: false, error: "ไม่พบการตั้งค่า" };
+
   return { ok: true };
 }

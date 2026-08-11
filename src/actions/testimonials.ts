@@ -1,9 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { storePublicImage } from "@/lib/admin-content";
-import { withAudit } from "@/lib/audit";
+import { auditedEntity } from "@/lib/audit";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { storage } from "@/lib/storage";
@@ -33,13 +32,18 @@ function parseTestimonial(formData: FormData) {
   });
 }
 
-function revalidate() {
-  revalidatePath("/admin/testimonials");
-  revalidatePath("/[locale]", "layout");
-  revalidatePath("/[locale]", "page");
-  revalidatePath("/[locale]/about", "page");
-  revalidatePath("/[locale]/testimonials", "page");
-}
+const testimonials = auditedEntity({
+  entityType: "Testimonial",
+  model: (client) => client.testimonial,
+  snapshot: "full",
+  revalidate: () => [
+    "/admin/testimonials",
+    ["/[locale]", "layout"],
+    ["/[locale]", "page"],
+    ["/[locale]/about", "page"],
+    ["/[locale]/testimonials", "page"],
+  ],
+});
 
 async function resolveProjectId(projectId: string | undefined) {
   if (!projectId) return null;
@@ -50,7 +54,7 @@ async function resolveProjectId(projectId: string | undefined) {
 }
 
 export async function createTestimonial(formData: FormData): Promise<ActionResult> {
-  const session = await requireAdmin();
+  await requireAdmin();
 
   const parsed = parseTestimonial(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
@@ -61,23 +65,14 @@ export async function createTestimonial(formData: FormData): Promise<ActionResul
   const { role, province, projectId, ...rest } = parsed.data;
   const resolvedProjectId = await resolveProjectId(projectId);
 
-  await withAudit({
-    actorId: session.user.id,
-    action: "CREATE",
-    entityType: "Testimonial",
-    run: () =>
-      prisma.testimonial.create({
-        data: {
-          ...rest,
-          role: role || null,
-          province: province || null,
-          projectId: resolvedProjectId,
-          photoKey: photo.key,
-        },
-      }),
+  await testimonials.create({
+    ...rest,
+    role: role || null,
+    province: province || null,
+    projectId: resolvedProjectId,
+    photoKey: photo.key,
   });
 
-  revalidate();
   return { ok: true };
 }
 
@@ -85,10 +80,7 @@ export async function updateTestimonial(
   id: string,
   formData: FormData
 ): Promise<ActionResult> {
-  const session = await requireAdmin();
-
-  const before = await prisma.testimonial.findUnique({ where: { id } });
-  if (!before) return { ok: false, error: "ไม่พบรีวิว" };
+  await requireAdmin();
 
   const parsed = parseTestimonial(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
@@ -99,51 +91,29 @@ export async function updateTestimonial(
   const { role, province, projectId, ...rest } = parsed.data;
   const resolvedProjectId = await resolveProjectId(projectId);
 
-  await withAudit({
-    actorId: session.user.id,
-    action: "UPDATE",
-    entityType: "Testimonial",
-    before,
-    run: () =>
-      prisma.testimonial.update({
-        where: { id },
-        data: {
-          ...rest,
-          role: role || null,
-          province: province || null,
-          projectId: resolvedProjectId,
-          ...(photo.key ? { photoKey: photo.key } : {}),
-        },
-      }),
+  const result = await testimonials.update(id, {
+    ...rest,
+    role: role || null,
+    province: province || null,
+    projectId: resolvedProjectId,
+    ...(photo.key ? { photoKey: photo.key } : {}),
   });
+  if (!result) return { ok: false, error: "ไม่พบรีวิว" };
 
-  if (photo.key && before.photoKey) {
-    await storage.delete(before.photoKey);
+  if (photo.key && result.before.photoKey) {
+    await storage.delete(result.before.photoKey);
   }
-  revalidate();
   return { ok: true };
 }
 
 export async function deleteTestimonial(id: string): Promise<ActionResult> {
-  const session = await requireAdmin();
+  await requireAdmin();
 
-  const before = await prisma.testimonial.findUnique({ where: { id } });
+  const before = await testimonials.remove(id);
   if (!before) return { ok: false, error: "ไม่พบรีวิว" };
-
-  await withAudit({
-    actorId: session.user.id,
-    action: "DELETE",
-    entityType: "Testimonial",
-    before,
-    run: async () => {
-      await prisma.testimonial.delete({ where: { id } });
-      return null;
-    },
-  });
 
   if (before.photoKey) {
     await storage.delete(before.photoKey);
   }
-  revalidate();
   return { ok: true };
 }

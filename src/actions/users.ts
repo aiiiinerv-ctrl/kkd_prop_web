@@ -56,7 +56,7 @@ async function resolveChannelExecutiveLink(
 }
 
 export async function createUser(formData: FormData): Promise<ActionResult> {
-  const session = await requireRole("ADMIN");
+  await requireRole("ADMIN");
 
   const parsed = userSchema.safeParse({
     email: formData.get("email"),
