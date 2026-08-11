@@ -1,11 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { linesToList, slugify, storePublicImage } from "@/lib/admin-content";
-import { withAudit } from "@/lib/audit";
+import { auditedEntity } from "@/lib/audit";
 import { requireAdmin } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { storage } from "@/lib/storage";
 import type { ActionResult } from "./users";
 
@@ -31,14 +29,19 @@ function parseService(formData: FormData) {
   });
 }
 
-function revalidate() {
-  revalidatePath("/admin/services");
-  revalidatePath("/[locale]/services", "page");
-  revalidatePath("/[locale]", "page");
-}
+const services = auditedEntity({
+  entityType: "Service",
+  model: (client) => client.service,
+  snapshot: "full",
+  revalidate: () => [
+    "/admin/services",
+    ["/[locale]/services", "page"],
+    ["/[locale]", "page"],
+  ],
+});
 
 export async function createService(formData: FormData): Promise<ActionResult> {
-  const session = await requireAdmin();
+  await requireAdmin();
 
   const parsed = parseService(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
@@ -46,23 +49,14 @@ export async function createService(formData: FormData): Promise<ActionResult> {
   const image = await storePublicImage(formData.get("image"), "services");
   if (!image.ok) return { ok: false, error: image.error };
 
-  await withAudit({
-    actorId: session.user.id,
-    action: "CREATE",
-    entityType: "Service",
-    run: () =>
-      prisma.service.create({
-        data: {
-          ...parsed.data,
-          slug: slugify(parsed.data.titleEn),
-          featuresTh: linesToList(formData.get("featuresTh")),
-          featuresEn: linesToList(formData.get("featuresEn")),
-          imageKey: image.key,
-        },
-      }),
+  await services.create({
+    ...parsed.data,
+    slug: slugify(parsed.data.titleEn),
+    featuresTh: linesToList(formData.get("featuresTh")),
+    featuresEn: linesToList(formData.get("featuresEn")),
+    imageKey: image.key,
   });
 
-  revalidate();
   return { ok: true };
 }
 
@@ -70,10 +64,7 @@ export async function updateService(
   id: string,
   formData: FormData
 ): Promise<ActionResult> {
-  const session = await requireAdmin();
-
-  const before = await prisma.service.findUnique({ where: { id } });
-  if (!before) return { ok: false, error: "ไม่พบบริการ" };
+  await requireAdmin();
 
   const parsed = parseService(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
@@ -81,50 +72,30 @@ export async function updateService(
   const image = await storePublicImage(formData.get("image"), "services");
   if (!image.ok) return { ok: false, error: image.error };
 
-  await withAudit({
-    actorId: session.user.id,
-    action: "UPDATE",
-    entityType: "Service",
-    before,
-    run: () =>
-      prisma.service.update({
-        where: { id },
-        data: {
-          ...parsed.data,
-          featuresTh: linesToList(formData.get("featuresTh")),
-          featuresEn: linesToList(formData.get("featuresEn")),
-          ...(image.key ? { imageKey: image.key } : {}),
-        },
-      }),
+  const result = await services.update(id, {
+    ...parsed.data,
+    featuresTh: linesToList(formData.get("featuresTh")),
+    featuresEn: linesToList(formData.get("featuresEn")),
+    ...(image.key ? { imageKey: image.key } : {}),
   });
+  if (!result) return { ok: false, error: "ไม่พบบริการ" };
 
-  if (image.key && before.imageKey) {
-    await storage.delete(before.imageKey);
+  // Outside the transaction on purpose: deleting the old blob can't be rolled
+  // back, so it only runs once the row is committed.
+  if (image.key && result.before.imageKey) {
+    await storage.delete(result.before.imageKey);
   }
-  revalidate();
   return { ok: true };
 }
 
 export async function deleteService(id: string): Promise<ActionResult> {
-  const session = await requireAdmin();
+  await requireAdmin();
 
-  const before = await prisma.service.findUnique({ where: { id } });
+  const before = await services.remove(id);
   if (!before) return { ok: false, error: "ไม่พบบริการ" };
-
-  await withAudit({
-    actorId: session.user.id,
-    action: "DELETE",
-    entityType: "Service",
-    before,
-    run: async () => {
-      await prisma.service.delete({ where: { id } });
-      return null;
-    },
-  });
 
   if (before.imageKey) {
     await storage.delete(before.imageKey);
   }
-  revalidate();
   return { ok: true };
 }

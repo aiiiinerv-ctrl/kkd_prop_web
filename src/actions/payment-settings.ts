@@ -1,8 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { withAudit } from "@/lib/audit";
+import { auditedEntity } from "@/lib/audit";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import type { ActionResult } from "./users";
@@ -21,8 +20,15 @@ const paymentSettingsSchema = z.object({
   bankAccountName: z.string().trim().max(120).optional().or(z.literal("")),
 });
 
+const paymentSettings = auditedEntity({
+  entityType: "PaymentSettings",
+  model: (client) => client.paymentSettings,
+  snapshot: "full",
+  revalidate: () => ["/admin/settings", "/th/booking", "/en/booking"],
+});
+
 export async function updatePaymentSettings(formData: FormData): Promise<ActionResult> {
-  const session = await requireRole("ADMIN");
+  await requireRole("ADMIN");
 
   const parsed = paymentSettingsSchema.safeParse({
     promptpayId: formData.get("promptpayId") ?? "",
@@ -32,28 +38,18 @@ export async function updatePaymentSettings(formData: FormData): Promise<ActionR
   });
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
 
-  const before = await prisma.paymentSettings.findFirst();
-  if (!before) return { ok: false, error: "ไม่พบการตั้งค่า" };
+  // Single-row settings table: find the row's id, then mutate it by id like
+  // any other entity.
+  const existing = await prisma.paymentSettings.findFirst({ select: { id: true } });
+  if (!existing) return { ok: false, error: "ไม่พบการตั้งค่า" };
 
-  await withAudit({
-    actorId: session.user.id,
-    action: "UPDATE",
-    entityType: "PaymentSettings",
-    before,
-    run: () =>
-      prisma.paymentSettings.update({
-        where: { id: before.id },
-        data: {
-          promptpayId: parsed.data.promptpayId || null,
-          bankName: parsed.data.bankName || null,
-          bankAccountNumber: parsed.data.bankAccountNumber || null,
-          bankAccountName: parsed.data.bankAccountName || null,
-        },
-      }),
+  const updated = await paymentSettings.update(existing.id, {
+    promptpayId: parsed.data.promptpayId || null,
+    bankName: parsed.data.bankName || null,
+    bankAccountNumber: parsed.data.bankAccountNumber || null,
+    bankAccountName: parsed.data.bankAccountName || null,
   });
+  if (!updated) return { ok: false, error: "ไม่พบการตั้งค่า" };
 
-  revalidatePath("/admin/settings");
-  revalidatePath("/th/booking");
-  revalidatePath("/en/booking");
   return { ok: true };
 }

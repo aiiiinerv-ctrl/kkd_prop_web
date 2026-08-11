@@ -1,9 +1,8 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { withAudit } from "@/lib/audit";
+import { auditedEntity } from "@/lib/audit";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
@@ -17,24 +16,20 @@ const userSchema = z.object({
   linkedChannelExecutiveId: z.string().trim().optional().or(z.literal("")),
 });
 
-// Password hash must never appear in audit snapshots.
-function auditView(user: {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-  isActive: boolean;
-  linkedChannelExecutiveId?: string | null;
-}) {
-  return {
+const users = auditedEntity({
+  entityType: "AdminUser",
+  model: (client) => client.adminUser,
+  // Projection, not "full": passwordHash must never reach an audit snapshot.
+  snapshot: (user) => ({
     id: user.id,
     email: user.email,
     name: user.name,
     role: user.role,
     isActive: user.isActive,
     linkedChannelExecutiveId: user.linkedChannelExecutiveId ?? null,
-  };
-}
+  }),
+  revalidate: () => ["/admin/users"],
+});
 
 /**
  * A CHANNEL_EXECUTIVE-role account must be linked to a real ChannelExecutive
@@ -61,7 +56,7 @@ async function resolveChannelExecutiveLink(
 }
 
 export async function createUser(formData: FormData): Promise<ActionResult> {
-  const session = await requireRole("ADMIN");
+  await requireRole("ADMIN");
 
   const parsed = userSchema.safeParse({
     email: formData.get("email"),
@@ -83,25 +78,14 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
   if (existing) return { ok: false, error: "อีเมลนี้มีผู้ใช้แล้ว" };
 
   const passwordHash = await bcrypt.hash(password, 12);
-  await withAudit({
-    actorId: session.user.id,
-    action: "CREATE",
-    entityType: "AdminUser",
-    run: async () =>
-      auditView(
-        await prisma.adminUser.create({
-          data: {
-            email,
-            name,
-            role,
-            passwordHash,
-            linkedChannelExecutiveId: link.value,
-          },
-        })
-      ),
+  await users.create({
+    email,
+    name,
+    role,
+    passwordHash,
+    linkedChannelExecutiveId: link.value,
   });
 
-  revalidatePath("/admin/users");
   return { ok: true };
 }
 
@@ -109,10 +93,7 @@ export async function updateUser(
   id: string,
   formData: FormData
 ): Promise<ActionResult> {
-  const session = await requireRole("ADMIN");
-
-  const before = await prisma.adminUser.findUnique({ where: { id } });
-  if (!before) return { ok: false, error: "ไม่พบผู้ใช้" };
+  await requireRole("ADMIN");
 
   const parsed = userSchema.safeParse({
     email: formData.get("email"),
@@ -127,27 +108,15 @@ export async function updateUser(
   const link = await resolveChannelExecutiveLink(role, linkedChannelExecutiveId);
   if ("error" in link) return { ok: false, error: link.error };
 
-  await withAudit({
-    actorId: session.user.id,
-    action: "UPDATE",
-    entityType: "AdminUser",
-    before: auditView(before),
-    run: async () =>
-      auditView(
-        await prisma.adminUser.update({
-          where: { id },
-          data: {
-            email,
-            name,
-            role,
-            linkedChannelExecutiveId: link.value,
-            ...(password ? { passwordHash: await bcrypt.hash(password, 12) } : {}),
-          },
-        })
-      ),
+  const updated = await users.update(id, {
+    email,
+    name,
+    role,
+    linkedChannelExecutiveId: link.value,
+    ...(password ? { passwordHash: await bcrypt.hash(password, 12) } : {}),
   });
+  if (!updated) return { ok: false, error: "ไม่พบผู้ใช้" };
 
-  revalidatePath("/admin/users");
   return { ok: true };
 }
 
@@ -157,23 +126,10 @@ export async function toggleUserActive(id: string): Promise<ActionResult> {
     return { ok: false, error: "ไม่สามารถปิดการใช้งานบัญชีตัวเองได้" };
   }
 
-  const before = await prisma.adminUser.findUnique({ where: { id } });
-  if (!before) return { ok: false, error: "ไม่พบผู้ใช้" };
+  const toggled = await users.update(id, (before) => ({
+    isActive: !before.isActive,
+  }));
+  if (!toggled) return { ok: false, error: "ไม่พบผู้ใช้" };
 
-  await withAudit({
-    actorId: session.user.id,
-    action: "UPDATE",
-    entityType: "AdminUser",
-    before: auditView(before),
-    run: async () =>
-      auditView(
-        await prisma.adminUser.update({
-          where: { id },
-          data: { isActive: !before.isActive },
-        })
-      ),
-  });
-
-  revalidatePath("/admin/users");
   return { ok: true };
 }

@@ -1,9 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { slugify } from "@/lib/admin-content";
-import { withAudit } from "@/lib/audit";
+import { auditedEntity } from "@/lib/audit";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import type { ActionResult } from "./users";
@@ -26,6 +25,20 @@ function parseChannel(formData: FormData) {
   });
 }
 
+const channels = auditedEntity({
+  entityType: "PromoChannel",
+  model: (client) => client.promoChannel,
+  snapshot: "full",
+  revalidate: () => ["/admin/channels"],
+});
+
+const executives = auditedEntity({
+  entityType: "ChannelExecutive",
+  model: (client) => client.channelExecutive,
+  snapshot: "full",
+  revalidate: () => ["/admin/channels"],
+});
+
 async function nextChannelRefCode(): Promise<string> {
   const last = await prisma.promoChannel.findFirst({
     orderBy: { refCode: "desc" },
@@ -36,23 +49,18 @@ async function nextChannelRefCode(): Promise<string> {
 }
 
 export async function createChannel(formData: FormData): Promise<ActionResult> {
-  const session = await requireRole("ADMIN");
+  await requireRole("ADMIN");
 
   const parsed = parseChannel(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
 
   const refCode = await nextChannelRefCode();
-  await withAudit({
-    actorId: session.user.id,
-    action: "CREATE",
-    entityType: "PromoChannel",
-    run: () =>
-      prisma.promoChannel.create({
-        data: { ...parsed.data, slug: slugify(parsed.data.nameEn), refCode },
-      }),
+  await channels.create({
+    ...parsed.data,
+    slug: slugify(parsed.data.nameEn),
+    refCode,
   });
 
-  revalidatePath("/admin/channels");
   return { ok: true };
 }
 
@@ -60,23 +68,14 @@ export async function updateChannel(
   id: string,
   formData: FormData
 ): Promise<ActionResult> {
-  const session = await requireRole("ADMIN");
-
-  const before = await prisma.promoChannel.findUnique({ where: { id } });
-  if (!before) return { ok: false, error: "ไม่พบช่องทาง" };
+  await requireRole("ADMIN");
 
   const parsed = parseChannel(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
 
-  await withAudit({
-    actorId: session.user.id,
-    action: "UPDATE",
-    entityType: "PromoChannel",
-    before,
-    run: () => prisma.promoChannel.update({ where: { id }, data: parsed.data }),
-  });
+  const updated = await channels.update(id, parsed.data);
+  if (!updated) return { ok: false, error: "ไม่พบช่องทาง" };
 
-  revalidatePath("/admin/channels");
   return { ok: true };
 }
 
@@ -110,7 +109,7 @@ export async function createChannelExecutive(
   channelId: string,
   formData: FormData
 ): Promise<ActionResult> {
-  const session = await requireRole("ADMIN");
+  await requireRole("ADMIN");
 
   const channel = await prisma.promoChannel.findUnique({
     where: { id: channelId },
@@ -121,17 +120,8 @@ export async function createChannelExecutive(
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
 
   const refCode = await nextExecutiveRefCode(channelId, channel.refCode);
-  await withAudit({
-    actorId: session.user.id,
-    action: "CREATE",
-    entityType: "ChannelExecutive",
-    run: () =>
-      prisma.channelExecutive.create({
-        data: { ...parsed.data, channelId, refCode },
-      }),
-  });
+  await executives.create({ ...parsed.data, channelId, refCode });
 
-  revalidatePath("/admin/channels");
   return { ok: true };
 }
 
@@ -139,87 +129,57 @@ export async function updateChannelExecutive(
   id: string,
   formData: FormData
 ): Promise<ActionResult> {
-  const session = await requireRole("ADMIN");
-
-  const before = await prisma.channelExecutive.findUnique({ where: { id } });
-  if (!before) return { ok: false, error: "ไม่พบผู้ดำเนินการ" };
+  await requireRole("ADMIN");
 
   const parsed = parseExecutive(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
 
-  await withAudit({
-    actorId: session.user.id,
-    action: "UPDATE",
-    entityType: "ChannelExecutive",
-    before,
-    run: () =>
-      prisma.channelExecutive.update({ where: { id }, data: parsed.data }),
-  });
+  const updated = await executives.update(id, parsed.data);
+  if (!updated) return { ok: false, error: "ไม่พบผู้ดำเนินการ" };
 
-  revalidatePath("/admin/channels");
   return { ok: true };
 }
 
 export async function deleteChannelExecutive(id: string): Promise<ActionResult> {
-  const session = await requireRole("ADMIN");
+  await requireRole("ADMIN");
 
-  const before = await prisma.channelExecutive.findUnique({
+  // Referential guard only — the module loads its own snapshot row, so the
+  // `_count` include no longer has to be stripped back out before auditing.
+  const guard = await prisma.channelExecutive.findUnique({
     where: { id },
-    include: { _count: { select: { autoLeads: true } } },
+    select: { _count: { select: { autoLeads: true } } },
   });
-  if (!before) return { ok: false, error: "ไม่พบผู้ดำเนินการ" };
-  if (before._count.autoLeads > 0) {
+  if (!guard) return { ok: false, error: "ไม่พบผู้ดำเนินการ" };
+  if (guard._count.autoLeads > 0) {
     return {
       ok: false,
-      error: `ลบไม่ได้ มี lead อ้างอิงผู้ดำเนินการนี้ ${before._count.autoLeads} รายการ`,
+      error: `ลบไม่ได้ มี lead อ้างอิงผู้ดำเนินการนี้ ${guard._count.autoLeads} รายการ`,
     };
   }
 
-  const { _count, ...beforeRow } = before;
-  void _count;
-  await withAudit({
-    actorId: session.user.id,
-    action: "DELETE",
-    entityType: "ChannelExecutive",
-    before: beforeRow,
-    run: async () => {
-      await prisma.channelExecutive.delete({ where: { id } });
-      return null;
-    },
-  });
+  const before = await executives.remove(id);
+  if (!before) return { ok: false, error: "ไม่พบผู้ดำเนินการ" };
 
-  revalidatePath("/admin/channels");
   return { ok: true };
 }
 
 export async function deleteChannel(id: string): Promise<ActionResult> {
-  const session = await requireRole("ADMIN");
+  await requireRole("ADMIN");
 
-  const before = await prisma.promoChannel.findUnique({
+  const guard = await prisma.promoChannel.findUnique({
     where: { id },
-    include: { _count: { select: { leads: true } } },
+    select: { _count: { select: { leads: true } } },
   });
-  if (!before) return { ok: false, error: "ไม่พบช่องทาง" };
-  if (before._count.leads > 0) {
+  if (!guard) return { ok: false, error: "ไม่พบช่องทาง" };
+  if (guard._count.leads > 0) {
     return {
       ok: false,
-      error: `ลบไม่ได้ มี lead อ้างอิงช่องทางนี้ ${before._count.leads} รายการ — ปิดการใช้งานแทน`,
+      error: `ลบไม่ได้ มี lead อ้างอิงช่องทางนี้ ${guard._count.leads} รายการ — ปิดการใช้งานแทน`,
     };
   }
 
-  const { _count, ...beforeRow } = before;
-  void _count;
-  await withAudit({
-    actorId: session.user.id,
-    action: "DELETE",
-    entityType: "PromoChannel",
-    before: beforeRow,
-    run: async () => {
-      await prisma.promoChannel.delete({ where: { id } });
-      return null;
-    },
-  });
+  const before = await channels.remove(id);
+  if (!before) return { ok: false, error: "ไม่พบช่องทาง" };
 
-  revalidatePath("/admin/channels");
   return { ok: true };
 }

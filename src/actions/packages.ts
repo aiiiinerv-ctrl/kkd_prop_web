@@ -1,11 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { linesToList, slugify, storePublicImage } from "@/lib/admin-content";
-import { withAudit } from "@/lib/audit";
+import { auditedEntity } from "@/lib/audit";
 import { requireAdmin } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { storage } from "@/lib/storage";
 import type { ActionResult } from "./users";
 
@@ -46,14 +44,19 @@ function parsePackage(formData: FormData) {
   });
 }
 
-function revalidate() {
-  revalidatePath("/admin/packages");
-  revalidatePath("/[locale]/packages", "page");
-  revalidatePath("/[locale]", "page");
-}
+const packages = auditedEntity({
+  entityType: "Package",
+  model: (client) => client.package,
+  snapshot: "full",
+  revalidate: () => [
+    "/admin/packages",
+    ["/[locale]/packages", "page"],
+    ["/[locale]", "page"],
+  ],
+});
 
 export async function createPackage(formData: FormData): Promise<ActionResult> {
-  const session = await requireAdmin();
+  await requireAdmin();
 
   const parsed = parsePackage(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
@@ -61,24 +64,15 @@ export async function createPackage(formData: FormData): Promise<ActionResult> {
   const image = await storePublicImage(formData.get("image"), "packages");
   if (!image.ok) return { ok: false, error: image.error };
 
-  await withAudit({
-    actorId: session.user.id,
-    action: "CREATE",
-    entityType: "Package",
-    run: () =>
-      prisma.package.create({
-        data: {
-          ...parsed.data,
-          slug: slugify(parsed.data.nameEn),
-          featuresTh: linesToList(formData.get("featuresTh")),
-          featuresEn: linesToList(formData.get("featuresEn")),
-          seasonalProduction: seasonalProduction(parsed.data.sizeKw),
-          imageKey: image.key,
-        },
-      }),
+  await packages.create({
+    ...parsed.data,
+    slug: slugify(parsed.data.nameEn),
+    featuresTh: linesToList(formData.get("featuresTh")),
+    featuresEn: linesToList(formData.get("featuresEn")),
+    seasonalProduction: seasonalProduction(parsed.data.sizeKw),
+    imageKey: image.key,
   });
 
-  revalidate();
   return { ok: true };
 }
 
@@ -86,10 +80,7 @@ export async function updatePackage(
   id: string,
   formData: FormData
 ): Promise<ActionResult> {
-  const session = await requireAdmin();
-
-  const before = await prisma.package.findUnique({ where: { id } });
-  if (!before) return { ok: false, error: "ไม่พบแพ็กเกจ" };
+  await requireAdmin();
 
   const parsed = parsePackage(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
@@ -97,51 +88,29 @@ export async function updatePackage(
   const image = await storePublicImage(formData.get("image"), "packages");
   if (!image.ok) return { ok: false, error: image.error };
 
-  await withAudit({
-    actorId: session.user.id,
-    action: "UPDATE",
-    entityType: "Package",
-    before,
-    run: () =>
-      prisma.package.update({
-        where: { id },
-        data: {
-          ...parsed.data,
-          featuresTh: linesToList(formData.get("featuresTh")),
-          featuresEn: linesToList(formData.get("featuresEn")),
-          seasonalProduction: seasonalProduction(parsed.data.sizeKw),
-          ...(image.key ? { imageKey: image.key } : {}),
-        },
-      }),
+  const result = await packages.update(id, {
+    ...parsed.data,
+    featuresTh: linesToList(formData.get("featuresTh")),
+    featuresEn: linesToList(formData.get("featuresEn")),
+    seasonalProduction: seasonalProduction(parsed.data.sizeKw),
+    ...(image.key ? { imageKey: image.key } : {}),
   });
+  if (!result) return { ok: false, error: "ไม่พบแพ็กเกจ" };
 
-  if (image.key && before.imageKey) {
-    await storage.delete(before.imageKey);
+  if (image.key && result.before.imageKey) {
+    await storage.delete(result.before.imageKey);
   }
-  revalidate();
   return { ok: true };
 }
 
 export async function deletePackage(id: string): Promise<ActionResult> {
-  const session = await requireAdmin();
+  await requireAdmin();
 
-  const before = await prisma.package.findUnique({ where: { id } });
+  const before = await packages.remove(id);
   if (!before) return { ok: false, error: "ไม่พบแพ็กเกจ" };
-
-  await withAudit({
-    actorId: session.user.id,
-    action: "DELETE",
-    entityType: "Package",
-    before,
-    run: async () => {
-      await prisma.package.delete({ where: { id } });
-      return null;
-    },
-  });
 
   if (before.imageKey) {
     await storage.delete(before.imageKey);
   }
-  revalidate();
   return { ok: true };
 }

@@ -1,7 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { withAudit } from "@/lib/audit";
+import { auditedEntity } from "@/lib/audit";
 import { canMutateLead, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import type { LeadStatus } from "@/generated/prisma/enums";
@@ -19,6 +18,33 @@ const LEAD_STATUSES: LeadStatus[] = [
 ];
 
 const NO_PERMISSION_ERROR = "ไม่มีสิทธิ์แก้ไข lead นี้";
+
+// The revalidate list is the union of what the individual mutations below used
+// to refresh — refreshing a page whose data didn't change is harmless, and one
+// declaration per entity is what keeps "which pages does a Lead feed" in a
+// single readable place.
+const leads = auditedEntity({
+  entityType: "Lead",
+  model: (client) => client.lead,
+  snapshot: "full",
+  revalidate: (lead) => [`/admin/leads/${lead.id}`, "/admin/leads", "/admin"],
+});
+
+/**
+ * Loads a Lead for a permission decision that has to happen before the
+ * mutation. The module re-reads the row inside its transaction, so the audit
+ * snapshot is still the row as of the write — this read only feeds
+ * canMutateLead().
+ *
+ * That split leaves a narrow window: assignedSalesId could change between this
+ * read and the write, so a SALES user's permission is decided on a row that
+ * may be a round-trip stale. Accepted — reassignment is ADMIN-only, so nothing
+ * a SALES user can trigger widens their own access — but don't move the guard
+ * further from the write without revisiting it.
+ */
+async function loadLeadForGuard(id: string) {
+  return prisma.lead.findUnique({ where: { id } });
+}
 
 /**
  * Validates an optional AdminUser id used for sales assignment: must exist,
@@ -49,9 +75,9 @@ export async function updateLeadStatus(
     return { ok: false, error: "สถานะไม่ถูกต้อง" };
   }
 
-  const before = await prisma.lead.findUnique({ where: { id } });
-  if (!before) return { ok: false, error: "ไม่พบ lead" };
-  if (!canMutateLead(session, before)) {
+  const guard = await loadLeadForGuard(id);
+  if (!guard) return { ok: false, error: "ไม่พบ lead" };
+  if (!canMutateLead(session, guard)) {
     return { ok: false, error: NO_PERMISSION_ERROR };
   }
 
@@ -66,26 +92,14 @@ export async function updateLeadStatus(
   // stays pinned to when the deal actually closed. If a lead somehow re-enters
   // SIGNED after being moved out of it (no state-machine guard exists on this
   // action), closedAt is overwritten with the new close date.
-  const closedAt =
-    (status as LeadStatus) === "SIGNED" && before.status !== "SIGNED" ? new Date() : undefined;
+  const updated = await leads.update(id, (before) => ({
+    status: status as LeadStatus,
+    ...((status as LeadStatus) === "SIGNED" && before.status !== "SIGNED"
+      ? { closedAt: new Date() }
+      : {}),
+  }));
+  if (!updated) return { ok: false, error: "ไม่พบ lead" };
 
-  await withAudit({
-    actorId: session.user.id,
-    action: "UPDATE",
-    entityType: "Lead",
-    before,
-    run: () =>
-      prisma.lead.update({
-        where: { id },
-        data: {
-          status: status as LeadStatus,
-          ...(closedAt ? { closedAt } : {}),
-        },
-      }),
-  });
-
-  revalidatePath(`/admin/leads/${id}`);
-  revalidatePath("/admin");
   return { ok: true };
 }
 
@@ -95,28 +109,18 @@ export async function updateLeadNotes(
 ): Promise<ActionResult> {
   const session = await requireRole("ADMIN", "SALES");
 
-  const before = await prisma.lead.findUnique({ where: { id } });
-  if (!before) return { ok: false, error: "ไม่พบ lead" };
-  if (!canMutateLead(session, before)) {
+  const guard = await loadLeadForGuard(id);
+  if (!guard) return { ok: false, error: "ไม่พบ lead" };
+  if (!canMutateLead(session, guard)) {
     return { ok: false, error: NO_PERMISSION_ERROR };
   }
 
-  await withAudit({
-    actorId: session.user.id,
-    action: "UPDATE",
-    entityType: "Lead",
-    before,
-    run: () =>
-      prisma.lead.update({
-        where: { id },
-        data: {
-          notes: notes.trim().slice(0, 5000) || null,
-          lastFollowUpAt: new Date(),
-        },
-      }),
+  const updated = await leads.update(id, {
+    notes: notes.trim().slice(0, 5000) || null,
+    lastFollowUpAt: new Date(),
   });
+  if (!updated) return { ok: false, error: "ไม่พบ lead" };
 
-  revalidatePath(`/admin/leads/${id}`);
   return { ok: true };
 }
 
@@ -127,29 +131,16 @@ export async function updateLeadSourceChannel(
   id: string,
   channelId: string
 ): Promise<ActionResult> {
-  const session = await requireRole("ADMIN");
-
-  const before = await prisma.lead.findUnique({ where: { id } });
-  if (!before) return { ok: false, error: "ไม่พบ lead" };
+  await requireRole("ADMIN");
 
   if (channelId) {
     const channel = await prisma.promoChannel.findUnique({ where: { id: channelId } });
     if (!channel) return { ok: false, error: "ไม่พบช่องทาง" };
   }
 
-  await withAudit({
-    actorId: session.user.id,
-    action: "UPDATE",
-    entityType: "Lead",
-    before,
-    run: () =>
-      prisma.lead.update({
-        where: { id },
-        data: { sourceChannelId: channelId || null },
-      }),
-  });
+  const updated = await leads.update(id, { sourceChannelId: channelId || null });
+  if (!updated) return { ok: false, error: "ไม่พบ lead" };
 
-  revalidatePath(`/admin/leads/${id}`);
   return { ok: true };
 }
 
@@ -161,27 +152,13 @@ export async function assignLeadSales(
   id: string,
   salesId: string
 ): Promise<ActionResult> {
-  const session = await requireRole("ADMIN");
-
-  const before = await prisma.lead.findUnique({ where: { id } });
-  if (!before) return { ok: false, error: "ไม่พบ lead" };
+  await requireRole("ADMIN");
 
   const resolved = await resolveSalesAssignee(salesId);
   if ("error" in resolved) return { ok: false, error: resolved.error };
 
-  await withAudit({
-    actorId: session.user.id,
-    action: "UPDATE",
-    entityType: "Lead",
-    before,
-    run: () =>
-      prisma.lead.update({
-        where: { id },
-        data: { assignedSalesId: resolved.value },
-      }),
-  });
+  const updated = await leads.update(id, { assignedSalesId: resolved.value });
+  if (!updated) return { ok: false, error: "ไม่พบ lead" };
 
-  revalidatePath(`/admin/leads/${id}`);
-  revalidatePath("/admin/leads");
   return { ok: true };
 }

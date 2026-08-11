@@ -62,8 +62,12 @@ A staff account with a `Role` (`ADMIN` or `EDITOR`) used to sign into the admin 
 `ADMIN` (full access) or `EDITOR` (content/leads, not user management) — the two authorization tiers checked by `requireAdmin()`/`requireRole()`.
 
 **Audit Log**:
-An immutable record of one admin mutation (or login), storing full before/after JSON snapshots of the affected entity. Written by `withAudit()` as a wrapper around every create/update/delete — never constructed directly.
+An immutable record of one admin mutation (or login), storing before/after JSON snapshots of the affected entity. Written only by the **Audited mutation** module — never constructed directly.
 _Avoid_: Activity log, history
+
+**Audited mutation**:
+The module in `src/lib/audit.ts` through which every admin create/update/delete passes. `auditedEntity()` is declared once per entity (its model, its snapshot policy, the pages it feeds) and returns create/update/remove; each runs the mutation and its Audit Log row in one transaction, so a committed change cannot exist without its trail. `recordAuditEvent()` covers the non-mutation case (login). Authorization stays outside it, at the action, because the rule differs per action.
+_Avoid_: audit wrapper, withAudit (the earlier callback-shaped version)
 
 ### Storage
 

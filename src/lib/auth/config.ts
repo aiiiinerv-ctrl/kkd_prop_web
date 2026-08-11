@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import type { NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import { recordAuditEvent } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 
 export const authConfig = {
@@ -32,13 +33,14 @@ export const authConfig = {
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) return null;
 
-        await prisma.auditLog.create({
-          data: {
-            actorId: user.id,
-            action: "LOGIN",
-            entityType: "AdminUser",
-            entityId: user.id,
-          },
+        // Through the same module as every entity mutation, so `auditLog`
+        // has exactly one writer. Passes its actor explicitly because there
+        // is no session yet at this point in the sign-in.
+        await recordAuditEvent({
+          actorId: user.id,
+          action: "LOGIN",
+          entityType: "AdminUser",
+          entityId: user.id,
         });
 
         return {

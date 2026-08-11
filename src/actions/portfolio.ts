@@ -1,11 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { slugify, storePublicImages } from "@/lib/admin-content";
-import { withAudit } from "@/lib/audit";
+import { auditedEntity } from "@/lib/audit";
 import { requireAdmin } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { storage } from "@/lib/storage";
 import type { ActionResult } from "./users";
 
@@ -37,14 +35,19 @@ function parseProject(formData: FormData) {
   });
 }
 
-function revalidate() {
-  revalidatePath("/admin/portfolio");
-  revalidatePath("/[locale]/portfolio", "page");
-  revalidatePath("/[locale]", "page");
-}
+const projects = auditedEntity({
+  entityType: "PortfolioProject",
+  model: (client) => client.portfolioProject,
+  snapshot: "full",
+  revalidate: () => [
+    "/admin/portfolio",
+    ["/[locale]/portfolio", "page"],
+    ["/[locale]", "page"],
+  ],
+});
 
 export async function createProject(formData: FormData): Promise<ActionResult> {
-  const session = await requireAdmin();
+  await requireAdmin();
 
   const parsed = parseProject(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
@@ -53,21 +56,12 @@ export async function createProject(formData: FormData): Promise<ActionResult> {
   if (!images.ok) return { ok: false, error: images.error };
   if (images.keys.length === 0) return { ok: false, error: "กรุณาแนบรูปผลงาน" };
 
-  await withAudit({
-    actorId: session.user.id,
-    action: "CREATE",
-    entityType: "PortfolioProject",
-    run: () =>
-      prisma.portfolioProject.create({
-        data: {
-          ...parsed.data,
-          slug: slugify(parsed.data.titleEn),
-          imageKeys: images.keys,
-        },
-      }),
+  await projects.create({
+    ...parsed.data,
+    slug: slugify(parsed.data.titleEn),
+    imageKeys: images.keys,
   });
 
-  revalidate();
   return { ok: true };
 }
 
@@ -75,10 +69,7 @@ export async function updateProject(
   id: string,
   formData: FormData
 ): Promise<ActionResult> {
-  const session = await requireAdmin();
-
-  const before = await prisma.portfolioProject.findUnique({ where: { id } });
-  if (!before) return { ok: false, error: "ไม่พบผลงาน" };
+  await requireAdmin();
 
   const parsed = parseProject(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
@@ -86,51 +77,28 @@ export async function updateProject(
   const images = await storePublicImages(formData.getAll("images"), "portfolio");
   if (!images.ok) return { ok: false, error: images.error };
 
-  const oldKeys = before.imageKeys as string[];
-  await withAudit({
-    actorId: session.user.id,
-    action: "UPDATE",
-    entityType: "PortfolioProject",
-    before,
-    run: () =>
-      prisma.portfolioProject.update({
-        where: { id },
-        data: {
-          ...parsed.data,
-          ...(images.keys.length > 0 ? { imageKeys: images.keys } : {}),
-        },
-      }),
+  const result = await projects.update(id, {
+    ...parsed.data,
+    ...(images.keys.length > 0 ? { imageKeys: images.keys } : {}),
   });
+  if (!result) return { ok: false, error: "ไม่พบผลงาน" };
 
   if (images.keys.length > 0) {
-    for (const key of oldKeys) {
+    for (const key of result.before.imageKeys as string[]) {
       await storage.delete(key);
     }
   }
-  revalidate();
   return { ok: true };
 }
 
 export async function deleteProject(id: string): Promise<ActionResult> {
-  const session = await requireAdmin();
+  await requireAdmin();
 
-  const before = await prisma.portfolioProject.findUnique({ where: { id } });
+  const before = await projects.remove(id);
   if (!before) return { ok: false, error: "ไม่พบผลงาน" };
-
-  await withAudit({
-    actorId: session.user.id,
-    action: "DELETE",
-    entityType: "PortfolioProject",
-    before,
-    run: async () => {
-      await prisma.portfolioProject.delete({ where: { id } });
-      return null;
-    },
-  });
 
   for (const key of before.imageKeys as string[]) {
     await storage.delete(key);
   }
-  revalidate();
   return { ok: true };
 }
