@@ -16,7 +16,16 @@ export async function generateMetadata({
   params: Promise<{ locale: string; slug: string }>;
 }) {
   const { locale, slug } = await params;
-  return pageMetadata(locale, "packages", `/packages/${slug}`);
+  // The package's own name and blurb, so every detail page doesn't ship the
+  // packages-list title. Same cached reader the page body uses, so this costs
+  // no extra query; falls back to the list metadata for an unknown slug.
+  const pkg = await getPackageBySlug(slug, locale);
+  return pageMetadata(
+    locale,
+    "packages",
+    `/packages/${slug}`,
+    pkg ? { title: pkg.name, description: pkg.suitable } : undefined
+  );
 }
 
 export default async function PackageDetailPage({
