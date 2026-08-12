@@ -6,13 +6,6 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import type { ActionResult } from "./users";
 
-// No requireRole here — the public /booking page (an RSC) reads this
-// directly, it isn't a form-submitting server action. requireRole only
-// guards the mutation below.
-export async function getPaymentSettings() {
-  return prisma.paymentSettings.findFirst();
-}
-
 const paymentSettingsSchema = z.object({
   promptpayId: z.string().trim().max(20).optional().or(z.literal("")),
   bankName: z.string().trim().max(120).optional().or(z.literal("")),

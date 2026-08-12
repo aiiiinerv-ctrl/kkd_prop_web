@@ -1,7 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { getPaymentSettings } from "@/actions/payment-settings";
 import { SectionHeading } from "@/components/site/section-heading";
-import { getActiveChannels } from "@/lib/content";
+import { getActiveChannels, getPaymentSettings } from "@/lib/content";
 import { generatePromptPayQrDataUrl } from "@/lib/promptpay";
 import { BookingForms } from "./booking-forms";
 import { pageMetadata } from "@/lib/seo";

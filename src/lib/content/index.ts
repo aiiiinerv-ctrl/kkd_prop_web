@@ -98,6 +98,16 @@ export const getActiveChannels = cache(
   }
 );
 
+/**
+ * Bank/PromptPay details shown on the booking page. Read-only and public by
+ * nature — but it lived in a `"use server"` module next to the mutation that
+ * edits it, which made it a POST-able endpoint anyone could call. Reads belong
+ * here; the guarded mutation stays in src/actions/payment-settings.ts.
+ */
+export const getPaymentSettings = cache(async () => {
+  return prisma.paymentSettings.findFirst();
+});
+
 export type SiteStats = { projectCount: number; closedLeadCount: number };
 
 /** Headline numbers on the about page. Not localized — counts, not content. */
