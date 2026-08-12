@@ -11,6 +11,7 @@ import { resolveInterestSlugs } from "@/lib/lead-interest-slugs";
 import { notifyNewLead } from "@/lib/notifications";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { resolveRefAttribution } from "@/lib/ref-attribution";
+import { effectiveChannel } from "@/lib/reports/aggregate";
 import { storage, validateImage } from "@/lib/storage";
 import { surveySchema, zodFieldErrors } from "@/lib/validations/lead";
 import type { SubmitResult } from "./submit-quote";
@@ -103,13 +104,19 @@ export async function submitSurveyBooking(
         },
       },
     },
-    include: { booking: true },
+    include: {
+      booking: true,
+      sourceChannel: { select: { nameTh: true } },
+      autoSourceChannel: { select: { nameTh: true } },
+    },
   });
 
+  const channel = effectiveChannel(lead);
   await notifyNewLead({
     kind: "SURVEY",
     lead,
     booking: lead.booking ?? undefined,
+    channelName: channel.id ? channel.name : undefined,
   });
   return { ok: true };
 }

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { resolveInterestSlugs } from "@/lib/lead-interest-slugs";
 import { notifyNewLead } from "@/lib/notifications";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { effectiveChannel } from "@/lib/reports/aggregate";
 import { resolveRefAttribution } from "@/lib/ref-attribution";
 import { quoteSchema, zodFieldErrors } from "@/lib/validations/lead";
 
@@ -58,8 +59,13 @@ export async function submitQuote(input: unknown): Promise<SubmitResult> {
       autoSourceChannelId,
       autoSourceExecutiveId,
     },
+    include: {
+      sourceChannel: { select: { nameTh: true } },
+      autoSourceChannel: { select: { nameTh: true } },
+    },
   });
 
-  await notifyNewLead({ kind: "QUOTE", lead });
+  const channel = effectiveChannel(lead);
+  await notifyNewLead({ kind: "QUOTE", lead, channelName: channel.id ? channel.name : undefined });
   return { ok: true };
 }
