@@ -56,14 +56,11 @@ assertEqual(
   "แพ็กเกจ 5 กิโลวัตต์"
 );
 
-console.log("\n=== fallback when the English column is absent vs. blank ===");
-// These pin down current behaviour, which is narrower than pickLocale's
-// docstring claims ("falls back to Thai when the English field is empty"):
-// `??` only falls back for null/undefined, so a blank string or empty list is
-// taken at face value and the English page renders nothing there. Left as-is
-// because this refactor is not meant to change what the site shows — see the
-// note in the summary. If the fallback is widened later, these two
-// expectations are the ones to flip.
+console.log("\n=== fallback when the English column is absent or blank ===");
+// The failure mode this guards: a row saved without English copy renders blank
+// text on /en — no error, nothing an e2e selector would catch. Thai is shown
+// instead, for a missing column and for a blank one alike (the blank case is
+// the realistic one, since the admin form only requires English on titles).
 const missingEn = { ...pkgRow, nameEn: undefined, featuresEn: undefined };
 assertEqual("absent en column falls back to th", toPackageView(missingEn, "en").name, "แพ็กเกจ 5 กิโลวัตต์");
 assertEqual(
@@ -73,8 +70,19 @@ assertEqual(
 );
 
 const blankEn = { ...pkgRow, nameEn: "", featuresEn: [] };
-assertEqual("blank en name renders blank (no fallback)", toPackageView(blankEn, "en").name, "");
-assertEqual("blank en features render empty (no fallback)", toPackageView(blankEn, "en").features, []);
+assertEqual("blank en name falls back to th", toPackageView(blankEn, "en").name, "แพ็กเกจ 5 กิโลวัตต์");
+assertEqual(
+  "blank en features fall back to th",
+  toPackageView(blankEn, "en").features,
+  ["แผง 10 แผ่น", "รับประกัน 10 ปี"]
+);
+assertEqual(
+  "whitespace-only en name falls back to th",
+  toPackageView({ ...pkgRow, nameEn: "   " }, "en").name,
+  "แพ็กเกจ 5 กิโลวัตต์"
+);
+// Thai itself is never second-guessed: a blank Thai column renders blank.
+assertEqual("blank th name stays blank on /th", toPackageView({ ...pkgRow, nameTh: "" }, "th").name, "");
 
 console.log("\n=== seasonal production is optional, not assumed ===");
 assertEqual("null seasonalProduction becomes undefined", toPackageView(pkgRow, "th").seasonal, undefined);
