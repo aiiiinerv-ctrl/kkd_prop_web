@@ -1,7 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import ExcelJS from "exceljs";
 import { auth, getLeadScopeFilter } from "@/lib/auth";
-import { EXPORT_COLUMNS, getExportRows } from "@/lib/reports/export-rows";
+import {
+  EXPORT_COLUMNS,
+  FULL_EXPORT_COLUMNS,
+  getExportRows,
+  getFullExportRows,
+} from "@/lib/reports/export-rows";
 import { parseReportFilters } from "@/lib/reports/aggregate";
 
 // exceljs must only ever be imported here (a server-only route handler) —
@@ -17,7 +22,9 @@ export async function GET(req: NextRequest) {
   }
 
   const filters = parseReportFilters(req.nextUrl.searchParams);
-  const rows = await getExportRows(filters, { lead: getLeadScopeFilter(session) });
+  const leadScope = { lead: getLeadScopeFilter(session) };
+  const rows = await getExportRows(filters, leadScope);
+  const fullRows = await getFullExportRows(filters, leadScope);
 
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("รายงาน");
@@ -25,6 +32,15 @@ export async function GET(req: NextRequest) {
   sheet.getRow(1).font = { bold: true };
   for (const row of rows) {
     sheet.addRow(row);
+  }
+
+  // "ข้อมูลเต็ม" — every field except paymentSlipKey (issue #19). Same
+  // workbook, same role gate and scope filter as the "รายงาน" sheet above.
+  const fullSheet = workbook.addWorksheet("ข้อมูลเต็ม");
+  fullSheet.columns = FULL_EXPORT_COLUMNS.map((c) => ({ header: c.header, key: c.key, width: c.width }));
+  fullSheet.getRow(1).font = { bold: true };
+  for (const row of fullRows) {
+    fullSheet.addRow(row);
   }
 
   const buffer = await workbook.xlsx.writeBuffer();
