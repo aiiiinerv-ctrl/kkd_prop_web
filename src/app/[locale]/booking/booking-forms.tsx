@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, CheckCircle2, Gift } from "lucide-react";
+import { Check, CheckCircle2, Gift, Upload } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
@@ -236,7 +236,13 @@ export function BookingForms({
             )}
           >
             <span className="block font-semibold">{title}</span>
-            <span className="block text-xs opacity-85">{subtitle}</span>
+            {/* opacity only on the active tab: against bg-muted the inactive
+                subtitle measured 3.89:1, under the 4.5:1 AA floor, and it was
+                dimming the free "request a quote" path. The size and weight
+                difference already carries the hierarchy. */}
+            <span className={cn("block text-xs", tab === key && "opacity-85")}>
+              {subtitle}
+            </span>
           </button>
         ))}
       </div>
@@ -347,6 +353,13 @@ function CommonFields({
       </div>
       {buildingType === "OTHER" && (
         <div>
+          {/* Conditionally required by requireBuildingTypeOtherText() in
+              lib/validations/lead.ts. Now that the asterisk is the only
+              required marker on this form, leaving it off here would make
+              the convention lie — and the input had no label at all. */}
+          <label className={labelCls}>
+            {t("fieldBuildingTypeOther")} <span className="text-destructive">*</span>
+          </label>
           <input
             className={inputCls}
             placeholder={t("fieldBuildingTypeOtherPlaceholder")}
@@ -471,6 +484,17 @@ function BillAndSystemsFields({
       </div>
     </>
   );
+}
+
+/**
+ * The form marks required fields with an asterisk and says nothing about the
+ * optional ones. Marking both poles is what made the labels inconsistent in
+ * the first place — every required field already carries the asterisk, so the
+ * optional marker was redundant coding that only some fields had. This line
+ * is what makes the remaining pole legible.
+ */
+function RequiredLegend({ t }: { t: Translator }) {
+  return <p className="text-xs text-muted-foreground">{t("requiredLegend")}</p>;
 }
 
 function SourceChannelField({
@@ -611,6 +635,7 @@ function QuoteForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+      <RequiredLegend t={t} />
       <CommonFields {...baseApi} t={t} />
       <BillAndSystemsFields
         {...baseApi}
@@ -663,6 +688,7 @@ function SurveyForm({
   const [serverError, setServerError] = useState(false);
   const [slip, setSlip] = useState<File | null>(null);
   const [slipError, setSlipError] = useState(false);
+  const [slipPreview, setSlipPreview] = useState<string | null>(null);
   const [availability, setAvailability] = useState<Record<string, boolean> | null>(
     null
   );
@@ -687,6 +713,19 @@ function SurveyForm({
     },
   });
   const baseApi = { register, errors, watch, setValue } as unknown as BaseLeadFormApi;
+
+  // Object URLs are leaked memory until revoked, and re-picking a file makes a
+  // new one every time — the cleanup is the point of doing this in an effect
+  // rather than inline in the change handler.
+  useEffect(() => {
+    if (!slip) {
+      setSlipPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(slip);
+    setSlipPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [slip]);
 
   useEffect(() => {
     const base = loadDraft<Record<string, unknown>>(BASE_DRAFT_KEY);
@@ -788,6 +827,7 @@ function SurveyForm({
         </ul>
       </div>
 
+      <RequiredLegend t={t} />
       <CommonFields {...baseApi} t={t} />
 
       <div>
@@ -878,8 +918,15 @@ function SurveyForm({
             </div>
           )}
         </div>
+        {/* A bare file input renders "Choose File / No file chosen" in
+            English — the only English left in an otherwise Thai form, sitting
+            on the required field at the payment step, where credibility is
+            most expensive. The thumbnail matters as much as the button: phone
+            galleries hand over names like IMG_0042.HEIC, which confirm
+            nothing about whether the right slip was attached. */}
         <input
-          className={inputCls}
+          id="paymentSlip"
+          className="peer sr-only"
           type="file"
           accept="image/jpeg,image/png,image/webp"
           onChange={(e) => {
@@ -887,9 +934,37 @@ function SurveyForm({
             setSlipError(false);
           }}
         />
-        {slipError && <p className={errorCls}>{t("required")}</p>}
+        <div className="flex flex-wrap items-center gap-3">
+          <label
+            htmlFor="paymentSlip"
+            className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-primary/30 bg-muted px-5 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-muted/70 peer-focus-visible:ring-2 peer-focus-visible:ring-ring/50"
+          >
+            <Upload className="size-4" />
+            {t("slipChooseFile")}
+          </label>
+          <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+            {slip ? slip.name : t("slipNoFile")}
+          </span>
+        </div>
+        <p className="mt-1.5 text-xs text-muted-foreground">{t("slipFormats")}</p>
+        {slipPreview && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={slipPreview}
+            alt={t("slipPreviewAlt")}
+            className="mt-3 max-h-44 rounded-lg border border-border/70"
+          />
+        )}
+        {slipError && <p className={errorCls}>{t("slipRequired")}</p>}
       </div>
 
+      {/* The qualifying questions sit after the payment block so they can't
+          delay anyone reaching the QR code. A heading earns them back: without
+          it they read as an afterthought bolted on past the point of payment. */}
+      <div className="border-t border-border/70 pt-5">
+        <p className="text-sm font-semibold text-primary">{t("surveyQualifyHeading")}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{t("surveyQualifyHint")}</p>
+      </div>
       <BillAndSystemsFields
         {...baseApi}
         t={t}
