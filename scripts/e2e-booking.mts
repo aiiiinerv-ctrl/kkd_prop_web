@@ -35,7 +35,7 @@ await page.selectOption('select[name="buildingType"]', "OTHER");
 await page.fill('input[name="buildingTypeOtherText"]', "โกดังเก็บของ");
 await page.fill('textarea[name="notes"]', "ทดสอบหมายเหตุจากฟอร์มสาธารณะ");
 await page.fill('input[name="referrerName"]', "คุณทดสอบ ผู้แนะนำ");
-await page.selectOption('select[name="avgMonthlyBill"]', "7500"); // 5,000-10,000 bucket
+await page.selectOption('select[name="avgMonthlyBillBucket"]', "7500"); // 5,000-10,000 bucket
 await page.check('input[name="interestedSystems"][value="ON_GRID"]');
 await page.check('input[name="interestedSystems"][value="HYBRID"]');
 await page.click('button[type="submit"]');
@@ -57,7 +57,9 @@ console.log(
   }`
 );
 console.log(
-  `QUOTE: notes saved ${quoteLead?.notes === "ทดสอบหมายเหตุจากฟอร์มสาธารณะ" ? "✓" : "✗ FAIL"}`
+  `QUOTE: customerMessage saved ${
+    quoteLead?.customerMessage === "ทดสอบหมายเหตุจากฟอร์มสาธารณะ" ? "✓" : "✗ FAIL"
+  }`
 );
 console.log(
   `QUOTE: avgMonthlyBill bucket value saved ${quoteLead?.avgMonthlyBill === 7500 ? "✓" : "✗ FAIL"}`
@@ -76,6 +78,44 @@ console.log(
     interestedSystems.length === 2 &&
     interestedSystems.includes("ON_GRID") &&
     interestedSystems.includes("HYBRID")
+      ? "✓"
+      : "✗ FAIL"
+  }`
+);
+
+// --- Route A2: link context (#18 chunk 2 + chunk 5) — a booking link with
+// ?package= and an off-bucket ?bill= should reach the server-validated slug
+// column and the "OTHER" bill fallback, without the user touching either
+// field. ---
+const linkPhone = "0865551234";
+const existingPackage = await prisma.package.findFirst({
+  where: { isPublished: true },
+  select: { slug: true },
+});
+if (!existingPackage) {
+  throw new Error("no published Package in DB — seed data required for this check");
+}
+await page.goto(
+  `http://localhost:3000/th/booking?tab=quote&package=${existingPackage.slug}&bill=4200`
+);
+await page.fill('input[name="name"]', "ทดสอบ ลิงก์แพ็กเกจ");
+await page.fill('input[name="phone"]', linkPhone);
+await page.selectOption('select[name="province"]', "เชียงใหม่");
+await page.selectOption('select[name="buildingType"]', "RESIDENTIAL");
+console.log(
+  `LINK: bill=4200 (off-bucket) auto-selects OTHER and prefills the number ${
+    (await page.inputValue('input[name="avgMonthlyBill"]')) === "4200" ? "✓" : "✗ FAIL"
+  }`
+);
+await page.click('button[type="submit"]');
+await page.waitForSelector("text=ส่งข้อมูลสำเร็จ", { timeout: 15000 });
+const linkLead = await prisma.lead.findFirst({
+  where: { phone: linkPhone },
+  orderBy: { createdAt: "desc" },
+});
+console.log(
+  `LINK: interestedPackageSlug + off-bucket avgMonthlyBill saved ${
+    linkLead?.interestedPackageSlug === existingPackage.slug && linkLead?.avgMonthlyBill === 4200
       ? "✓"
       : "✗ FAIL"
   }`
@@ -110,6 +150,10 @@ await page.fill('input[name="referrerName"]', "คุณทดสอบ ผู�
 await page.fill('textarea[name="address"]', "123/45 หมู่บ้านทดสอบ ถนนสุขุมวิท แขวงบางนา");
 await page.fill('input[name="preferredDate"]', surveyDate);
 await page.selectOption('select[name="timeSlot"]', "MORNING");
+// #18 chunk 5 (gap G4): avgMonthlyBill/interestedSystems moved from
+// quoteSchema up to baseLeadSchema, so the survey tab now captures them too.
+await page.selectOption('select[name="avgMonthlyBillBucket"]', "3500"); // 2,000-5,000 bucket
+await page.check('input[name="interestedSystems"][value="OFF_GRID"]');
 await page.setInputFiles('input[type="file"]', slipPath);
 await page.click('button[type="submit"]');
 await page.waitForSelector("text=ส่งการนัดเรียบร้อยแล้ว", { timeout: 15000 });
@@ -120,15 +164,23 @@ const surveyLead = await prisma.lead.findFirst({
   orderBy: { createdAt: "desc" },
 });
 console.log(
-  `SURVEY: province + notes saved ${
-    surveyLead?.province === "กรุงเทพมหานคร" && surveyLead.notes === "หมายเหตุนัดสำรวจทดสอบ"
+  `SURVEY: province + customerMessage saved ${
+    surveyLead?.province === "กรุงเทพมหานคร" &&
+    surveyLead.customerMessage === "หมายเหตุนัดสำรวจทดสอบ"
       ? "✓"
       : "✗ FAIL"
   }`
 );
+const surveyInterestedSystems = Array.isArray(surveyLead?.interestedSystems)
+  ? (surveyLead!.interestedSystems as string[])
+  : null;
 console.log(
-  `SURVEY: interestedSystems not set (quote-form-only field) ${
-    surveyLead?.interestedSystems == null ? "✓" : "✗ FAIL"
+  `SURVEY: avgMonthlyBill + interestedSystems now captured too (gap G4) ${
+    surveyLead?.avgMonthlyBill === 3500 &&
+    surveyInterestedSystems?.length === 1 &&
+    surveyInterestedSystems.includes("OFF_GRID")
+      ? "✓"
+      : "✗ FAIL"
   }`
 );
 console.log(

@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
+import { resolveInterestSlugs } from "@/lib/lead-interest-slugs";
 import { notifyNewLead } from "@/lib/notifications";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { resolveRefAttribution } from "@/lib/ref-attribution";
@@ -30,6 +31,10 @@ export async function submitQuote(input: unknown): Promise<SubmitResult> {
   const data = parsed.data;
   const { autoSourceChannelId, autoSourceExecutiveId } =
     await resolveRefAttribution();
+  const { interestedPackageSlug, interestedServiceSlug } = await resolveInterestSlugs(
+    data.interestedPackageSlug,
+    data.interestedServiceSlug
+  );
 
   const lead = await prisma.lead.create({
     data: {
@@ -41,11 +46,13 @@ export async function submitQuote(input: unknown): Promise<SubmitResult> {
       province: data.province,
       buildingType: data.buildingType,
       buildingTypeOtherText: data.buildingTypeOtherText || null,
-      notes: data.notes || null,
+      customerMessage: data.notes || null,
       avgMonthlyBill: data.avgMonthlyBill ?? null,
       interestedSystems: data.interestedSystems?.length
         ? data.interestedSystems
         : Prisma.JsonNull,
+      interestedPackageSlug,
+      interestedServiceSlug,
       locale: data.locale,
       sourceChannelId: data.sourceChannelId || null,
       autoSourceChannelId,

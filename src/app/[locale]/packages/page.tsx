@@ -4,6 +4,7 @@ import { CtaBanner } from "@/components/site/cta-banner";
 import { SeasonalProductionTable } from "@/components/site/seasonal-production-table";
 import { SectionHeading } from "@/components/site/section-heading";
 import { Link } from "@/i18n/navigation";
+import { bookingHref } from "@/lib/booking-links";
 import { getPublishedPackages } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
 import { cn } from "@/lib/utils";
@@ -85,10 +86,7 @@ export default async function PackagesPage({
                 {tCommon("learnMore")}
               </Link>
               <Link
-                href={{
-                  pathname: "/booking",
-                  query: { tab: "quote", package: pkg.slug },
-                }}
+                href={bookingHref({ tab: "quote", package: pkg.slug })}
                 className={cn("mt-3", pkg.isPopular ? "btn-pill" : "btn-pill-outline")}
               >
                 {tCommon("requestQuote")}

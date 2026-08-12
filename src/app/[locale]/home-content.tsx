@@ -7,6 +7,7 @@ import { IconFacebook } from "@/components/site/icon-facebook";
 import { Reveal } from "@/components/site/reveal";
 import { SectionHeading } from "@/components/site/section-heading";
 import { Link } from "@/i18n/navigation";
+import { bookingHref } from "@/lib/booking-links";
 import { getLatestProjects } from "@/lib/content";
 
 /* Same hrefs as the contact page so quick-contact info never drifts out of sync. */
@@ -23,14 +24,8 @@ export async function HomeContent({
   const t = await getTranslations("home");
   const tCommon = await getTranslations("common");
   const tContact = await getTranslations("contact");
-  const bookingSurveyHref = {
-    pathname: "/booking",
-    query: { tab: "survey" },
-  };
-  const bookingQuoteHref = {
-    pathname: "/booking",
-    query: { tab: "quote" },
-  };
+  const bookingSurveyHref = bookingHref({ tab: "survey" });
+  const bookingQuoteHref = bookingHref({ tab: "quote" });
 
   const portfolioItems = await getLatestProjects(locale, 4);
 

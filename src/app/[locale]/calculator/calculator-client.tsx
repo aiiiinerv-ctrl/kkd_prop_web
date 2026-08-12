@@ -12,6 +12,7 @@ import {
   calculateSavings,
   type CalcPackage,
 } from "@/lib/calculator";
+import { bookingHref } from "@/lib/booking-links";
 import { cn } from "@/lib/utils";
 import { useCalculatorStore } from "@/store/use-calculator-store";
 
@@ -170,16 +171,10 @@ export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
             )}
 
             <div className="flex flex-wrap justify-center gap-3 pt-2">
-              <Link
-                href={{ pathname: "/booking", query: { tab: "survey" } }}
-                className="btn-pill-outline"
-              >
+              <Link href={bookingHref({ tab: "survey" })} className="btn-pill-outline">
                 {tCommon("bookSurvey")}
               </Link>
-              <Link
-                href={{ pathname: "/booking", query: { tab: "quote", bill } }}
-                className="btn-pill"
-              >
+              <Link href={bookingHref({ tab: "quote", bill })} className="btn-pill">
                 {tCommon("requestQuoteFree")}
               </Link>
             </div>

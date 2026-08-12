@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, CheckCircle2, Gift } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import {
   useForm,
@@ -11,12 +12,18 @@ import {
   type FieldPath,
   type UseFormRegister,
   type UseFormSetError,
+  type UseFormSetValue,
   type UseFormWatch,
 } from "react-hook-form";
 import { submitQuote } from "@/actions/submit-quote";
 import { submitSurveyBooking } from "@/actions/submit-survey-booking";
 import { PROVINCES } from "@/lib/data/provinces";
-import { clearDraft, loadDraft, saveDraft } from "@/lib/form-draft";
+import {
+  clearDrafts,
+  loadDraft,
+  mergeDraftForForm,
+  saveDraft,
+} from "@/lib/form-draft";
 import { cn } from "@/lib/utils";
 import {
   quoteSchema,
@@ -28,8 +35,41 @@ import {
   type SurveyInput,
 } from "@/lib/validations/lead";
 
+// #14 decision 3: base fields shared by both tabs live in one draft key so
+// switching tabs doesn't lose them; each tab additionally keeps its own
+// tab-only fields (avgMonthlyBill/interestedSystems, address/date/slip, ...)
+// in a separate key. See mergeDraftForForm() in lib/form-draft.ts for how the
+// three sources (base draft, tab draft, URL param) combine.
+const BASE_DRAFT_KEY = "kkd-booking-draft-base";
 const QUOTE_DRAFT_KEY = "kkd-booking-draft-quote";
 const SURVEY_DRAFT_KEY = "kkd-booking-draft-survey";
+const ALL_DRAFT_KEYS = [BASE_DRAFT_KEY, QUOTE_DRAFT_KEY, SURVEY_DRAFT_KEY];
+
+// The fields that make up "kkd-booking-draft-base" per #14 decision 3: ชื่อ
+// เบอร์ LINE จังหวัด ประเภทอาคาร ผู้แนะนำ ช่องทาง ข้อความ (+ the OTHER-detail
+// text that travels with buildingType).
+const BASE_DRAFT_FIELDS = [
+  "name",
+  "phone",
+  "lineId",
+  "province",
+  "buildingType",
+  "buildingTypeOtherText",
+  "referrerName",
+  "sourceChannelId",
+  "notes",
+] as const;
+type BaseDraftValues = Pick<BaseLeadFormInput, (typeof BASE_DRAFT_FIELDS)[number]>;
+
+function pickBaseDraftFields(values: Record<string, unknown>): Partial<BaseDraftValues> {
+  const picked: Partial<BaseDraftValues> = {};
+  for (const field of BASE_DRAFT_FIELDS) {
+    if (field in values) {
+      (picked as Record<string, unknown>)[field] = values[field];
+    }
+  }
+  return picked;
+}
 
 type Channel = { id: string; name: string };
 type Tab = "quote" | "survey";
@@ -44,6 +84,9 @@ const inputCls =
 const labelCls = "mb-1.5 block text-sm font-semibold";
 const errorCls = "mt-1 text-xs text-destructive";
 
+// Values are the middle of each range, not its edge — "1500" means "under
+// 2,000", not "exactly 1,500" (see billBucketFor()). A raw bill that doesn't
+// land on one of these exact values gets the "OTHER" bucket instead.
 const BILL_BUCKETS = [
   { value: "1500", key: "billBucketUnder2k" },
   { value: "3500", key: "billBucketRange2to5k" },
@@ -51,6 +94,12 @@ const BILL_BUCKETS = [
   { value: "15000", key: "billBucketRange10to20k" },
   { value: "25000", key: "billBucketOver20k" },
 ] as const;
+
+/** "bucket" when the raw value is one of BILL_BUCKETS' exact values, "other" otherwise. */
+function billBucketMode(value: string | undefined | null): "" | "bucket" | "other" {
+  if (!value) return "";
+  return BILL_BUCKETS.some((b) => b.value === value) ? "bucket" : "other";
+}
 
 const INTERESTED_SYSTEMS = [
   { value: "ON_GRID", key: "systemOnGrid" },
@@ -97,24 +146,52 @@ type BaseLeadFormApi = {
   register: UseFormRegister<BaseLeadFormInput>;
   errors: FieldErrors<BaseLeadFormInput>;
   watch: UseFormWatch<BaseLeadFormInput>;
+  setValue: UseFormSetValue<BaseLeadFormInput>;
 };
 
 export function BookingForms({
-  initialTab,
   initialBill,
+  initialPackageSlug,
+  initialServiceSlug,
   channels,
   bankInfo,
   promptpayQrDataUrl,
 }: {
-  initialTab: Tab;
   initialBill: string;
+  initialPackageSlug: string;
+  initialServiceSlug: string;
   channels: Channel[];
   bankInfo: BankInfo;
   promptpayQrDataUrl: string | null;
 }) {
   const t = useTranslations("booking");
-  const [tab, setTab] = useState<Tab>(initialTab);
+  // URL is the single source of truth for the active tab (#13 decision 1):
+  // no `tab` param (or anything other than "survey") means "quote" — that
+  // rule lives here, in exactly one place.
+  const searchParams = useSearchParams();
+  const tab: Tab = searchParams.get("tab") === "survey" ? "survey" : "quote";
   const [success, setSuccess] = useState<Tab | null>(null);
+
+  // A tab switch always clears whatever success screen was showing for the
+  // other tab (#13 decision 1 — the "success" state used to leak across tabs).
+  useEffect(() => {
+    setSuccess(null);
+  }, [tab]);
+
+  const setTab = (next: Tab) => {
+    if (next === tab) return;
+    const params = new URLSearchParams(searchParams);
+    if (next === "quote") {
+      params.delete("tab");
+    } else {
+      params.set("tab", next);
+    }
+    const query = params.toString();
+    // Native history API, not next/navigation's router — updates the URL
+    // (and anything reading useSearchParams) without adding a history entry
+    // or hitting the server (#13 decision 2).
+    window.history.replaceState(null, "", query ? `?${query}` : window.location.pathname);
+  };
 
   if (success) {
     return (
@@ -168,11 +245,16 @@ export function BookingForms({
         <QuoteForm
           channels={channels}
           initialBill={initialBill}
+          initialPackageSlug={initialPackageSlug}
+          initialServiceSlug={initialServiceSlug}
           onSuccess={() => setSuccess("quote")}
         />
       ) : (
         <SurveyForm
           channels={channels}
+          initialBill={initialBill}
+          initialPackageSlug={initialPackageSlug}
+          initialServiceSlug={initialServiceSlug}
           onSuccess={() => setSuccess("survey")}
           bankInfo={bankInfo}
           promptpayQrDataUrl={promptpayQrDataUrl}
@@ -273,14 +355,119 @@ function CommonFields({
           <FieldErrorText error={errors.buildingTypeOtherText} t={t} />
         </div>
       )}
+    </>
+  );
+}
+
+/**
+ * "หมายเหตุ" — deliberately kept as its own component (rather than folded
+ * back into CommonFields) so it can be rendered at the tail of each form,
+ * after the qualifying fields, instead of interrupting them (#18 chunk 6).
+ */
+function NotesField({
+  register,
+  t,
+}: {
+  register: UseFormRegister<BaseLeadFormInput>;
+  t: Translator;
+}) {
+  return (
+    <div>
+      <label className={labelCls}>{t("fieldNotes")}</label>
+      <textarea
+        className={inputCls}
+        rows={3}
+        placeholder={t("fieldNotesPlaceholder")}
+        {...register("notes")}
+      />
+    </div>
+  );
+}
+
+/**
+ * ค่าไฟเฉลี่ย + ระบบที่สนใจ — shared by both tabs since #14/#18 chunk 5
+ * lifted them from quoteSchema into baseLeadSchema (gap G4). The bill select
+ * gets an "OTHER" bucket with a free-number fallback (gap G3): a raw value
+ * that doesn't land exactly on one of BILL_BUCKETS' values (e.g. from the
+ * calculator slider) switches to OTHER and prefills the number instead of
+ * silently falling back to an empty <select>.
+ */
+function BillAndSystemsFields({
+  register,
+  watch,
+  setValue,
+  t,
+  billMode,
+  setBillMode,
+}: BaseLeadFormApi & {
+  t: Translator;
+  billMode: "" | "bucket" | "other";
+  setBillMode: (mode: "" | "bucket" | "other") => void;
+}) {
+  const bill = watch("avgMonthlyBill");
+
+  return (
+    <>
       <div>
-        <label className={labelCls}>{t("fieldNotes")}</label>
-        <textarea
+        <label className={labelCls}>{t("fieldBill")}</label>
+        <select
           className={inputCls}
-          rows={3}
-          placeholder={t("fieldNotesPlaceholder")}
-          {...register("notes")}
-        />
+          name="avgMonthlyBillBucket"
+          value={billMode === "bucket" ? String(bill ?? "") : billMode === "other" ? "OTHER" : ""}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (value === "OTHER") {
+              setBillMode("other");
+              setValue("avgMonthlyBill", "");
+            } else if (value === "") {
+              setBillMode("");
+              setValue("avgMonthlyBill", "");
+            } else {
+              setBillMode("bucket");
+              setValue("avgMonthlyBill", value);
+            }
+          }}
+        >
+          <option value="">{t("fieldBillPlaceholder")}</option>
+          {BILL_BUCKETS.map((b) => (
+            <option key={b.value} value={b.value}>
+              {t(b.key)}
+            </option>
+          ))}
+          <option value="OTHER">{t("billBucketOther")}</option>
+        </select>
+        {billMode === "other" && (
+          <>
+            <label htmlFor="avgMonthlyBillOther" className="sr-only">
+              {t("fieldBillOtherLabel")}
+            </label>
+            <input
+              id="avgMonthlyBillOther"
+              className={cn(inputCls, "mt-2")}
+              type="number"
+              min={0}
+              max={1_000_000}
+              placeholder={t("billOtherPlaceholder")}
+              {...register("avgMonthlyBill")}
+            />
+          </>
+        )}
+      </div>
+      <div>
+        <label className={labelCls}>{t("fieldInterestedSystems")}</label>
+        <div className="flex flex-col gap-2">
+          {INTERESTED_SYSTEMS.map((s) => (
+            <label key={s.value} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                value={s.value}
+                {...register("interestedSystems")}
+                className="size-4 rounded border-input"
+              />
+              {t(s.key)}
+            </label>
+          ))}
+        </div>
       </div>
     </>
   );
@@ -330,40 +517,82 @@ function ReferrerField({
   );
 }
 
+/** Carries the source-package/service context from the booking link — never shown to the customer. */
+function InterestSlugFields({ register }: { register: UseFormRegister<BaseLeadFormInput> }) {
+  return (
+    <>
+      <input type="hidden" {...register("interestedPackageSlug")} />
+      <input type="hidden" {...register("interestedServiceSlug")} />
+    </>
+  );
+}
+
 function QuoteForm({
   channels,
   initialBill,
+  initialPackageSlug,
+  initialServiceSlug,
   onSuccess,
 }: {
   channels: Channel[];
   initialBill: string;
+  initialPackageSlug: string;
+  initialServiceSlug: string;
   onSuccess: () => void;
 }) {
   const t = useTranslations("booking");
   const locale = useLocale();
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState(false);
+  const [billMode, setBillMode] = useState<"" | "bucket" | "other">(() =>
+    billBucketMode(initialBill)
+  );
   const {
     register,
     handleSubmit,
     watch,
-    reset,
+    setValue,
     setError,
     formState: { errors },
   } = useForm<QuoteFormInput, undefined, QuoteInput>({
     resolver: zodResolver(quoteSchema),
-    defaultValues: { avgMonthlyBill: initialBill, interestedSystems: [] },
+    defaultValues: {
+      avgMonthlyBill: initialBill,
+      interestedSystems: [],
+      interestedPackageSlug: initialPackageSlug,
+      interestedServiceSlug: initialServiceSlug,
+    },
   });
-  const baseApi = { register, errors, watch } as unknown as BaseLeadFormApi;
+  const baseApi = { register, errors, watch, setValue } as unknown as BaseLeadFormApi;
 
+  // Draft/URL hydration merges field-by-field (base -> tab draft -> URL
+  // param, #14 decision 1) via setValue — never a whole-form reset(), which
+  // used to clobber the URL-driven defaultValues above (gap G3).
   useEffect(() => {
-    const draft = loadDraft<QuoteFormInput>(QUOTE_DRAFT_KEY);
-    if (draft) reset(draft);
+    const base = loadDraft<Record<string, unknown>>(BASE_DRAFT_KEY);
+    const tabDraft = loadDraft<Record<string, unknown>>(QUOTE_DRAFT_KEY);
+    const urlParams: Partial<QuoteFormInput> = {
+      avgMonthlyBill: initialBill || undefined,
+      interestedPackageSlug: initialPackageSlug || undefined,
+      interestedServiceSlug: initialServiceSlug || undefined,
+    };
+    const merged = mergeDraftForForm(base, tabDraft, urlParams);
+    for (const [field, value] of Object.entries(merged)) {
+      if (value !== undefined) {
+        setValue(field as FieldPath<QuoteFormInput>, value as never, { shouldDirty: false });
+      }
+    }
+    if (typeof merged.avgMonthlyBill !== "undefined") {
+      setBillMode(billBucketMode(String(merged.avgMonthlyBill ?? "")));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    const subscription = watch((values) => saveDraft(QUOTE_DRAFT_KEY, values));
+    const subscription = watch((values) => {
+      saveDraft(QUOTE_DRAFT_KEY, values);
+      saveDraft(BASE_DRAFT_KEY, pickBaseDraftFields(values as Record<string, unknown>));
+    });
     return () => subscription.unsubscribe();
   }, [watch]);
 
@@ -372,7 +601,7 @@ function QuoteForm({
     startTransition(async () => {
       const result = await submitQuote({ ...values, locale });
       if (result.ok) {
-        clearDraft(QUOTE_DRAFT_KEY);
+        clearDrafts(ALL_DRAFT_KEYS);
         onSuccess();
       } else if (!applyServerFieldErrors(result.fieldErrors, setError)) {
         setServerError(true);
@@ -383,35 +612,16 @@ function QuoteForm({
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
       <CommonFields {...baseApi} t={t} />
-      <div>
-        <label className={labelCls}>{t("fieldBill")}</label>
-        <select className={inputCls} {...register("avgMonthlyBill")} defaultValue={initialBill}>
-          <option value="">{t("fieldBillPlaceholder")}</option>
-          {BILL_BUCKETS.map((b) => (
-            <option key={b.value} value={b.value}>
-              {t(b.key)}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label className={labelCls}>{t("fieldInterestedSystems")}</label>
-        <div className="flex flex-col gap-2">
-          {INTERESTED_SYSTEMS.map((s) => (
-            <label key={s.value} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                value={s.value}
-                {...register("interestedSystems")}
-                className="size-4 rounded border-input"
-              />
-              {t(s.key)}
-            </label>
-          ))}
-        </div>
-      </div>
+      <BillAndSystemsFields
+        {...baseApi}
+        t={t}
+        billMode={billMode}
+        setBillMode={setBillMode}
+      />
+      <InterestSlugFields register={baseApi.register} />
       <SourceChannelField register={baseApi.register} channels={channels} t={t} />
       <ReferrerField register={baseApi.register} t={t} />
+      <NotesField register={baseApi.register} t={t} />
       {serverError && <p className={errorCls}>{t("errorGeneric")}</p>}
       <p className="text-center text-xs text-muted-foreground">
         {t("reassurance")}{" "}
@@ -432,11 +642,17 @@ function QuoteForm({
 
 function SurveyForm({
   channels,
+  initialBill,
+  initialPackageSlug,
+  initialServiceSlug,
   onSuccess,
   bankInfo,
   promptpayQrDataUrl,
 }: {
   channels: Channel[];
+  initialBill: string;
+  initialPackageSlug: string;
+  initialServiceSlug: string;
   onSuccess: () => void;
   bankInfo: BankInfo;
   promptpayQrDataUrl: string | null;
@@ -451,26 +667,52 @@ function SurveyForm({
     null
   );
   const [dateFullError, setDateFullError] = useState(false);
+  const [billMode, setBillMode] = useState<"" | "bucket" | "other">(() =>
+    billBucketMode(initialBill)
+  );
   const {
     register,
     handleSubmit,
     watch,
-    reset,
+    setValue,
     setError,
     formState: { errors },
   } = useForm<SurveyFormInput, undefined, SurveyInput>({
     resolver: zodResolver(surveySchema),
+    defaultValues: {
+      avgMonthlyBill: initialBill,
+      interestedSystems: [],
+      interestedPackageSlug: initialPackageSlug,
+      interestedServiceSlug: initialServiceSlug,
+    },
   });
-  const baseApi = { register, errors, watch } as unknown as BaseLeadFormApi;
+  const baseApi = { register, errors, watch, setValue } as unknown as BaseLeadFormApi;
 
   useEffect(() => {
-    const draft = loadDraft<SurveyFormInput>(SURVEY_DRAFT_KEY);
-    if (draft) reset(draft);
+    const base = loadDraft<Record<string, unknown>>(BASE_DRAFT_KEY);
+    const tabDraft = loadDraft<Record<string, unknown>>(SURVEY_DRAFT_KEY);
+    const urlParams: Partial<SurveyFormInput> = {
+      avgMonthlyBill: initialBill || undefined,
+      interestedPackageSlug: initialPackageSlug || undefined,
+      interestedServiceSlug: initialServiceSlug || undefined,
+    };
+    const merged = mergeDraftForForm(base, tabDraft, urlParams);
+    for (const [field, value] of Object.entries(merged)) {
+      if (value !== undefined) {
+        setValue(field as FieldPath<SurveyFormInput>, value as never, { shouldDirty: false });
+      }
+    }
+    if (typeof merged.avgMonthlyBill !== "undefined") {
+      setBillMode(billBucketMode(String(merged.avgMonthlyBill ?? "")));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    const subscription = watch((values) => saveDraft(SURVEY_DRAFT_KEY, values));
+    const subscription = watch((values) => {
+      saveDraft(SURVEY_DRAFT_KEY, values);
+      saveDraft(BASE_DRAFT_KEY, pickBaseDraftFields(values as Record<string, unknown>));
+    });
     return () => subscription.unsubscribe();
   }, [watch]);
 
@@ -517,7 +759,7 @@ function SurveyForm({
       formData.set("paymentSlip", slip);
       const result = await submitSurveyBooking(formData);
       if (result.ok) {
-        clearDraft(SURVEY_DRAFT_KEY);
+        clearDrafts(ALL_DRAFT_KEYS);
         onSuccess();
       } else if (result.error === "date_full") {
         setDateFullError(true);
@@ -599,6 +841,8 @@ function SurveyForm({
         </div>
       </div>
 
+      <InterestSlugFields register={baseApi.register} />
+
       <div>
         <label className={labelCls}>
           {t("fieldSlip")} <span className="text-destructive">*</span>
@@ -646,8 +890,15 @@ function SurveyForm({
         {slipError && <p className={errorCls}>{t("required")}</p>}
       </div>
 
+      <BillAndSystemsFields
+        {...baseApi}
+        t={t}
+        billMode={billMode}
+        setBillMode={setBillMode}
+      />
       <SourceChannelField register={baseApi.register} channels={channels} t={t} />
       <ReferrerField register={baseApi.register} t={t} />
+      <NotesField register={baseApi.register} t={t} />
       {serverError && <p className={errorCls}>{t("errorGeneric")}</p>}
       {dateFullError && <p className={errorCls}>{t("dateFull")}</p>}
       <p className="text-center text-xs text-muted-foreground">

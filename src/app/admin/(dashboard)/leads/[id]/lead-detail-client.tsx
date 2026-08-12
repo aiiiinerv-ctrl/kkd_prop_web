@@ -52,8 +52,11 @@ type LeadDetail = {
   buildingTypeOtherText: string | null;
   avgMonthlyBill: number | null;
   interestedSystems: string[] | null;
+  interestedPackageSlug: string | null;
+  interestedServiceSlug: string | null;
   locale: string;
-  notes: string | null;
+  customerMessage: string | null;
+  internalNotes: string | null;
   sourceChannelId: string | null;
   autoSourceChannelName: string | null;
   autoSourceExecutiveName: string | null;
@@ -89,7 +92,7 @@ export function LeadDetailClient({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [notes, setNotes] = useState(lead.notes ?? "");
+  const [notes, setNotes] = useState(lead.internalNotes ?? "");
 
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>, okMsg: string) =>
     startTransition(async () => {
@@ -195,6 +198,18 @@ export function LeadDetailClient({
               <dd className="font-medium">
                 {lead.avgMonthlyBill.toLocaleString()} บาท/เดือน
               </dd>
+            </div>
+          )}
+          {lead.interestedPackageSlug && (
+            <div>
+              <dt className="text-muted-foreground">แพ็กเกจที่สนใจ (จากลิงก์)</dt>
+              <dd className="font-medium">{lead.interestedPackageSlug}</dd>
+            </div>
+          )}
+          {lead.interestedServiceSlug && (
+            <div>
+              <dt className="text-muted-foreground">บริการที่สนใจ (จากลิงก์)</dt>
+              <dd className="font-medium">{lead.interestedServiceSlug}</dd>
             </div>
           )}
           <div>
@@ -359,6 +374,13 @@ export function LeadDetailClient({
         </div>
       )}
 
+      {lead.customerMessage && (
+        <div className="rounded-xl border border-border/70 bg-card p-6">
+          <h2 className="mb-3 font-semibold">ข้อความจากลูกค้า</h2>
+          <p className="text-sm whitespace-pre-wrap">{lead.customerMessage}</p>
+        </div>
+      )}
+
       <div className="rounded-xl border border-border/70 bg-card p-6">
         <h2 className="mb-3 font-semibold">บันทึกภายใน</h2>
         {canEdit ? (
@@ -371,7 +393,7 @@ export function LeadDetailClient({
             />
             <Button
               className="mt-3"
-              disabled={isPending || notes === (lead.notes ?? "")}
+              disabled={isPending || notes === (lead.internalNotes ?? "")}
               onClick={() => run(() => updateLeadNotes(lead.id, notes), "บันทึกแล้ว")}
             >
               บันทึก
@@ -379,7 +401,7 @@ export function LeadDetailClient({
           </>
         ) : (
           <p className="text-sm whitespace-pre-wrap text-muted-foreground">
-            {lead.notes || "ยังไม่มีบันทึก"}
+            {lead.internalNotes || "ยังไม่มีบันทึก"}
           </p>
         )}
       </div>

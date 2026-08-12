@@ -106,7 +106,7 @@ export async function updateLeadNotes(
   }
 
   const updated = await leads.update(id, {
-    notes: notes.trim().slice(0, 5000) || null,
+    internalNotes: notes.trim().slice(0, 5000) || null,
     lastFollowUpAt: new Date(),
   });
   if (!updated) return { ok: false, error: "ไม่พบ lead" };

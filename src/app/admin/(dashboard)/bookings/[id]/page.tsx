@@ -58,6 +58,7 @@ export default async function BookingDetailPage({
           name: booking.lead.name,
           phone: booking.lead.phone,
           province: booking.lead.province,
+          customerMessage: booking.lead.customerMessage,
         },
       }}
       staff={staff}

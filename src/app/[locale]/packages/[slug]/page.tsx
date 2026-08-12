@@ -5,6 +5,7 @@ import { CtaBanner } from "@/components/site/cta-banner";
 import { SeasonalProductionTable } from "@/components/site/seasonal-production-table";
 import { SectionHeading } from "@/components/site/section-heading";
 import { Link } from "@/i18n/navigation";
+import { bookingHref } from "@/lib/booking-links";
 import { getPackageBySlug } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
 
@@ -81,10 +82,7 @@ export default async function PackageDetailPage({
             </ul>
 
             <Link
-              href={{
-                pathname: "/booking",
-                query: { tab: "quote", package: pkg.slug },
-              }}
+              href={bookingHref({ tab: "quote", package: pkg.slug })}
               className="btn-pill mt-7 inline-flex"
             >
               {tCommon("requestQuote")}

@@ -51,7 +51,13 @@ type BookingDetail = {
   paymentStatus: PaymentStatus;
   assignedEngineerId: string | null;
   assignedSalesId: string | null;
-  lead: { id: string; name: string; phone: string; province: string };
+  lead: {
+    id: string;
+    name: string;
+    phone: string;
+    province: string;
+    customerMessage: string | null;
+  };
 };
 
 export function BookingDetailClient({
@@ -156,6 +162,14 @@ export function BookingDetailClient({
             <dt className="text-muted-foreground">ช่วงเวลา</dt>
             <dd className="font-medium">{TIME_SLOT_LABELS[booking.timeSlot]}</dd>
           </div>
+          {booking.lead.customerMessage && (
+            <div className="sm:col-span-2">
+              <dt className="text-muted-foreground">ข้อความจากลูกค้า</dt>
+              <dd className="whitespace-pre-wrap font-medium">
+                {booking.lead.customerMessage}
+              </dd>
+            </div>
+          )}
         </dl>
       </div>
 

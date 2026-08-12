@@ -73,8 +73,11 @@ export default async function LeadDetailPage({
         interestedSystems: Array.isArray(lead.interestedSystems)
           ? (lead.interestedSystems as string[])
           : null,
+        interestedPackageSlug: lead.interestedPackageSlug,
+        interestedServiceSlug: lead.interestedServiceSlug,
         locale: lead.locale,
-        notes: lead.notes,
+        customerMessage: lead.customerMessage,
+        internalNotes: lead.internalNotes,
         sourceChannelId: lead.sourceChannelId,
         autoSourceChannelName: lead.autoSourceChannel?.nameTh ?? null,
         autoSourceExecutiveName: lead.autoSourceExecutive?.name ?? null,

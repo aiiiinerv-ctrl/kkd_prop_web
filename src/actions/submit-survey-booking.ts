@@ -2,10 +2,12 @@
 
 import { createId } from "@paralleldrive/cuid2";
 import { headers } from "next/headers";
+import { Prisma } from "@/generated/prisma/client";
 import { nextBookingNumber } from "@/lib/bookings/booking-number";
 import { isDateFull } from "@/lib/bookings/capacity";
 import { prisma } from "@/lib/db";
 import { compressImage } from "@/lib/images";
+import { resolveInterestSlugs } from "@/lib/lead-interest-slugs";
 import { notifyNewLead } from "@/lib/notifications";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { resolveRefAttribution } from "@/lib/ref-attribution";
@@ -64,6 +66,10 @@ export async function submitSurveyBooking(
   const bookingNumber = await nextBookingNumber();
   const { autoSourceChannelId, autoSourceExecutiveId } =
     await resolveRefAttribution();
+  const { interestedPackageSlug, interestedServiceSlug } = await resolveInterestSlugs(
+    data.interestedPackageSlug,
+    data.interestedServiceSlug
+  );
   const lead = await prisma.lead.create({
     data: {
       type: "SURVEY",
@@ -74,7 +80,15 @@ export async function submitSurveyBooking(
       province: data.province,
       buildingType: data.buildingType,
       buildingTypeOtherText: data.buildingTypeOtherText || null,
-      notes: data.notes || null,
+      customerMessage: data.notes || null,
+      // Lifted from quote-only to shared (#18 chunk 5, gap G4) — survey leads
+      // now carry the same technical context as quote leads.
+      avgMonthlyBill: data.avgMonthlyBill ?? null,
+      interestedSystems: data.interestedSystems?.length
+        ? data.interestedSystems
+        : Prisma.JsonNull,
+      interestedPackageSlug,
+      interestedServiceSlug,
       locale: data.locale,
       sourceChannelId: data.sourceChannelId || null,
       autoSourceChannelId,

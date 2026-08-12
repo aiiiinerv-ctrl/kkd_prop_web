@@ -23,6 +23,20 @@ const baseLeadSchema = z.object({
   notes: z.string().trim().max(1000, "too_long").optional().or(z.literal("")),
   sourceChannelId: z.string().trim().optional().or(z.literal("")),
   locale: z.enum(["th", "en"]).default("th"),
+  // Carried from the booking link's `?package=`/`?service=` query param (see
+  // src/lib/booking-links.ts) via a hidden field — format-checked here, but
+  // existence against the Package/Service table is checked server-side in
+  // the submit actions, not here.
+  interestedPackageSlug: z.string().trim().max(200, "too_long").optional().or(z.literal("")),
+  interestedServiceSlug: z.string().trim().max(200, "too_long").optional().or(z.literal("")),
+  // An untouched <select> submits "" — treat it as "not answered" rather than
+  // letting z.coerce turn it into 0. Lifted here from quoteSchema so the
+  // survey tab captures the same technical context (#14 map decision 4, G4).
+  avgMonthlyBill: z.preprocess(
+    (v) => (v === "" || v == null ? undefined : v),
+    z.coerce.number().int().min(0).max(1_000_000).optional()
+  ),
+  interestedSystems: z.array(z.enum(["ON_GRID", "HYBRID", "OFF_GRID"])).optional(),
 });
 
 // Shared across quote/survey: buildingTypeOtherText is required only when
@@ -43,17 +57,7 @@ function requireBuildingTypeOtherText(
   }
 }
 
-export const quoteSchema = baseLeadSchema
-  .extend({
-    // An untouched <select> submits "" — treat it as "not answered" rather than
-    // letting z.coerce turn it into 0.
-    avgMonthlyBill: z.preprocess(
-      (v) => (v === "" || v == null ? undefined : v),
-      z.coerce.number().int().min(0).max(1_000_000).optional()
-    ),
-    interestedSystems: z.array(z.enum(["ON_GRID", "HYBRID", "OFF_GRID"])).optional(),
-  })
-  .superRefine(requireBuildingTypeOtherText);
+export const quoteSchema = baseLeadSchema.superRefine(requireBuildingTypeOtherText);
 
 export const surveySchema = baseLeadSchema
   .extend({

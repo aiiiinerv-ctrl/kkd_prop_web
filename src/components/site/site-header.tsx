@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { LanguageSwitcher } from "@/components/site/language-switcher";
 import { Link, usePathname } from "@/i18n/navigation";
+import { bookingHref } from "@/lib/booking-links";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/store/use-ui-store";
 
@@ -56,7 +57,7 @@ export function SiteHeader({ showTestimonials }: { showTestimonials: boolean }) 
 
         <div className="hidden items-center gap-3 lg:flex">
           <LanguageSwitcher />
-          <Link href="/booking" className="btn-pill px-5 py-2">
+          <Link href={bookingHref()} className="btn-pill px-5 py-2">
             {t("booking")}
           </Link>
         </div>
@@ -91,7 +92,7 @@ export function SiteHeader({ showTestimonials }: { showTestimonials: boolean }) 
             ))}
             <li className="p-4 text-center">
               <Link
-                href="/booking"
+                href={bookingHref()}
                 onClick={() => setMobileNavOpen(false)}
                 className="btn-pill inline-flex px-6 py-2.5"
               >

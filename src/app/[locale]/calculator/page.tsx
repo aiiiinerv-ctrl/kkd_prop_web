@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Reveal } from "@/components/site/reveal";
 import { Link } from "@/i18n/navigation";
 import { CalculatorClient } from "./calculator-client";
+import { bookingHref } from "@/lib/booking-links";
 import { getPublishedPackages } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
 import { cn } from "@/lib/utils";
@@ -96,10 +97,7 @@ export default async function CalculatorPage({
                     ))}
                   </ul>
                   <Link
-                    href={{
-                      pathname: "/booking",
-                      query: { tab: "quote", package: pkg.slug },
-                    }}
+                    href={bookingHref({ tab: "quote", package: pkg.slug })}
                     className={cn("mt-7", pkg.isPopular ? "btn-pill" : "btn-pill-outline")}
                   >
                     {tCommon("requestQuote")}

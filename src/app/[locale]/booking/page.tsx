@@ -1,6 +1,9 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { Suspense } from "react";
 import { SectionHeading } from "@/components/site/section-heading";
+import { bookingLinkParamsSchema } from "@/lib/booking-links";
 import { getActiveChannels, getPaymentSettings } from "@/lib/content";
+import { prisma } from "@/lib/db";
 import { generatePromptPayQrDataUrl } from "@/lib/promptpay";
 import { BookingForms } from "./booking-forms";
 import { pageMetadata } from "@/lib/seo";
@@ -20,16 +23,30 @@ export default async function BookingPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ tab?: string; bill?: string }>;
+  searchParams: Promise<{ tab?: string; bill?: string; package?: string; service?: string }>;
 }) {
   const { locale } = await params;
-  const { tab, bill } = await searchParams;
+  // Parsed with the same contract the link-side helper (bookingHref) builds
+  // against (#13 decision 4) — an unknown-shaped param is dropped, not
+  // trusted. `package`/`service` existence against the DB is checked below;
+  // an unrecognized slug is never handed to the form.
+  const rawParams = await searchParams;
+  const parsedParams = bookingLinkParamsSchema.safeParse(rawParams);
+  const { bill, package: packageSlug, service: serviceSlug } = parsedParams.success
+    ? parsedParams.data
+    : {};
   setRequestLocale(locale);
   const t = await getTranslations("booking");
 
-  const [channels, paymentSettings] = await Promise.all([
+  const [channels, paymentSettings, packageRow, serviceRow] = await Promise.all([
     getActiveChannels(locale),
     getPaymentSettings(),
+    packageSlug
+      ? prisma.package.findUnique({ where: { slug: packageSlug }, select: { slug: true } })
+      : null,
+    serviceSlug
+      ? prisma.service.findUnique({ where: { slug: serviceSlug }, select: { slug: true } })
+      : null,
   ]);
 
   // Survey booking fee is a fixed ฿199 (same constant used in the UI copy
@@ -44,17 +61,24 @@ export default async function BookingPage({
         title={t("title")}
         headingClassName="font-extrabold tracking-[-0.01em]"
       />
-      <BookingForms
-        initialTab={tab === "survey" ? "survey" : "quote"}
-        initialBill={bill && /^\d+$/.test(bill) ? bill : ""}
-        channels={channels}
-        bankInfo={{
-          bankName: paymentSettings?.bankName ?? "",
-          bankAccountNumber: paymentSettings?.bankAccountNumber ?? "",
-          bankAccountName: paymentSettings?.bankAccountName ?? "",
-        }}
-        promptpayQrDataUrl={promptpayQrDataUrl}
-      />
+      {/* BookingForms reads the active tab from useSearchParams (#13 decision
+          1) — Next 16 requires a Suspense boundary around any client
+          component that calls it, or `npm run build` fails even though
+          `npm run dev` looks fine (see use-search-params.md). */}
+      <Suspense fallback={null}>
+        <BookingForms
+          initialBill={bill ?? ""}
+          initialPackageSlug={packageRow?.slug ?? ""}
+          initialServiceSlug={serviceRow?.slug ?? ""}
+          channels={channels}
+          bankInfo={{
+            bankName: paymentSettings?.bankName ?? "",
+            bankAccountNumber: paymentSettings?.bankAccountNumber ?? "",
+            bankAccountName: paymentSettings?.bankAccountName ?? "",
+          }}
+          promptpayQrDataUrl={promptpayQrDataUrl}
+        />
+      </Suspense>
     </main>
   );
 }

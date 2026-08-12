@@ -144,13 +144,23 @@ export function canMutateBooking(
   return false;
 }
 
-const LEAD_PII_FIELDS = ["name", "phone", "lineId", "notes"] as const;
+// interestedPackageSlug/interestedServiceSlug (added #18 chunk 2) are
+// link-click context, not something the customer typed — deliberately left
+// out of this list, same treatment as sourceChannelId/province/buildingType.
+const LEAD_PII_FIELDS = [
+  "name",
+  "phone",
+  "lineId",
+  "customerMessage",
+  "internalNotes",
+] as const;
 
 /**
- * Strips customer PII (name/phone/LINE ID/notes) from a lead payload before
- * it leaves the server for a CHANNEL_EXECUTIVE-scoped request. This must run
- * on the API/action response shape, not just be hidden in the UI — the
- * fields must not be present in the JSON at all.
+ * Strips customer PII (name/phone/LINE ID/customer message/internal notes)
+ * from a lead payload before it leaves the server for a
+ * CHANNEL_EXECUTIVE-scoped request. This must run on the API/action response
+ * shape, not just be hidden in the UI — the fields must not be present in
+ * the JSON at all.
  */
 export function redactLeadPII<T extends Record<string, unknown>>(
   lead: T

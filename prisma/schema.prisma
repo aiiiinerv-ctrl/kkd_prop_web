@@ -145,6 +145,14 @@ model Lead {
   // multi-select). Used as the "ประเภทระบบ" export column (see
   // src/lib/reports/export-rows.ts). Null for SURVEY-type leads.
   interestedSystems Json?
+  // Slug of the Package/Service the lead clicked "request quote" from (the
+  // `?package=`/`?service=` query param on the booking link — see
+  // src/lib/booking-links.ts). Server-validated against the Package/Service
+  // table at submit time (submit-quote.ts / submit-survey-booking.ts); an
+  // unrecognized slug is stored as null rather than the raw param. This is
+  // link-click context, not something the customer typed in.
+  interestedPackageSlug String?
+  interestedServiceSlug String?
   locale          String         @default("th")
   sourceChannelId String?
   sourceChannel   PromoChannel?  @relation(fields: [sourceChannelId], references: [id])
@@ -162,7 +170,18 @@ model Lead {
   // that were already SIGNED+ before this column existed (stays null, shown
   // as "-" in the export).
   closedAt        DateTime?
-  notes           String?        @db.Text
+  // Written once by the public submit actions at create time
+  // (submit-quote.ts / submit-survey-booking.ts) — no admin action ever
+  // writes this. What the customer typed into "ข้อความเพิ่มเติม".
+  customerMessage String?        @db.Text
+  // Admin-only free text ("บันทึกภายใน"), written by updateLeadNotes().
+  // Column in the DB is still named "notes" for historical reasons (this
+  // field used to double as both the customer's message and the admin's
+  // notes, which is why customerMessage above exists as a separate column)
+  // — renaming the DB column isn't worth the migration risk on a host with
+  // no external MySQL access, so we keep the @map and rename only the
+  // Prisma-side field name.
+  internalNotes   String?        @db.Text @map("notes")
   booking         SurveyBooking?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt

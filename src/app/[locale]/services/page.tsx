@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CtaBanner } from "@/components/site/cta-banner";
 import { SectionHeading } from "@/components/site/section-heading";
 import { Link } from "@/i18n/navigation";
+import { bookingHref } from "@/lib/booking-links";
 import { getPublishedServices, type ServiceView } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
 
@@ -66,7 +67,7 @@ export default async function ServicesPage({
           ))}
         </ul>
         <Link
-          href={{ pathname: "/booking", query: { tab: "quote", service: service.slug } }}
+          href={bookingHref({ tab: "quote", service: service.slug })}
           className="btn-pill-outline mt-6"
         >
           {isMaintenance ? tCommon("requestMaintenance") : tCommon("requestQuote")}
