@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Pencil, Plus, Trash2, Users } from "lucide-react";
+import { Check, Copy, Pencil, Plus, Users } from "lucide-react";
 import { useState, useTransition } from "react";
 import { CHANNEL_TYPE_LABELS } from "@/lib/enum-labels";
 import { toast } from "sonner";
@@ -385,15 +385,12 @@ export function ChannelsClient({
                             >
                               <Pencil className="size-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              className="p-2"
-                              aria-label="ลบ"
+                            <DeleteConfirm
+                              title={`ลบผู้ดำเนินการ "${e.name}"?`}
+                              description="ลิงก์แนะนำของผู้ดำเนินการรายนี้จะใช้ไม่ได้อีก และการลบจะถูกบันทึกในประวัติการแก้ไข"
                               disabled={isPending}
-                              onClick={() => onExecDelete(e.id)}
-                            >
-                              <Trash2 className="size-4 text-destructive" />
-                            </Button>
+                              onConfirm={() => onExecDelete(e.id)}
+                            />
                           </TableCell>
                         )}
                       </TableRow>
