@@ -5,6 +5,11 @@
 // on the booking page itself) gets attributed to the matching
 // PromoChannel/ChannelExecutive. Never previously covered by a dedicated
 // script (Sprint 3 note + Sprint 9 task brief).
+//
+// Since the cookie-consent sprint, `kkd_ref` is only set once the visitor has
+// agreed to advertisement cookies, so every case that expects the cookie now
+// starts from a context that already carries CookieYes' consent cookie — see
+// consentedContext(). Case 6 covers the other direction.
 import "dotenv/config";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { chromium } from "playwright";
@@ -34,6 +39,23 @@ function randPhone() {
   return `09${String(Math.floor(10000000 + Math.random() * 89999999))}`;
 }
 
+// A browser that has already accepted advertisement cookies. Real visitors get
+// this cookie from the CookieYes banner; here we plant it directly so these
+// cases test attribution rather than the third-party banner's own UI.
+async function consentedContext() {
+  const context = await browser.newContext();
+  await context.addCookies([
+    {
+      name: "cookieyes-consent",
+      value:
+        "consentid:e2e,consent:yes,action:yes,necessary:yes,functional:no,analytics:no,performance:no,advertisement:yes,other:no",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  return context;
+}
+
 async function submitQuoteLead(page: import("playwright").Page, name: string, phone: string) {
   await page.fill('input[name="name"]', name);
   await page.fill('input[name="phone"]', phone);
@@ -46,7 +68,7 @@ async function submitQuoteLead(page: import("playwright").Page, name: string, ph
 // --- Case 1: ref code = ChannelExecutive.refCode ("CHxxx-EXyy") -> both
 // autoSourceChannelId and autoSourceExecutiveId set ---
 {
-  const context = await browser.newContext();
+  const context = await consentedContext();
   const page = await context.newPage();
   const phone = randPhone();
 
@@ -81,7 +103,7 @@ async function submitQuoteLead(page: import("playwright").Page, name: string, ph
 // --- Case 2: ref code = PromoChannel.refCode directly (no executive) ->
 // autoSourceChannelId set, autoSourceExecutiveId stays null ---
 {
-  const context = await browser.newContext();
+  const context = await consentedContext();
   const page = await context.newPage();
   const phone = randPhone();
 
@@ -100,7 +122,9 @@ async function submitQuoteLead(page: import("playwright").Page, name: string, ph
   await context.close();
 }
 
-// --- Case 3: no ref at all -> lead stays unattributed (direct) ---
+// --- Case 3: no ref at all -> lead stays unattributed (direct). Plain
+// context, no consent cookie: this is the ordinary first-time visitor, and
+// it is also the shape Case 6's visitor ends up in. ---
 {
   const context = await browser.newContext();
   const page = await context.newPage();
@@ -136,7 +160,7 @@ async function submitQuoteLead(page: import("playwright").Page, name: string, ph
 // covered by src/lib/ref-attribution.ts's early-return structure (same
 // function already proven above to resolve real codes correctly). ---
 {
-  const context = await browser.newContext();
+  const context = await consentedContext();
   const page = await context.newPage();
 
   await page.goto("http://localhost:3000/th/booking?tab=quote&ref=NOT-A-REAL-CODE");
@@ -155,7 +179,7 @@ async function submitQuoteLead(page: import("playwright").Page, name: string, ph
 // stickiness, per the proxy.ts comment: "if a visitor already has a cookie
 // and revisits without ?ref=, the existing cookie is left untouched") ---
 {
-  const context = await browser.newContext();
+  const context = await consentedContext();
   const page = await context.newPage();
 
   await page.goto(`http://localhost:3000/th?ref=${facebookChannel.refCode}`);
@@ -166,6 +190,59 @@ async function submitQuoteLead(page: import("playwright").Page, name: string, ph
   console.log(
     `CHANNEL TRACKING: cookie persists on later visit without ?ref= ${
       refCookie?.value === facebookChannel.refCode ? "✓" : "✗ FAIL"
+    }`
+  );
+
+  await context.close();
+}
+
+// --- Case 6: `?ref=` without consent -> no cookie at all, and an existing
+// cookie from an earlier consented visit is left alone rather than deleted.
+// The second half matters: the agreed position is that cookies set under the
+// rules in force at the time expire on their own within 30 days; clearing
+// them protects nobody and destroys real attribution data. No submission
+// here — Case 3 already proves that a visitor with no `kkd_ref` is recorded
+// as direct, and the rate-limit budget explained above is spent. ---
+{
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
+  await page.goto(`http://localhost:3000/th?ref=${facebookChannel.refCode}`);
+  const withoutConsent = await context.cookies();
+  console.log(
+    `CHANNEL TRACKING: ?ref= without advertisement consent sets no kkd_ref ${
+      withoutConsent.find((c) => c.name === "kkd_ref") === undefined ? "✓" : "✗ FAIL"
+    }`
+  );
+
+  // Same browser, now consenting: the cookie appears...
+  await context.addCookies([
+    {
+      name: "cookieyes-consent",
+      value: "consent:yes,necessary:yes,advertisement:yes,other:no",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto(`http://localhost:3000/th?ref=${facebookChannel.refCode}`);
+  const afterConsent = await context.cookies();
+  console.log(
+    `CHANNEL TRACKING: same visitor after consenting does get kkd_ref ${
+      afterConsent.find((c) => c.name === "kkd_ref")?.value === facebookChannel.refCode
+        ? "✓"
+        : "✗ FAIL"
+    }`
+  );
+
+  // ...and withdrawing consent must not wipe it.
+  await context.clearCookies({ name: "cookieyes-consent" });
+  await page.goto(`http://localhost:3000/th?ref=${facebookChannel.refCode}`);
+  const afterWithdrawal = await context.cookies();
+  console.log(
+    `CHANNEL TRACKING: withdrawing consent leaves an existing kkd_ref in place ${
+      afterWithdrawal.find((c) => c.name === "kkd_ref")?.value === facebookChannel.refCode
+        ? "✓"
+        : "✗ FAIL"
     }`
   );
 
