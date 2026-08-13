@@ -58,11 +58,19 @@ export default async function CookiePolicyPage({
   return (
     <main>
       <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
-        <SectionHeading
-          title={t("title")}
-          subtitle={t("intro")}
-          caption={`${t("lastUpdated")} · ${t("controller")}`}
-        />
+        <SectionHeading title={t("title")} subtitle={t("intro")} />
+
+        {/* Not SectionHeading's `caption`, which is faded italic 12px and
+            measures ~3.1:1 — below AA. This line exists precisely to be read:
+            a policy with no visible date can't be judged current, and the
+            controller's identity is the other half of that. Left as its own
+            element rather than lightening `caption` itself, which the
+            portfolio page also uses.
+            Keep `lastUpdated` in step with edits to this page's wording — a
+            stale date is worse than no date. */}
+        <p className="-mt-6 mb-10 text-center text-xs text-muted-foreground">
+          {t("lastUpdated")} · {t("controller")}
+        </p>
 
         <h2 className="text-lg font-semibold text-primary">{t("tableHeading")}</h2>
 
@@ -79,9 +87,12 @@ export default async function CookiePolicyPage({
               <div className="font-mono text-xs break-all text-foreground">{cookie.name}</div>
               <p className="mt-2 text-sm text-muted-foreground">{cookie.purpose}</p>
               <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-                <dt className="text-muted-foreground/70">{t("colDuration")}</dt>
+                {/* Full-strength muted, not /70: at 12px the faded token
+                    measures ~3.1:1, and these labels are the only thing
+                    telling a phone reader which value is which. */}
+                <dt className="text-muted-foreground">{t("colDuration")}</dt>
                 <dd className="text-muted-foreground">{cookie.duration}</dd>
-                <dt className="text-muted-foreground/70">{t("colCategory")}</dt>
+                <dt className="text-muted-foreground">{t("colCategory")}</dt>
                 <dd className="text-muted-foreground">{cookie.category}</dd>
               </dl>
             </li>
@@ -138,7 +149,20 @@ export default async function CookiePolicyPage({
         </div>
 
         <h2 className="mt-10 text-lg font-semibold text-primary">{t("thirdPartyHeading")}</h2>
-        <p className="mt-3 text-sm text-muted-foreground">{t("thirdPartyBody")}</p>
+        <p className="mt-3 text-sm text-muted-foreground">
+          {t.rich("thirdPartyBody", {
+            link: (chunks) => (
+              <a
+                href="https://policies.google.com/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline underline-offset-2 hover:text-brand-orange"
+              >
+                {chunks}
+              </a>
+            ),
+          })}
+        </p>
 
         <h2 className="mt-10 text-lg font-semibold text-primary">{t("manageHeading")}</h2>
         <p className="mt-3 text-sm text-muted-foreground">{t("manageBody")}</p>

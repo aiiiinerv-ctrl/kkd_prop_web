@@ -398,7 +398,7 @@
     "consentPurpose": "Stores the consent choice you made, so you are not asked again on every visit.",
     "consentDuration": "1 year",
     "thirdPartyHeading": "Embedded third-party services",
-    "thirdPartyBody": "Our Contact page embeds a Google Maps view showing where we are. Opening that page may let Google set its own cookies in your browser. Those are outside our control and are not listed in the table above; see Google's privacy policy for details.",
+    "thirdPartyBody": "Our Contact page embeds a Google Maps view showing where we are. Opening that page may let Google set its own cookies in your browser. Those are outside our control and are not listed in the table above; see <link>Google's privacy policy</link> for details.",
     "manageHeading": "Changing your consent",
     "manageBody": "You can change your mind at any time using the cookie settings button in the corner of the screen, or by clearing this site's cookies in your browser, which brings the consent banner back. Declining does not affect your use of the website.",
     "contactHeading": "Questions",
