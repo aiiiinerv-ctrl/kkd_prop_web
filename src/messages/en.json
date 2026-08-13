@@ -35,8 +35,6 @@
     "email": "contact@kkdproperty.com",
     "hours": "Mon - Sat 09:00 - 18:00",
     "copyright": "Copyright © {year} KKD PROPERTY CO., LTD. All Rights Reserved.",
-    "privacyPolicy": "Privacy Policy",
-    "termsOfUse": "Terms of Use",
     "cookiePolicy": "Cookie Policy",
     "siteMap": "Site Map",
     "serviceOnGrid": "On-Grid System",
@@ -375,6 +373,31 @@
     "calculatorTitle": "Solar Calculator | KKD PROPERTY",
     "calculatorDesc": "Calculate the right solar system size from your monthly electricity bill, with estimated savings.",
     "testimonialsTitle": "Customer Testimonials | KKD PROPERTY",
-    "testimonialsDesc": "Read what real customers say about their solar installation experience with KKD PROPERTY."
+    "testimonialsDesc": "Read what real customers say about their solar installation experience with KKD PROPERTY.",
+    "cookiePolicyTitle": "Cookie Policy | KKD PROPERTY",
+    "cookiePolicyDesc": "Every cookie the KKD PROPERTY website stores, what each one is for, how long it lasts, and how to change your consent."
+  },
+  "cookiePolicy": {
+    "title": "Cookie Policy",
+    "intro": "This website uses only the cookies it needs to work, plus one marketing cookie that is set only after you have given consent. The table below lists every cookie this site actually stores — there are no others.",
+    "tableHeading": "Cookies used on this site",
+    "colName": "Cookie",
+    "colPurpose": "Purpose",
+    "colDuration": "Retention",
+    "colCategory": "Category",
+    "categoryNecessary": "Necessary",
+    "categoryAdvertisement": "Advertisement",
+    "localePurpose": "Remembers the language you chose (Thai/English) so you don't have to pick it again.",
+    "localeDuration": "1 year",
+    "sessionPurpose": "Keeps an administrator signed in. Never set for ordinary visitors.",
+    "sessionDuration": "Until you sign out",
+    "refPurpose": "Records which promotional link brought you here, so we know where your enquiry came from.",
+    "refDuration": "30 days",
+    "consentPurpose": "Stores the consent choice you made, so you are not asked again on every visit.",
+    "consentDuration": "1 year",
+    "manageHeading": "Changing your consent",
+    "manageBody": "You can change your mind at any time using the cookie settings button in the corner of the screen, or by clearing this site's cookies in your browser, which brings the consent banner back. Declining does not affect your use of the website.",
+    "contactHeading": "Questions",
+    "contactBody": "For any question about our use of cookies or your personal data, contact KKD PROPERTY CO., LTD. on 082-473-1567 or at contact@kkdproperty.com."
   }
 }

@@ -141,15 +141,13 @@ export function SiteFooter() {
       <div className="site-footer-bottom bg-[#1a1a1a] px-4 py-5 sm:px-6">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 text-center text-xs text-brand-gold sm:flex-row">
           <div className="flex flex-wrap justify-center gap-5">
-            <a href="#" className="transition-colors hover:text-white">
-              {t("privacyPolicy")}
-            </a>
-            <a href="#" className="transition-colors hover:text-white">
-              {t("termsOfUse")}
-            </a>
-            <a href="#" className="transition-colors hover:text-white">
+            {/* Privacy policy and terms used to sit here as `href="#"`. A
+                policy link that goes nowhere is worse than no link — it
+                announces the policy exists and then proves it doesn't. They
+                come back when the customer's own wording arrives, TH and EN. */}
+            <Link href="/cookie-policy" className="transition-colors hover:text-white">
               {t("cookiePolicy")}
-            </a>
+            </Link>
             <a href="/sitemap.xml" className="transition-colors hover:text-white">
               {t("siteMap")}
             </a>

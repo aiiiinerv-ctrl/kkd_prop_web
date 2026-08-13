@@ -13,7 +13,8 @@ type MetaKey =
   | "booking"
   | "contact"
   | "calculator"
-  | "testimonials";
+  | "testimonials"
+  | "cookiePolicy";
 
 /**
  * Localized title/description + hreflang alternates for a public page.
