@@ -132,3 +132,25 @@ npx tsx scripts/smoke-test-production.mts --check /th/cookie-policy
 - คอมเมนต์ปิดใน #26: baseline attribution (T9) + คำสั่ง rollback + สิ่งที่ต้องแจ้งลูกค้า (ต้องส่งเนื้อหา privacy policy + terms มา TH/EN, บัญชี CookieYes เป็นของลูกค้าเพื่อดูแลต่อหลังหมดประกัน)
 
 **จงใจไม่ทำในสปรินต์นี้:** ร่างเนื้อหา privacy policy / terms (มติ #23 ข้อ 4 — ต้องมาจากฝ่ายกฎหมายลูกค้า) · อัปเป็น Basic plan เพื่อแบนเนอร์ EN (เปลี่ยนเงื่อนไขการเงินฝ่ายเดียว) · GA (#25) · UTM/gclid (#24) · G9 (#21) · รีวิวซ้ำ #20 · ล้าง `kkd_ref` เก่า (มติ #23 ข้อ 3)
+
+---
+
+## Go-live checklist (เพิ่มหลัง implement — สิ่งที่พิสูจน์แล้วบนเครื่องจริงและที่ review เจอ)
+
+**ต้องทำในแดชบอร์ด CookieYes ก่อนใส่ env var** (agent ทำแทนไม่ได้ ต้องใช้ browser จริง)
+
+1. แก้โดเมนจาก `http://www.kkdproperty.co.th` → `https://kkdproperty.co.th` (ไม่มี www) — ถ้าไม่แก้ แบนเนอร์ไม่ขึ้น และอาการแยกไม่ออกจาก "รอ ISR ไม่ครบ"
+2. เช็คว่า Free plan มีสวิตช์ **"reload after consent"** ไหม — ถ้าไม่มี ต้องเขียน `/api/ref` route กู้ attribution (อนุมัติล่วงหน้าแล้ว)
+3. **ปิดลิงก์ "Privacy Policy" ในแบนเนอร์ หรือชี้ไป `/th/cookie-policy`** — แบนเนอร์ CookieYes ตาม default มีลิงก์นี้ แต่เว็บไม่มีหน้า privacy policy แล้ว (ถอดออกตามมติ #23 ข้อ 4) ถ้าไม่ปิด จะได้แบนเนอร์ที่กดแล้ว 404 ตั้งแต่วันแรก
+4. เปิดหมวด **necessary + advertisement** เท่านั้น ; เพิ่ม `kkd_ref` เข้าหมวด advertisement ด้วยมือ (scan หาไม่เจอ เพราะตั้งจาก server)
+5. ยืนยันว่ามี **ปุ่มตั้งค่าคุกกี้ (revisit consent)** จริงบน Free plan — หน้านโยบายอ้างถึงปุ่มนี้ ถ้าไม่มีต้องแก้ข้อความ `cookiePolicy.manageBody` ทั้ง TH/EN (มีทางสำรอง "ลบคุกกี้ในเบราว์เซอร์" อยู่แล้ว จึงไม่ถึงกับใช้ไม่ได้)
+
+**ลำดับตอนเปิดใช้งาน**
+
+ใส่ `NEXT_PUBLIC_COOKIEYES_ID=ebaf06b6a5fed3292f124e8e29195a7c` ในแพเนล → touch `tmp/restart.txt` → **รอ ≥5 นาที แล้วโหลดหน้าสองครั้ง** (`revalidate = 300` — ครั้งแรกได้ของเก่าและสั่ง regenerate ครั้งที่สองถึงได้ของใหม่ ทดสอบยืนยันกลไกนี้บน local แล้ว) ตัดสินว่าพังก่อนครบเวลานี้คือตัดสินผิด
+
+**Rollback:** ลบค่า env var → touch restart → รอ 5 นาที แบนเนอร์หายโดยไม่ต้อง deploy ซ้ำ
+
+**Baseline attribution:** อ่านจาก `/admin/reports` บน production **ก่อน** deploy (MySQL ต่อจากข้างนอกไม่ได้ ตัวเลข dev DB เป็นขยะ e2e ใช้เทียบไม่ได้) แล้วเทียบซ้ำที่ 7 และ 30 วัน
+
+**ยกออกเป็น ticket แยก:** #27 — Google Maps iframe บนหน้าติดต่อเราตั้งคุกกี้ third-party โดยไม่ขอความยินยอม (พบตอน design review ; หน้านโยบายแก้ถ้อยคำให้ตรงความจริงแล้ว แต่ตัวคุกกี้ยังถูกตั้งอยู่)
