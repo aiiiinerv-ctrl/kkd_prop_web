@@ -203,6 +203,32 @@ submission succeeded or failed. This produced a false "deploy verified" on
 2026-08-12 while the form was in fact returning 500 on every submit. Assert on
 the POST status code, then on the row in the database.
 
+**ISR is cached per page, not per site.** If the deploy changes anything rendered from a
+root layout — a script tag, an env-var-driven flag, footer markup — the change appears
+page by page as each one's `revalidate` window lapses, and only for pages someone
+actually requests. Observed 2026-08-13: `/th` carried a newly enabled third-party script
+while `/en`, `/th/about`, `/th/services`, `/th/packages` and `/th/calculator` still did
+not, several minutes after the restart. Checking the homepage and calling it done would
+have shipped half a site without the change, silently.
+
+After any env-var flip, warm every public route twice — the first request serves stale
+and schedules regeneration, the second returns the new output:
+
+```bash
+pages=(/th /en /th/about /en/about /th/services /en/services /th/packages /en/packages \
+  /th/portfolio /en/portfolio /th/calculator /en/calculator /th/contact /en/contact \
+  /th/booking /en/booking /th/testimonials /en/testimonials /th/cookie-policy /en/cookie-policy)
+for u in $pages; do curl -s -o /dev/null "https://kkdproperty.co.th$u"; done
+sleep 10
+for u in $pages; do curl -s -o /dev/null "https://kkdproperty.co.th$u"; done
+```
+
+Then assert the marker on every page, not just one. The same applies to rollback: pulling
+the env var out leaves the old output cached until each page regenerates.
+
+Note this is a zsh array on purpose — `for u in $PAGES` over a plain string does not
+word-split in zsh the way it does in bash, and silently curls one nonsense URL instead.
+
 **Smoke test** — run `scripts/smoke-test-production.mts` (see below) or the
 standard checks manually:
 
