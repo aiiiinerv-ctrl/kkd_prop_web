@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Sans, Noto_Sans_Thai } from "next/font/google";
 import { notFound } from "next/navigation";
+import Script from "next/script";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { setRequestLocale } from "next-intl/server";
 import { LocalBusinessJsonLd } from "@/components/site/local-business-jsonld";
@@ -27,6 +28,35 @@ const notoSansThai = Noto_Sans_Thai({
 export const metadata: Metadata = {
   title: "KKD PROPERTY CO., LTD.",
 };
+
+// CookieYes runs the consent banner (quote line item 7, Free plan). The id is
+// a public identifier — it ships in every page's HTML — but it stays an env
+// var so the banner can be switched off by clearing it in the hosting panel,
+// no redeploy involved. The Free plan has no staging site, so production is
+// the first place this is ever seen; an unset id rendering nothing at all is
+// what makes that safe.
+//
+// Read here, in the server layout, on purpose: NEXT_PUBLIC_* is inlined at
+// build time into anything sent to the browser, which would freeze the value
+// into the artifact and defeat the switch. Don't move this into a client
+// component.
+//
+// beforeInteractive puts it ahead of our own scripts in the initial HTML,
+// which CookieYes needs — its auto-blocking works by intercepting scripts
+// that load after it. The strategy is only valid in a root layout, which this
+// is; the admin shell is a separate root layout and deliberately has no
+// banner, being staff traffic rather than public.
+function CookieYesScript() {
+  const id = process.env.NEXT_PUBLIC_COOKIEYES_ID;
+  if (!id) return null;
+  return (
+    <Script
+      id="cookieyes"
+      strategy="beforeInteractive"
+      src={`https://cdn-cookieyes.com/client_data/${id}/script.js`}
+    />
+  );
+}
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -58,6 +88,7 @@ export default async function LocaleLayout({
       suppressHydrationWarning
     >
       <body className="site-shell min-h-full flex flex-col">
+        <CookieYesScript />
         <LocalBusinessJsonLd />
         <NextIntlClientProvider>
           <SiteHeader showTestimonials={testimonials.length > 0} />
