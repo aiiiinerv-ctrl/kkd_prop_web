@@ -252,6 +252,7 @@ scenarios that a targeted content check caught.
 | `Specified key was too long` (MySQL 1071) | Index on multiple default `VARCHAR(191)` columns exceeds this panel's InnoDB key-length limit | Use explicit shorter `@db.VarChar(n)` |
 | Pages all return 200 but every form submit returns 500, and `/api/admin/leads` 500s | A migration in the deploy never reached production — Prisma is querying a column that doesn't exist | Apply the DDL via phpMyAdmin (`ADD COLUMN IF NOT EXISTS`), verify with `SHOW COLUMNS`; no redeploy needed, the fix takes effect immediately |
 | Upload output contains the FTP password in cleartext | `deploy/upload-dist.sh` runs `curl -v`, which prints the `PASS` line | Rotate the password if it has been pasted anywhere; consider filtering `PASS` out of the script's output |
+| Consent banner reappears on every page, `kkd_ref` never sticks, admin login won't hold | The visitor is on **http**. This host answers plain http with 200 unless told otherwise, and every cookie that matters (`kkd_ref`, `cookieyes-consent`, `authjs.session-token`) is `Secure`, so the browser drops all of them. Every test over `https://` passes, which is why it hides. | Panel → SSL Certificates → the domain → tick **Force SSL with https redirect** (posts `CMD_DOMAIN` `action=private_html&force_ssl=yes`; the redirect keeps the query string, so `?ref=` survives). Enabled 2026-08-14. Don't redirect in `src/proxy.ts` instead — TLS terminates at LiteSpeed and the app can't reliably tell, so it risks an infinite loop. |
 
 ## Related docs
 
