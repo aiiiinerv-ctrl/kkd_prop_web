@@ -5,6 +5,7 @@ import Script from "next/script";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { setRequestLocale } from "next-intl/server";
 import { LocalBusinessJsonLd } from "@/components/site/local-business-jsonld";
+import { RefConsentCapture } from "@/components/site/ref-consent-capture";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteHeader } from "@/components/site/site-header";
 import { getPublishedTestimonials } from "@/lib/content";
@@ -89,6 +90,7 @@ export default async function LocaleLayout({
     >
       <body className="site-shell min-h-full flex flex-col">
         <CookieYesScript />
+        <RefConsentCapture />
         <LocalBusinessJsonLd />
         <NextIntlClientProvider>
           <SiteHeader showTestimonials={testimonials.length > 0} />

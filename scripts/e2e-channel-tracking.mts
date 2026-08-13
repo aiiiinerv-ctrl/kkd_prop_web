@@ -249,5 +249,84 @@ async function submitQuoteLead(page: import("playwright").Page, name: string, ph
   await context.close();
 }
 
+// --- Case 7: `/api/ref` recovers the attribution the banner would otherwise
+// cost. This is the sequence a real promo visitor follows and Case 6 cannot
+// reach: they arrive with `?ref=` and no consent, so the middleware sets
+// nothing, and they accept in the browser — where no further request carries
+// the code. The page then reports the code it still has in its URL, and the
+// route sets the cookie only after re-checking consent server-side. ---
+{
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
+  await page.goto(`http://localhost:3000/th?ref=${facebookChannel.refCode}`);
+
+  // Consent arrives client-side, exactly as the banner grants it: no
+  // navigation, so the middleware never sees it.
+  await context.addCookies([
+    {
+      name: "cookieyes-consent",
+      value: "consent:yes,necessary:yes,advertisement:yes,other:no",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  const status = await page.evaluate(async (code) => {
+    const res = await fetch(`/api/ref?ref=${encodeURIComponent(code)}`, {
+      credentials: "same-origin",
+    });
+    return res.status;
+  }, facebookChannel.refCode);
+  const recovered = await context.cookies();
+  console.log(
+    `CHANNEL TRACKING: /api/ref after in-browser consent restores kkd_ref ${
+      status === 200 &&
+      recovered.find((c) => c.name === "kkd_ref")?.value === facebookChannel.refCode
+        ? "✓"
+        : `✗ FAIL (status ${status})`
+    }`
+  );
+
+  await context.close();
+}
+
+// --- Case 8: the same route refuses everything else. A public endpoint that
+// sets a marketing cookie has to be uninteresting to anyone who calls it
+// without consent, and unusable as a way to write arbitrary cookie values. ---
+{
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.goto("http://localhost:3000/th");
+
+  // Inlined rather than pulled into a helper: tsx compiles named functions
+  // with an esbuild `__name` annotation, which doesn't exist inside the page.
+  const denied = await page.evaluate(async (code) => {
+    const opts = { credentials: "same-origin" as const };
+    return {
+      noConsent: (await fetch(`/api/ref?ref=${encodeURIComponent(code)}`, opts)).status,
+      noRef: (await fetch("/api/ref", opts)).status,
+      junkRef: (await fetch(`/api/ref?ref=${encodeURIComponent("../../etc/passwd")}`, opts))
+        .status,
+    };
+  }, facebookChannel.refCode);
+  const after = await context.cookies();
+  console.log(
+    `CHANNEL TRACKING: /api/ref without consent is refused and sets nothing ${
+      denied.noConsent === 403 && after.find((c) => c.name === "kkd_ref") === undefined
+        ? "✓"
+        : `✗ FAIL (status ${denied.noConsent})`
+    }`
+  );
+  console.log(
+    `CHANNEL TRACKING: /api/ref rejects a missing or malformed ref code ${
+      denied.noRef === 400 && denied.junkRef === 400
+        ? "✓"
+        : `✗ FAIL (missing ${denied.noRef}, junk ${denied.junkRef})`
+    }`
+  );
+
+  await context.close();
+}
+
 await browser.close();
 await prisma.$disconnect();
