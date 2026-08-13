@@ -58,10 +58,44 @@ export default async function CookiePolicyPage({
   return (
     <main>
       <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
-        <SectionHeading title={t("title")} subtitle={t("intro")} />
+        <SectionHeading
+          title={t("title")}
+          subtitle={t("intro")}
+          caption={`${t("lastUpdated")} · ${t("controller")}`}
+        />
 
         <h2 className="text-lg font-semibold text-primary">{t("tableHeading")}</h2>
-        <div className="mt-4 overflow-x-auto rounded-xl border border-border/70 shadow-sm">
+
+        {/* Below sm the same four fields become one card per cookie. A
+            horizontally scrolling table at 375px shows barely one and a half
+            columns, hides retention and category entirely, and reads as broken
+            rather than scrollable — and most visitors here are on a phone. */}
+        <ul className="mt-4 space-y-4 sm:hidden">
+          {COOKIES.map((cookie) => (
+            <li
+              key={cookie.name}
+              className="rounded-xl border border-border/70 p-4 shadow-sm"
+            >
+              <div className="font-mono text-xs break-all text-foreground">{cookie.name}</div>
+              <p className="mt-2 text-sm text-muted-foreground">{cookie.purpose}</p>
+              <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                <dt className="text-muted-foreground/70">{t("colDuration")}</dt>
+                <dd className="text-muted-foreground">{cookie.duration}</dd>
+                <dt className="text-muted-foreground/70">{t("colCategory")}</dt>
+                <dd className="text-muted-foreground">{cookie.category}</dd>
+              </dl>
+            </li>
+          ))}
+        </ul>
+
+        <div
+          // Scrollable regions need to be focusable, or a keyboard-only visitor
+          // cannot reach the columns that are off-screen.
+          tabIndex={0}
+          role="region"
+          aria-label={t("tableHeading")}
+          className="mt-4 hidden overflow-x-auto rounded-xl border border-border/70 shadow-sm sm:block"
+        >
           <table className="w-full min-w-[42rem] border-collapse text-left text-sm">
             <thead className="bg-muted/50">
               <tr>
@@ -84,7 +118,9 @@ export default async function CookiePolicyPage({
                 <tr key={cookie.name} className="border-t border-border/70 align-top">
                   <th
                     scope="row"
-                    className="px-4 py-3 font-mono text-xs font-normal whitespace-nowrap text-primary"
+                    // Not text-primary: navy on white reads as a hyperlink, and
+                    // these are cookie names, not somewhere to click.
+                    className="px-4 py-3 font-mono text-xs font-normal whitespace-nowrap text-foreground"
                   >
                     {cookie.name}
                   </th>
@@ -100,6 +136,9 @@ export default async function CookiePolicyPage({
             </tbody>
           </table>
         </div>
+
+        <h2 className="mt-10 text-lg font-semibold text-primary">{t("thirdPartyHeading")}</h2>
+        <p className="mt-3 text-sm text-muted-foreground">{t("thirdPartyBody")}</p>
 
         <h2 className="mt-10 text-lg font-semibold text-primary">{t("manageHeading")}</h2>
         <p className="mt-3 text-sm text-muted-foreground">{t("manageBody")}</p>
