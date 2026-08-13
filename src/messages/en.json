@@ -390,7 +390,7 @@
     "categoryNecessary": "Necessary",
     "categoryAdvertisement": "Advertisement",
     "localePurpose": "Remembers the language you chose (Thai/English) so you don't have to pick it again.",
-    "localeDuration": "1 year",
+    "localeDuration": "Until you close your browser",
     "sessionPurpose": "Keeps an administrator signed in. Never set for ordinary visitors.",
     "sessionDuration": "Until you sign out",
     "refPurpose": "Records which promotional link brought you here, so we know where your enquiry came from.",
