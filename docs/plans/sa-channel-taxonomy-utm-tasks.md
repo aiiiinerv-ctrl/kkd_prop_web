@@ -119,10 +119,10 @@ ALTER TABLE `PromoChannel` ADD COLUMN IF NOT EXISTS `utmCampaign` VARCHAR(60) NU
 
 ## Sprint 2 — ลิงก์โปรโมท + UTM builder (ขนาด: S, ~0.5 วัน)
 
-2.1 `src/lib/promo-link.ts` (**ไฟล์ใหม่** — ย้ายตรรกะออกจาก client component เพราะ Sprint 4 ต้องใช้ฝั่ง server ด้วย) — `buildPromoLink({ siteUrl, refCode, landingPath, subType, utmCampaign })` คืน URL พร้อม `?ref=` + utm 4 ตัว; `utm_content` = refCode ของแถวนั้น | **nextjs-dev** | ⏳ รอ #1.1
-2.2 `src/app/admin/(dashboard)/channels/channels-client.tsx:58` — ลบ `promoLink()` ตัวเดิม (`${siteUrl}/?ref=`) เรียก `buildPromoLink()` แทน ทั้งแถวช่องทาง (บรรทัด ~220) และแถวพนักงาน (~388) | **nextjs-dev** | ⏳ รอ #2.1
-2.3 หน้า `/admin/channels` — แสดงลิงก์ยาวขึ้นมาก (มี utm 4 ตัว) ต้องไม่ทำตารางแตก: ตัดด้วย `truncate` + tooltip เต็ม, ปุ่ม copy คัดลอกตัวเต็มเสมอ | **ux-ui-expert** ออกแบบ → **nextjs-dev** implement | ⏳ รอ #2.2
-2.4 ตรวจ `?ref=` ยังทำงานเมื่อมี utm ต่อท้าย และ landing `/th/packages` ไม่โดน locale middleware กินพารามิเตอร์ — ต่อยอด `scripts/e2e-channel-tracking.mts` เพิ่มเคส `/th/packages?ref=…&utm_*` | **nextjs-dev** | ⏳ รอ #2.2
+2.1 `src/lib/promo-link.ts` (**ไฟล์ใหม่** — ย้ายตรรกะออกจาก client component เพราะ Sprint 4 ต้องใช้ฝั่ง server ด้วย) — `buildPromoLink({ siteUrl, refCode, landingPath, subType, utmCampaign })` คืน URL พร้อม `?ref=` + utm 4 ตัว; `utm_content` = refCode ของแถวนั้น | **nextjs-dev** | ✅ ทำแล้ว — ช่องทางที่ `subType` เป็น null หรือไม่มี utm default (CP/RF/EF/AG) ได้ลิงก์แบบมีแค่ `?ref=` ไม่มี utm ว่าง ๆ
+2.2 `src/app/admin/(dashboard)/channels/channels-client.tsx:58` — ลบ `promoLink()` ตัวเดิม (`${siteUrl}/?ref=`) เรียก `buildPromoLink()` แทน ทั้งแถวช่องทาง (บรรทัด ~220) และแถวพนักงาน (~388) | **nextjs-dev** | ✅ ทำแล้ว — ลิงก์พนักงานสืบทอด `landingPath`/`subType`/`utmCampaign` จากช่องทางแม่ ใช้ refCode ตัวเอง
+2.3 หน้า `/admin/channels` — แสดงลิงก์ยาวขึ้นมาก (มี utm 4 ตัว) ต้องไม่ทำตารางแตก: ตัดด้วย `truncate` + tooltip เต็ม, ปุ่ม copy คัดลอกตัวเต็มเสมอ | **nextjs-dev** | ✅ ทำแล้ว — ใช้ native `title` attribute แทน tooltip component (ไม่มี Tooltip primitive ใน shadcn setup ของโปรเจกต์ และงานเล็กเกินคุ้มรอบออกแบบเต็มของ **ux-ui-expert** ตามที่ตัดสินระหว่างทาง) ตรวจกับ render จริงแล้ว ตารางไม่แตก
+2.4 ตรวจ `?ref=` ยังทำงานเมื่อมี utm ต่อท้าย และ landing `/th/packages` ไม่โดน locale middleware กินพารามิเตอร์ — ต่อยอด `scripts/e2e-channel-tracking.mts` เพิ่มเคส `/th/packages?ref=…&utm_*` | **nextjs-dev** | ✅ ทำแล้ว — Case 12
 
 ---
 
