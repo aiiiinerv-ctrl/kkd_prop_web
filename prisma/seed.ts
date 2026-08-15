@@ -69,16 +69,22 @@ async function seedAdmin() {
   console.log(`Admin user ready: ${email}`);
 }
 
-// Generates the next sequential `CH00N` code that isn't already taken —
-// existing channels (including leftover e2e test channels in dev.db) keep
-// whatever refCode they already have; only genuinely new rows get a fresh one.
-async function nextChannelRefCode(): Promise<string> {
+// Generates the next sequential `<prefix>00N` code within that prefix that
+// isn't already taken — existing channels (including leftover e2e test
+// channels in dev.db) keep whatever refCode they already have; only
+// genuinely new rows get a fresh one. Mirrors src/actions/channels.ts'
+// nextChannelRefCode() — both must agree or seed and the admin UI would hand
+// out codes on two different schemes. Legacy seed channels with no clean
+// taxonomy match (see seedPromoChannels()) fall back to the pre-taxonomy
+// "CH" prefix rather than being force-fit into a subType.
+async function nextChannelRefCode(prefix: string): Promise<string> {
   const last = await prisma.promoChannel.findFirst({
+    where: { refCode: { startsWith: prefix } },
     orderBy: { refCode: "desc" },
     select: { refCode: true },
   });
-  const lastNum = last ? Number(last.refCode.replace("CH", "")) || 0 : 0;
-  return `CH${String(lastNum + 1).padStart(3, "0")}`;
+  const lastNum = last ? Number(last.refCode.slice(prefix.length)) || 0 : 0;
+  return `${prefix}${String(lastNum + 1).padStart(3, "0")}`;
 }
 
 async function seedPromoChannels() {
@@ -89,6 +95,8 @@ async function seedPromoChannels() {
       nameEn: "Facebook",
       sortOrder: 1,
       type: "PLATFORM" as const,
+      // Clean 1:1 taxonomy match.
+      subType: "FB" as const,
       executive: { name: "ทีมการตลาด Facebook", phone: "0800000001" },
     },
     {
@@ -97,6 +105,7 @@ async function seedPromoChannels() {
       nameEn: "LINE",
       sortOrder: 2,
       type: "PLATFORM" as const,
+      subType: "LN" as const,
       executive: { name: "ทีมการตลาด LINE", phone: "0800000002" },
     },
     {
@@ -105,6 +114,11 @@ async function seedPromoChannels() {
       nameEn: "Google Search",
       sortOrder: 3,
       type: "PLATFORM" as const,
+      // No subType in the 10-value taxonomy actually means "organic search" —
+      // left unclassified rather than force-fit onto WS ("Website"), which is
+      // a different concept (direct site visits, not search-driven ones).
+      // Flag for the SA/admin to decide during the Sprint 5.6 manual pass.
+      subType: null,
       executive: { name: "ทีมการตลาด Google", phone: "0800000003" },
     },
     {
@@ -113,6 +127,7 @@ async function seedPromoChannels() {
       nameEn: "Referral",
       sortOrder: 4,
       type: "INDIVIDUAL" as const,
+      subType: "RF" as const,
       executive: { name: "ผู้แนะนำทั่วไป", phone: "0800000004" },
     },
     {
@@ -121,24 +136,32 @@ async function seedPromoChannels() {
       nameEn: "Other / Walk-in",
       sortOrder: 5,
       type: "COMPANY" as const,
+      // Same reasoning as google above — none of the 10 values means
+      // "walk-in", and CP ("Corporate/B2B") would mislabel it just to match
+      // the COMPANY type. Left unclassified for the same manual pass.
+      subType: null,
       executive: { name: "หน้าร้าน Walk-in", phone: "0800000005" },
     },
   ];
   for (const c of channels) {
-    const { executive, ...channelData } = c;
+    const { executive, subType, ...channelData } = c;
     const existing = await prisma.promoChannel.findUnique({ where: { slug: c.slug } });
-    const refCode = existing?.refCode ?? (await nextChannelRefCode());
+    // update never touches subType — a pre-existing row (dev or production)
+    // keeps whatever an admin has or hasn't set (default #10: no auto-migrate).
+    const refCode = existing?.refCode ?? (await nextChannelRefCode(subType ?? "CH"));
     const channel = await prisma.promoChannel.upsert({
       where: { slug: c.slug },
       update: { type: c.type },
-      create: { ...channelData, refCode },
+      create: { ...channelData, subType, refCode },
     });
 
     const existingExec = await prisma.channelExecutive.findFirst({
       where: { channelId: channel.id },
     });
     if (!existingExec) {
-      const execRefCode = `${channel.refCode}-EX01`;
+      // New scheme: running 2 digits appended directly (no "-EX01" — see
+      // nextExecutiveRefCode() in src/actions/channels.ts).
+      const execRefCode = `${channel.refCode}01`;
       await prisma.channelExecutive.upsert({
         where: { refCode: execRefCode },
         update: {},

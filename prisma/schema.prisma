@@ -104,6 +104,21 @@ model PromoChannel {
   nameTh     String
   nameEn     String
   type       ChannelType        @default(INDIVIDUAL)
+  // "ประเภทช่องทางย่อย" — a 2-letter code from src/lib/channel-taxonomy.ts
+  // (TE/LN/LO/TT/FB/WS/CP/RF/EF/AG), also the refCode prefix for channels
+  // created after this column shipped. Plain VarChar rather than a Prisma
+  // enum on purpose: production has no SSH, so adding an 11th value later
+  // must not require an `ALTER TABLE … MODIFY` through phpMyAdmin — the
+  // closed set is enforced by zod in src/actions/channels.ts instead.
+  // Nullable so the 6 pre-existing channels (refCode CH0xx) keep resolving;
+  // this column is never used to validate or reshape an old refCode.
+  subType    String?            @db.VarChar(4)
+  // Landing page for this channel's promo link (dropdown, not free text —
+  // see CHANNEL_LANDING_PATHS in src/lib/channel-taxonomy.ts).
+  landingPath String            @default("/th/packages")
+  // utm_campaign for this channel's promo link — one of CHANNEL_UTM_CAMPAIGNS,
+  // nullable because it has no meaningful default until an admin picks one.
+  utmCampaign String?           @db.VarChar(60)
   refCode    String             @unique
   isActive   Boolean            @default(true)
   sortOrder  Int                @default(0)

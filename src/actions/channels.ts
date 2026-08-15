@@ -5,13 +5,31 @@ import { slugify } from "@/lib/admin-content";
 import { auditedEntity } from "@/lib/audit";
 import { requireRole } from "@/lib/auth";
 import { CHANNEL_TYPES, zodEnum } from "@/lib/enums";
+import {
+  CHANNEL_LANDING_PATHS,
+  CHANNEL_SUB_TYPE_CODES,
+  CHANNEL_UTM_CAMPAIGNS,
+} from "@/lib/channel-taxonomy";
 import { prisma } from "@/lib/db";
 import type { ActionResult } from "./users";
+
+// Empty-string form values collapse to null — a channel created before this
+// column existed (or one an admin hasn't classified yet) has no subType/
+// utmCampaign, and that must stay a valid, non-blocking state (default #10,
+// sa-channel-taxonomy-utm-tasks.md — old refCodes are never auto-migrated).
+const optionalCode = (allowed: readonly string[], message: string) =>
+  z.preprocess(
+    (v) => (typeof v === "string" && v.trim() !== "" ? v.trim() : null),
+    z.string().nullable()
+  ).refine((v) => v === null || allowed.includes(v), { message });
 
 const channelSchema = z.object({
   nameTh: z.string().trim().min(1).max(120),
   nameEn: z.string().trim().min(1).max(120),
   type: zodEnum(CHANNEL_TYPES),
+  subType: optionalCode(CHANNEL_SUB_TYPE_CODES, "รหัสประเภทช่องทางย่อยไม่ถูกต้อง"),
+  landingPath: zodEnum(CHANNEL_LANDING_PATHS),
+  utmCampaign: optionalCode(CHANNEL_UTM_CAMPAIGNS, "utm_campaign ไม่ถูกต้อง"),
   isActive: z.coerce.boolean(),
   sortOrder: z.coerce.number().int().min(0).max(999).default(0),
 });
@@ -21,6 +39,9 @@ function parseChannel(formData: FormData) {
     nameTh: formData.get("nameTh"),
     nameEn: formData.get("nameEn"),
     type: formData.get("type"),
+    subType: formData.get("subType"),
+    landingPath: formData.get("landingPath") || "/th/packages",
+    utmCampaign: formData.get("utmCampaign"),
     isActive: formData.get("isActive") === "on",
     sortOrder: formData.get("sortOrder") || 0,
   });
@@ -40,13 +61,18 @@ const executives = auditedEntity({
   revalidate: () => ["/admin/channels"],
 });
 
-async function nextChannelRefCode(): Promise<string> {
+// One running-3-digit counter per subType prefix (TE001, TE002, FB001, …) —
+// never a table-wide counter, or a new prefix would collide with whatever
+// number the *last-inserted* channel happened to have (see the old bug this
+// replaced: `Number("FB001".replace("CH", ""))` is NaN -> 0 -> "CH001").
+async function nextChannelRefCode(subTypePrefix: string): Promise<string> {
   const last = await prisma.promoChannel.findFirst({
+    where: { refCode: { startsWith: subTypePrefix } },
     orderBy: { refCode: "desc" },
     select: { refCode: true },
   });
-  const lastNum = last ? Number(last.refCode.replace("CH", "")) || 0 : 0;
-  return `CH${String(lastNum + 1).padStart(3, "0")}`;
+  const lastNum = last ? Number(last.refCode.slice(subTypePrefix.length)) || 0 : 0;
+  return `${subTypePrefix}${String(lastNum + 1).padStart(3, "0")}`;
 }
 
 export async function createChannel(formData: FormData): Promise<ActionResult> {
@@ -55,7 +81,9 @@ export async function createChannel(formData: FormData): Promise<ActionResult> {
   const parsed = parseChannel(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
 
-  const refCode = await nextChannelRefCode();
+  // No subType picked -> continues the pre-taxonomy "CH0xx" scheme, matching
+  // the "- ไม่ระบุ (คงรหัสเดิม) -" option in the admin dropdown.
+  const refCode = await nextChannelRefCode(parsed.data.subType ?? "CH");
   await channels.create({
     ...parsed.data,
     slug: slugify(parsed.data.nameEn),
@@ -92,7 +120,12 @@ function parseExecutive(formData: FormData) {
   });
 }
 
-// Sequential per-channel, e.g. first exec under CH001 -> CH001-EX01.
+// Sequential per-channel, running 2 digits appended directly to the channel's
+// refCode — e.g. first exec under TE001 -> TE00101 (no "-EX" separator; the
+// SA sheet's format). A channel still on the pre-taxonomy CH0xx scheme (see
+// default #10 — old refCodes are never auto-migrated) gets the same
+// direct-append treatment for any *new* executive created after this shipped;
+// its existing "-EX01"-style rows are left untouched.
 async function nextExecutiveRefCode(
   channelId: string,
   channelRefCode: string
@@ -102,8 +135,10 @@ async function nextExecutiveRefCode(
     orderBy: { refCode: "desc" },
     select: { refCode: true },
   });
-  const lastNum = last ? Number(last.refCode.split("-EX")[1]) || 0 : 0;
-  return `${channelRefCode}-EX${String(lastNum + 1).padStart(2, "0")}`;
+  const lastNum = last
+    ? Number(last.refCode.slice(channelRefCode.length)) || 0
+    : 0;
+  return `${channelRefCode}${String(lastNum + 1).padStart(2, "0")}`;
 }
 
 export async function createChannelExecutive(

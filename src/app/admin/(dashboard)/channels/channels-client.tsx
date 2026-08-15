@@ -1,8 +1,14 @@
 "use client";
 
 import { Check, Copy, Pencil, Plus, Users } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { CHANNEL_TYPE_LABELS } from "@/lib/enum-labels";
+import {
+  CHANNEL_LANDING_PATHS,
+  CHANNEL_SUB_TYPES,
+  CHANNEL_UTM_CAMPAIGNS,
+  subTypeOf,
+} from "@/lib/channel-taxonomy";
 import { toast } from "sonner";
 import {
   createChannel,
@@ -47,6 +53,9 @@ type ChannelRow = {
   nameTh: string;
   nameEn: string;
   type: ChannelType;
+  subType: string | null;
+  landingPath: string;
+  utmCampaign: string | null;
   refCode: string;
   isActive: boolean;
   sortOrder: number;
@@ -107,6 +116,7 @@ export function ChannelsClient({
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ChannelRow | null>(null);
+  const typeSelectRef = useRef<HTMLSelectElement>(null);
   const [execDialogChannel, setExecDialogChannel] = useState<ChannelRow | null>(
     null
   );
@@ -193,6 +203,7 @@ export function ChannelsClient({
               <TableHead>ชื่อ (TH)</TableHead>
               <TableHead>ชื่อ (EN)</TableHead>
               <TableHead>ประเภท</TableHead>
+              <TableHead>ประเภทย่อย</TableHead>
               {/* The channel-level and executive-level links are both produced
                   by promoLink() and look identical once copied, but only the
                   executive one carries a person's name — so only it prefills
@@ -213,6 +224,11 @@ export function ChannelsClient({
                 <TableCell className="font-medium">{c.nameTh}</TableCell>
                 <TableCell>{c.nameEn}</TableCell>
                 <TableCell>{CHANNEL_TYPE_LABELS[c.type]}</TableCell>
+                <TableCell>
+                  {c.subType
+                    ? `${subTypeOf(c.subType)?.nameTh ?? c.subType} (${c.subType})`
+                    : "-"}
+                </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1.5">
                     <Badge variant="outline">{c.refCode}</Badge>
@@ -297,9 +313,34 @@ export function ChannelsClient({
               <Input name="nameEn" required defaultValue={editing?.nameEn} />
             </div>
             <div className="space-y-1.5">
+              <Label>ประเภทช่องทางย่อย</Label>
+              <select
+                name="subType"
+                defaultValue={editing?.subType ?? ""}
+                onChange={(e) => {
+                  const sub = subTypeOf(e.target.value);
+                  if (sub && typeSelectRef.current) {
+                    typeSelectRef.current.value = sub.channelType;
+                  }
+                }}
+                className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/50"
+              >
+                <option value="">- ไม่ระบุ (คงรหัสเดิม) -</option>
+                {CHANNEL_SUB_TYPES.map((s) => (
+                  <option key={s.code} value={s.code}>
+                    {s.nameTh} ({s.code})
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                ใช้เป็น prefix ของรหัสช่องทางตอนสร้างใหม่ (เช่น FB001) และกำหนด &quot;ประเภทช่องทาง&quot; ด้านล่างให้อัตโนมัติ
+              </p>
+            </div>
+            <div className="space-y-1.5">
               <Label>ประเภทช่องทาง</Label>
               <select
                 name="type"
+                ref={typeSelectRef}
                 required
                 defaultValue={editing?.type ?? "INDIVIDUAL"}
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/50"
@@ -307,6 +348,36 @@ export function ChannelsClient({
                 {(Object.keys(CHANNEL_TYPE_LABELS) as ChannelType[]).map((type) => (
                   <option key={type} value={type}>
                     {CHANNEL_TYPE_LABELS[type]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>หน้า Landing ของลิงก์โปรโมท</Label>
+              <select
+                name="landingPath"
+                required
+                defaultValue={editing?.landingPath ?? "/th/packages"}
+                className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/50"
+              >
+                {CHANNEL_LANDING_PATHS.map((path) => (
+                  <option key={path} value={path}>
+                    {path}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>utm_campaign</Label>
+              <select
+                name="utmCampaign"
+                defaultValue={editing?.utmCampaign ?? ""}
+                className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/50"
+              >
+                <option value="">- ไม่ระบุ -</option>
+                {CHANNEL_UTM_CAMPAIGNS.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
                   </option>
                 ))}
               </select>

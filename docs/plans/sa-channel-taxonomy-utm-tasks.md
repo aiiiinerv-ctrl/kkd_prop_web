@@ -99,7 +99,15 @@ production ว่างเปล่าตอนนี้ (Lead=0) ถ้าจ�
 
 1.1 `src/lib/channel-taxonomy.ts` (**ไฟล์ใหม่**) — ตาราง 10 subType: `{ code, nameTh, nameEn, channelType, utmSource, utmMedium }` + `CHANNEL_SUB_TYPES` array + helper `subTypeOf(code)` | **nextjs-dev** | ✅ ขนานได้
 1.2 `prisma/schema.prisma` — `PromoChannel`: `subType String? @db.VarChar(4)`, `landingPath String @default("/th/packages")`, `utmCampaign String? @db.VarChar(60)` (`Lead` ยังไม่แตะ — ไปแตะ Sprint 3) | **nextjs-dev** | ⏳ รอ #0.1
-1.3 `prisma/migrations/` — รัน `npx prisma migrate dev` และ **เก็บ SQL ที่ได้ไว้ส่ง phpMyAdmin** เขียนเป็น `ADD COLUMN IF NOT EXISTS` ตาม runbook | **nextjs-dev** | ⏳ รอ #1.2
+1.3 `prisma/migrations/` — รัน `npx prisma migrate dev` และ **เก็บ SQL ที่ได้ไว้ส่ง phpMyAdmin** เขียนเป็น `ADD COLUMN IF NOT EXISTS` ตาม runbook | **nextjs-dev** | ⏳ รอ #1.2 — ✅ ทำแล้ว: `prisma/migrations/20260815105843_add_channel_subtype_utm/migration.sql` (dev, ผ่าน `prisma migrate dev`); phpMyAdmin-safe version ด้านล่างสำหรับ Sprint 5.3
+
+```sql
+-- Sprint 1 — apply via phpMyAdmin SQL tab (database: kkdprop1_kkdproperty)
+ALTER TABLE `PromoChannel` ADD COLUMN IF NOT EXISTS `subType` VARCHAR(4) NULL;
+ALTER TABLE `PromoChannel` ADD COLUMN IF NOT EXISTS `landingPath` VARCHAR(191) NOT NULL DEFAULT '/th/packages';
+ALTER TABLE `PromoChannel` ADD COLUMN IF NOT EXISTS `utmCampaign` VARCHAR(60) NULL;
+-- Verify: SHOW COLUMNS FROM `PromoChannel`;
+```
 1.4 `src/actions/channels.ts:43` `nextChannelRefCode()` — รับ `subType` แล้วสร้าง `<PREFIX><running>` โดย query `where: { refCode: { startsWith: prefix } }` และ parse เฉพาะส่วนตัวเลข (แก้บั๊ก NaN→0 ที่ทำให้ชน unique) + เพิ่ม `subType`/`landingPath`/`utmCampaign` เข้า `channelSchema` | **nextjs-dev** | ⏳ รอ #1.1,#1.2
 1.5 `src/actions/channels.ts:96` `nextExecutiveRefCode()` — ปรับรูปแบบตามคำตอบ Q1 (ค่าเริ่มต้นสมมติ `TE00101`) | **nextjs-dev** | ⏳ รอ #0.1
 1.6 `prisma/seed.ts:75` — ตัว `nextChannelRefCode()` ก๊อบซ้ำอยู่ในไฟล์นี้ ต้องแก้พร้อมกัน ไม่งั้น seed จะสร้างโค้ดคนละสกีมกับ runtime; อัปเดต 6 ช่องทาง seed ให้มี `subType` และคง idempotent | **nextjs-dev** | ⏳ รอ #1.4
