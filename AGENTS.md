@@ -58,7 +58,7 @@ Escalation is by role, not by retry: sonnet implements → independent reviewers
 [Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0.0/): `<type>(scope): <description>`, body explains *why*, footers after a blank line.
 
 - **Types:** `feat` (new user-facing capability → SemVer MINOR), `fix` (bug patch → PATCH), plus `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`. Breaking changes: `!` after type/scope or an uppercase `BREAKING CHANGE:` footer → MAJOR.
-- **Scopes (use these, keep them stable):** `site` (public pages/components), `admin` (dashboard), a feature name when the change is one vertical slice (`testimonials`, `portfolio`, `calculator`, `booking`, `themes`), `deploy` (Dockerfile/fly/firebase), `agents` (.claude/), `e2e` (scripts), `preview` (static-preview). Add a new scope only for a genuinely new area.
+- **Scopes (use these, keep them stable):** `site` (public pages/components), `admin` (dashboard), a feature name when the change is one vertical slice (`testimonials`, `portfolio`, `calculator`, `booking`, `themes`), `deploy` (`scripts/build-shared-hosting-deploy.mts`, `deploy/docker-build/Dockerfile.shared-hosting`, `docs/plans/kkd-shared-hosting-redeploy-runbook.md`), `agents` (.claude/), `e2e` (scripts), `preview` (static-preview). Add a new scope only for a genuinely new area.
 - **One type per commit.** If a change needs both `feat` and `fix`, split it into two commits.
 - Description in imperative mood, lowercase after the colon, no trailing period.
 
