@@ -33,15 +33,20 @@ export const metadata: Metadata = {
 
 // CookieYes runs the consent banner (quote line item 7, Free plan). The id is
 // a public identifier — it ships in every page's HTML — but it stays an env
-// var so the banner can be switched off by clearing it in the hosting panel,
-// no redeploy involved. The Free plan has no staging site, so production is
-// the first place this is ever seen; an unset id rendering nothing at all is
-// what makes that safe.
+// var so the banner can be switched off by clearing it, without a code change.
 //
-// Read here, in the server layout, on purpose: NEXT_PUBLIC_* is inlined at
-// build time into anything sent to the browser, which would freeze the value
-// into the artifact and defeat the switch. Don't move this into a client
-// component.
+// Read here, in the server layout — but despite the theory that a
+// server-only `process.env` read on a purely dynamic render stays untouched
+// by build-time inlining, this shared-hosting build pipeline still froze a
+// missing value into the artifact (caught 2026-08-16: the panel had the
+// correct id set at runtime, the banner still didn't render). Whatever the
+// exact cause — static optimization of a layout with no per-request API
+// call, output-file-tracing, or something pipeline-specific — the practical
+// rule for this repo is the same as NEXT_PUBLIC_SITE_URL: the value has to
+// be present in `.env.production` (loaded at build time) to reliably reach
+// production, not only set in the panel. "Switch it off by clearing the
+// panel value" therefore no longer works on its own — clear it in
+// `.env.production` too, then rebuild and redeploy.
 //
 // beforeInteractive puts it ahead of our own scripts in the initial HTML,
 // which CookieYes needs — its auto-blocking works by intercepting scripts
