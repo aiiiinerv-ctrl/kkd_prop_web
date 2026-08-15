@@ -300,43 +300,6 @@ export function LeadDetailClient({
         </dl>
       </div>
 
-      {(lead.utmSource ||
-        lead.utmMedium ||
-        lead.utmCampaign ||
-        lead.utmContent ||
-        lead.utmTerm ||
-        lead.landingPath) && (
-        <div className="rounded-xl border border-border/70 bg-card p-6">
-          <h2 className="mb-4 font-semibold">ข้อมูลแคมเปญ (UTM)</h2>
-          <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
-            <div>
-              <dt className="text-muted-foreground">UTM Source</dt>
-              <dd className="font-medium">{lead.utmSource ?? "-"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">UTM Medium</dt>
-              <dd className="font-medium">{lead.utmMedium ?? "-"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">UTM Campaign</dt>
-              <dd className="font-medium">{lead.utmCampaign ?? "-"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">UTM Content</dt>
-              <dd className="font-medium">{lead.utmContent ?? "-"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">UTM Term</dt>
-              <dd className="font-medium">{lead.utmTerm ?? "-"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Landing Path</dt>
-              <dd className="font-medium">{lead.landingPath ?? "-"}</dd>
-            </div>
-          </dl>
-        </div>
-      )}
-
       {lead.booking && payment && (
         <div className="rounded-xl border border-border/70 bg-card p-6">
           <div className="mb-4 flex items-center justify-between">
@@ -421,6 +384,47 @@ export function LeadDetailClient({
         <div className="rounded-xl border border-border/70 bg-card p-6">
           <h2 className="mb-3 font-semibold">ข้อความจากลูกค้า</h2>
           <p className="text-sm whitespace-pre-wrap">{lead.customerMessage}</p>
+        </div>
+      )}
+
+      {/* Marketing metadata, not something sales reads while working a lead —
+          kept below internal notes so the fields that matter for follow-up
+          (address, message, notes) don't require scrolling past a section
+          nobody but marketing checks. */}
+      {(lead.utmSource ||
+        lead.utmMedium ||
+        lead.utmCampaign ||
+        lead.utmContent ||
+        lead.utmTerm ||
+        lead.landingPath) && (
+        <div className="rounded-xl border border-border/70 bg-card p-6">
+          <h2 className="mb-4 font-semibold">ข้อมูลแคมเปญ (UTM)</h2>
+          <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-muted-foreground">UTM Source</dt>
+              <dd className="font-medium">{lead.utmSource ?? "-"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">UTM Medium</dt>
+              <dd className="font-medium">{lead.utmMedium ?? "-"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">UTM Campaign</dt>
+              <dd className="font-medium">{lead.utmCampaign ?? "-"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">UTM Content</dt>
+              <dd className="font-medium">{lead.utmContent ?? "-"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">UTM Term</dt>
+              <dd className="font-medium">{lead.utmTerm ?? "-"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Landing Path</dt>
+              <dd className="font-medium">{lead.landingPath ?? "-"}</dd>
+            </div>
+          </dl>
         </div>
       )}
 
