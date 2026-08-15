@@ -39,11 +39,21 @@ function randPhone() {
   return `09${String(Math.floor(10000000 + Math.random() * 89999999))}`;
 }
 
+// checkRateLimit() (src/lib/rate-limit.ts) keys on x-forwarded-for, which
+// falls back to the literal string "unknown" when absent — the case for
+// every local Playwright script hitting localhost, so this script's public
+// submissions share one budget with e2e-booking.mts's when both run in the
+// same verify-all window. In production every visitor has a distinct real
+// IP; a documentation-range address (RFC 5737 TEST-NET-3) here just gives
+// this script's submissions their own bucket, matching that reality instead
+// of an artifact of not setting the header at all.
+const FAKE_IP = "203.0.113.50";
+
 // A browser that has already accepted advertisement cookies. Real visitors get
 // this cookie from the CookieYes banner; here we plant it directly so these
 // cases test attribution rather than the third-party banner's own UI.
 async function consentedContext() {
-  const context = await browser.newContext();
+  const context = await browser.newContext({ extraHTTPHeaders: { "x-forwarded-for": FAKE_IP } });
   await context.addCookies([
     {
       name: "cookieyes-consent",
@@ -126,7 +136,7 @@ async function submitQuoteLead(page: import("playwright").Page, name: string, ph
 // context, no consent cookie: this is the ordinary first-time visitor, and
 // it is also the shape Case 6's visitor ends up in. ---
 {
-  const context = await browser.newContext();
+  const context = await browser.newContext({ extraHTTPHeaders: { "x-forwarded-for": FAKE_IP } });
   const page = await context.newPage();
   const phone = randPhone();
 
@@ -143,17 +153,16 @@ async function submitQuoteLead(page: import("playwright").Page, name: string, ph
   await context.close();
 }
 
-// Cases 4-5 below deliberately avoid a 4th/5th public form submission: the
+// Cases 4-5 below deliberately avoid further public form submissions: the
 // public submit actions (submit-quote.ts/submit-survey-booking.ts) share a
 // single in-memory IP rate limit (src/lib/rate-limit.ts, MAX_PER_WINDOW=5
-// per 10 min, keyed by "unknown" when no x-forwarded-for header is present
-// — i.e. shared across every local Playwright run hitting localhost).
-// e2e-booking.mts already spends 2 of that budget and this script spends 3
-// more above (exactly 5) — a 4th/5th submission here would flake against
-// e2e-booking.mts run in the same window. These two cases only need cookie
-// inspection (no submission) to prove their behavior; resolveRefAttribution
-// (src/lib/ref-attribution.ts) is already exercised end-to-end by the three
-// submission cases above.
+// per 10 min, keyed by x-forwarded-for — this script's submissions above use
+// FAKE_IP precisely so they don't share a budget with e2e-booking.mts's three
+// submissions when both run in the same verify-all window, but there's still
+// only 5 per window per IP, and this script already spends 3 of its own
+// above. These two cases only need cookie inspection (no submission) to
+// prove their behavior; resolveRefAttribution (src/lib/ref-attribution.ts)
+// is already exercised end-to-end by the three submission cases above.
 
 // --- Case 4: unknown ref code -> cookie is still set (proxy.ts never
 // validates the code against the DB), the DB-miss fallback to DIRECT is
@@ -322,6 +331,61 @@ async function submitQuoteLead(page: import("playwright").Page, name: string, ph
       denied.noRef === 400 && denied.junkRef === 400
         ? "✓"
         : `✗ FAIL (missing ${denied.noRef}, junk ${denied.junkRef})`
+    }`
+  );
+
+  await context.close();
+}
+
+// --- Case 9: exec ref code + consent -> the "ผู้แนะนำ" field on the booking
+// page arrives prefilled with the executive's name (resolveRefReferrerName,
+// src/lib/ref-attribution.ts). No submission needed — this is a prefill
+// check, not an attribution check, and the rate-limit budget is spent. ---
+{
+  const context = await consentedContext();
+  const page = await context.newPage();
+
+  await page.goto(`http://localhost:3000/th?ref=${facebookExecutive.refCode}`);
+  await page.goto("http://localhost:3000/th/booking?tab=quote");
+  const value = await page.inputValue('input[name="referrerName"]');
+  console.log(
+    `CHANNEL TRACKING: executive ref prefills the referrer field ${
+      value === facebookExecutive.name ? "✓" : `✗ FAIL (got "${value}")`
+    }`
+  );
+
+  await context.close();
+}
+
+// --- Case 10: channel-only ref code (no executive) -> referrer field stays
+// empty; the channel is already captured via autoSourceChannelId and there is
+// no person's name to fill in. ---
+{
+  const context = await consentedContext();
+  const page = await context.newPage();
+
+  await page.goto(`http://localhost:3000/th/booking?tab=quote&ref=${referralChannel.refCode}`);
+  const value = await page.inputValue('input[name="referrerName"]');
+  console.log(
+    `CHANNEL TRACKING: channel-only ref leaves the referrer field empty ${
+      value === "" ? "✓" : `✗ FAIL (got "${value}")`
+    }`
+  );
+
+  await context.close();
+}
+
+// --- Case 11: no consent -> no kkd_ref cookie -> referrer field stays empty,
+// even with an exec ref code in the URL. ---
+{
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
+  await page.goto(`http://localhost:3000/th/booking?tab=quote&ref=${facebookExecutive.refCode}`);
+  const value = await page.inputValue('input[name="referrerName"]');
+  console.log(
+    `CHANNEL TRACKING: ref without consent leaves the referrer field empty ${
+      value === "" ? "✓" : `✗ FAIL (got "${value}")`
     }`
   );
 

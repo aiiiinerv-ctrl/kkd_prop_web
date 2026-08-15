@@ -9,6 +9,7 @@ import {
   getServiceBySlug,
 } from "@/lib/content";
 import { generatePromptPayQrDataUrl } from "@/lib/promptpay";
+import { resolveRefReferrerName } from "@/lib/ref-attribution";
 import { BookingForms } from "./booking-forms";
 import { pageMetadata } from "@/lib/seo";
 
@@ -42,12 +43,14 @@ export default async function BookingPage({
   setRequestLocale(locale);
   const t = await getTranslations("booking");
 
-  const [channels, paymentSettings, packageRow, serviceRow] = await Promise.all([
-    getActiveChannels(locale),
-    getPaymentSettings(),
-    packageSlug ? getPackageBySlug(packageSlug, locale) : null,
-    serviceSlug ? getServiceBySlug(serviceSlug, locale) : null,
-  ]);
+  const [channels, paymentSettings, packageRow, serviceRow, initialReferrerName] =
+    await Promise.all([
+      getActiveChannels(locale),
+      getPaymentSettings(),
+      packageSlug ? getPackageBySlug(packageSlug, locale) : null,
+      serviceSlug ? getServiceBySlug(serviceSlug, locale) : null,
+      resolveRefReferrerName(),
+    ]);
 
   // Survey booking fee is a fixed ฿199 (same constant used in the UI copy
   // and lib/notifications/format.ts) — embed it so scanning apps prefill it.
@@ -70,6 +73,7 @@ export default async function BookingPage({
           initialBill={bill ?? ""}
           initialPackageSlug={packageRow?.slug ?? ""}
           initialServiceSlug={serviceRow?.slug ?? ""}
+          initialReferrerName={initialReferrerName}
           channels={channels}
           bankInfo={{
             bankName: paymentSettings?.bankName ?? "",

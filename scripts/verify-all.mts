@@ -58,6 +58,7 @@ const suites = [
   "scripts/e2e-booking.mts",
   "scripts/e2e-admin.mts",
   "scripts/e2e-admin-crud.mts",
+  "scripts/e2e-channel-tracking.mts",
 ];
 
 let failed = false;

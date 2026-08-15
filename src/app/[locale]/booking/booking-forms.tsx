@@ -153,6 +153,7 @@ export function BookingForms({
   initialBill,
   initialPackageSlug,
   initialServiceSlug,
+  initialReferrerName,
   channels,
   bankInfo,
   promptpayQrDataUrl,
@@ -160,6 +161,7 @@ export function BookingForms({
   initialBill: string;
   initialPackageSlug: string;
   initialServiceSlug: string;
+  initialReferrerName: string;
   channels: Channel[];
   bankInfo: BankInfo;
   promptpayQrDataUrl: string | null;
@@ -253,6 +255,7 @@ export function BookingForms({
           initialBill={initialBill}
           initialPackageSlug={initialPackageSlug}
           initialServiceSlug={initialServiceSlug}
+          initialReferrerName={initialReferrerName}
           onSuccess={() => setSuccess("quote")}
         />
       ) : (
@@ -261,6 +264,7 @@ export function BookingForms({
           initialBill={initialBill}
           initialPackageSlug={initialPackageSlug}
           initialServiceSlug={initialServiceSlug}
+          initialReferrerName={initialReferrerName}
           onSuccess={() => setSuccess("survey")}
           bankInfo={bankInfo}
           promptpayQrDataUrl={promptpayQrDataUrl}
@@ -556,12 +560,14 @@ function QuoteForm({
   initialBill,
   initialPackageSlug,
   initialServiceSlug,
+  initialReferrerName,
   onSuccess,
 }: {
   channels: Channel[];
   initialBill: string;
   initialPackageSlug: string;
   initialServiceSlug: string;
+  initialReferrerName: string;
   onSuccess: () => void;
 }) {
   const t = useTranslations("booking");
@@ -585,6 +591,7 @@ function QuoteForm({
       interestedSystems: [],
       interestedPackageSlug: initialPackageSlug,
       interestedServiceSlug: initialServiceSlug,
+      referrerName: initialReferrerName,
     },
   });
   const baseApi = { register, errors, watch, setValue } as unknown as BaseLeadFormApi;
@@ -605,6 +612,11 @@ function QuoteForm({
       if (value !== undefined) {
         setValue(field as FieldPath<QuoteFormInput>, value as never, { shouldDirty: false });
       }
+    }
+    // A ref link's referrer name only fills in the blank the customer left —
+    // anything they (or an earlier draft) already put in the field wins.
+    if (initialReferrerName && !merged.referrerName) {
+      setValue("referrerName", initialReferrerName, { shouldDirty: false });
     }
     if (typeof merged.avgMonthlyBill !== "undefined") {
       setBillMode(billBucketMode(String(merged.avgMonthlyBill ?? "")));
@@ -670,6 +682,7 @@ function SurveyForm({
   initialBill,
   initialPackageSlug,
   initialServiceSlug,
+  initialReferrerName,
   onSuccess,
   bankInfo,
   promptpayQrDataUrl,
@@ -678,6 +691,7 @@ function SurveyForm({
   initialBill: string;
   initialPackageSlug: string;
   initialServiceSlug: string;
+  initialReferrerName: string;
   onSuccess: () => void;
   bankInfo: BankInfo;
   promptpayQrDataUrl: string | null;
@@ -710,6 +724,7 @@ function SurveyForm({
       interestedSystems: [],
       interestedPackageSlug: initialPackageSlug,
       interestedServiceSlug: initialServiceSlug,
+      referrerName: initialReferrerName,
     },
   });
   const baseApi = { register, errors, watch, setValue } as unknown as BaseLeadFormApi;
@@ -740,6 +755,11 @@ function SurveyForm({
       if (value !== undefined) {
         setValue(field as FieldPath<SurveyFormInput>, value as never, { shouldDirty: false });
       }
+    }
+    // A ref link's referrer name only fills in the blank the customer left —
+    // anything they (or an earlier draft) already put in the field wins.
+    if (initialReferrerName && !merged.referrerName) {
+      setValue("referrerName", initialReferrerName, { shouldDirty: false });
     }
     if (typeof merged.avgMonthlyBill !== "undefined") {
       setBillMode(billBucketMode(String(merged.avgMonthlyBill ?? "")));
