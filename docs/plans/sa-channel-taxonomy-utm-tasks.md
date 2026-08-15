@@ -155,9 +155,9 @@ ALTER TABLE `Lead` ADD COLUMN IF NOT EXISTS `landingPath` VARCHAR(200) NULL;
 
 ## Sprint 4 — แสดงผล + รายงาน/export (ขนาด: S–M, ~0.5–1 วัน)
 
-4.1 `src/app/admin/(dashboard)/leads/` (หน้า lead detail) — บล็อก "ข้อมูลแคมเปญ (UTM)" แสดง 5 ค่า + landing path, ขึ้น "-" เมื่อว่าง | **nextjs-dev** | ⏳ รอ #3.6
-4.2 `src/lib/reports/export-rows.ts` — เพิ่มคอลัมน์ utm ทั้ง 2 จุดที่ select อยู่แล้ว (บรรทัด ~84 และ ~232) หัวคอลัมน์ภาษาไทยให้เข้าชุดเดิม | **nextjs-dev** | ⏳ รอ #3.6
-4.3 `src/lib/reports/aggregate.ts` — **ยืนยันว่า `effectiveChannel()` (บรรทัด 144) ไม่ถูกแก้** และ channelBreakdown ยังนับเท่าเดิม (กันการนับซ้ำตาม default #1) เพิ่มได้เฉพาะ breakdown ตาม `utm_campaign` แยกก้อน | **nextjs-dev** | ⏳ รอ #4.2
+4.1 `src/app/admin/(dashboard)/leads/` (หน้า lead detail) — บล็อก "ข้อมูลแคมเปญ (UTM)" แสดง 5 ค่า + landing path, ขึ้น "-" เมื่อว่าง | **nextjs-dev** | ✅ ทำแล้ว — บล็อกทั้งก้อนซ่อนถ้าไม่มี utm data เลย (ตาม pattern `interestedPackageSlug` ที่มีอยู่แล้วในหน้านี้)
+4.2 `src/lib/reports/export-rows.ts` — เพิ่มคอลัมน์ utm 5 ตัว + landingPath **เฉพาะใน `FullExportRow`/`FULL_EXPORT_COLUMNS`/`getFullExportRows()`** (sheet "ข้อมูลเต็ม") | **nextjs-dev** | ✅ ทำแล้ว — sheet "รายงาน" (`EXPORT_COLUMNS`, contract §4.5) ยืนยันแล้วว่ายังคง 13 คอลัมน์เท่าเดิม ไม่ถูกแตะ
+4.3 `src/lib/reports/aggregate.ts` — **ยืนยันว่า `effectiveChannel()` (บรรทัด 144) ไม่ถูกแก้** และ channelBreakdown ยังนับเท่าเดิม (กันการนับซ้ำตาม default #1) | **nextjs-dev** | ✅ ยืนยันแล้ว — ไฟล์นี้มี diff ว่างเปล่า (ไม่ถูกแตะเลย); `campaignBreakdown` **ตัดสินใจไม่ทำ** เพราะต้องมี UI ใหม่มาแสดงผลถึงจะไม่ใช่ dead code ซึ่งเกินขอบเขต 4.1/4.2 ของสปรินต์นี้ (ตรงกับ default #9 — รอข้อมูลจริงก่อนค่อยตัดสินใจเรื่อง dashboard แคมเปญ)
 4.4 ตรวจว่าไม่มี mutation ใหม่ที่หลุด `requireAdmin()`/`withAudit()` และ export ไม่รั่วข้อมูลเกิน role (CHANNEL_EXECUTIVE เห็นเฉพาะช่องตัวเอง) | **audit-compliance-reviewer** | ⏳ รอ #4.3
 4.5 รีวิวหน้า `/admin/channels` + lead detail บน render จริง (ไม่ใช่ mockup) — ลิงก์ยาวไม่ทำ layout แตก, subType อ่านออก, ปุ่ม copy ชัด | **design-business-reviewer** | ⏳ รอ #4.1, #2.3
 
