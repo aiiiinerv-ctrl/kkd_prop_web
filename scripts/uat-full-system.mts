@@ -64,6 +64,58 @@ async function acceptConsent(page: Page) {
   }
 }
 
+// HEADED=1 opens a visible window for someone to watch; STEP_DELAY paces the
+// walkthrough for a human, not a CI runner. Defaults: 0 when headless (no
+// point pausing offscreen), 10s when headed unless STEP_DELAY_MS overrides it.
+const STEP_DELAY =
+  process.env.HEADED === "1" ? Number(process.env.STEP_DELAY_MS ?? 10000) : 0;
+async function pace(page: Page, ms = STEP_DELAY) {
+  if (ms > 0) await page.waitForTimeout(ms);
+}
+
+/**
+ * `kkd_ref` is httpOnly on purpose (src/proxy.ts) — no page script, including
+ * this one, can read it via `document.cookie`. The only way to see it is the
+ * same way the app does: ask the browser context directly (Playwright talks
+ * to Chrome's own cookie jar over CDP, which httpOnly does not block) and
+ * paint what it found onto the page so it's visible while watching headed,
+ * not just asserted silently in code.
+ */
+async function showCookieOverlay(
+  page: Page,
+  ctx: import("playwright").BrowserContext,
+  label: string
+) {
+  const cookies = await ctx.cookies();
+  const ref = cookies.find((c) => c.name === "kkd_ref");
+  const utm = cookies.find((c) => c.name === "kkd_utm");
+  const lines = [
+    `<div style="font-weight:700;margin-bottom:6px">${label}</div>`,
+    `<div>kkd_ref: <b>${ref ? ref.value : "(ยังไม่ถูกตั้งค่า)"}</b></div>`,
+    ref ? `<div style="opacity:.75">httpOnly=${ref.httpOnly} · maxAge≈30 วัน</div>` : "",
+    utm ? `<div style="margin-top:4px">kkd_utm: <b>${(() => { try { return JSON.parse(decodeURIComponent(utm.value)).utm_source; } catch { return utm.value.slice(0, 40); } })()}</b></div>` : "",
+  ]
+    .filter(Boolean)
+    .join("");
+  await page
+    .evaluate((html) => {
+      const id = "__uat_cookie_overlay__";
+      document.getElementById(id)?.remove();
+      const div = document.createElement("div");
+      div.id = id;
+      div.style.cssText =
+        "position:fixed;top:16px;right:16px;z-index:999999;background:#0f1b2b;color:#fff;" +
+        "font:14px/1.5 -apple-system,sans-serif;padding:14px 18px;border-radius:10px;" +
+        "box-shadow:0 8px 24px rgba(0,0,0,.35);max-width:340px;border:1px solid #c89d53";
+      div.innerHTML = html;
+      document.body.appendChild(div);
+    }, lines)
+    .catch(() => {});
+  console.log(
+    `[cookie] ${label} — kkd_ref=${ref?.value ?? "(none)"} httpOnly=${ref?.httpOnly ?? "-"}`
+  );
+}
+
 async function adminLogin(page: Page, base: string) {
   await page.goto(`${base}/admin/login`, { waitUntil: "load" });
   await page.fill('input[name="email"]', "admin@kkdproperty.com");
@@ -72,7 +124,15 @@ async function adminLogin(page: Page, base: string) {
   await page.waitForURL("**/admin", { timeout: 20000 });
 }
 
-const browser = await chromium.launch({ channel: "chrome", headless: true });
+// HEADED=1 opens a real visible browser window instead of running offscreen
+// — useful when someone wants to watch the walkthrough live rather than
+// only read the report afterward. Defaults to headless for unattended/CI
+// runs, matching the rest of this repo's e2e scripts.
+const browser = await chromium.launch({
+  channel: "chrome",
+  headless: process.env.HEADED !== "1",
+  slowMo: process.env.HEADED === "1" ? 250 : 0,
+});
 
 async function runProduction() {
   const base = PROD;
@@ -85,6 +145,7 @@ async function runProduction() {
     await page.waitForTimeout(4000);
     const bannerVisible = await page.locator("text=/ยอมรับ|Accept/i").first().isVisible().catch(() => false);
     const shotFile = await shot(page, "homepage-consent-banner");
+    await pace(page);
     results.push({
       section: "public",
       title: "หน้าแรก — แบนเนอร์ขอความยินยอมคุกกี้ปรากฏก่อนเก็บข้อมูลใด ๆ",
@@ -102,6 +163,7 @@ async function runProduction() {
     await page.goto(`${base}/en`, { waitUntil: "load" });
     await page.waitForTimeout(1500);
     const shotFile = await shot(page, "homepage-en");
+    await pace(page);
     results.push({
       section: "public",
       title: "หน้าแรกภาษาอังกฤษ — สลับภาษาได้ครบทุกหน้า",
@@ -119,6 +181,7 @@ async function runProduction() {
     const res = await page.goto(`${base}/th/packages`, { waitUntil: "load" });
     await page.waitForTimeout(1200);
     const shotFile = await shot(page, "packages");
+    await pace(page);
     results.push({
       section: "public",
       title: "หน้าแพ็กเกจ — แสดงราคาและรายละเอียดระบบ",
@@ -136,6 +199,7 @@ async function runProduction() {
     const res = await page.goto(`${base}/th/portfolio`, { waitUntil: "load" });
     await page.waitForTimeout(1200);
     const shotFile = await shot(page, "portfolio");
+    await pace(page);
     results.push({
       section: "public",
       title: "ผลงานการติดตั้ง — แกลเลอรีโครงการจริง",
@@ -159,6 +223,7 @@ async function runProduction() {
       await page.waitForTimeout(600);
     }
     const shotFile = await shot(page, "calculator");
+    await pace(page);
     results.push({
       section: "public",
       title: "เครื่องคำนวณค่าไฟ — ลูกค้าประเมินขนาดระบบได้เอง",
@@ -178,6 +243,7 @@ async function runProduction() {
     const bodyText = await page.locator("body").innerText();
     const hasUtmRow = bodyText.includes("kkd_utm");
     const shotFile = await shot(page, "cookie-policy");
+    await pace(page);
     results.push({
       section: "public",
       title: "นโยบายคุกกี้ — รายการคุกกี้ครบถ้วนรวม kkd_utm ตัวใหม่",
@@ -188,22 +254,45 @@ async function runProduction() {
     await ctx.close();
   }
 
-  // 7. Promo-link attribution — real production executive, cookie only, no submit
+  // 7. Promo-link attribution — real production executive, cookie only, no submit.
+  // Slowed down and narrated step by step (per request) since this is the
+  // exact mechanism that was confusing earlier: kkd_ref is httpOnly, so
+  // nothing on the page can show it — showCookieOverlay() reads it the way
+  // the server does (via the browser context, not page JS) and paints it on
+  // screen at each stage so it's visible while watching, not just asserted.
   const exec = { name: "เจนจิรา ตะลุง", refCode: "CH018-EX01" };
   {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await ctx.newPage();
+
+    console.log(`\n[step] เปิดลิงก์โปรโมทของ ${exec.name}: ${base}/th?ref=${exec.refCode}`);
     await page.goto(`${base}/th?ref=${exec.refCode}`, { waitUntil: "load" });
-    await page.waitForTimeout(3500);
+    await showCookieOverlay(page, ctx, "1) เพิ่งเข้าเว็บผ่านลิงก์ — ยังไม่กดยอมรับคุกกี้");
+    await pace(page);
+
+    console.log("[step] กดยอมรับคุกกี้ทั้งหมด");
     await acceptConsent(page);
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1500);
+    await showCookieOverlay(page, ctx, "2) กดยอมรับคุกกี้แล้ว — proxy.ts เขียน kkd_ref ให้ทันที");
+    await pace(page);
+
     const refCookie = (await ctx.cookies()).find((c) => c.name === "kkd_ref");
+
+    console.log("[step] ไปหน้าจองงาน ดูว่าช่องผู้แนะนำเติมชื่อให้อัตโนมัติไหม");
     await page.goto(`${base}/th/booking?tab=quote`, { waitUntil: "load" });
-    await page.waitForTimeout(2500);
+    await showCookieOverlay(page, ctx, "3) มาถึงหน้าจอง — คุกกี้ยังติดตัวมาด้วย");
+    await pace(page);
+
     const referrerValue = await page.inputValue('input[name="referrerName"]').catch(() => "");
     await page.locator('input[name="referrerName"]').scrollIntoViewIfNeeded().catch(() => {});
-    await page.waitForTimeout(400);
+    await showCookieOverlay(
+      page,
+      ctx,
+      `4) ผลลัพธ์ — เซิร์ฟเวอร์อ่าน kkd_ref แล้วเติมชื่อ "${referrerValue || "(ว่าง)"}"`
+    );
+    await pace(page);
     const shotFile = await shot(page, "referrer-autofill");
+    await pace(page);
     results.push({
       section: "attribution",
       title: `ลิงก์โปรโมทเติมชื่อผู้แนะนำอัตโนมัติ — ลูกค้าที่คลิกลิงก์ของ "${exec.name}" เห็นชื่อขึ้นในฟอร์มทันที`,
@@ -213,7 +302,11 @@ async function runProduction() {
         { label: "คุกกี้บันทึกช่องทางหลังยอมรับความยินยอม", pass: refCookie?.value === exec.refCode },
         { label: `ช่อง "ผู้แนะนำ" เติมชื่อ "${exec.name}" อัตโนมัติ`, pass: referrerValue === exec.name },
       ],
-      data: { "ลิงก์ที่ทดสอบ": `${base}/th?ref=${exec.refCode}` },
+      data: {
+        "ลิงก์ที่ทดสอบ": `${base}/th?ref=${exec.refCode}`,
+        "คุกกี้ kkd_ref": refCookie?.value ?? "(ไม่พบ)",
+        "httpOnly (จับต้องจาก JS ไม่ได้)": String(refCookie?.httpOnly ?? "-"),
+      },
     });
     await ctx.close();
   }
@@ -231,6 +324,7 @@ async function runProduction() {
       .then(() => true)
       .catch(() => false);
     const shotFail = await shot(admin, "admin-login-rejected");
+    await pace(admin);
 
     await admin.fill('input[name="email"]', "admin@kkdproperty.com");
     await admin.fill('input[name="password"]', process.env.ADMIN_PASSWORD ?? "admin1234");
@@ -238,6 +332,7 @@ async function runProduction() {
     const loggedIn = await admin.waitForURL("**/admin", { timeout: 15000 }).then(() => true).catch(() => false);
     await admin.waitForTimeout(1000);
     const shotOk = await shot(admin, "admin-dashboard");
+    await pace(admin);
     results.push({
       section: "admin",
       title: "ระบบหลังบ้าน — ป้องกันรหัสผ่านผิด",
@@ -259,6 +354,7 @@ async function runProduction() {
     const res = await admin.goto(`${base}/admin/leads`, { waitUntil: "load" });
     await admin.waitForTimeout(1500);
     const shotFile = await shot(admin, "admin-leads-list");
+    await pace(admin);
     results.push({
       section: "admin",
       title: "รายการลูกค้าเป้าหมาย (Leads) — ข้อมูลจริงของธุรกิจ",
@@ -273,6 +369,7 @@ async function runProduction() {
     const res = await admin.goto(`${base}/admin/channels`, { waitUntil: "load" });
     await admin.waitForTimeout(1500);
     const shotFile = await shot(admin, "admin-channels");
+    await pace(admin);
     results.push({
       section: "admin",
       title: "ช่องทางโปรโมท — จัดหมวดหมู่ช่องทาง สร้างลิงก์พร้อม UTM อัตโนมัติ",
@@ -296,6 +393,7 @@ async function runProduction() {
       }
     }
     const execShotFile = await shot(admin, "admin-channel-executives");
+    await pace(admin);
     results.push({
       section: "admin",
       title: "ผู้ดำเนินการต่อช่องทาง — ลิงก์รายบุคคลเติมชื่อผู้แนะนำให้ลูกค้าอัตโนมัติ",
@@ -311,6 +409,7 @@ async function runProduction() {
     const res = await admin.goto(`${base}/admin/reports`, { waitUntil: "load" });
     await admin.waitForTimeout(1800);
     const shotFile = await shot(admin, "admin-reports");
+    await pace(admin);
     results.push({
       section: "admin",
       title: "รายงานภาพรวม — สรุปยอดลีด ยอดจอง และรายได้ตามช่องทาง",
@@ -325,6 +424,7 @@ async function runProduction() {
     const res = await admin.goto(`${base}/admin/audit`, { waitUntil: "load" });
     await admin.waitForTimeout(1200);
     const shotFile = await shot(admin, "admin-audit-log");
+    await pace(admin);
     results.push({
       section: "admin",
       title: "ประวัติการแก้ไข — ทุกการเปลี่ยนแปลงข้อมูลถูกบันทึกไว้ตรวจสอบย้อนหลังได้",
@@ -409,6 +509,7 @@ async function runLocal() {
     await page.selectOption('select[name="province"]', "กรุงเทพมหานคร").catch(() => {});
     await page.selectOption('select[name="buildingType"]', "RESIDENTIAL").catch(() => {});
     const beforeSubmit = await shot(page, "booking-form-filled");
+    await pace(page);
     await page.click('button[type="submit"]');
     const submitted = await page
       .waitForSelector("text=ส่งข้อมูลสำเร็จ", { timeout: 15000 })
@@ -416,6 +517,7 @@ async function runLocal() {
       .catch(() => false);
     await page.waitForTimeout(500);
     const afterSubmit = await shot(page, "booking-form-success");
+    await pace(page);
     results.push({
       section: "booking",
       title: "ฟอร์มขอใบเสนอราคา — ลูกค้ากรอกและส่งได้จริง (ทดสอบบนสภาพแวดล้อมภายใน โค้ดชุดเดียวกับ production)",
@@ -464,6 +566,7 @@ async function runLocal() {
     await admin.waitForTimeout(1200);
     const hasUtmBlock = await admin.getByText("ข้อมูลแคมเปญ (UTM)").isVisible().catch(() => false);
     const shotFile = await shot(admin, "admin-lead-detail");
+    await pace(admin);
     results.push({
       section: "admin",
       title: "รายละเอียดลีด — เห็นช่องทางที่มา ผู้แนะนำ และข้อมูลแคมเปญ (UTM) ครบในหน้าเดียว",
