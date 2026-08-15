@@ -448,5 +448,131 @@ async function referrerValueAfterHydration(
   await context.close();
 }
 
+// --- Case 13: utm_* alone, no `?ref=` -> the Lead's utm columns are filled
+// in but autoSourceChannelId stays null. The two systems are independent
+// (Sprint 3, Default #1) — a campaign click with no promo ref code is still
+// a real campaign visit, not an attributed channel visit. Spends 1 of this
+// script's 5-submission FAKE_IP budget (see comment above Case 4). ---
+{
+  const context = await consentedContext();
+  const page = await context.newPage();
+  const phone = randPhone();
+
+  await page.goto(
+    "http://localhost:3000/th?utm_source=facebook&utm_medium=social&utm_campaign=package_info&utm_content=ADHOC01"
+  );
+  await page.goto("http://localhost:3000/th/booking?tab=quote");
+  await submitQuoteLead(page, "ทดสอบ UTM อย่างเดียว", phone);
+
+  const lead = await prisma.lead.findFirst({ where: { phone }, orderBy: { createdAt: "desc" } });
+  console.log(
+    `CHANNEL TRACKING: utm-only visit fills utm columns without autoSourceChannelId ${
+      lead?.utmSource === "facebook" &&
+      lead?.utmMedium === "social" &&
+      lead?.utmCampaign === "package_info" &&
+      lead?.utmContent === "ADHOC01" &&
+      lead?.autoSourceChannelId === null
+        ? "✓"
+        : "✗ FAIL"
+    }`
+  );
+
+  await context.close();
+}
+
+// --- Case 14: `?ref=` and `utm_*` together -> the Lead gets both
+// autoSourceChannelId (from kkd_ref) and the utm columns (from kkd_utm) —
+// the two cookies/systems don't interfere with each other. Spends the last
+// of this script's 5-submission FAKE_IP budget. ---
+{
+  const context = await consentedContext();
+  const page = await context.newPage();
+  const phone = randPhone();
+
+  await page.goto(
+    `http://localhost:3000/th?ref=${facebookChannel.refCode}&utm_source=facebook&utm_medium=social&utm_campaign=always_on&utm_content=${facebookChannel.refCode}`
+  );
+  await page.goto("http://localhost:3000/th/booking?tab=quote");
+  await submitQuoteLead(page, "ทดสอบ Ref + UTM", phone);
+
+  const lead = await prisma.lead.findFirst({ where: { phone }, orderBy: { createdAt: "desc" } });
+  console.log(
+    `CHANNEL TRACKING: ref+utm together attribute both channel and utm columns ${
+      lead?.autoSourceChannelId === facebookChannel.id &&
+      lead?.utmSource === "facebook" &&
+      lead?.utmCampaign === "always_on" &&
+      lead?.utmContent === facebookChannel.refCode
+        ? "✓"
+        : "✗ FAIL"
+    }`
+  );
+
+  await context.close();
+}
+
+// --- Case 15: `utm_*` without advertisement consent -> no `kkd_utm` cookie
+// at all, same gate as `kkd_ref` (Q2). Cookie inspection only, no
+// submission — Case 3 already proves an unattributed lead is recorded as
+// direct, and the budget above is fully spent. ---
+{
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
+  await page.goto(
+    "http://localhost:3000/th?utm_source=facebook&utm_medium=social&utm_campaign=package_info"
+  );
+  const cookies = await context.cookies();
+  console.log(
+    `CHANNEL TRACKING: utm_* without advertisement consent sets no kkd_utm ${
+      cookies.find((c) => c.name === "kkd_utm") === undefined ? "✓" : "✗ FAIL"
+    }`
+  );
+
+  await context.close();
+}
+
+// --- Case 16: accepting consent after landing on a utm link recovers the
+// utm set through the same /api/ref round trip that recovers `kkd_ref`
+// (Case 7) — RefConsentCapture now forwards utm_* alongside ref. ---
+{
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
+  await page.goto(
+    `http://localhost:3000/th?ref=${facebookChannel.refCode}&utm_source=facebook&utm_medium=social&utm_campaign=package_info&utm_content=${facebookChannel.refCode}`
+  );
+
+  // Consent arrives client-side, exactly as the banner grants it.
+  await context.addCookies([
+    {
+      name: "cookieyes-consent",
+      value: "consent:yes,necessary:yes,advertisement:yes,other:no",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  const status = await page.evaluate(async (params) => {
+    const res = await fetch(`/api/ref?${params}`, { credentials: "same-origin" });
+    return res.status;
+  }, `ref=${encodeURIComponent(facebookChannel.refCode)}&utm_source=facebook&utm_medium=social&utm_campaign=package_info&utm_content=${encodeURIComponent(facebookChannel.refCode)}`);
+  const recovered = await context.cookies();
+  const utmCookie = recovered.find((c) => c.name === "kkd_utm");
+  let utmValue: Record<string, string> | null = null;
+  try {
+    utmValue = utmCookie ? JSON.parse(decodeURIComponent(utmCookie.value)) : null;
+  } catch {
+    utmValue = null;
+  }
+  console.log(
+    `CHANNEL TRACKING: /api/ref after in-browser consent restores kkd_utm too ${
+      status === 200 && utmValue?.utm_source === "facebook" && utmValue?.utm_campaign === "package_info"
+        ? "✓"
+        : `✗ FAIL (status ${status}, utm ${JSON.stringify(utmValue)})`
+    }`
+  );
+
+  await context.close();
+}
+
 await browser.close();
 await prisma.$disconnect();

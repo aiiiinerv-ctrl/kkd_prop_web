@@ -7,7 +7,7 @@ import { resolveInterestSlugs } from "@/lib/lead-interest-slugs";
 import { notifyNewLead } from "@/lib/notifications";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { effectiveChannel } from "@/lib/reports/aggregate";
-import { resolveRefAttribution } from "@/lib/ref-attribution";
+import { resolveRefAttribution, resolveUtmAttribution } from "@/lib/ref-attribution";
 import { quoteSchema, zodFieldErrors } from "@/lib/validations/lead";
 
 export type SubmitResult =
@@ -32,6 +32,7 @@ export async function submitQuote(input: unknown): Promise<SubmitResult> {
   const data = parsed.data;
   const { autoSourceChannelId, autoSourceExecutiveId } =
     await resolveRefAttribution();
+  const utm = await resolveUtmAttribution();
   const { interestedPackageSlug, interestedServiceSlug } = await resolveInterestSlugs(
     data.interestedPackageSlug,
     data.interestedServiceSlug
@@ -58,6 +59,12 @@ export async function submitQuote(input: unknown): Promise<SubmitResult> {
       sourceChannelId: data.sourceChannelId || null,
       autoSourceChannelId,
       autoSourceExecutiveId,
+      utmSource: utm.utmSource,
+      utmMedium: utm.utmMedium,
+      utmCampaign: utm.utmCampaign,
+      utmContent: utm.utmContent,
+      utmTerm: utm.utmTerm,
+      landingPath: utm.landingPath,
     },
     include: {
       sourceChannel: { select: { nameTh: true } },

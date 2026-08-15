@@ -10,7 +10,7 @@ import { compressImage } from "@/lib/images";
 import { resolveInterestSlugs } from "@/lib/lead-interest-slugs";
 import { notifyNewLead } from "@/lib/notifications";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { resolveRefAttribution } from "@/lib/ref-attribution";
+import { resolveRefAttribution, resolveUtmAttribution } from "@/lib/ref-attribution";
 import { effectiveChannel } from "@/lib/reports/aggregate";
 import { storage, validateImage } from "@/lib/storage";
 import { surveySchema, zodFieldErrors } from "@/lib/validations/lead";
@@ -67,6 +67,7 @@ export async function submitSurveyBooking(
   const bookingNumber = await nextBookingNumber();
   const { autoSourceChannelId, autoSourceExecutiveId } =
     await resolveRefAttribution();
+  const utm = await resolveUtmAttribution();
   const { interestedPackageSlug, interestedServiceSlug } = await resolveInterestSlugs(
     data.interestedPackageSlug,
     data.interestedServiceSlug
@@ -94,6 +95,12 @@ export async function submitSurveyBooking(
       sourceChannelId: data.sourceChannelId || null,
       autoSourceChannelId,
       autoSourceExecutiveId,
+      utmSource: utm.utmSource,
+      utmMedium: utm.utmMedium,
+      utmCampaign: utm.utmCampaign,
+      utmContent: utm.utmContent,
+      utmTerm: utm.utmTerm,
+      landingPath: utm.landingPath,
       booking: {
         create: {
           bookingNumber,
