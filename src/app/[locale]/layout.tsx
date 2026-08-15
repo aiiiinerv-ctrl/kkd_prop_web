@@ -5,6 +5,7 @@ import Script from "next/script";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { setRequestLocale } from "next-intl/server";
 import { LocalBusinessJsonLd } from "@/components/site/local-business-jsonld";
+import { MobileBookingBar } from "@/components/site/mobile-booking-bar";
 import { RefConsentCapture } from "@/components/site/ref-consent-capture";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteHeader } from "@/components/site/site-header";
@@ -94,8 +95,9 @@ export default async function LocaleLayout({
         <LocalBusinessJsonLd />
         <NextIntlClientProvider>
           <SiteHeader showTestimonials={testimonials.length > 0} />
-          <div className="flex-1 flex flex-col">{children}</div>
+          <div className="flex-1 flex flex-col pb-[76px] lg:pb-0">{children}</div>
           <SiteFooter />
+          <MobileBookingBar />
         </NextIntlClientProvider>
       </body>
     </html>

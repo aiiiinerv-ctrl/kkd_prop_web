@@ -58,7 +58,7 @@ export function SiteFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="site-footer border-t border-border bg-muted/50">
+    <footer id="site-footer" className="site-footer border-t border-border bg-muted/50">
       <div className="site-footer-main mx-auto grid max-w-7xl gap-10 px-4 py-14 text-center sm:px-6 sm:text-left md:grid-cols-2 lg:grid-cols-[2fr_1fr_1.5fr_1.5fr]">
         <div className="flex flex-col items-center sm:items-start">
           <BrandLogo className="mb-4" />

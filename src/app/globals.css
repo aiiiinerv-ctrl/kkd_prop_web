@@ -555,6 +555,15 @@
   background: rgb(255 255 255 / 0.08);
 }
 
+/* Mobile persistent booking bar (issue #33) sits on the same navy as
+   .site-header, so its outline button needs the same light-on-dark
+   treatment as .home-hero above rather than the default navy-on-white. */
+.mobile-booking-bar .btn-pill-outline {
+  border-color: #f0b429;
+  color: #f0b429;
+  background: rgb(255 255 255 / 0.08);
+}
+
 .home-latest-works {
   position: relative;
   max-width: none;
