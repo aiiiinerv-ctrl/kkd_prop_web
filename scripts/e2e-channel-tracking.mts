@@ -427,5 +427,26 @@ async function referrerValueAfterHydration(
   await context.close();
 }
 
+// --- Case 12: a promo link built by buildPromoLink() (Sprint 2) carries utm_*
+// params alongside ?ref= and points at a non-root landing page — confirm the
+// extra params don't confuse proxy.ts's ref capture and that next-intl's
+// locale middleware doesn't drop the query string on its way to /th/packages. ---
+{
+  const context = await consentedContext();
+  const page = await context.newPage();
+
+  await page.goto(
+    `http://localhost:3000/th/packages?ref=${facebookExecutive.refCode}&utm_source=facebook&utm_medium=social&utm_campaign=package_info&utm_content=${facebookExecutive.refCode}`
+  );
+  const refCookie = (await context.cookies()).find((c) => c.name === "kkd_ref");
+  console.log(
+    `CHANNEL TRACKING: ref capture survives utm_* params and a non-root landing page ${
+      refCookie?.value === facebookExecutive.refCode ? "✓" : "✗ FAIL"
+    }`
+  );
+
+  await context.close();
+}
+
 await browser.close();
 await prisma.$disconnect();

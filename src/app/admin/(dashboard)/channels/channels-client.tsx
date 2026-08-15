@@ -9,6 +9,7 @@ import {
   CHANNEL_UTM_CAMPAIGNS,
   subTypeOf,
 } from "@/lib/channel-taxonomy";
+import { buildPromoLink } from "@/lib/promo-link";
 import { toast } from "sonner";
 import {
   createChannel,
@@ -63,10 +64,6 @@ type ChannelRow = {
   leadCount: number;
   executives: ExecutiveRow[];
 };
-
-function promoLink(siteUrl: string, refCode: string) {
-  return `${siteUrl}/?ref=${refCode}`;
-}
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("th-TH", {
@@ -232,10 +229,33 @@ export function ChannelsClient({
                 <TableCell>
                   <div className="flex items-center gap-1.5">
                     <Badge variant="outline">{c.refCode}</Badge>
-                    <span className="max-w-40 truncate text-xs text-muted-foreground">
-                      {promoLink(siteUrl, c.refCode)}
+                    <span
+                      className="max-w-40 truncate text-xs text-muted-foreground"
+                      title={buildPromoLink({
+                        siteUrl,
+                        refCode: c.refCode,
+                        landingPath: c.landingPath,
+                        subType: c.subType,
+                        utmCampaign: c.utmCampaign,
+                      })}
+                    >
+                      {buildPromoLink({
+                        siteUrl,
+                        refCode: c.refCode,
+                        landingPath: c.landingPath,
+                        subType: c.subType,
+                        utmCampaign: c.utmCampaign,
+                      })}
                     </span>
-                    <CopyButton value={promoLink(siteUrl, c.refCode)} />
+                    <CopyButton
+                      value={buildPromoLink({
+                        siteUrl,
+                        refCode: c.refCode,
+                        landingPath: c.landingPath,
+                        subType: c.subType,
+                        utmCampaign: c.utmCampaign,
+                      })}
+                    />
                   </div>
                 </TableCell>
                 <TableCell>{c.leadCount}</TableCell>
@@ -454,9 +474,21 @@ export function ChannelsClient({
                         <TableCell className="font-medium">{e.name}</TableCell>
                         <TableCell>{e.phone}</TableCell>
                         <TableCell>
+                          {/* Inherits landingPath/subType/utmCampaign from the
+                              parent channel — an executive isn't classified on
+                              their own, they carry the channel's campaign
+                              metadata with their own refCode swapped in. */}
                           <div className="flex items-center gap-1.5">
                             <Badge variant="outline">{e.refCode}</Badge>
-                            <CopyButton value={promoLink(siteUrl, e.refCode)} />
+                            <CopyButton
+                              value={buildPromoLink({
+                                siteUrl,
+                                refCode: e.refCode,
+                                landingPath: execDialogChannel.landingPath,
+                                subType: execDialogChannel.subType,
+                                utmCampaign: execDialogChannel.utmCampaign,
+                              })}
+                            />
                           </div>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
