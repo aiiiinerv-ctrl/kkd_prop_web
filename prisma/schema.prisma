@@ -175,6 +175,19 @@ model Lead {
   autoSourceChannel     PromoChannel?     @relation("LeadAutoSourceChannel", fields: [autoSourceChannelId], references: [id])
   autoSourceExecutiveId String?
   autoSourceExecutive   ChannelExecutive? @relation("LeadAutoSourceExecutive", fields: [autoSourceExecutiveId], references: [id])
+  // Campaign tracking, separate from the sourceChannelId/autoSourceChannelId
+  // pair above (docs/plans/sa-channel-taxonomy-utm-tasks.md Default #1):
+  // `kkd_ref` is per-channel/per-person attribution used for channel
+  // counting in reports (effectiveChannel() in src/lib/reports/aggregate.ts
+  // never reads these), while these columns are ad-campaign metadata read
+  // from the `kkd_utm` cookie (src/lib/utm.ts) at submit time. Both can be
+  // set on the same lead; neither one derives the other.
+  utmSource       String?        @db.VarChar(120)
+  utmMedium       String?        @db.VarChar(120)
+  utmCampaign     String?        @db.VarChar(120)
+  utmContent      String?        @db.VarChar(120)
+  utmTerm         String?        @db.VarChar(120)
+  landingPath     String?        @db.VarChar(200)
   assignedSalesId String?
   assignedSales   AdminUser?     @relation("LeadAssignedSales", fields: [assignedSalesId], references: [id])
   lastFollowUpAt  DateTime?

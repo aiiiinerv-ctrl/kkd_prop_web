@@ -108,6 +108,19 @@ ALTER TABLE `PromoChannel` ADD COLUMN IF NOT EXISTS `landingPath` VARCHAR(191) N
 ALTER TABLE `PromoChannel` ADD COLUMN IF NOT EXISTS `utmCampaign` VARCHAR(60) NULL;
 -- Verify: SHOW COLUMNS FROM `PromoChannel`;
 ```
+
+3.4 (Sprint 3) `prisma/migrations/20260815121403_add_utm_lead_columns/migration.sql` — dev, ผ่าน `prisma migrate dev`; phpMyAdmin-safe version ด้านล่างสำหรับ Sprint 5.3
+
+```sql
+-- Sprint 3 — apply via phpMyAdmin SQL tab (database: kkdprop1_kkdproperty)
+ALTER TABLE `Lead` ADD COLUMN IF NOT EXISTS `utmSource` VARCHAR(120) NULL;
+ALTER TABLE `Lead` ADD COLUMN IF NOT EXISTS `utmMedium` VARCHAR(120) NULL;
+ALTER TABLE `Lead` ADD COLUMN IF NOT EXISTS `utmCampaign` VARCHAR(120) NULL;
+ALTER TABLE `Lead` ADD COLUMN IF NOT EXISTS `utmContent` VARCHAR(120) NULL;
+ALTER TABLE `Lead` ADD COLUMN IF NOT EXISTS `utmTerm` VARCHAR(120) NULL;
+ALTER TABLE `Lead` ADD COLUMN IF NOT EXISTS `landingPath` VARCHAR(200) NULL;
+-- Verify: SHOW COLUMNS FROM `Lead`;
+```
 1.4 `src/actions/channels.ts:43` `nextChannelRefCode()` — รับ `subType` แล้วสร้าง `<PREFIX><running>` โดย query `where: { refCode: { startsWith: prefix } }` และ parse เฉพาะส่วนตัวเลข (แก้บั๊ก NaN→0 ที่ทำให้ชน unique) + เพิ่ม `subType`/`landingPath`/`utmCampaign` เข้า `channelSchema` | **nextjs-dev** | ⏳ รอ #1.1,#1.2
 1.5 `src/actions/channels.ts:96` `nextExecutiveRefCode()` — ปรับรูปแบบตามคำตอบ Q1 (ค่าเริ่มต้นสมมติ `TE00101`) | **nextjs-dev** | ⏳ รอ #0.1
 1.6 `prisma/seed.ts:75` — ตัว `nextChannelRefCode()` ก๊อบซ้ำอยู่ในไฟล์นี้ ต้องแก้พร้อมกัน ไม่งั้น seed จะสร้างโค้ดคนละสกีมกับ runtime; อัปเดต 6 ช่องทาง seed ให้มี `subType` และคง idempotent | **nextjs-dev** | ⏳ รอ #1.4

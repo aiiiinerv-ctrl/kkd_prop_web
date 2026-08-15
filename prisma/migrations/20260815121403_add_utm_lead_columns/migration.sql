@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE `Lead` ADD COLUMN `landingPath` VARCHAR(200) NULL,
+    ADD COLUMN `utmCampaign` VARCHAR(120) NULL,
+    ADD COLUMN `utmContent` VARCHAR(120) NULL,
+    ADD COLUMN `utmMedium` VARCHAR(120) NULL,
+    ADD COLUMN `utmSource` VARCHAR(120) NULL,
+    ADD COLUMN `utmTerm` VARCHAR(120) NULL;
