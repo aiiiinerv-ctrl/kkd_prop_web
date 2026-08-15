@@ -5,6 +5,7 @@ import {
   REF_COOKIE,
   REF_COOKIE_MAX_AGE,
 } from "@/lib/ref-cookie";
+import { parseUtmParams, serializeUtm, UTM_COOKIE } from "@/lib/utm";
 
 // Recovers the attribution the consent gate would otherwise drop.
 //
@@ -47,5 +48,36 @@ export async function GET(req: NextRequest) {
     secure: process.env.NODE_ENV === "production",
     path: "/",
   });
+
+  // Same recovery, same request: a visitor who accepted after landing on a
+  // promo link carrying both `?ref=` and `?utm_*=` would otherwise lose the
+  // utm set the same way `kkd_ref` was lost before this route existed — see
+  // ref-consent-capture.tsx, which now reads both off the URL and sends them
+  // here together. Consent was already re-checked above; no separate check
+  // needed for utm since it's gated by the exact same advertisement category.
+  const utm = parseUtmParams(req.nextUrl.searchParams);
+  if (utm) {
+    // This request is the recovery ping, not the landing page itself — the
+    // landing path comes from the same-origin Referer header the browser
+    // attaches to the fetch (see RefConsentCapture), falling back to
+    // undefined (no landingPath stored) if it's ever missing.
+    let landingPath: string | undefined;
+    const referer = req.headers.get("referer");
+    if (referer) {
+      try {
+        landingPath = new URL(referer).pathname;
+      } catch {
+        landingPath = undefined;
+      }
+    }
+    res.cookies.set(UTM_COOKIE, serializeUtm(utm, landingPath), {
+      maxAge: REF_COOKIE_MAX_AGE,
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+    });
+  }
+
   return res;
 }

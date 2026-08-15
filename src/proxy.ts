@@ -7,6 +7,7 @@ import {
   REF_COOKIE,
   REF_COOKIE_MAX_AGE,
 } from "@/lib/ref-cookie";
+import { parseUtmParams, serializeUtm, UTM_COOKIE } from "@/lib/utm";
 
 const intl = createIntlMiddleware(routing);
 
@@ -45,6 +46,33 @@ function applyRefCookie(req: NextRequest, res: NextResponse): NextResponse {
   return res;
 }
 
+// UTM campaign-tracking capture — a parallel system to applyRefCookie()
+// above, not a merge into it (docs/plans/sa-channel-taxonomy-utm-tasks.md
+// Default #1: `kkd_ref` is per-channel/per-person attribution, UTM is
+// campaign tracking; they stay separate columns and separate cookies, and
+// `ref` alone decides channel counting in reports).
+//
+// Same consent rule as `kkd_ref` (Q2 in the plan: gate identically, one PDPA
+// standard for the whole site) and the same last-touch semantics: a new
+// valid utm_* set overwrites whatever was there, written as one cookie value
+// so a later read can never mix utm_source from one campaign with
+// utm_campaign from another.
+function applyUtmCookie(req: NextRequest, res: NextResponse): NextResponse {
+  const utm = parseUtmParams(req.nextUrl.searchParams);
+  if (!utm) return res;
+  if (!hasAdvertisementConsent(req.cookies.get(CONSENT_COOKIE)?.value)) {
+    return res;
+  }
+  res.cookies.set(UTM_COOKIE, serializeUtm(utm, req.nextUrl.pathname), {
+    maxAge: REF_COOKIE_MAX_AGE,
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+  });
+  return res;
+}
+
 export default async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -60,7 +88,7 @@ export default async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  return applyRefCookie(req, intl(req));
+  return applyUtmCookie(req, applyRefCookie(req, intl(req)));
 }
 
 export const config = {

@@ -20,11 +20,24 @@ import { useEffect } from "react";
 // and with no banner there is no event to hear.
 export function RefConsentCapture() {
   useEffect(() => {
-    const ref = new URLSearchParams(window.location.search).get("ref")?.trim();
+    const search = new URLSearchParams(window.location.search);
+    const ref = search.get("ref")?.trim();
     if (!ref) return;
 
+    // utm_* params ride along on the same request: a promo link carries both
+    // `?ref=` and `?utm_*=`, and a visitor who accepts consent after landing
+    // would otherwise lose the utm set the same way `kkd_ref` was lost before
+    // this component existed (see route.ts). The route re-validates and
+    // re-gates both independently — this is just forwarding whatever the URL
+    // still has.
+    const params = new URLSearchParams({ ref });
+    for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"]) {
+      const value = search.get(key);
+      if (value) params.set(key, value);
+    }
+
     const capture = () => {
-      void fetch(`/api/ref?ref=${encodeURIComponent(ref)}`, {
+      void fetch(`/api/ref?${params.toString()}`, {
         credentials: "same-origin",
       }).catch(() => {
         // A lost attribution ping must never surface to the visitor.
