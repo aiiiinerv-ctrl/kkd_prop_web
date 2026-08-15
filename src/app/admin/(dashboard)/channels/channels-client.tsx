@@ -73,6 +73,16 @@ function formatDate(iso: string) {
   });
 }
 
+/**
+ * The domain+protocol prefix is identical on every promo link and eats most
+ * of the truncated width, hiding the part that actually differs
+ * (landingPath / ?ref= / utm params). Show only that part; the full URL
+ * stays available via the `title` attribute and the copy button.
+ */
+function stripSiteUrl(url: string, siteUrl: string) {
+  return url.startsWith(siteUrl) ? url.slice(siteUrl.length) : url;
+}
+
 function CopyButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
   return (
@@ -193,7 +203,7 @@ export function ChannelsClient({
         ถ้าต้องการให้เติมชื่อด้วย ให้ใช้ลิงก์รายบุคคลในปุ่ม &ldquo;ผู้ดำเนินการ&rdquo; ของช่องทางนั้น
       </p>
 
-      <div className="rounded-xl border border-border/70 bg-card">
+      <div className="min-w-0 rounded-xl border border-border/70 bg-card">
         <Table>
           <TableHeader>
             <TableRow>
@@ -216,98 +226,89 @@ export function ChannelsClient({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {channels.map((c) => (
-              <TableRow key={c.id}>
-                <TableCell className="font-medium">{c.nameTh}</TableCell>
-                <TableCell>{c.nameEn}</TableCell>
-                <TableCell>{CHANNEL_TYPE_LABELS[c.type]}</TableCell>
-                <TableCell>
-                  {c.subType
-                    ? `${subTypeOf(c.subType)?.nameTh ?? c.subType} (${c.subType})`
-                    : "-"}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1.5">
-                    <Badge variant="outline">{c.refCode}</Badge>
-                    <span
-                      className="max-w-40 truncate text-xs text-muted-foreground"
-                      title={buildPromoLink({
-                        siteUrl,
-                        refCode: c.refCode,
-                        landingPath: c.landingPath,
-                        subType: c.subType,
-                        utmCampaign: c.utmCampaign,
-                      })}
-                    >
-                      {buildPromoLink({
-                        siteUrl,
-                        refCode: c.refCode,
-                        landingPath: c.landingPath,
-                        subType: c.subType,
-                        utmCampaign: c.utmCampaign,
-                      })}
-                    </span>
-                    <CopyButton
-                      value={buildPromoLink({
-                        siteUrl,
-                        refCode: c.refCode,
-                        landingPath: c.landingPath,
-                        subType: c.subType,
-                        utmCampaign: c.utmCampaign,
-                      })}
-                    />
-                  </div>
-                </TableCell>
-                <TableCell>{c.leadCount}</TableCell>
-                <TableCell>{c.sortOrder}</TableCell>
-                <TableCell>
-                  <Badge variant={c.isActive ? "secondary" : "destructive"}>
-                    {c.isActive ? "เปิดใช้งาน" : "ปิด"}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {formatDate(c.createdAt)}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    className="p-2"
-                    aria-label="ผู้ดำเนินการ"
-                    onClick={() => {
-                      setExecDialogChannel(c);
-                      setEditingExec(null);
-                    }}
-                  >
-                    <Users className="size-4" />
-                  </Button>
-                  {!readOnly && (
-                    <>
-                      <Button
-                        variant="ghost"
-                        className="p-2"
-                        aria-label="แก้ไข"
-                        onClick={() => {
-                          setEditing(c);
-                          setDialogOpen(true);
-                        }}
+            {channels.map((c) => {
+              const promoLink = buildPromoLink({
+                siteUrl,
+                refCode: c.refCode,
+                landingPath: c.landingPath,
+                subType: c.subType,
+                utmCampaign: c.utmCampaign,
+              });
+              const promoLinkDisplay = stripSiteUrl(promoLink, siteUrl);
+              return (
+                <TableRow key={c.id}>
+                  <TableCell className="font-medium">{c.nameTh}</TableCell>
+                  <TableCell>{c.nameEn}</TableCell>
+                  <TableCell>{CHANNEL_TYPE_LABELS[c.type]}</TableCell>
+                  <TableCell>
+                    {c.subType
+                      ? `${subTypeOf(c.subType)?.nameTh ?? c.subType} (${c.subType})`
+                      : "-"}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      <Badge variant="outline">{c.refCode}</Badge>
+                      <span
+                        tabIndex={0}
+                        className="max-w-56 truncate text-xs text-muted-foreground"
+                        title={promoLink}
                       >
-                        <Pencil className="size-4" />
-                      </Button>
-                      <DeleteConfirm
-                        title={`ลบช่องทาง "${c.nameTh}"?`}
-                        description={
-                          c.leadCount > 0
-                            ? `มี lead อ้างอิงช่องทางนี้ ${c.leadCount} รายการ — ระบบจะไม่อนุญาตให้ลบ แนะนำให้ปิดการใช้งานแทน`
-                            : "การลบจะถูกบันทึกในประวัติการแก้ไข"
-                        }
-                        disabled={isPending}
-                        onConfirm={() => onDelete(c.id)}
-                      />
-                    </>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
+                        {promoLinkDisplay}
+                      </span>
+                      <CopyButton value={promoLink} />
+                    </div>
+                  </TableCell>
+                  <TableCell>{c.leadCount}</TableCell>
+                  <TableCell>{c.sortOrder}</TableCell>
+                  <TableCell>
+                    <Badge variant={c.isActive ? "secondary" : "destructive"}>
+                      {c.isActive ? "เปิดใช้งาน" : "ปิด"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {formatDate(c.createdAt)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      className="p-2"
+                      aria-label="ผู้ดำเนินการ"
+                      onClick={() => {
+                        setExecDialogChannel(c);
+                        setEditingExec(null);
+                      }}
+                    >
+                      <Users className="size-4" />
+                    </Button>
+                    {!readOnly && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          className="p-2"
+                          aria-label="แก้ไข"
+                          onClick={() => {
+                            setEditing(c);
+                            setDialogOpen(true);
+                          }}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                        <DeleteConfirm
+                          title={`ลบช่องทาง "${c.nameTh}"?`}
+                          description={
+                            c.leadCount > 0
+                              ? `มี lead อ้างอิงช่องทางนี้ ${c.leadCount} รายการ — ระบบจะไม่อนุญาตให้ลบ แนะนำให้ปิดการใช้งานแทน`
+                              : "การลบจะถูกบันทึกในประวัติการแก้ไข"
+                          }
+                          disabled={isPending}
+                          onConfirm={() => onDelete(c.id)}
+                        />
+                      </>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
@@ -435,7 +436,7 @@ export function ChannelsClient({
           }
         }}
       >
-        <DialogContent className="max-w-xl">
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>
               ผู้ดำเนินการช่องทาง &quot;{execDialogChannel?.nameTh}&quot;
@@ -469,7 +470,19 @@ export function ChannelsClient({
                         </TableCell>
                       </TableRow>
                     )}
-                    {execDialogChannel.executives.map((e) => (
+                    {execDialogChannel.executives.map((e) => {
+                      const execPromoLink = buildPromoLink({
+                        siteUrl,
+                        refCode: e.refCode,
+                        landingPath: execDialogChannel.landingPath,
+                        subType: execDialogChannel.subType,
+                        utmCampaign: execDialogChannel.utmCampaign,
+                      });
+                      const execPromoLinkDisplay = stripSiteUrl(
+                        execPromoLink,
+                        siteUrl
+                      );
+                      return (
                       <TableRow key={e.id}>
                         <TableCell className="font-medium">{e.name}</TableCell>
                         <TableCell>{e.phone}</TableCell>
@@ -480,15 +493,14 @@ export function ChannelsClient({
                               metadata with their own refCode swapped in. */}
                           <div className="flex items-center gap-1.5">
                             <Badge variant="outline">{e.refCode}</Badge>
-                            <CopyButton
-                              value={buildPromoLink({
-                                siteUrl,
-                                refCode: e.refCode,
-                                landingPath: execDialogChannel.landingPath,
-                                subType: execDialogChannel.subType,
-                                utmCampaign: execDialogChannel.utmCampaign,
-                              })}
-                            />
+                            <span
+                              tabIndex={0}
+                              className="max-w-56 truncate text-xs text-muted-foreground"
+                              title={execPromoLink}
+                            >
+                              {execPromoLinkDisplay}
+                            </span>
+                            <CopyButton value={execPromoLink} />
                           </div>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
@@ -513,7 +525,8 @@ export function ChannelsClient({
                           </TableCell>
                         )}
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
