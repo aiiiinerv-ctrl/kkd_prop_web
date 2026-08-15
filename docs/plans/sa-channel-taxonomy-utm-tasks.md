@@ -172,12 +172,12 @@ npx prisma migrate dev && npx prisma db seed   # migration ผ่าน, seed �
 npx tsx scripts/verify-all.mts         # build → prod server → booking → admin → admin-crud
 npx tsx scripts/e2e-channel-tracking.mts       # เคสใหม่ทั้ง 4 ต้อง ✓
 ```
-เปิดดูจริง: `/th/packages?ref=<code>&utm_source=facebook&utm_medium=social&utm_campaign=package_info`, `/en/packages?...`, `/th/cookie-policy`, `/en/cookie-policy`, `/admin/channels`, lead detail ที่เพิ่ง submit | **nextjs-dev** | ⏳ รอ Sprint 4
-5.2 อ่าน `docs/plans/kkd-shared-hosting-redeploy-runbook.md` ให้จบก่อนแตะ production (กฎ "schema first, always verified") | **hosting-deploy-specialist** | ⏳ รอ #5.1
-5.3 **DDL ก่อน deploy** — apply SQL จาก #1.3 และ #3.4 ผ่าน **phpMyAdmin** (production ไม่มี SSH/Prisma migrate ไม่ถึง) เขียนแบบ `ADD COLUMN IF NOT EXISTS` แล้วยืนยันด้วย `SHOW COLUMNS FROM \`PromoChannel\`;` และ `SHOW COLUMNS FROM \`Lead\`;` | **hosting-deploy-specialist** | ⏳ รอ #5.2
-5.4 ตรวจ Dockerfile/`.htaccess`/build script ว่าไม่ต้องแก้จากงานนี้ (ไม่มี env ใหม่) | **deploy-verify** | ✅ ขนานได้กับ #5.3
-5.5 deploy + `npx tsx scripts/smoke-test-production.mts` เพิ่ม `--check "/th/packages?ref=TE001&utm_source=telesale"` ยืนยัน 200 และ query string ไม่หายหลัง 301 www→non-www | **hosting-deploy-specialist** | ⏳ รอ #5.3
-5.6 หลัง deploy: admin สร้าง/แก้ 6 ช่องทางเดิมให้มี subType + refCode ใหม่ผ่าน UI (ข้อมูล lead=0 จึงไม่มีความเสี่ยง) แล้วแจกลิงก์ชุดใหม่กลับให้ SA | **ผู้ใช้/admin** | ⏳ รอ #5.5
+เปิดดูจริง: `/th/packages?ref=<code>&utm_source=facebook&utm_medium=social&utm_campaign=package_info`, `/en/packages?...`, `/th/cookie-policy`, `/en/cookie-policy`, `/admin/channels`, lead detail ที่เพิ่ง submit | **nextjs-dev** | ✅ ทำแล้ว — build/migrate dev/seed/verify-all/e2e-channel-tracking (20/20 ✓) รันจริงบนเครื่อง ไม่ใช่แค่อ้าง
+5.2 อ่าน `docs/plans/kkd-shared-hosting-redeploy-runbook.md` ให้จบก่อนแตะ production (กฎ "schema first, always verified") | **hosting-deploy-specialist** | ✅ ทำแล้ว
+5.3 **DDL ก่อน deploy** — apply SQL จาก #1.3 และ #3.4 ผ่าน **phpMyAdmin** (production ไม่มี SSH/Prisma migrate ไม่ถึง) เขียนแบบ `ADD COLUMN IF NOT EXISTS` แล้วยืนยันด้วย `SHOW COLUMNS FROM \`PromoChannel\`;` และ `SHOW COLUMNS FROM \`Lead\`;` | **ผู้ใช้ (ผ่าน phpMyAdmin) + ตรวจซ้ำ** | ✅ ทำแล้ว — ยืนยันด้วย screenshot จริง 2 ตาราง ครบทั้ง 9 คอลัมน์ ก่อน restart
+5.4 ตรวจ Dockerfile/`.htaccess`/build script ว่าไม่ต้องแก้จากงานนี้ (ไม่มี env ใหม่) | **deploy-verify** | ✅ ทำแล้ว — `git diff` เทียบ Dockerfile/fly.toml/firebase.json/.dockerignore/deploy/ ว่างเปล่า
+5.5 deploy + `npx tsx scripts/smoke-test-production.mts` เพิ่ม `--check "/th/packages?ref=TE001&utm_source=telesale"` ยืนยัน 200 และ query string ไม่หายหลัง 301 www→non-www | **ผู้ใช้ (FTP upload ผ่าน `!`) + agent (extract/restart/verify)** | ✅ ทำแล้ว — BUILD_ID `EOjTCOf-4YbxMTbJQjAP2` ตรง, smoke-test 3/3 ✓, `ref`+`utm` รอด 301 www→non-www query ไม่หาย
+5.6 หลัง deploy: admin สร้าง/แก้ 6 ช่องทางเดิมให้มี subType + refCode ใหม่ผ่าน UI (ข้อมูล lead=0 จึงไม่มีความเสี่ยง) แล้วแจกลิงก์ชุดใหม่กลับให้ SA | **ผู้ใช้/admin** | ✅ ทำแล้วบางส่วน — Facebook→FB, LINE→LO, เพื่อนแนะนำ→RF (ตามที่ผู้ใช้ยืนยัน) ยืนยันแล้วว่าลิงก์มี utm ครบ; **ยังไม่จัด**: Google ค้นหา, อื่น ๆ / Walk-in (ไม่มี subType ตรงในชีต SA 10 ค่า — ทิ้งว่างไว้ตามที่ตกลง ไม่ใช่งานค้าง); refCode เดิม (CH015-CH019) ยังไม่เปลี่ยนเป็นสกีมใหม่ (TE/FB/…) เพราะ default #10 ห้าม auto-migrate — เปลี่ยนเองทีหลังผ่าน UI ได้ถ้าต้องการ; ยังไม่ได้แจกลิงก์ชุดใหม่กลับให้ SA (ผู้ใช้ดำเนินการเอง)
 
 **Commit convention:** `feat(channels): …` สำหรับ taxonomy/ลิงก์, `feat(booking): …` หรือ scope ใหม่ `tracking` สำหรับ UTM capture, `fix(channels): …` แยกคอมมิตสำหรับบั๊ก `nextChannelRefCode()` (หนึ่ง type ต่อหนึ่งคอมมิต — อย่ารวม feat กับ fix)
 
