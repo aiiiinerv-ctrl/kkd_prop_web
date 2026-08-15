@@ -45,6 +45,15 @@ export const getPackageBySlug = cache(
   }
 );
 
+/** Null when the slug is unknown *or* unpublished — an unpublished service is not a 404-able draft to the public, it simply doesn't exist. */
+export const getServiceBySlug = cache(
+  async (slug: string, locale: string): Promise<ServiceView | null> => {
+    const row = await prisma.service.findUnique({ where: { slug } });
+    if (!row || !row.isPublished) return null;
+    return toServiceView(row, locale);
+  }
+);
+
 export const getPublishedServices = cache(
   async (locale: string): Promise<ServiceView[]> => {
     const rows = await prisma.service.findMany({

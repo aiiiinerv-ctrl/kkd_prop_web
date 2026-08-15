@@ -2,8 +2,12 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 import { SectionHeading } from "@/components/site/section-heading";
 import { bookingLinkParamsSchema } from "@/lib/booking-links";
-import { getActiveChannels, getPaymentSettings } from "@/lib/content";
-import { prisma } from "@/lib/db";
+import {
+  getActiveChannels,
+  getPackageBySlug,
+  getPaymentSettings,
+  getServiceBySlug,
+} from "@/lib/content";
 import { generatePromptPayQrDataUrl } from "@/lib/promptpay";
 import { BookingForms } from "./booking-forms";
 import { pageMetadata } from "@/lib/seo";
@@ -41,12 +45,8 @@ export default async function BookingPage({
   const [channels, paymentSettings, packageRow, serviceRow] = await Promise.all([
     getActiveChannels(locale),
     getPaymentSettings(),
-    packageSlug
-      ? prisma.package.findUnique({ where: { slug: packageSlug }, select: { slug: true } })
-      : null,
-    serviceSlug
-      ? prisma.service.findUnique({ where: { slug: serviceSlug }, select: { slug: true } })
-      : null,
+    packageSlug ? getPackageBySlug(packageSlug, locale) : null,
+    serviceSlug ? getServiceBySlug(serviceSlug, locale) : null,
   ]);
 
   // Survey booking fee is a fixed ฿199 (same constant used in the UI copy
