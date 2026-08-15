@@ -337,6 +337,41 @@ async function submitQuoteLead(page: import("playwright").Page, name: string, ph
   await context.close();
 }
 
+/**
+ * Reads the referrer field only once the page has had a chance to hydrate.
+ *
+ * The value is not in the server HTML: the server passes the name as a prop
+ * and react-hook-form writes it into the input from an effect after
+ * hydration. Reading straight after page.goto() therefore races the client
+ * and returns "" intermittently — which is exactly how the first version of
+ * these cases reported a green run against a feature that was fine and, worse,
+ * would have reported green against one that wasn't.
+ *
+ * Waits for `expected` when there is something to wait for; for the
+ * deliberately-empty cases there is no value to wait on, so it settles the
+ * page first and only then reads, otherwise "" would just mean "too early".
+ */
+async function referrerValueAfterHydration(
+  page: import("playwright").Page,
+  expected: string
+): Promise<string> {
+  await page.waitForLoadState("networkidle");
+  if (expected !== "") {
+    await page
+      .waitForFunction(
+        (want) =>
+          (document.querySelector('input[name="referrerName"]') as HTMLInputElement | null)
+            ?.value === want,
+        expected,
+        { timeout: 5_000 }
+      )
+      .catch(() => {});
+  } else {
+    await page.waitForTimeout(1_500);
+  }
+  return page.inputValue('input[name="referrerName"]');
+}
+
 // --- Case 9: exec ref code + consent -> the "ผู้แนะนำ" field on the booking
 // page arrives prefilled with the executive's name (resolveRefReferrerName,
 // src/lib/ref-attribution.ts). No submission needed — this is a prefill
@@ -347,7 +382,7 @@ async function submitQuoteLead(page: import("playwright").Page, name: string, ph
 
   await page.goto(`http://localhost:3000/th?ref=${facebookExecutive.refCode}`);
   await page.goto("http://localhost:3000/th/booking?tab=quote");
-  const value = await page.inputValue('input[name="referrerName"]');
+  const value = await referrerValueAfterHydration(page, facebookExecutive.name);
   console.log(
     `CHANNEL TRACKING: executive ref prefills the referrer field ${
       value === facebookExecutive.name ? "✓" : `✗ FAIL (got "${value}")`
@@ -365,7 +400,7 @@ async function submitQuoteLead(page: import("playwright").Page, name: string, ph
   const page = await context.newPage();
 
   await page.goto(`http://localhost:3000/th/booking?tab=quote&ref=${referralChannel.refCode}`);
-  const value = await page.inputValue('input[name="referrerName"]');
+  const value = await referrerValueAfterHydration(page, "");
   console.log(
     `CHANNEL TRACKING: channel-only ref leaves the referrer field empty ${
       value === "" ? "✓" : `✗ FAIL (got "${value}")`
@@ -382,7 +417,7 @@ async function submitQuoteLead(page: import("playwright").Page, name: string, ph
   const page = await context.newPage();
 
   await page.goto(`http://localhost:3000/th/booking?tab=quote&ref=${facebookExecutive.refCode}`);
-  const value = await page.inputValue('input[name="referrerName"]');
+  const value = await referrerValueAfterHydration(page, "");
   console.log(
     `CHANNEL TRACKING: ref without consent leaves the referrer field empty ${
       value === "" ? "✓" : `✗ FAIL (got "${value}")`
