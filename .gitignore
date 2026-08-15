@@ -33,6 +33,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+# build-time public config, no secrets — must be committed so the deploy build
+# container (which never sees .env) knows the real site URL
+!.env.production
 
 # database
 prisma/*.db
