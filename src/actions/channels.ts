@@ -34,6 +34,36 @@ const channelSchema = z.object({
   sortOrder: z.coerce.number().int().min(0).max(999).default(0),
 });
 
+/**
+ * Turns a unique-constraint violation into the `{ok:false}` union the rest of
+ * these actions return, instead of letting it escape as an unhandled server
+ * error that leaves the dialog stuck on "กำลังบันทึก..." with no toast.
+ *
+ * Two ways to hit this, one of them ordinary: `PromoChannel.slug` is unique
+ * and derived from nameEn, so any two channels sharing an English name
+ * collide — an everyday admin mistake, not a race. The other is genuinely
+ * concurrent creation: refCode is chosen by reading the current maximum and
+ * adding one, which is a separate round-trip from the insert, so two admins
+ * submitting the same subType at the same moment can compute the same code.
+ * Retrying is not worth it for two admins on one site; telling them plainly
+ * that the code or name was taken is.
+ */
+async function asResult(write: () => Promise<unknown>): Promise<ActionResult> {
+  try {
+    await write();
+    return { ok: true };
+  } catch (err) {
+    const code = (err as { code?: string })?.code;
+    if (code === "P2002") {
+      return {
+        ok: false,
+        error: "ชื่อหรือรหัสนี้ถูกใช้ไปแล้ว กรุณาลองใหม่อีกครั้งหรือเปลี่ยนชื่อ",
+      };
+    }
+    throw err;
+  }
+}
+
 function parseChannel(formData: FormData) {
   return channelSchema.safeParse({
     nameTh: formData.get("nameTh"),
@@ -84,13 +114,13 @@ export async function createChannel(formData: FormData): Promise<ActionResult> {
   // No subType picked -> continues the pre-taxonomy "CH0xx" scheme, matching
   // the "- ไม่ระบุ (คงรหัสเดิม) -" option in the admin dropdown.
   const refCode = await nextChannelRefCode(parsed.data.subType ?? "CH");
-  await channels.create({
-    ...parsed.data,
-    slug: slugify(parsed.data.nameEn),
-    refCode,
-  });
-
-  return { ok: true };
+  return asResult(() =>
+    channels.create({
+      ...parsed.data,
+      slug: slugify(parsed.data.nameEn),
+      refCode,
+    })
+  );
 }
 
 export async function updateChannel(
@@ -156,9 +186,7 @@ export async function createChannelExecutive(
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
 
   const refCode = await nextExecutiveRefCode(channelId, channel.refCode);
-  await executives.create({ ...parsed.data, channelId, refCode });
-
-  return { ok: true };
+  return asResult(() => executives.create({ ...parsed.data, channelId, refCode }));
 }
 
 export async function updateChannelExecutive(
