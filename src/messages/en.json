@@ -395,6 +395,8 @@
     "sessionDuration": "Until you sign out",
     "refPurpose": "Records which promotional link brought you here, so we know where your enquiry came from.",
     "refDuration": "30 days",
+    "utmPurpose": "Records the ad-campaign parameters (UTM) from the link you clicked, so we can measure marketing campaigns.",
+    "utmDuration": "30 days",
     "consentPurpose": "Stores the consent choice you made, so you are not asked again on every visit.",
     "consentDuration": "1 year",
     "thirdPartyHeading": "Embedded third-party services",

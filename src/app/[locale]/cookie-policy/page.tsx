@@ -24,10 +24,10 @@ export default async function CookiePolicyPage({
   setRequestLocale(locale);
   const t = await getTranslations("cookiePolicy");
 
-  // The four cookies this site actually sets, kept in sync with
-  // src/lib/ref-cookie.ts, src/proxy.ts and the Auth.js session cookie. Adding
-  // a cookie anywhere means adding a row here — the page claims to be the
-  // complete list.
+  // The cookies this site actually sets, kept in sync with
+  // src/lib/ref-cookie.ts, src/lib/utm.ts, src/proxy.ts and the Auth.js
+  // session cookie. Adding a cookie anywhere means adding a row here — the
+  // page claims to be the complete list.
   const COOKIES = [
     {
       name: "NEXT_LOCALE",
@@ -51,6 +51,12 @@ export default async function CookiePolicyPage({
       name: "kkd_ref",
       purpose: t("refPurpose"),
       duration: t("refDuration"),
+      category: t("categoryAdvertisement"),
+    },
+    {
+      name: "kkd_utm",
+      purpose: t("utmPurpose"),
+      duration: t("utmDuration"),
       category: t("categoryAdvertisement"),
     },
   ];
