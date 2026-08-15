@@ -141,15 +141,15 @@ ALTER TABLE `Lead` ADD COLUMN IF NOT EXISTS `landingPath` VARCHAR(200) NULL;
 
 ## Sprint 3 — UTM capture → Lead (ขนาด: M, ~1 วัน) — **block ด้วย Q2**
 
-3.1 `src/lib/utm.ts` (**ไฟล์ใหม่**) — `UTM_COOKIE = "kkd_utm"`, `parseUtmParams(searchParams)` (ตัดที่ 120 ตัวอักษร, whitelist 5 คีย์, ทิ้งทั้งชุดถ้าไม่มี `utm_source`), `serializeUtm`/`parseUtmCookie` | **nextjs-dev** | ✅ ขนานได้
-3.2 `src/proxy.ts` — เพิ่ม `applyUtmCookie()` ข้าง `applyRefCookie()` **ใช้ `hasAdvertisementConsent()` ตัวเดียวกัน** (ตามคำตอบ Q2) เขียนทั้งชุดพร้อมกัน last-touch; ห้ามแตะ matcher และห้ามแตะตรรกะ `applyRefCookie` เดิม | **nextjs-dev** | ⏳ รอ #3.1, #0.1(Q2)
-3.3 `src/app/api/ref/route.ts` + `src/components/site/ref-consent-capture.tsx` — ขยาย recovery path ให้ส่ง utm ไปด้วย (visitor ที่กด accept ทีหลัง จะเสีย utm เหมือนที่เคยเสีย ref — บั๊กเดิมที่วัดจริงบน production 2026-08-13) พร้อม re-check consent ฝั่ง server เหมือนเดิม | **nextjs-dev** | ⏳ รอ #3.2
-3.4 `prisma/schema.prisma` `Lead` — `utmSource/utmMedium/utmCampaign/utmContent/utmTerm String? @db.VarChar(120)` + `landingPath String? @db.VarChar(200)` + comment อธิบายว่าอยู่คนละระบบกับ `autoSourceChannelId` (ตาม default #1) | **nextjs-dev** | ⏳ รอ #3.1
-3.5 `src/lib/ref-attribution.ts` — เพิ่ม `resolveUtmAttribution()` แยกฟังก์ชัน **ห้ามแก้ `resolveRefAttribution()`** (สองระบบคู่กัน ไม่ปนกัน) | **nextjs-dev** | ⏳ รอ #3.4
-3.6 `src/actions/submit-quote.ts` + `src/actions/submit-survey-booking.ts` — เขียน utm ลง Lead ตอน create; UTM ที่อ่านไม่ได้/ว่าง ต้องไม่ทำให้ submit ล้ม (lead สำคัญกว่า attribution — หลักเดียวกับ `notifyNewLead()`) | **nextjs-dev** | ⏳ รอ #3.5
-3.7 `scripts/e2e-channel-tracking.mts` — เพิ่มเคส: (a) มี utm อย่างเดียว, (b) มี ref+utm พร้อมกัน → ต้องได้ทั้ง `autoSourceChannelId` และคอลัมน์ utm, (c) ไม่ consent → ไม่มี utm ในฐานข้อมูล, (d) accept ทีหลังแล้ว recovery ติด | **nextjs-dev** | ⏳ รอ #3.6
-3.8 `src/app/[locale]/cookie-policy/page.tsx` + `src/messages/th.json` + `en.json` — เพิ่ม `kkd_utm` ลงตารางคุกกี้ (ชื่อ/วัตถุประสงค์/อายุ) **ทั้งสองภาษา** | **nextjs-dev** | ⏳ รอ #3.2
-3.9 ตรวจ key parity ของ #3.8 | **i18n-parity-checker** | ⏳ รอ #3.8
+3.1 `src/lib/utm.ts` (**ไฟล์ใหม่**) — `UTM_COOKIE = "kkd_utm"`, `parseUtmParams(searchParams)` (ตัดที่ 120 ตัวอักษร, whitelist 5 คีย์, ทิ้งทั้งชุดถ้าไม่มี `utm_source`), `serializeUtm`/`parseUtmCookie` | **nextjs-dev** | ✅ ทำแล้ว
+3.2 `src/proxy.ts` — เพิ่ม `applyUtmCookie()` ข้าง `applyRefCookie()` **ใช้ `hasAdvertisementConsent()` ตัวเดียวกัน** (ตามคำตอบ Q2) เขียนทั้งชุดพร้อมกัน last-touch; ห้ามแตะ matcher และห้ามแตะตรรกะ `applyRefCookie` เดิม | **nextjs-dev** | ✅ ทำแล้ว — ตรวจซ้ำอิสระแล้วว่า `applyRefCookie()`/`matcher` ไม่ถูกแก้แม้แต่บรรทัดเดียว
+3.3 `src/app/api/ref/route.ts` + `src/components/site/ref-consent-capture.tsx` — ขยาย recovery path ให้ส่ง utm ไปด้วย (visitor ที่กด accept ทีหลัง จะเสีย utm เหมือนที่เคยเสีย ref — บั๊กเดิมที่วัดจริงบน production 2026-08-13) พร้อม re-check consent ฝั่ง server เหมือนเดิม | **nextjs-dev** | ✅ ทำแล้ว — `landingPath` มาจาก `req.nextUrl.pathname` (proxy) หรือ `Referer` header (recovery route)
+3.4 `prisma/schema.prisma` `Lead` — `utmSource/utmMedium/utmCampaign/utmContent/utmTerm String? @db.VarChar(120)` + `landingPath String? @db.VarChar(200)` + comment อธิบายว่าอยู่คนละระบบกับ `autoSourceChannelId` (ตาม default #1) | **nextjs-dev** | ✅ ทำแล้ว — `prisma/migrations/20260815121403_add_utm_lead_columns/migration.sql`; SQL สำหรับ phpMyAdmin อยู่ท้ายไฟล์นี้ (Sprint 5.3)
+3.5 `src/lib/ref-attribution.ts` — เพิ่ม `resolveUtmAttribution()` แยกฟังก์ชัน **ห้ามแก้ `resolveRefAttribution()`** (สองระบบคู่กัน ไม่ปนกัน) | **nextjs-dev** | ✅ ทำแล้ว — ตรวจซ้ำอิสระแล้วว่า `resolveRefAttribution()`/`resolveRefReferrerName()` ไม่ถูกแก้; ห่อ try/catch คืน null ทั้งชุดถ้า parse ล้มเหลว
+3.6 `src/actions/submit-quote.ts` + `src/actions/submit-survey-booking.ts` — เขียน utm ลง Lead ตอน create; UTM ที่อ่านไม่ได้/ว่าง ต้องไม่ทำให้ submit ล้ม (lead สำคัญกว่า attribution — หลักเดียวกับ `notifyNewLead()`) | **nextjs-dev** | ✅ ทำแล้ว
+3.7 `scripts/e2e-channel-tracking.mts` — เพิ่มเคส: (a) มี utm อย่างเดียว, (b) มี ref+utm พร้อมกัน → ต้องได้ทั้ง `autoSourceChannelId` และคอลัมน์ utm, (c) ไม่ consent → ไม่มี utm ในฐานข้อมูล, (d) accept ทีหลังแล้ว recovery ติด | **nextjs-dev** | ✅ ทำแล้ว — Case 13–16, `verify-all` เขียวทั้งชุด (ตรวจซ้ำอิสระแล้ว)
+3.8 `src/app/[locale]/cookie-policy/page.tsx` + `src/messages/th.json` + `en.json` — เพิ่ม `kkd_utm` ลงตารางคุกกี้ (ชื่อ/วัตถุประสงค์/อายุ) **ทั้งสองภาษา** | **nextjs-dev** | ✅ ทำแล้ว — คีย์ `utmPurpose`/`utmDuration`, category advertisement เหมือน `kkd_ref`
+3.9 ตรวจ key parity ของ #3.8 | **i18n-parity-checker** | ✅ PASS — `cookiePolicy.utmPurpose`/`utmDuration` มีครบทั้ง TH/EN (27 คีย์เท่ากัน) ไม่มี key ที่หน้าอ้างถึงแล้วขาด
 
 ---
 
