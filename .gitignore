@@ -54,6 +54,10 @@ prisma/*.db-journal
 # generated screenshots (verification output, not source)
 /screenshots/
 
+# client-supplied documents (company registration certificate, requirement PDFs,
+# pricing spreadsheets) — this repo is PUBLIC, these must never be committed
+/docs/stuffs/
+
 # firebase CLI deploy cache
 /.firebase/
 
