@@ -82,6 +82,15 @@ deploy blocker; worth knowing before relying on atomicity.
 - All code changes committed, typecheck + lint clean
 - If the deploy carries a migration: schema applied and **verified** per the
   rule above
+- **If the deploy carries a migration, snapshot production first.** There is no
+  SSH and no external MySQL access, so the backup has to run inside the app
+  process on the host — `npx tsx scripts/backup-db.mts` writes a data-only SQL
+  dump plus the private payment slips into `backups/`. To roll back, either run
+  `npx tsx scripts/restore-db.mts <snapshot> --confirm` or import the snapshot's
+  `database.sql` through phpMyAdmin in the panel. Note that restore is
+  destructive (each table is emptied before its rows are reinserted) and that
+  slips are only touched with `--with-storage`. `backups/` lives on the same
+  host, so download it off-server for anything you actually want to keep.
 
 ## Steps
 

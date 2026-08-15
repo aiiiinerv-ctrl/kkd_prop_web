@@ -96,6 +96,8 @@ npx tsx scripts/e2e-booking.mts  # E2E: public lead forms (server must be runnin
 npx tsx scripts/e2e-admin.mts    # E2E: auth guard, login, slip access
 npx tsx scripts/e2e-admin-crud.mts  # E2E: leads pipeline, content CRUD, audit
 npx tsx scripts/verify-calculator.mts  # regression check: calculator formulas vs. reference Excel
+npx tsx scripts/backup-db.mts    # snapshot DB + private slips into backups/ (runs anywhere the app runs — no mysqldump needed)
+npx tsx scripts/restore-db.mts   # dry-run against the latest snapshot; add --confirm to actually restore (destructive)
 # before redeploying to production, always read docs/plans/kkd-shared-hosting-redeploy-runbook.md
 npx tsx scripts/smoke-test-production.mts  # verify production after deploy (4 standard checks + optional --check/--expect-text)
 ```

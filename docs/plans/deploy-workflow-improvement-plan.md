@@ -1,7 +1,8 @@
 # KKD PROPERTY — ปรับปรุง Deploy Workflow ให้สะดวกขึ้น (Shared Hosting, No SSH)
 
 Owner ของแผนนี้: `pm-expert` (scope/breakdown) → ส่งต่อ `orchestrator` เพื่อ dispatch จริง
-Status: ROUTED TO ORCHESTRATOR — รอ dispatch
+Status: DONE (2026-08-15) — task 1 (runbook), 3 (`deploy/upload-dist.sh`), 4 (`scripts/smoke-test-production.mts`)
+และ 5 (AGENTS.md Commands) ส่งมอบครบแล้ว เก็บไฟล์นี้ไว้เป็นบันทึกเหตุผลเบื้องหลัง ไม่ใช่ backlog ที่ยังรอคิว
 
 ## ที่มา / ปัญหา
 
