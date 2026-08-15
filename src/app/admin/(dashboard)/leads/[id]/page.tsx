@@ -85,6 +85,12 @@ export default async function LeadDetailPage({
         assignedSalesName: lead.assignedSales?.name ?? null,
         lastFollowUpAt: lead.lastFollowUpAt ? lead.lastFollowUpAt.toISOString() : null,
         createdAt: lead.createdAt.toISOString(),
+        utmSource: lead.utmSource,
+        utmMedium: lead.utmMedium,
+        utmCampaign: lead.utmCampaign,
+        utmContent: lead.utmContent,
+        utmTerm: lead.utmTerm,
+        landingPath: lead.landingPath,
         booking: lead.booking
           ? {
               id: lead.booking.id,

@@ -166,6 +166,12 @@ export type FullExportRow = {
   paymentStatus: string;
   bookingStatus: string;
   giftSent: string;
+  utmSource: string;
+  utmMedium: string;
+  utmCampaign: string;
+  utmContent: string;
+  utmTerm: string;
+  landingPath: string;
 };
 
 export const FULL_EXPORT_COLUMNS: { key: keyof FullExportRow; header: string; width: number }[] = [
@@ -198,6 +204,12 @@ export const FULL_EXPORT_COLUMNS: { key: keyof FullExportRow; header: string; wi
   { key: "paymentStatus", header: "สถานะการชำระเงิน", width: 18 },
   { key: "bookingStatus", header: "สถานะการนัดสำรวจ", width: 18 },
   { key: "giftSent", header: "ส่งของขวัญแล้วหรือไม่", width: 20 },
+  { key: "utmSource", header: "UTM Source", width: 16 },
+  { key: "utmMedium", header: "UTM Medium", width: 16 },
+  { key: "utmCampaign", header: "UTM Campaign", width: 18 },
+  { key: "utmContent", header: "UTM Content", width: 18 },
+  { key: "utmTerm", header: "UTM Term", width: 16 },
+  { key: "landingPath", header: "Landing Path", width: 20 },
 ];
 
 export async function getFullExportRows(
@@ -229,6 +241,12 @@ export async function getFullExportRows(
       createdAt: true,
       closedAt: true,
       lastFollowUpAt: true,
+      utmSource: true,
+      utmMedium: true,
+      utmCampaign: true,
+      utmContent: true,
+      utmTerm: true,
+      landingPath: true,
       sourceChannelId: true,
       sourceChannel: { select: { nameTh: true } },
       autoSourceChannelId: true,
@@ -293,6 +311,12 @@ export async function getFullExportRows(
         : "-",
       bookingStatus: booking?.status ? (BOOKING_STATUS_LABELS[booking.status] ?? booking.status) : "-",
       giftSent: !booking ? "-" : booking.giftSent ? "ส่งแล้ว" : "ยังไม่ส่ง",
+      utmSource: lead.utmSource ?? "-",
+      utmMedium: lead.utmMedium ?? "-",
+      utmCampaign: lead.utmCampaign ?? "-",
+      utmContent: lead.utmContent ?? "-",
+      utmTerm: lead.utmTerm ?? "-",
+      landingPath: lead.landingPath ?? "-",
     };
   });
 }

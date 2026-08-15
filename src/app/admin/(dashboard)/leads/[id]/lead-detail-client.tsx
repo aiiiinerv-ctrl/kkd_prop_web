@@ -64,6 +64,12 @@ type LeadDetail = {
   assignedSalesName: string | null;
   lastFollowUpAt: string | null;
   createdAt: string;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  utmContent: string | null;
+  utmTerm: string | null;
+  landingPath: string | null;
   booking: {
     id: string;
     address: string;
@@ -293,6 +299,43 @@ export function LeadDetailClient({
           </div>
         </dl>
       </div>
+
+      {(lead.utmSource ||
+        lead.utmMedium ||
+        lead.utmCampaign ||
+        lead.utmContent ||
+        lead.utmTerm ||
+        lead.landingPath) && (
+        <div className="rounded-xl border border-border/70 bg-card p-6">
+          <h2 className="mb-4 font-semibold">ข้อมูลแคมเปญ (UTM)</h2>
+          <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-muted-foreground">UTM Source</dt>
+              <dd className="font-medium">{lead.utmSource ?? "-"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">UTM Medium</dt>
+              <dd className="font-medium">{lead.utmMedium ?? "-"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">UTM Campaign</dt>
+              <dd className="font-medium">{lead.utmCampaign ?? "-"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">UTM Content</dt>
+              <dd className="font-medium">{lead.utmContent ?? "-"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">UTM Term</dt>
+              <dd className="font-medium">{lead.utmTerm ?? "-"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Landing Path</dt>
+              <dd className="font-medium">{lead.landingPath ?? "-"}</dd>
+            </div>
+          </dl>
+        </div>
+      )}
 
       {lead.booking && payment && (
         <div className="rounded-xl border border-border/70 bg-card p-6">
