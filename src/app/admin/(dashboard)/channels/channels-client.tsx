@@ -180,6 +180,12 @@ export function ChannelsClient({
         )}
       </div>
 
+      <p className="text-xs text-muted-foreground">
+        ลิงก์ในตารางนี้เป็นลิงก์ของ<strong className="font-medium">ช่องทาง</strong>
+        {" — "}บันทึกว่า lead มาจากช่องทางไหน แต่ไม่เติมชื่อในช่อง &ldquo;ผู้แนะนำ&rdquo; ให้ลูกค้า
+        ถ้าต้องการให้เติมชื่อด้วย ให้ใช้ลิงก์รายบุคคลในปุ่ม &ldquo;ผู้ดำเนินการ&rdquo; ของช่องทางนั้น
+      </p>
+
       <div className="rounded-xl border border-border/70 bg-card">
         <Table>
           <TableHeader>
@@ -187,7 +193,13 @@ export function ChannelsClient({
               <TableHead>ชื่อ (TH)</TableHead>
               <TableHead>ชื่อ (EN)</TableHead>
               <TableHead>ประเภท</TableHead>
-              <TableHead>รหัส / ลิงก์โปรโมท</TableHead>
+              {/* The channel-level and executive-level links are both produced
+                  by promoLink() and look identical once copied, but only the
+                  executive one carries a person's name — so only it prefills
+                  the customer's "ผู้แนะนำ" field on the booking form. Say which
+                  is which here, or the shorter link in the main table gets
+                  handed out by default and the prefill never fires. */}
+              <TableHead>รหัส / ลิงก์โปรโมทระดับช่องทาง</TableHead>
               <TableHead>จำนวน Lead</TableHead>
               <TableHead>ลำดับ</TableHead>
               <TableHead>สถานะ</TableHead>
@@ -340,13 +352,17 @@ export function ChannelsClient({
           </DialogHeader>
           {execDialogChannel && (
             <div className="space-y-4">
+              <p className="text-xs text-muted-foreground">
+                ลิงก์รายบุคคลเติมชื่อผู้ดำเนินการลงช่อง &ldquo;ผู้แนะนำ&rdquo;
+                ในฟอร์มจองให้ลูกค้าอัตโนมัติ (ลูกค้าแก้ได้) — ใช้ลิงก์นี้เวลาแจกให้พนักงานไปโปรโมท
+              </p>
               <div className="rounded-lg border border-border/70">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>ชื่อ</TableHead>
                       <TableHead>เบอร์โทร</TableHead>
-                      <TableHead>รหัส / ลิงก์โปรโมท</TableHead>
+                      <TableHead>รหัส / ลิงก์โปรโมทรายบุคคล</TableHead>
                       <TableHead>วันที่สร้าง</TableHead>
                       {!readOnly && <TableHead className="text-right">จัดการ</TableHead>}
                     </TableRow>
