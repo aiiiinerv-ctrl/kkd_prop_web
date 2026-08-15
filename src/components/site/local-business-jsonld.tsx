@@ -1,13 +1,14 @@
+import { getTranslations } from "next-intl/server";
 import { SITE_URL } from "@/lib/seo";
 
 // LocalBusiness structured data for search engines.
-export function LocalBusinessJsonLd() {
+export async function LocalBusinessJsonLd() {
+  const t = await getTranslations("meta");
   const data = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     name: "KKD PROPERTY CO., LTD.",
-    description:
-      "บริการติดตั้งโซลาร์เซลล์ครบวงจร On-Grid, Hybrid, Off-Grid โดยวิศวกรมีใบอนุญาต",
+    description: t("localBusinessDescription"),
     url: SITE_URL,
     telephone: "+66824731567",
     email: "contact@kkdproperty.com",
