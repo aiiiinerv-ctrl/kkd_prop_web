@@ -249,6 +249,58 @@ Always include at least one **feature-specific** check unique to that
 redeploy's actual change — the generic checks alone have missed stale-code
 scenarios that a targeted content check caught.
 
+## Host-level config that lives only on the server
+
+`/domains/kkdproperty.co.th/public_html/.htaccess` is not in this repo and no
+deploy touches it, so nothing here restores it. It holds three things:
+
+1. the CloudLinux Passenger block (app root, Node binary, `server.js`) —
+   without it the site does not run at all;
+2. the CloudLinux env-var block, which is where production's real
+   `DATABASE_URL`, `AUTH_SECRET`, `STORAGE_ROOT`, `NEXT_PUBLIC_SITE_URL` and
+   `NEXT_PUBLIC_COOKIEYES_ID` live. **This file contains live secrets — never
+   paste its contents into an issue, a commit, or a chat log.**
+3. the canonical-host redirect added 2026-08-15 (below).
+
+Both CloudLinux blocks are marked `DO NOT REMOVE`. Anything added has to be
+*appended*: download the file first, append, upload, then download again and
+diff against what you intended before trusting it. There is no SSH, so a
+mangled `.htaccess` means a site that is down with no shell to fix it from.
+
+Editing env vars through the panel's Node.js Selector rewrites this file. If
+that ever drops the appended block, `www` silently starts serving a duplicate
+of the whole site again — so re-check the redirect after any env-var change.
+
+### Canonical host: www → non-www
+
+`www.kkdproperty.co.th` and `kkdproperty.co.th` both answered 200 with
+identical content and no redirect between them, while every canonical tag,
+hreflang entry and sitemap URL named the bare domain — two crawlable copies of
+every page. Appended to `.htaccess`:
+
+```apache
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteCond %{HTTP_HOST} ^www\.kkdproperty\.co\.th$ [NC]
+RewriteRule ^(.*)$ https://kkdproperty.co.th/$1 [R=301,L]
+</IfModule>
+```
+
+Done at the LiteSpeed layer rather than in `src/proxy.ts` because the proxy's
+matcher excludes `api`, `files`, `_next` and any path containing a dot — which
+means `sitemap.xml` and `robots.txt`, the two files crawlers care about most,
+would not have been redirected at all.
+
+Verify after any change to this file:
+
+```bash
+curl -s -o /dev/null -w "%{http_code} -> %{redirect_url}\n" https://www.kkdproperty.co.th/th
+# expect: 301 -> https://kkdproperty.co.th/th   (path preserved, not just the root)
+curl -s -o /dev/null -L -w "hops: %{num_redirects} final: %{url_effective}\n" http://www.kkdproperty.co.th/
+# expect: ends at https://kkdproperty.co.th/th with 200 — http://www goes via the
+# Force-SSL redirect first, so 3 hops here is correct, not a loop
+```
+
 ## Common failure modes seen so far
 
 | Symptom | Cause | Fix |
@@ -261,6 +313,7 @@ scenarios that a targeted content check caught.
 | `Specified key was too long` (MySQL 1071) | Index on multiple default `VARCHAR(191)` columns exceeds this panel's InnoDB key-length limit | Use explicit shorter `@db.VarChar(n)` |
 | Pages all return 200 but every form submit returns 500, and `/api/admin/leads` 500s | A migration in the deploy never reached production — Prisma is querying a column that doesn't exist | Apply the DDL via phpMyAdmin (`ADD COLUMN IF NOT EXISTS`), verify with `SHOW COLUMNS`; no redeploy needed, the fix takes effect immediately |
 | Upload output contains the FTP password in cleartext | `deploy/upload-dist.sh` runs `curl -v`, which prints the `PASS` line | Rotate the password if it has been pasted anywhere; consider filtering `PASS` out of the script's output |
+| `www.` serves the whole site again with no redirect | The panel rewrote `.htaccess` (editing env vars through the Node.js Selector does this) and dropped the appended canonical-host block | Re-append it — see "Host-level config that lives only on the server" above |
 | Consent banner reappears on every page, `kkd_ref` never sticks, admin login won't hold | The visitor is on **http**. This host answers plain http with 200 unless told otherwise, and every cookie that matters (`kkd_ref`, `cookieyes-consent`, `authjs.session-token`) is `Secure`, so the browser drops all of them. Every test over `https://` passes, which is why it hides. | Panel → SSL Certificates → the domain → tick **Force SSL with https redirect** (posts `CMD_DOMAIN` `action=private_html&force_ssl=yes`; the redirect keeps the query string, so `?ref=` survives). Enabled 2026-08-14. Don't redirect in `src/proxy.ts` instead — TLS terminates at LiteSpeed and the app can't reliably tell, so it risks an infinite loop. |
 
 ## Related docs
