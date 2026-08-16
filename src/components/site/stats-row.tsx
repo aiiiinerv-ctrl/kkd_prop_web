@@ -8,7 +8,11 @@ const STATS = [
   { valueKey: "statsCustomersValue", labelKey: "statsCustomers" },
 ] as const;
 
-type OverridableStatKey = "statsProjectsValue" | "statsCustomersValue";
+type OverridableStatKey =
+  | "statsProjectsValue"
+  | "statsCustomersValue"
+  | "statsYearsValue"
+  | "statsEngineersValue";
 
 /**
  * Grid columns adapt to how many stats actually render — Tailwind classes

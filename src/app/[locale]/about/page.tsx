@@ -97,6 +97,10 @@ export default async function AboutPage({
         overrides={{
           statsProjectsValue: projectCount > 0 ? String(projectCount) : null,
           statsCustomersValue: closedLeadCount > 0 ? String(closedLeadCount) : null,
+          // No verified source for years in business or licensed engineer
+          // headcount yet — hide rather than show a placeholder dash.
+          statsYearsValue: null,
+          statsEngineersValue: null,
         }}
       />
 
