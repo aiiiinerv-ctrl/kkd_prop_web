@@ -259,6 +259,88 @@ model BookingCapacitySetting {
   updatedAt  DateTime @updatedAt
 }
 
+// Singleton — site-wide contact info, social links, header/footer text.
+// All content columns are nullable so the app can fallback to messages/*.json
+// when a row exists but a field has never been filled in.
+model SiteSettings {
+  id                  String   @id @default(cuid())
+  phone               String?
+  email               String?
+  addressTh           String?
+  addressEn           String?
+  hoursTh             String?
+  hoursEn             String?
+  mapQuery            String?
+  lineUrl             String?
+  facebookUrl         String?
+  instagramUrl        String?
+  tiktokUrl           String?
+  youtubeUrl          String?
+  footerDescriptionTh String?  @db.Text
+  footerDescriptionEn String?  @db.Text
+  contactTitleTh      String?
+  contactTitleEn      String?
+  contactSubtitleTh   String?
+  contactSubtitleEn   String?
+  headerCtaLabelTh    String?
+  headerCtaLabelEn    String?
+  updatedAt           DateTime @updatedAt
+}
+
+// Per-page SEO data — one row per MetaKey (10 rows in seed).
+// `key` is constrained to META_KEYS at the zod level, not with a Prisma enum,
+// so production can never need an ALTER TABLE to extend it.
+model PageSeo {
+  id            String   @id @default(cuid())
+  key           String   @unique @db.VarChar(40)
+  titleTh       String?
+  titleEn       String?
+  descriptionTh String?  @db.Text
+  descriptionEn String?  @db.Text
+  ogImageKey    String?
+  updatedAt     DateTime @updatedAt
+}
+
+// Singleton — editable content for the about page (ADMIN|SALES|MARKETING|EDITOR).
+// Matches the 16 user-facing fields from messages.about (excludes numbersTitle
+// which belongs to StatsRow and must not be touched here).
+model AboutContent {
+  id                    String   @id @default(cuid())
+  titleTh               String?
+  titleEn               String?
+  introTh               String?  @db.Text
+  introEn               String?  @db.Text
+  credRegisteredTitleTh String?
+  credRegisteredTitleEn String?
+  credRegisteredDescTh  String?  @db.Text
+  credRegisteredDescEn  String?  @db.Text
+  credEngineerTitleTh   String?
+  credEngineerTitleEn   String?
+  credEngineerDescTh    String?  @db.Text
+  credEngineerDescEn    String?  @db.Text
+  credExperienceTitleTh String?
+  credExperienceTitleEn String?
+  credExperienceDescTh  String?  @db.Text
+  credExperienceDescEn  String?  @db.Text
+  teamTitleTh           String?
+  teamTitleEn           String?
+  teamDescTh            String?  @db.Text
+  teamDescEn            String?  @db.Text
+  teamDesignTitleTh     String?
+  teamDesignTitleEn     String?
+  teamDesignDescTh      String?  @db.Text
+  teamDesignDescEn      String?  @db.Text
+  teamInstallTitleTh    String?
+  teamInstallTitleEn    String?
+  teamInstallDescTh     String?  @db.Text
+  teamInstallDescEn     String?  @db.Text
+  teamSupportTitleTh    String?
+  teamSupportTitleEn    String?
+  teamSupportDescTh     String?  @db.Text
+  teamSupportDescEn     String?  @db.Text
+  updatedAt             DateTime @updatedAt
+}
+
 // Singleton (mirrors BookingCapacitySetting) — admin-configurable payment
 // info shown on the public survey-booking form (bank transfer + PromptPay QR).
 model PaymentSettings {

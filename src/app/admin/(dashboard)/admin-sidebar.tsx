@@ -4,6 +4,7 @@ import {
   CalendarCheck,
   ClipboardList,
   FileBarChart,
+  FileText,
   Home,
   Images,
   LayoutDashboard,
@@ -71,6 +72,12 @@ const ITEMS = [
     roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
   },
   {
+    href: "/admin/content/about",
+    label: "เนื้อหาหน้าเว็บ",
+    icon: FileText,
+    roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
+  },
+  {
     href: "/admin/channels",
     label: "ช่องทางโปรโมท",
     icon: Megaphone,
@@ -98,7 +105,7 @@ const ITEMS = [
     href: "/admin/settings",
     label: "ตั้งค่าระบบ",
     icon: Settings,
-    roles: ["ADMIN"] as Role[],
+    roles: ["ADMIN", "MARKETING"] as Role[],
   },
 ];
 

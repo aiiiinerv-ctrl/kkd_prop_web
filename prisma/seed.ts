@@ -640,6 +640,199 @@ async function seedPortfolio() {
   console.log(`Portfolio projects: ${projects.length}`);
 }
 
+async function seedSiteSettings() {
+  const existing = await prisma.siteSettings.findFirst();
+  if (existing) return;
+  await prisma.siteSettings.create({
+    data: {
+      phone: "0824731567",
+      email: "contact@kkdproperty.com",
+      addressTh: "สมุทรปราการ, ประเทศไทย",
+      addressEn: "Samut Prakan, Thailand",
+      hoursTh: "จันทร์ - เสาร์ 09:00 - 18:00 น.",
+      hoursEn: "Mon - Sat 09:00 - 18:00",
+      mapQuery: "สมุทรปราการ, ประเทศไทย",
+      lineUrl: "https://line.me/R/ti/p/@kkdsolar",
+      facebookUrl: "https://facebook.com/kkdsolar",
+      // MOCK — replace with real URLs when client provides them
+      instagramUrl: "https://instagram.com/kkdproperty",
+      // MOCK — replace with real URLs when client provides them
+      tiktokUrl: "https://tiktok.com/@kkdproperty",
+      // MOCK — replace with real URLs when client provides them
+      youtubeUrl: "https://youtube.com/@kkdproperty",
+      footerDescriptionTh:
+        "KKD PROPERTY CO., LTD. บริษัทวิศวกรรมที่เชี่ยวชาญด้านการติดตั้งระบบโซลาร์เซลล์ มีประสบการณ์งานวิศวกรรม บริการออกแบบและติดตั้งครบวงจร ด้วยวิศวกรมีใบอนุญาต จดทะเบียนถูกต้องในประเทศไทย",
+      footerDescriptionEn:
+        "KKD PROPERTY CO., LTD. is an engineering company specializing in solar power installation. We provide end-to-end design and installation services with licensed engineers, fully registered in Thailand.",
+      contactTitleTh: "ติดต่อเรา",
+      contactTitleEn: "Contact Us",
+      contactSubtitleTh: "ยินดีให้คำปรึกษาฟรี ไม่มีข้อผูกมัด",
+      contactSubtitleEn: "Free consultation, no obligation",
+      headerCtaLabelTh: null,
+      headerCtaLabelEn: null,
+    },
+  });
+  console.log("Site settings: ready");
+}
+
+async function seedPageSeo() {
+  const pages: Array<{
+    key: string;
+    titleTh: string;
+    titleEn: string;
+    descriptionTh: string;
+    descriptionEn: string;
+  }> = [
+    {
+      key: "home",
+      titleTh: "KKD PROPERTY - ติดตั้งโซลาร์เซลล์ครบวงจร โดยวิศวกรมีใบอนุญาต",
+      titleEn: "KKD PROPERTY - Complete Solar Installation by Licensed Engineers",
+      descriptionTh:
+        "บริการติดตั้งโซลาร์เซลล์ On-Grid, Hybrid, Off-Grid ครบวงจร พร้อมบริการล้างแผงและตรวจเช็คระบบ โดยทีมวิศวกรมีใบอนุญาต จดทะเบียนถูกต้องในไทย",
+      descriptionEn:
+        "On-Grid, Hybrid and Off-Grid solar installation, plus panel cleaning and system inspection, by licensed engineers. Fully registered in Thailand.",
+    },
+    {
+      key: "about",
+      titleTh: "เกี่ยวกับเรา | KKD PROPERTY",
+      titleEn: "About Us | KKD PROPERTY",
+      descriptionTh: "รู้จัก KKD PROPERTY CO., LTD. บริษัทวิศวกรรมผู้เชี่ยวชาญด้านโซลาร์เซลล์ จดทะเบียน DBD ถูกต้อง",
+      descriptionEn: "Meet KKD PROPERTY CO., LTD., a solar engineering specialist with DBD registration.",
+    },
+    {
+      key: "services",
+      titleTh: "บริการของเรา | KKD PROPERTY",
+      titleEn: "Our Services | KKD PROPERTY",
+      descriptionTh:
+        "บริการติดตั้งระบบโซลาร์เซลล์ On-Grid, Hybrid, Off-Grid พร้อมบริการล้างแผงโซลาร์เซลล์และตรวจเช็คระบบโดยวิศวกร",
+      descriptionEn:
+        "On-Grid, Hybrid and Off-Grid solar installation, plus professional panel cleaning and engineer system inspections.",
+    },
+    {
+      key: "packages",
+      titleTh: "แพ็กเกจโซลาร์เซลล์ | KKD PROPERTY",
+      titleEn: "Solar Packages | KKD PROPERTY",
+      descriptionTh:
+        "แพ็กเกจติดตั้งโซลาร์เซลล์ 3KW 5KW 10KW พร้อมราคา เลือกตามค่าไฟบ้านคุณ แผง Tier 1 ประกัน 25 ปี",
+      descriptionEn:
+        "3KW, 5KW and 10KW solar packages with pricing. Tier 1 panels, 25-year warranty. Choose by your monthly bill.",
+    },
+    {
+      key: "portfolio",
+      titleTh: "ผลงานการติดตั้ง | KKD PROPERTY",
+      titleEn: "Installation Portfolio | KKD PROPERTY",
+      descriptionTh:
+        "ผลงานติดตั้งโซลาร์เซลล์บ้านพักอาศัยจริงของ KKD PROPERTY พร้อมขนาดระบบและรายละเอียดหน้างานแต่ละหลัง",
+      descriptionEn:
+        "Real residential solar installations by KKD PROPERTY, with system size and site details for each home.",
+    },
+    {
+      key: "booking",
+      titleTh: "ขอใบเสนอราคา / นัดสำรวจหน้างาน | KKD PROPERTY",
+      titleEn: "Request a Quote / Book Site Survey | KKD PROPERTY",
+      descriptionTh:
+        "ขอใบเสนอราคาโซลาร์เซลล์ฟรี หรือนัดวิศวกรสำรวจหน้างานเพียง 199 บาท ออกแบบระบบเฉพาะสำหรับคุณ",
+      descriptionEn:
+        "Get a free solar quote, or book an engineer site survey for only ฿199 with a custom system design.",
+    },
+    {
+      key: "contact",
+      titleTh: "ติดต่อเรา | KKD PROPERTY",
+      titleEn: "Contact Us | KKD PROPERTY",
+      descriptionTh: "ติดต่อ KKD PROPERTY โทร 082-473-1567 หรือ LINE @kkdsolar เปิดจันทร์-เสาร์ 9:00-18:00 น.",
+      descriptionEn: "Contact KKD PROPERTY: call 082-473-1567 or LINE @kkdsolar. Open Mon-Sat 9:00-18:00.",
+    },
+    {
+      key: "calculator",
+      titleTh: "เครื่องคำนวณโซลาร์เซลล์ | KKD PROPERTY",
+      titleEn: "Solar Calculator | KKD PROPERTY",
+      descriptionTh:
+        "คำนวณขนาดระบบโซลาร์เซลล์ที่เหมาะกับบ้านคุณจากค่าไฟรายเดือน พร้อมประมาณการเงินที่ประหยัดได้",
+      descriptionEn: "Calculate the right solar system size from your monthly electricity bill, with estimated savings.",
+    },
+    {
+      key: "testimonials",
+      titleTh: "รีวิวจากลูกค้า | KKD PROPERTY",
+      titleEn: "Customer Testimonials | KKD PROPERTY",
+      descriptionTh: "อ่านความคิดเห็นจริงจากลูกค้าที่ใช้บริการติดตั้งโซลาร์เซลล์กับ KKD PROPERTY",
+      descriptionEn: "Read what real customers say about their solar installation experience with KKD PROPERTY.",
+    },
+    {
+      key: "cookiePolicy",
+      titleTh: "นโยบายคุกกี้ | KKD PROPERTY",
+      titleEn: "Cookie Policy | KKD PROPERTY",
+      descriptionTh:
+        "รายการคุกกี้ทั้งหมดที่เว็บไซต์ KKD PROPERTY จัดเก็บ วัตถุประสงค์ ระยะเวลา และวิธีเปลี่ยนความยินยอมของคุณ",
+      descriptionEn:
+        "Every cookie the KKD PROPERTY website stores, what each one is for, how long it lasts, and how to change your consent.",
+    },
+  ];
+
+  for (const page of pages) {
+    await prisma.pageSeo.upsert({
+      where: { key: page.key },
+      update: {},
+      create: page,
+    });
+  }
+  console.log(`Page SEO rows: ${pages.length}`);
+}
+
+async function seedAboutContent() {
+  const existing = await prisma.aboutContent.findFirst();
+  if (existing) return;
+  await prisma.aboutContent.create({
+    data: {
+      titleTh: "เกี่ยวกับบริษัท KKD PROPERTY CO., LTD.",
+      titleEn: "About KKD PROPERTY CO., LTD.",
+      introTh:
+        "บริษัทวิศวกรรมที่เชี่ยวชาญด้านการติดตั้งระบบโซลาร์เซลล์ งานก่อสร้าง และระบบครัวอุตสาหกรรม มุ่งมั่นให้บริการด้วยมาตรฐานสูงสุด",
+      introEn:
+        "An engineering company specializing in solar power installation, construction, and industrial kitchen systems, committed to the highest service standards.",
+      credRegisteredTitleTh: "จดทะเบียนถูกต้องในประเทศไทย",
+      credRegisteredTitleEn: "Registered in Thailand",
+      credRegisteredDescTh: "เลขทะเบียน DBD: 0105566007521 ตรวจสอบได้ โปร่งใส เชื่อถือได้",
+      credRegisteredDescEn: "DBD registration no. 0105566007521 — verifiable, transparent, and trustworthy.",
+      credEngineerTitleTh: "ทีมวิศวกรมีใบอนุญาต",
+      credEngineerTitleEn: "Licensed Engineering Team",
+      credEngineerDescTh: "รับงานที่ต้องมีวิศวกรเซ็นรับรองอย่างถูกต้องตามกฎหมาย ปลอดภัยทุกขั้นตอน",
+      credEngineerDescEn:
+        "We handle projects requiring certified engineer sign-off, fully compliant with the law and safe at every step.",
+      credExperienceTitleTh: "ผลงานที่ผ่านมา",
+      credExperienceTitleEn: "Proven Track Record",
+      credExperienceDescTh:
+        "ทีมวิศวกรมืออาชีพ ติดตั้งระบบโซลาร์คุณภาพสูงให้ทั้งบ้านพักอาศัย อาคารพาณิชย์ และโรงงานอุตสาหกรรม",
+      credExperienceDescEn:
+        "A professional engineering team installing high-quality solar systems for homes, commercial buildings, and industrial factories.",
+      teamTitleTh: "ทีมงานของเรา",
+      teamTitleEn: "Our Team",
+      teamDescTh:
+        "ทีมวิศวกรและช่างติดตั้งมืออาชีพ ผ่านการอบรมมาตรฐานความปลอดภัย พร้อมดูแลโครงการของคุณตั้งแต่ออกแบบจนถึงบริการหลังการขาย",
+      teamDescEn:
+        "Professional engineers and installers, trained to safety standards, taking care of your project from design through after-sales service.",
+      teamDesignTitleTh: "ทีมออกแบบและวิศวกรรม",
+      teamDesignTitleEn: "Design & Engineering",
+      teamDesignDescTh:
+        "วิศวกรมีใบอนุญาตออกแบบระบบออนกริด ไฮบริด และออฟกริด ให้เหมาะกับหลังคาและพฤติกรรมการใช้ไฟของแต่ละโครงการ",
+      teamDesignDescEn:
+        "Licensed engineers design On-Grid, Hybrid, and Off-Grid systems tailored to each roof and electricity usage pattern.",
+      teamInstallTitleTh: "ทีมติดตั้งหน้างาน",
+      teamInstallTitleEn: "Site Installation",
+      teamInstallDescTh:
+        "ช่างติดตั้งผ่านการอบรมมาตรฐานความปลอดภัย ควบคุมคุณภาพงานทุกขั้นตอนตั้งแต่เริ่มจนจบโครงการ",
+      teamInstallDescEn:
+        "Installers trained to safety standards, controlling quality at every step from project start to finish.",
+      teamSupportTitleTh: "ทีมบริการหลังการขาย",
+      teamSupportTitleEn: "After-Sales Support",
+      teamSupportDescTh:
+        "ดูแลต่อเนื่องด้วยบริการล้างแผงโซลาร์เซลล์และตรวจเช็คระบบ ให้ระบบของคุณทำงานเต็มประสิทธิภาพอยู่เสมอ",
+      teamSupportDescEn:
+        "Ongoing care with panel cleaning and system inspection services, keeping your system running at full efficiency.",
+    },
+  });
+  console.log("About content: ready");
+}
+
 async function main() {
   await seedAdmin();
   await seedPromoLandingPaths();
@@ -647,6 +840,9 @@ async function main() {
   await seedTestRoleAccounts();
   await seedBookingCapacitySetting();
   await seedPaymentSettings();
+  await seedSiteSettings();
+  await seedPageSeo();
+  await seedAboutContent();
   await seedServices();
   await seedPackages();
   await seedPortfolio();

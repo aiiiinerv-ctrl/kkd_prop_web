@@ -118,3 +118,115 @@ export type ChannelView = { id: string; name: string };
 export function toChannelView(row: Row, locale: string): ChannelView {
   return { id: String(row.id), name: pickLocale(row, "name", locale) };
 }
+
+// ─── Site content view-models ───────────────────────────────────────────────
+
+export type SocialLink = { key: string; url: string };
+
+export type SiteSettingsView = {
+  id: string;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  hours: string | null;
+  mapQuery: string | null;
+  socialLinks: SocialLink[];
+  footerDescription: string | null;
+  contactTitle: string | null;
+  contactSubtitle: string | null;
+  headerCtaLabel: string | null;
+  lineUrl: string | null;
+  facebookUrl: string | null;
+};
+
+export function toSiteSettingsView(row: Row, locale: string): SiteSettingsView {
+  const str = (v: unknown) => (v && typeof v === "string" ? v : null);
+  const loc = (field: string) => pickLocale(row, field, locale) || null;
+
+  const socialCandidates: SocialLink[] = [
+    { key: "line", url: str(row.lineUrl) ?? "" },
+    { key: "facebook", url: str(row.facebookUrl) ?? "" },
+    { key: "instagram", url: str(row.instagramUrl) ?? "" },
+    { key: "tiktok", url: str(row.tiktokUrl) ?? "" },
+    { key: "youtube", url: str(row.youtubeUrl) ?? "" },
+  ];
+  const socialLinks = socialCandidates.filter((s) => s.url !== "");
+
+  return {
+    id: String(row.id),
+    phone: str(row.phone),
+    email: str(row.email),
+    address: loc("address"),
+    hours: loc("hours"),
+    mapQuery: str(row.mapQuery),
+    socialLinks,
+    footerDescription: loc("footerDescription"),
+    contactTitle: loc("contactTitle"),
+    contactSubtitle: loc("contactSubtitle"),
+    headerCtaLabel: loc("headerCtaLabel"),
+    lineUrl: str(row.lineUrl),
+    facebookUrl: str(row.facebookUrl),
+  };
+}
+
+export type PageSeoView = {
+  id: string;
+  key: string;
+  title: string | null;
+  description: string | null;
+  ogImageKey: string | null;
+};
+
+export function toPageSeoView(row: Row, locale: string): PageSeoView {
+  const loc = (field: string) => pickLocale(row, field, locale) || null;
+  return {
+    id: String(row.id),
+    key: String(row.key),
+    title: loc("title"),
+    description: loc("description"),
+    ogImageKey: row.ogImageKey ? String(row.ogImageKey) : null,
+  };
+}
+
+export type AboutContentView = {
+  id: string;
+  title: string | null;
+  intro: string | null;
+  credRegisteredTitle: string | null;
+  credRegisteredDesc: string | null;
+  credEngineerTitle: string | null;
+  credEngineerDesc: string | null;
+  credExperienceTitle: string | null;
+  credExperienceDesc: string | null;
+  teamTitle: string | null;
+  teamDesc: string | null;
+  teamDesignTitle: string | null;
+  teamDesignDesc: string | null;
+  teamInstallTitle: string | null;
+  teamInstallDesc: string | null;
+  teamSupportTitle: string | null;
+  teamSupportDesc: string | null;
+};
+
+export function toAboutContentView(row: Row, locale: string): AboutContentView {
+  const loc = (field: string) => pickLocale(row, field, locale) || null;
+  return {
+    id: String(row.id),
+    title: loc("title"),
+    intro: loc("intro"),
+    credRegisteredTitle: loc("credRegisteredTitle"),
+    credRegisteredDesc: loc("credRegisteredDesc"),
+    credEngineerTitle: loc("credEngineerTitle"),
+    credEngineerDesc: loc("credEngineerDesc"),
+    credExperienceTitle: loc("credExperienceTitle"),
+    credExperienceDesc: loc("credExperienceDesc"),
+    teamTitle: loc("teamTitle"),
+    teamDesc: loc("teamDesc"),
+    teamDesignTitle: loc("teamDesignTitle"),
+    teamDesignDesc: loc("teamDesignDesc"),
+    teamInstallTitle: loc("teamInstallTitle"),
+    teamInstallDesc: loc("teamInstallDesc"),
+    teamSupportTitle: loc("teamSupportTitle"),
+    teamSupportDesc: loc("teamSupportDesc"),
+  };
+}

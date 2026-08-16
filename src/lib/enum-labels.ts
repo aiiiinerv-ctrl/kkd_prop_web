@@ -101,16 +101,19 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> =
  * raw class name here — which is what three of these were doing.
  */
 export const AUDIT_ENTITY_LABELS: Record<AuditEntityType, string> = {
+  AboutContent: "เนื้อหาหน้าเกี่ยวกับเรา",
   AdminUser: "ผู้ใช้ระบบ",
   BookingCapacitySetting: "การตั้งค่าคิวสำรวจ",
   ChannelExecutive: "ผู้ดำเนินการช่องทาง",
   Lead: "Lead",
   Package: "แพ็กเกจ",
+  PageSeo: "SEO หน้าเว็บ",
   PaymentSettings: "การตั้งค่าการชำระเงิน",
   PortfolioProject: "ผลงาน",
   PromoChannel: "ช่องทางโปรโมท",
   PromoLandingPath: "หน้า Landing ของลิงก์โปรโมท",
   Service: "บริการ",
+  SiteSettings: "การตั้งค่าเว็บไซต์",
   SurveyBooking: "การนัดสำรวจ",
   Testimonial: "รีวิวลูกค้า",
 };

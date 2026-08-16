@@ -206,6 +206,11 @@ export function canDeleteContent(role: Role): boolean {
   return role === "ADMIN" || role === "SALES" || role === "MARKETING";
 }
 
+/** Can edit SiteSettings (contact/social/header/footer) and PageSeo — ADMIN or MARKETING. */
+export function canManageSiteSettings(role: Role): boolean {
+  return role === "ADMIN" || role === "MARKETING";
+}
+
 /** Can create/update/delete promo channels (not the executives attached to them). */
 export function canManageChannels(role: Role): boolean {
   return role === "ADMIN" || role === "MARKETING";

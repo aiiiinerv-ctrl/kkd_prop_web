@@ -11,16 +11,19 @@ import type { Prisma } from "@/generated/prisma/client";
  * model from being filed under another.
  */
 export type AuditEntityType =
+  | "AboutContent"
   | "AdminUser"
   | "BookingCapacitySetting"
   | "ChannelExecutive"
   | "Lead"
   | "Package"
+  | "PageSeo"
   | "PaymentSettings"
   | "PortfolioProject"
   | "PromoChannel"
   | "PromoLandingPath"
   | "Service"
+  | "SiteSettings"
   | "SurveyBooking"
   | "Testimonial";
 

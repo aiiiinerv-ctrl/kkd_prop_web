@@ -2,17 +2,25 @@ import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { CLOSED_LEAD_STATUSES } from "@/lib/reports/aggregate";
 import {
+  toAboutContentView,
   toChannelView,
   toPackageView,
+  toPageSeoView,
   toProjectView,
   toServiceView,
+  toSiteSettingsView,
   toTestimonialView,
+  type AboutContentView,
   type ChannelView,
   type PackageView,
+  type PageSeoView,
   type ProjectView,
   type ServiceView,
+  type SiteSettingsView,
+  type SocialLink,
   type TestimonialView,
 } from "./views";
+import type { MetaKey } from "@/lib/seo";
 
 /**
  * The only way public pages read content. Each reader answers one question a
@@ -128,10 +136,50 @@ export const getSiteStats = cache(async (): Promise<SiteStats> => {
   return { projectCount, closedLeadCount };
 });
 
+/**
+ * Site-wide contact info, social links, header/footer text.
+ * Returns null when no row exists (fallback to messages is the caller's job).
+ */
+export const getSiteSettings = cache(
+  async (locale: string): Promise<SiteSettingsView | null> => {
+    const row = await prisma.siteSettings.findFirst();
+    if (!row) return null;
+    return toSiteSettingsView(row, locale);
+  }
+);
+
+/**
+ * Per-page SEO data for one MetaKey.
+ * Returns null when no row exists for that key.
+ */
+export const getPageSeo = cache(
+  async (key: MetaKey, locale: string): Promise<PageSeoView | null> => {
+    const row = await prisma.pageSeo.findUnique({ where: { key } });
+    if (!row) return null;
+    return toPageSeoView(row, locale);
+  }
+);
+
+/**
+ * Editable about page content.
+ * Returns null when no row exists (fallback to messages is the caller's job).
+ */
+export const getAboutContent = cache(
+  async (locale: string): Promise<AboutContentView | null> => {
+    const row = await prisma.aboutContent.findFirst();
+    if (!row) return null;
+    return toAboutContentView(row, locale);
+  }
+);
+
 export type {
+  AboutContentView,
   ChannelView,
   PackageView,
+  PageSeoView,
   ProjectView,
   ServiceView,
+  SiteSettingsView,
+  SocialLink,
   TestimonialView,
 };
