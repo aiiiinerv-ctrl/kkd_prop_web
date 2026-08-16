@@ -240,9 +240,16 @@ export function ChannelsClient({
   const [addingLandingPath, setAddingLandingPath] = useState(false);
   const [landingPathDraft, setLandingPathDraft] = useState("");
   const typeSelectRef = useRef<HTMLSelectElement>(null);
-  const [execDialogChannel, setExecDialogChannel] = useState<ChannelRow | null>(
+  // Holds only the id, not a snapshot of the row — the executive list inside
+  // this dialog must track the live `channels` prop (refreshed by
+  // revalidatePath after create/update/delete) so a new executive shows up
+  // immediately without closing the dialog. Storing the whole row here would
+  // freeze its `executives` array at open-time.
+  const [execDialogChannelId, setExecDialogChannelId] = useState<string | null>(
     null
   );
+  const execDialogChannel =
+    channels.find((c) => c.id === execDialogChannelId) ?? null;
   const [editingExec, setEditingExec] = useState<ExecutiveRow | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -413,7 +420,7 @@ export function ChannelsClient({
                       className="p-2"
                       aria-label="ผู้ดำเนินการ"
                       onClick={() => {
-                        setExecDialogChannel(c);
+                        setExecDialogChannelId(c.id);
                         setEditingExec(null);
                       }}
                     >
@@ -626,7 +633,7 @@ export function ChannelsClient({
         open={!!execDialogChannel}
         onOpenChange={(open) => {
           if (!open) {
-            setExecDialogChannel(null);
+            setExecDialogChannelId(null);
             setEditingExec(null);
           }
         }}
