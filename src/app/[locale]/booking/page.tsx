@@ -7,6 +7,7 @@ import {
   getPackageBySlug,
   getPaymentSettings,
   getServiceBySlug,
+  getSiteSettings,
 } from "@/lib/content";
 import { generatePromptPayQrDataUrl } from "@/lib/promptpay";
 import { resolveRefReferrerName } from "@/lib/ref-attribution";
@@ -43,13 +44,14 @@ export default async function BookingPage({
   setRequestLocale(locale);
   const t = await getTranslations("booking");
 
-  const [channels, paymentSettings, packageRow, serviceRow, initialReferrerName] =
+  const [channels, paymentSettings, packageRow, serviceRow, initialReferrerName, siteSettings] =
     await Promise.all([
       getActiveChannels(locale),
       getPaymentSettings(),
       packageSlug ? getPackageBySlug(packageSlug, locale) : null,
       serviceSlug ? getServiceBySlug(serviceSlug, locale) : null,
       resolveRefReferrerName(),
+      getSiteSettings(locale),
     ]);
 
   // Survey booking fee is a fixed ฿199 (same constant used in the UI copy
@@ -81,6 +83,8 @@ export default async function BookingPage({
             bankAccountName: paymentSettings?.bankAccountName ?? "",
           }}
           promptpayQrDataUrl={promptpayQrDataUrl}
+          phone={siteSettings?.phone ?? "0824731567"}
+          lineUrl={siteSettings?.socialLinks.find((s) => s.key === "line")?.url ?? "https://line.me/R/ti/p/@kkdsolar"}
         />
       </Suspense>
     </main>

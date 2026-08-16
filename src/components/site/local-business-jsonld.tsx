@@ -1,17 +1,26 @@
-import { getTranslations } from "next-intl/server";
 import { SITE_URL } from "@/lib/seo";
+import type { SiteSettingsView } from "@/lib/content";
+
+type Props = { settings: SiteSettingsView | null };
 
 // LocalBusiness structured data for search engines.
-export async function LocalBusinessJsonLd() {
-  const t = await getTranslations("meta");
+export function LocalBusinessJsonLd({ settings }: Props) {
+  const telephone = settings?.phone
+    ? `+66${settings.phone.replace(/^0/, "").replace(/[-\s]/g, "")}`
+    : "+66824731567";
+  const email = settings?.email ?? "contact@kkdproperty.com";
+
+  const sameAs = settings?.socialLinks.map((s) => s.url).filter(Boolean) ?? [
+    "https://line.me/R/ti/p/@kkdsolar",
+  ];
+
   const data = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     name: "KKD PROPERTY CO., LTD.",
-    description: t("localBusinessDescription"),
     url: SITE_URL,
-    telephone: "+66824731567",
-    email: "contact@kkdproperty.com",
+    telephone,
+    email,
     address: {
       "@type": "PostalAddress",
       addressLocality: "Samut Prakan",
@@ -23,7 +32,7 @@ export async function LocalBusinessJsonLd() {
       opens: "09:00",
       closes: "18:00",
     },
-    sameAs: ["https://line.me/R/ti/p/@kkdsolar"],
+    ...(sameAs.length > 0 ? { sameAs } : {}),
   };
 
   return (

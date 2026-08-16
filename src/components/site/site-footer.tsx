@@ -4,6 +4,7 @@ import { Clock, Mail, MapPin, Phone } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { Link } from "@/i18n/navigation";
+import type { SiteSettingsView, SocialLink } from "@/lib/content";
 
 /* Minimal brand glyphs (lucide-react ships no brand/social icons) — kept local, no new dependency. */
 function IconFacebook(props: React.SVGProps<SVGSVGElement>) {
@@ -42,20 +43,29 @@ function IconYoutube(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-const SOCIAL_LINKS = [
-  { key: "socialFacebook", Icon: IconFacebook },
-  { key: "socialLine", Icon: IconLine },
-  { key: "socialInstagram", Icon: IconInstagram },
-  { key: "socialTiktok", Icon: IconTiktok },
-  { key: "socialYoutube", Icon: IconYoutube },
-] as const;
+const SOCIAL_ICON_MAP: Record<string, React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
+  line: IconLine,
+  facebook: IconFacebook,
+  instagram: IconInstagram,
+  tiktok: IconTiktok,
+  youtube: IconYoutube,
+};
 
 const FOOTER_SERVICE_LINKS = ["serviceOnGrid", "serviceHybrid", "serviceOffGrid", "serviceCleaning"] as const;
 
-export function SiteFooter() {
+type Props = { settings: SiteSettingsView | null };
+
+export function SiteFooter({ settings }: Props) {
   const t = useTranslations("footer");
   const tNav = useTranslations("nav");
   const year = new Date().getFullYear();
+
+  const phone = settings?.phone ?? null;
+  const email = settings?.email ?? null;
+  const address = settings?.address ?? null;
+  const hours = settings?.hours ?? null;
+  const description = settings?.footerDescription ?? null;
+  const socialLinks: SocialLink[] = settings?.socialLinks ?? [];
 
   return (
     <footer id="site-footer" className="site-footer border-t border-border bg-muted/50">
@@ -63,20 +73,28 @@ export function SiteFooter() {
         <div className="flex flex-col items-center sm:items-start">
           <BrandLogo className="mb-4" />
           <p className="text-sm leading-relaxed text-muted-foreground">
-            {t("description")}
+            {description ?? t("description")}
           </p>
-          <div className="mt-4 flex gap-4">
-            {SOCIAL_LINKS.map(({ key, Icon }) => (
-              <a
-                key={key}
-                href="#"
-                aria-label={t(key)}
-                className="text-foreground transition-colors hover:text-brand-orange"
-              >
-                <Icon className="size-[18px]" />
-              </a>
-            ))}
-          </div>
+          {socialLinks.length > 0 && (
+            <div className="mt-4 flex gap-4">
+              {socialLinks.map(({ key, url }) => {
+                const Icon = SOCIAL_ICON_MAP[key];
+                if (!Icon) return null;
+                return (
+                  <a
+                    key={key}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={t(`social${key.charAt(0).toUpperCase() + key.slice(1)}` as Parameters<typeof t>[0])}
+                    className="text-foreground transition-colors hover:text-brand-orange"
+                  >
+                    <Icon className="size-[18px]" />
+                  </a>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div>
@@ -114,26 +132,58 @@ export function SiteFooter() {
         <div>
           <h4 className="mb-4 text-sm font-bold">{t("contactUs")}</h4>
           <ul className="space-y-2.5 text-sm text-muted-foreground">
-            <li className="flex items-center justify-center gap-2 sm:justify-start">
-              <MapPin className="size-4 shrink-0 text-brand-orange" />
-              {t("address")}
-            </li>
-            <li className="flex items-center justify-center gap-2 sm:justify-start">
-              <Phone className="size-4 shrink-0 text-brand-orange" />
-              <a href="tel:0824731567" className="hover:text-brand-orange">
-                {t("phone")}
-              </a>
-            </li>
-            <li className="flex items-center justify-center gap-2 sm:justify-start">
-              <Mail className="size-4 shrink-0 text-brand-orange" />
-              <a href="mailto:contact@kkdproperty.com" className="hover:text-brand-orange">
-                {t("email")}
-              </a>
-            </li>
-            <li className="flex items-center justify-center gap-2 sm:justify-start">
-              <Clock className="size-4 shrink-0 text-brand-orange" />
-              {t("hours")}
-            </li>
+            {address && (
+              <li className="flex items-center justify-center gap-2 sm:justify-start">
+                <MapPin className="size-4 shrink-0 text-brand-orange" />
+                {address}
+              </li>
+            )}
+            {phone && (
+              <li className="flex items-center justify-center gap-2 sm:justify-start">
+                <Phone className="size-4 shrink-0 text-brand-orange" />
+                <a href={`tel:${phone.replace(/[-\s]/g, "")}`} className="hover:text-brand-orange">
+                  {phone}
+                </a>
+              </li>
+            )}
+            {email && (
+              <li className="flex items-center justify-center gap-2 sm:justify-start">
+                <Mail className="size-4 shrink-0 text-brand-orange" />
+                <a href={`mailto:${email}`} className="hover:text-brand-orange">
+                  {email}
+                </a>
+              </li>
+            )}
+            {hours && (
+              <li className="flex items-center justify-center gap-2 sm:justify-start">
+                <Clock className="size-4 shrink-0 text-brand-orange" />
+                {hours}
+              </li>
+            )}
+            {!address && !phone && !email && !hours && (
+              <>
+                <li className="flex items-center justify-center gap-2 sm:justify-start">
+                  <MapPin className="size-4 shrink-0 text-brand-orange" />
+                  {t("address")}
+                </li>
+                <li className="flex items-center justify-center gap-2 sm:justify-start">
+                  <Phone className="size-4 shrink-0 text-brand-orange" />
+                  <a href="tel:0824731567" className="hover:text-brand-orange">
+                    {t("phone")}
+                  </a>
+                </li>
+                <li className="flex items-center justify-center gap-2 sm:justify-start">
+                  <Mail className="size-4 shrink-0 text-brand-orange" />
+                  <a href="mailto:contact@kkdproperty.com" className="hover:text-brand-orange">
+                    {t("email")}
+                  </a>
+                </li>
+                <li className="flex items-center justify-center gap-2 sm:justify-start">
+                  <Clock className="size-4 shrink-0 text-brand-orange" />
+                  {t("hours")}
+                </li>
+              </>
+            )}
           </ul>
         </div>
       </div>

@@ -157,6 +157,8 @@ export function BookingForms({
   channels,
   bankInfo,
   promptpayQrDataUrl,
+  phone,
+  lineUrl,
 }: {
   initialBill: string;
   initialPackageSlug: string;
@@ -165,6 +167,8 @@ export function BookingForms({
   channels: Channel[];
   bankInfo: BankInfo;
   promptpayQrDataUrl: string | null;
+  phone: string;
+  lineUrl: string;
 }) {
   const t = useTranslations("booking");
   // URL is the single source of truth for the active tab (#13 decision 1):
@@ -206,7 +210,7 @@ export function BookingForms({
           {success === "quote" ? t("successQuoteDesc") : t("successSurveyDesc")}
         </p>
         <a
-          href="https://line.me/R/ti/p/@kkdsolar"
+          href={lineUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-6 inline-block rounded-full bg-[#06c755] px-6 py-2.5 text-sm font-semibold text-white"
@@ -257,6 +261,7 @@ export function BookingForms({
           initialServiceSlug={initialServiceSlug}
           initialReferrerName={initialReferrerName}
           onSuccess={() => setSuccess("quote")}
+          phone={phone}
         />
       ) : (
         <SurveyForm
@@ -268,6 +273,7 @@ export function BookingForms({
           onSuccess={() => setSuccess("survey")}
           bankInfo={bankInfo}
           promptpayQrDataUrl={promptpayQrDataUrl}
+          phone={phone}
         />
       )}
     </div>
@@ -562,6 +568,7 @@ function QuoteForm({
   initialServiceSlug,
   initialReferrerName,
   onSuccess,
+  phone,
 }: {
   channels: Channel[];
   initialBill: string;
@@ -569,6 +576,7 @@ function QuoteForm({
   initialServiceSlug: string;
   initialReferrerName: string;
   onSuccess: () => void;
+  phone: string;
 }) {
   const t = useTranslations("booking");
   const locale = useLocale();
@@ -662,7 +670,7 @@ function QuoteForm({
       {serverError && <p className={errorCls}>{t("errorGeneric")}</p>}
       <p className="text-center text-xs text-muted-foreground">
         {t("reassurance")}{" "}
-        <a href="tel:0824731567" className="font-semibold text-primary hover:underline">
+        <a href={`tel:${phone.replace(/[-\s]/g, "")}`} className="font-semibold text-primary hover:underline">
           {t("callUs")}
         </a>
       </p>
@@ -686,6 +694,7 @@ function SurveyForm({
   onSuccess,
   bankInfo,
   promptpayQrDataUrl,
+  phone,
 }: {
   channels: Channel[];
   initialBill: string;
@@ -695,6 +704,7 @@ function SurveyForm({
   onSuccess: () => void;
   bankInfo: BankInfo;
   promptpayQrDataUrl: string | null;
+  phone: string;
 }) {
   const t = useTranslations("booking");
   const locale = useLocale();
@@ -998,7 +1008,7 @@ function SurveyForm({
       {dateFullError && <p className={errorCls}>{t("dateFull")}</p>}
       <p className="text-center text-xs text-muted-foreground">
         {t("reassurance")}{" "}
-        <a href="tel:0824731567" className="font-semibold text-primary hover:underline">
+        <a href={`tel:${phone.replace(/[-\s]/g, "")}`} className="font-semibold text-primary hover:underline">
           {t("callUs")}
         </a>
       </p>

@@ -8,11 +8,11 @@ import { Reveal } from "@/components/site/reveal";
 import { SectionHeading } from "@/components/site/section-heading";
 import { Link } from "@/i18n/navigation";
 import { bookingHref } from "@/lib/booking-links";
-import { getLatestProjects } from "@/lib/content";
+import { getLatestProjects, getSiteSettings } from "@/lib/content";
 
-/* Same hrefs as the contact page so quick-contact info never drifts out of sync. */
-const QUICK_CONTACT_LINE_URL = "https://line.me/R/ti/p/@kkdsolar";
-const QUICK_CONTACT_FACEBOOK_URL = "https://facebook.com/kkdsolar";
+const FALLBACK_LINE_URL = "https://line.me/R/ti/p/@kkdsolar";
+const FALLBACK_FACEBOOK_URL = "https://facebook.com/kkdsolar";
+const FALLBACK_PHONE = "0824731567";
 
 export async function HomeContent({
   params,
@@ -27,7 +27,14 @@ export async function HomeContent({
   const bookingSurveyHref = bookingHref({ tab: "survey" });
   const bookingQuoteHref = bookingHref({ tab: "quote" });
 
-  const portfolioItems = await getLatestProjects(locale, 4);
+  const [portfolioItems, siteSettings] = await Promise.all([
+    getLatestProjects(locale, 4),
+    getSiteSettings(locale),
+  ]);
+
+  const phone = siteSettings?.phone ?? FALLBACK_PHONE;
+  const lineUrl = siteSettings?.socialLinks.find((s) => s.key === "line")?.url ?? FALLBACK_LINE_URL;
+  const facebookUrl = siteSettings?.facebookUrl ?? FALLBACK_FACEBOOK_URL;
 
   return (
     <main>
@@ -81,14 +88,14 @@ export async function HomeContent({
               {t("quickContactTitle")}
             </span>
             <a
-              href="tel:0824731567"
+              href={`tel:${phone.replace(/[-\s]/g, "")}`}
               aria-label={tContact("phone")}
               className="flex size-9 items-center justify-center rounded-full border border-border/70 bg-card text-primary transition-colors hover:border-brand-orange hover:text-brand-orange"
             >
               <Phone className="size-4" />
             </a>
             <a
-              href={QUICK_CONTACT_LINE_URL}
+              href={lineUrl}
               target="_blank"
               rel="noopener noreferrer"
               aria-label={tContact("line")}
@@ -97,7 +104,7 @@ export async function HomeContent({
               <MessageCircle className="size-4" />
             </a>
             <a
-              href={QUICK_CONTACT_FACEBOOK_URL}
+              href={facebookUrl}
               target="_blank"
               rel="noopener noreferrer"
               aria-label={tContact("facebook")}
@@ -191,7 +198,7 @@ export async function HomeContent({
         </Reveal>
       </section>
 
-      <FaqSection />
+      <FaqSection lineUrl={lineUrl} />
     </main>
   );
 }

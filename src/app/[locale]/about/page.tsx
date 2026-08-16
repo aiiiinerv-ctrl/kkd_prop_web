@@ -5,7 +5,7 @@ import { Reveal } from "@/components/site/reveal";
 import { SectionHeading } from "@/components/site/section-heading";
 import { StatsRow } from "@/components/site/stats-row";
 import { TestimonialsSection } from "@/components/site/testimonials-section";
-import { getSiteStats } from "@/lib/content";
+import { getAboutContent, getSiteStats } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
 
 export const revalidate = 300;
@@ -28,18 +28,48 @@ export default async function AboutPage({
   setRequestLocale(locale);
   const t = await getTranslations("about");
 
-  const { projectCount, closedLeadCount } = await getSiteStats();
+  const [{ projectCount, closedLeadCount }, aboutContent] = await Promise.all([
+    getSiteStats(),
+    getAboutContent(locale),
+  ]);
+
+  // DB values take precedence; fall back to messages so the page is never blank.
+  const c = aboutContent;
 
   const CREDENTIALS = [
-    { icon: Building2, title: t("credRegisteredTitle"), desc: t("credRegisteredDesc") },
-    { icon: BadgeCheck, title: t("credEngineerTitle"), desc: t("credEngineerDesc") },
-    { icon: Award, title: t("credExperienceTitle"), desc: t("credExperienceDesc") },
+    {
+      icon: Building2,
+      title: c?.credRegisteredTitle ?? t("credRegisteredTitle"),
+      desc: c?.credRegisteredDesc ?? t("credRegisteredDesc"),
+    },
+    {
+      icon: BadgeCheck,
+      title: c?.credEngineerTitle ?? t("credEngineerTitle"),
+      desc: c?.credEngineerDesc ?? t("credEngineerDesc"),
+    },
+    {
+      icon: Award,
+      title: c?.credExperienceTitle ?? t("credExperienceTitle"),
+      desc: c?.credExperienceDesc ?? t("credExperienceDesc"),
+    },
   ];
 
   const TEAM = [
-    { icon: PencilRuler, title: t("teamDesignTitle"), desc: t("teamDesignDesc") },
-    { icon: Wrench, title: t("teamInstallTitle"), desc: t("teamInstallDesc") },
-    { icon: Headset, title: t("teamSupportTitle"), desc: t("teamSupportDesc") },
+    {
+      icon: PencilRuler,
+      title: c?.teamDesignTitle ?? t("teamDesignTitle"),
+      desc: c?.teamDesignDesc ?? t("teamDesignDesc"),
+    },
+    {
+      icon: Wrench,
+      title: c?.teamInstallTitle ?? t("teamInstallTitle"),
+      desc: c?.teamInstallDesc ?? t("teamInstallDesc"),
+    },
+    {
+      icon: Headset,
+      title: c?.teamSupportTitle ?? t("teamSupportTitle"),
+      desc: c?.teamSupportDesc ?? t("teamSupportDesc"),
+    },
   ];
 
   return (
@@ -47,8 +77,8 @@ export default async function AboutPage({
       <section className="bg-gradient-to-b from-[#fff5e6] to-background">
         <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
           <SectionHeading
-            title={t("title")}
-            subtitle={t("intro")}
+            title={c?.title ?? t("title")}
+            subtitle={c?.intro ?? t("intro")}
             headingClassName="font-extrabold tracking-[-0.01em]"
           />
         </div>
@@ -57,14 +87,14 @@ export default async function AboutPage({
       <section className="bg-muted/40">
         <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
           <div className="grid gap-7 md:grid-cols-3">
-            {CREDENTIALS.map((c, i) => (
-              <Reveal key={c.title} delay={i * 100}>
+            {CREDENTIALS.map((cred, i) => (
+              <Reveal key={cred.title} delay={i * 100}>
                 <div className="h-full rounded-xl border border-border/70 bg-card p-7 text-center shadow-sm transition-all hover:-translate-y-1.5 hover:shadow-lg">
                   <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-brand-orange/10">
-                    <c.icon className="size-8 text-brand-orange" />
+                    <cred.icon className="size-8 text-brand-orange" />
                   </div>
-                  <h3 className="mt-5 font-bold text-primary">{c.title}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">{c.desc}</p>
+                  <h3 className="mt-5 font-bold text-primary">{cred.title}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">{cred.desc}</p>
                 </div>
               </Reveal>
             ))}
@@ -74,8 +104,8 @@ export default async function AboutPage({
 
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
         <SectionHeading
-          title={t("teamTitle")}
-          subtitle={t("teamDesc")}
+          title={c?.teamTitle ?? t("teamTitle")}
+          subtitle={c?.teamDesc ?? t("teamDesc")}
           headingClassName="font-extrabold tracking-[-0.01em]"
         />
         <div className="grid gap-7 md:grid-cols-3">

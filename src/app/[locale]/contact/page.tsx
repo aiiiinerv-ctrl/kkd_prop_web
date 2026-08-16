@@ -3,11 +3,8 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CtaBanner } from "@/components/site/cta-banner";
 import { IconFacebook } from "@/components/site/icon-facebook";
 import { SectionHeading } from "@/components/site/section-heading";
+import { getSiteSettings } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
-
-/** Placeholder location query — real coordinates pending from the customer (see remediation plan). */
-const CONTACT_FACEBOOK_URL = "https://facebook.com/kkdsolar";
-
 
 export async function generateMetadata({
   params,
@@ -27,37 +24,37 @@ export default async function ContactPage({
   setRequestLocale(locale);
   const t = await getTranslations("contact");
 
-  const ITEMS = [
-    { icon: MapPin, label: t("address"), value: t("addressValue") },
-    {
-      icon: Phone,
-      label: t("phone"),
-      value: t("phoneValue"),
-      href: "tel:0824731567",
-    },
-    {
-      icon: MessageCircle,
-      label: t("line"),
-      value: t("lineValue"),
-      href: "https://line.me/R/ti/p/@kkdsolar",
-    },
-    {
-      icon: IconFacebook,
-      label: t("facebook"),
-      value: t("facebookValue"),
-      href: CONTACT_FACEBOOK_URL,
-    },
-    { icon: Clock, label: t("hours"), value: t("hoursValue") },
+  const settings = await getSiteSettings(locale);
+
+  // Values from DB take precedence; fall back to messages so the page is
+  // never blank on a fresh deployment before seed data is in the DB.
+  const phone = settings?.phone ?? t("phoneValue");
+  // Social links: null/empty means the operator cleared them → do not render.
+  const lineUrl = settings?.socialLinks.find((s) => s.key === "line")?.url ?? null;
+  const facebookUrl = settings?.facebookUrl ?? null;
+  const address = settings?.address ?? t("addressValue");
+  const hours = settings?.hours ?? t("hoursValue");
+  const contactTitle = settings?.contactTitle ?? t("title");
+  const contactSubtitle = settings?.contactSubtitle ?? t("subtitle");
+
+  // Build only the items that have a value; social items without a URL are omitted.
+  type Item = { icon: React.ComponentType<React.SVGAttributes<SVGSVGElement>>; label: string; value: string; href?: string };
+  const ITEMS: Item[] = [
+    { icon: MapPin, label: t("address"), value: address },
+    { icon: Phone, label: t("phone"), value: phone, href: `tel:${phone.replace(/[-\s]/g, "")}` },
+    ...(lineUrl ? [{ icon: MessageCircle, label: t("line"), value: t("lineValue"), href: lineUrl } as Item] : []),
+    ...(facebookUrl ? [{ icon: IconFacebook, label: t("facebook"), value: t("facebookValue"), href: facebookUrl } as Item] : []),
+    { icon: Clock, label: t("hours"), value: hours },
   ];
 
-  const mapQuery = encodeURIComponent(t("addressValue"));
+  const mapQuery = encodeURIComponent(settings?.mapQuery ?? address);
 
   return (
     <main>
       <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
         <SectionHeading
-          title={t("title")}
-          subtitle={t("subtitle")}
+          title={contactTitle}
+          subtitle={contactSubtitle}
           headingClassName="font-extrabold tracking-[-0.01em]"
         />
 

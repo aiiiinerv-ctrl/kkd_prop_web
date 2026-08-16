@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 const QUESTION_KEYS = ["q1", "q2", "q3", "q4", "q5"] as const;
 
-export function FaqSection() {
+export function FaqSection({ lineUrl }: { lineUrl: string }) {
   const t = useTranslations("faq");
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
@@ -24,7 +24,7 @@ export function FaqSection() {
           </h2>
           <p className="mt-4 text-sm text-muted-foreground sm:text-base">{t("intro")}</p>
           <a
-            href="https://line.me/R/ti/p/@kkdsolar"
+            href={lineUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-7 inline-flex items-center gap-2 rounded-full bg-[#06C755] px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-[#05a648] hover:shadow-[0_4px_10px_rgba(6,199,85,0.3)]"

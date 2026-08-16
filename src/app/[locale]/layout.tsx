@@ -9,7 +9,7 @@ import { MobileBookingBar } from "@/components/site/mobile-booking-bar";
 import { RefConsentCapture } from "@/components/site/ref-consent-capture";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteHeader } from "@/components/site/site-header";
-import { getPublishedTestimonials } from "@/lib/content";
+import { getPublishedTestimonials, getSiteSettings } from "@/lib/content";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
 
@@ -82,11 +82,10 @@ export default async function LocaleLayout({
   }
   setRequestLocale(locale);
 
-  // Whether to offer the testimonials nav link. Same cached reader the
-  // testimonials page and section use, so the three places that ask "is there
-  // anything published?" share one query per request and one definition of the
-  // answer.
-  const testimonials = await getPublishedTestimonials(locale);
+  const [testimonials, siteSettings] = await Promise.all([
+    getPublishedTestimonials(locale),
+    getSiteSettings(locale),
+  ]);
 
   return (
     <html
@@ -97,11 +96,14 @@ export default async function LocaleLayout({
       <body className="site-shell min-h-full flex flex-col">
         <CookieYesScript />
         <RefConsentCapture />
-        <LocalBusinessJsonLd />
+        <LocalBusinessJsonLd settings={siteSettings} />
         <NextIntlClientProvider>
-          <SiteHeader showTestimonials={testimonials.length > 0} />
+          <SiteHeader
+            showTestimonials={testimonials.length > 0}
+            ctaLabel={siteSettings?.headerCtaLabel ?? null}
+          />
           <div className="flex-1 flex flex-col pb-[76px] lg:pb-0">{children}</div>
-          <SiteFooter />
+          <SiteFooter settings={siteSettings} />
           <MobileBookingBar />
         </NextIntlClientProvider>
       </body>

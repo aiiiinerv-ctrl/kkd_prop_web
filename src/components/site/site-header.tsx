@@ -20,11 +20,12 @@ const NAV_ITEMS = [
   { key: "contact", href: "/contact" },
 ] as const;
 
-export function SiteHeader({ showTestimonials }: { showTestimonials: boolean }) {
+export function SiteHeader({ showTestimonials, ctaLabel }: { showTestimonials: boolean; ctaLabel: string | null }) {
   const t = useTranslations("nav");
   const activePath = usePathname();
   const { mobileNavOpen, setMobileNavOpen } = useUiStore();
   const navItems = NAV_ITEMS.filter((item) => item.key !== "testimonials" || showTestimonials);
+  const ctaText = ctaLabel || t("booking");
 
   return (
     <header className="site-header sticky top-0 z-50 bg-background shadow-md">
@@ -58,7 +59,7 @@ export function SiteHeader({ showTestimonials }: { showTestimonials: boolean }) 
         <div className="hidden items-center gap-3 lg:flex">
           <LanguageSwitcher />
           <Link href={bookingHref()} className="btn-pill px-5 py-2">
-            {t("booking")}
+            {ctaText}
           </Link>
         </div>
 
@@ -96,7 +97,7 @@ export function SiteHeader({ showTestimonials }: { showTestimonials: boolean }) 
                 onClick={() => setMobileNavOpen(false)}
                 className="btn-pill inline-flex px-6 py-2.5"
               >
-                {t("booking")}
+                {ctaText}
               </Link>
             </li>
           </ul>
