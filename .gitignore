@@ -61,9 +61,6 @@ prisma/*.db-journal
 # pricing spreadsheets) — this repo is PUBLIC, these must never be committed
 /docs/stuffs/
 
-# firebase CLI deploy cache
-/.firebase/
-
 # shared-hosting deploy artifact staging (scripts/build-shared-hosting-deploy.mts)
 /deploy/dist/
 /deploy/dist.zip

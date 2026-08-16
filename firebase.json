@@ -1,7 +1,0 @@
-{
-  "hosting": {
-    "public": "static-preview",
-    "ignore": ["firebase.json", "**/.*"],
-    "cleanUrls": true
-  }
-}
