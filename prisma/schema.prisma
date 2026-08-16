@@ -119,8 +119,9 @@ model PromoChannel {
   // Nullable so the 6 pre-existing channels (refCode CH0xx) keep resolving;
   // this column is never used to validate or reshape an old refCode.
   subType    String?            @db.VarChar(4)
-  // Landing page for this channel's promo link. Admin choices are registered
-  // in PromoLandingPath and re-checked server-side before channel writes.
+  // Landing page for this channel's promo link. Choices come from
+  // PROMO_LANDING_PATH_OPTIONS in src/lib/channel-taxonomy.ts and are
+  // validated server-side via isPromoLandingPath() before writes.
   landingPath String            @default("/th/packages")
   // utm_campaign for this channel's promo link — one of CHANNEL_UTM_CAMPAIGNS,
   // nullable because it has no meaningful default until an admin picks one.
@@ -134,9 +135,10 @@ model PromoChannel {
   executives ChannelExecutive[]
 }
 
-// Admin-managed allowlist for promo-link landing destinations. PromoChannel
-// keeps its landingPath string rather than a foreign key so this registry can
-// ship safely to the production database while its legacy tables are MyISAM.
+// Landing-path options are no longer read from this table — they come from
+// PROMO_LANDING_PATH_OPTIONS in src/lib/channel-taxonomy.ts. This model is
+// retained so the production table and existing AuditLog rows that reference
+// "PromoLandingPath" remain valid; dropping it can be a separate migration.
 model PromoLandingPath {
   id        String   @id @default(cuid())
   // 180 keeps the utf8mb4 unique index below the host's key-length limit.

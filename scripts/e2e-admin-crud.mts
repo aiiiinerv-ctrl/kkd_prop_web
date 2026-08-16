@@ -5,6 +5,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { PrismaClient } from "../src/generated/prisma/client.js";
+import { PROMO_LANDING_PATHS } from "../src/lib/channel-taxonomy.js";
 
 const prisma = new PrismaClient({
   adapter: new PrismaMariaDb(process.env.DATABASE_URL!),
@@ -448,110 +449,70 @@ console.log(
   }`
 );
 
-// --- Channels: register a real landing path inline, reject a 404, create one ---
-const e2eLandingPath = "/en/about";
-// Preserve a real admin-added option if this persistent dev DB already has
-// one. The action still gets a clean create path, then exact state is restored.
-const previousLandingPath = await prisma.promoLandingPath.findUnique({
-  where: { path: e2eLandingPath },
-});
+// --- Channels: bilingual static dropdown, create with path, edit path ---
 const channelName = `LandingPath E2E ${Date.now().toString(36)}`;
 
 try {
-  if (previousLandingPath) {
-    await prisma.promoLandingPath.delete({ where: { id: previousLandingPath.id } });
-  }
   await prisma.promoChannel.deleteMany({
     where: { nameTh: { startsWith: "LandingPath E2E" } },
   });
 
-await page.goto("http://localhost:3000/admin/channels");
-await page.click("text=เพิ่มช่องทาง");
-await page.click('button:text-is("เพิ่ม path")');
-await page.fill("#new-landing-path", "/th/%2e%2e/admin");
-await page.click('button:text-is("เพิ่มและเลือก")');
-await page.waitForSelector("text=path ต้องอยู่ใต้ /th หรือ /en หลัง normalize", {
-  timeout: 10000,
-});
-console.log("CHANNELS: encoded path traversal rejected ✓");
+  await page.goto("http://localhost:3000/admin/channels");
+  await page.click("text=เพิ่มช่องทาง");
 
-await page.fill("#new-landing-path", "/th/definitely-missing-e2e");
-await page.click('button:text-is("เพิ่มและเลือก")');
-await page.waitForSelector("text=ไม่พบหน้าเว็บนี้ กรุณาตรวจ path แล้วลองใหม่", {
-  timeout: 10000,
-});
-console.log("CHANNELS: nonexistent landing path rejected ✓");
+  // Verify dropdown is complete and bilingual — 20 options total (10 pages × 2 locales).
+  const optionCount = await page.locator('select[name="landingPath"] option').count();
+  assertCheck(
+    optionCount === PROMO_LANDING_PATHS.length,
+    `CHANNELS: dropdown has ${PROMO_LANDING_PATHS.length} options`,
+    `got ${optionCount}`
+  );
 
-await page.fill("#new-landing-path", e2eLandingPath);
-await page.click('button:text-is("เพิ่มและเลือก")');
-await page.waitForSelector("text=เพิ่มหน้า Landing แล้ว", { timeout: 10000 });
-await page.waitForSelector(`#new-landing-path`, { state: "detached", timeout: 10000 });
-assertCheck(
-  (await page.locator('select[name="landingPath"]').inputValue()) === e2eLandingPath,
-  "CHANNELS: real landing path registered and selected"
-);
+  // Contains both a /th/... and the /en/... variant of the same page.
+  const allOptions = await page.locator('select[name="landingPath"] option').allTextContents();
+  const hasThOption = allOptions.some((t) => t.startsWith("/th/"));
+  const hasEnOption = allOptions.some((t) => t.startsWith("/en/"));
+  assertCheck(hasThOption && hasEnOption, "CHANNELS: dropdown contains both /th and /en options");
 
-await page.fill('input[name="nameTh"]', channelName);
-await page.fill('input[name="nameEn"]', channelName);
-await page.click("text=บันทึก >> nth=-1");
-await page.waitForSelector("text=บันทึกเรียบร้อย", { timeout: 10000 });
-const createdChannel = await prisma.promoChannel.findFirst({
-  where: { nameTh: channelName },
-});
-assertCheck(
-  createdChannel?.landingPath === e2eLandingPath,
-  "CHANNELS: created with registered landing path"
-);
-const registeredPath = await prisma.promoLandingPath.findUnique({
-  where: { path: e2eLandingPath },
-});
-const landingPathAudit = registeredPath
-  ? await prisma.auditLog.findFirst({
-      where: {
-        entityType: "PromoLandingPath",
-        entityId: registeredPath.id,
-        action: "CREATE",
-      },
-    })
-  : null;
-assertCheck(
-  landingPathAudit?.after && !landingPathAudit.before,
-  "CHANNELS: landing path creation audited"
-);
+  // Create a channel with a specific landing path.
+  await page.fill('input[name="nameTh"]', channelName);
+  await page.fill('input[name="nameEn"]', channelName);
+  await page.selectOption('select[name="landingPath"]', "/en/about");
+  await page.click("text=บันทึก >> nth=-1");
+  await page.waitForSelector("text=บันทึกเรียบร้อย", { timeout: 10000 });
+  const createdChannel = await prisma.promoChannel.findFirst({
+    where: { nameTh: channelName },
+  });
+  assertCheck(
+    createdChannel?.landingPath === "/en/about",
+    "CHANNELS: created with selected landing path"
+  );
 
-await page.click(`tr:has-text("${channelName}") button[aria-label="แก้ไข"]`);
-await page.selectOption('select[name="landingPath"]', "/th/about");
-await page.click("text=บันทึก >> nth=-1");
-await page.locator('input[name="nameTh"]').waitFor({ state: "detached", timeout: 10000 });
-await page.click(`tr:has-text("${channelName}") button[aria-label="แก้ไข"]`);
-await page.selectOption('select[name="landingPath"]', e2eLandingPath);
-await page.click("text=บันทึก >> nth=-1");
-await page.locator('input[name="nameTh"]').waitFor({ state: "detached", timeout: 10000 });
-const updatedChannel = await prisma.promoChannel.findUnique({
-  where: { id: createdChannel.id },
-});
-assertCheck(
-  updatedChannel?.landingPath === e2eLandingPath,
-  "CHANNELS: edited back to newly registered landing path"
-);
+  // Edit: switch to /th/about, save, then switch back to /en/about.
+  await page.click(`tr:has-text("${channelName}") button[aria-label="แก้ไข"]`);
+  await page.selectOption('select[name="landingPath"]', "/th/about");
+  await page.click("text=บันทึก >> nth=-1");
+  await page.locator('input[name="nameTh"]').waitFor({ state: "detached", timeout: 10000 });
+  await page.click(`tr:has-text("${channelName}") button[aria-label="แก้ไข"]`);
+  await page.selectOption('select[name="landingPath"]', "/en/about");
+  await page.click("text=บันทึก >> nth=-1");
+  await page.locator('input[name="nameTh"]').waitFor({ state: "detached", timeout: 10000 });
+  const updatedChannel = await prisma.promoChannel.findUnique({
+    where: { id: createdChannel!.id },
+  });
+  assertCheck(
+    updatedChannel?.landingPath === "/en/about",
+    "CHANNELS: edited back to /en/about persisted"
+  );
 
-await page.click(`tr:has-text("${channelName}") button[aria-label="ลบ"]`);
-await page.click('button:text-is("ลบ")');
-await page.waitForSelector(`tr:has-text("${channelName}")`, {
-  state: "detached",
-  timeout: 10000,
-});
+  await page.click(`tr:has-text("${channelName}") button[aria-label="ลบ"]`);
+  await page.click('button:text-is("ลบ")');
+  await page.waitForSelector(`tr:has-text("${channelName}")`, {
+    state: "detached",
+    timeout: 10000,
+  });
 } finally {
   await prisma.promoChannel.deleteMany({ where: { nameTh: channelName } });
-  const currentLandingPath = await prisma.promoLandingPath.findUnique({
-    where: { path: e2eLandingPath },
-  });
-  if (currentLandingPath) {
-    await prisma.promoLandingPath.delete({ where: { id: currentLandingPath.id } });
-  }
-  if (previousLandingPath) {
-    await prisma.promoLandingPath.create({ data: previousLandingPath });
-  }
 }
 
 // --- Bookings: filter, status/gift/assignment mutations ---

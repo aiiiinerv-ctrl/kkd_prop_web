@@ -57,9 +57,47 @@ export function subTypeOf(code: string | null | undefined): ChannelSubType | und
   return CHANNEL_SUB_TYPES.find((s) => s.code === code);
 }
 
-// Options live in PromoLandingPath so ADMIN can extend the allowlist without
-// a deploy. This constant is only the fallback for old/missing form values.
+// The admin dropdown is populated from PROMO_LANDING_PATH_OPTIONS (below).
+// This constant is the fallback value for old/missing form values.
 export const CHANNEL_DEFAULT_LANDING_PATH = "/th/packages";
+
+/**
+ * All real public pages in the order they appear in both locale groups.
+ * Labels reuse the public site's `nav` wording (admin UI is Thai-only) so a
+ * promo link's destination reads the same here as in the site header.
+ */
+const PUBLIC_PAGES = [
+  { segment: "", labelTh: "หน้าแรก" },
+  { segment: "packages", labelTh: "แพ็กเกจ" },
+  { segment: "services", labelTh: "บริการ" },
+  { segment: "portfolio", labelTh: "ผลงาน" },
+  { segment: "testimonials", labelTh: "รีวิวลูกค้า" },
+  { segment: "calculator", labelTh: "เครื่องคำนวณ" },
+  { segment: "booking", labelTh: "สอบถาม/นัดสำรวจ" },
+  { segment: "about", labelTh: "เกี่ยวกับเรา" },
+  { segment: "contact", labelTh: "ติดต่อเรา" },
+  { segment: "cookie-policy", labelTh: "นโยบายคุกกี้" },
+] as const;
+
+/** 10 pages × 2 locales — TH group first, same page order in both groups. */
+export const PROMO_LANDING_PATH_OPTIONS: readonly {
+  path: string;
+  locale: "th" | "en";
+  label: string;
+}[] = (["th", "en"] as const).flatMap((locale) =>
+  PUBLIC_PAGES.map(({ segment, labelTh }) => ({
+    path: segment ? `/${locale}/${segment}` : `/${locale}`,
+    locale,
+    label: labelTh,
+  }))
+);
+
+export const PROMO_LANDING_PATHS: readonly string[] =
+  PROMO_LANDING_PATH_OPTIONS.map((o) => o.path);
+
+export function isPromoLandingPath(path: string): boolean {
+  return PROMO_LANDING_PATHS.includes(path);
+}
 
 /** utm_campaign is a closed choice per the SA sheet, not free text. */
 export const CHANNEL_UTM_CAMPAIGNS = ["package_info", "always_on"] as const;

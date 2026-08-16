@@ -9,9 +9,9 @@ import {
   CHANNEL_DEFAULT_LANDING_PATH,
   CHANNEL_SUB_TYPE_CODES,
   CHANNEL_UTM_CAMPAIGNS,
+  isPromoLandingPath,
 } from "@/lib/channel-taxonomy";
 import { prisma } from "@/lib/db";
-import { SITE_URL } from "@/lib/seo";
 import type { ActionResult } from "./users";
 
 // Empty-string form values collapse to null — a channel created before this
@@ -116,76 +116,6 @@ const executives = auditedEntity({
   revalidate: () => ["/admin/channels"],
 });
 
-const landingPaths = auditedEntity({
-  entityType: "PromoLandingPath",
-  model: (client) => client.promoLandingPath,
-  snapshot: "full",
-  revalidate: () => ["/admin/channels"],
-});
-
-async function isRegisteredLandingPath(path: string): Promise<boolean> {
-  return Boolean(
-    await prisma.promoLandingPath.findUnique({
-      where: { path },
-      select: { id: true },
-    })
-  );
-}
-
-async function publicLandingPathExists(path: string): Promise<boolean> {
-  try {
-    const response = await fetch(new URL(path, SITE_URL), {
-      cache: "no-store",
-      redirect: "follow",
-      signal: AbortSignal.timeout(5_000),
-    });
-    await response.body?.cancel();
-    const finalUrl = new URL(response.url);
-    return (
-      response.ok &&
-      finalUrl.origin === new URL(SITE_URL).origin &&
-      /^\/(?:th|en)(?:\/|$)/.test(finalUrl.pathname)
-    );
-  } catch {
-    return false;
-  }
-}
-
-export type LandingPathActionResult =
-  | { ok: true; path: string }
-  | { ok: false; error: string };
-
-export async function createLandingPath(
-  formData: FormData
-): Promise<LandingPathActionResult> {
-  await requireRole("ADMIN", "MARKETING");
-
-  const parsed = landingPathSchema.safeParse(formData.get("path"));
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "path ไม่ถูกต้อง",
-    };
-  }
-
-  if (await isRegisteredLandingPath(parsed.data)) {
-    return { ok: false, error: "path นี้มีอยู่แล้ว" };
-  }
-  if (!(await publicLandingPathExists(parsed.data))) {
-    return { ok: false, error: "ไม่พบหน้าเว็บนี้ กรุณาตรวจ path แล้วลองใหม่" };
-  }
-
-  try {
-    const created = await landingPaths.create({ path: parsed.data });
-    return { ok: true, path: created.path };
-  } catch (err) {
-    if ((err as { code?: string })?.code === "P2002") {
-      return { ok: false, error: "path นี้มีอยู่แล้ว" };
-    }
-    throw err;
-  }
-}
-
 // One running-3-digit counter per subType prefix (TE001, TE002, FB001, …) —
 // never a table-wide counter, or a new prefix would collide with whatever
 // number the *last-inserted* channel happened to have (see the old bug this
@@ -205,7 +135,7 @@ export async function createChannel(formData: FormData): Promise<ActionResult> {
 
   const parsed = parseChannel(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
-  if (!(await isRegisteredLandingPath(parsed.data.landingPath))) {
+  if (!isPromoLandingPath(parsed.data.landingPath)) {
     return { ok: false, error: "หน้า Landing ไม่อยู่ในรายการที่อนุญาต" };
   }
 
@@ -229,7 +159,7 @@ export async function updateChannel(
 
   const parsed = parseChannel(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
-  if (!(await isRegisteredLandingPath(parsed.data.landingPath))) {
+  if (!isPromoLandingPath(parsed.data.landingPath)) {
     return { ok: false, error: "หน้า Landing ไม่อยู่ในรายการที่อนุญาต" };
   }
 

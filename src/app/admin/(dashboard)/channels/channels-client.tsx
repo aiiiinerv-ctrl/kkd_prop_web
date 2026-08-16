@@ -7,6 +7,8 @@ import {
   CHANNEL_DEFAULT_LANDING_PATH,
   CHANNEL_SUB_TYPES,
   CHANNEL_UTM_CAMPAIGNS,
+  PROMO_LANDING_PATH_OPTIONS,
+  PROMO_LANDING_PATHS,
   subTypeOf,
 } from "@/lib/channel-taxonomy";
 import { buildPromoLink } from "@/lib/promo-link";
@@ -14,7 +16,6 @@ import { toast } from "sonner";
 import {
   createChannel,
   createChannelExecutive,
-  createLandingPath,
   deleteChannel,
   deleteChannelExecutive,
   updateChannel,
@@ -218,16 +219,14 @@ const MANUAL_ENTRY_VALUE = "__manual__";
 
 export function ChannelsClient({
   channels,
-  landingPaths,
   siteUrl,
   canManageChannels = false,
   canManageExecutives = false,
   adminUsers = [],
 }: {
   channels: ChannelRow[];
-  landingPaths: string[];
   siteUrl: string;
-  /** Create/edit/delete channels + landing paths — ADMIN and MARKETING only. */
+  /** Create/edit/delete channels — ADMIN and MARKETING only. */
   canManageChannels?: boolean;
   /** Create/edit/delete channel executives — ADMIN, MARKETING, and EDITOR. */
   canManageExecutives?: boolean;
@@ -236,12 +235,9 @@ export function ChannelsClient({
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ChannelRow | null>(null);
-  const [landingPathOptions, setLandingPathOptions] = useState(landingPaths);
   const [selectedLandingPath, setSelectedLandingPath] = useState(
     CHANNEL_DEFAULT_LANDING_PATH
   );
-  const [addingLandingPath, setAddingLandingPath] = useState(false);
-  const [landingPathDraft, setLandingPathDraft] = useState("");
   const typeSelectRef = useRef<HTMLSelectElement>(null);
   // Holds only the id, not a snapshot of the row — the executive list inside
   // this dialog must track the live `channels` prop (refreshed by
@@ -268,26 +264,6 @@ export function ChannelsClient({
       } else {
         toast.error(result.error);
       }
-    });
-  };
-
-  const onLandingPathCreate = () => {
-    const formData = new FormData();
-    formData.set("path", landingPathDraft);
-    startTransition(async () => {
-      const result = await createLandingPath(formData);
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
-
-      setLandingPathOptions((current) =>
-        current.includes(result.path) ? current : [...current, result.path].sort()
-      );
-      setSelectedLandingPath(result.path);
-      setLandingPathDraft("");
-      setAddingLandingPath(false);
-      toast.success("เพิ่มหน้า Landing แล้ว");
     });
   };
 
@@ -467,11 +443,7 @@ export function ChannelsClient({
         open={dialogOpen}
         onOpenChange={(open) => {
           setDialogOpen(open);
-          if (!open) {
-            setEditing(null);
-            setAddingLandingPath(false);
-            setLandingPathDraft("");
-          }
+          if (!open) setEditing(null);
         }}
       >
         <DialogContent>
@@ -528,19 +500,7 @@ export function ChannelsClient({
               </select>
             </div>
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between gap-3">
-                <Label>หน้า Landing ของลิงก์โปรโมท</Label>
-                {!addingLandingPath && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="h-7 px-2 text-xs"
-                    onClick={() => setAddingLandingPath(true)}
-                  >
-                    <Plus className="size-3.5" /> เพิ่ม path
-                  </Button>
-                )}
-              </div>
+              <Label>หน้า Landing ของลิงก์โปรโมท</Label>
               <select
                 name="landingPath"
                 required
@@ -548,50 +508,30 @@ export function ChannelsClient({
                 onChange={(event) => setSelectedLandingPath(event.target.value)}
                 className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/50"
               >
-                {landingPathOptions.map((path) => (
-                  <option key={path} value={path}>
-                    {path}
-                  </option>
-                ))}
+                {/* If editing a channel whose saved path is no longer in the
+                    constant list (e.g. a legacy path), show it as a labelled
+                    extra option so opening the dialog never silently changes it. */}
+                {editing &&
+                  !PROMO_LANDING_PATHS.includes(editing.landingPath) && (
+                    <option value={editing.landingPath}>
+                      {editing.landingPath} — path เดิม
+                    </option>
+                  )}
+                <optgroup label="ไทย (/th)">
+                  {PROMO_LANDING_PATH_OPTIONS.filter((o) => o.locale === "th").map((o) => (
+                    <option key={o.path} value={o.path}>
+                      {o.path} — {o.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="English (/en)">
+                  {PROMO_LANDING_PATH_OPTIONS.filter((o) => o.locale === "en").map((o) => (
+                    <option key={o.path} value={o.path}>
+                      {o.path} — {o.label}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
-              {addingLandingPath && (
-                <div className="space-y-2 rounded-lg border border-border/70 bg-muted/30 p-3">
-                  <Label htmlFor="new-landing-path">เพิ่ม path ที่มีอยู่จริง</Label>
-                  <Input
-                    id="new-landing-path"
-                    value={landingPathDraft}
-                    onChange={(event) => setLandingPathDraft(event.target.value)}
-                    placeholder="/th/campaign"
-                    maxLength={180}
-                    disabled={isPending}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    รับเฉพาะ path ภายในเว็บที่ขึ้นต้นด้วย /th หรือ /en ระบบจะตรวจว่าหน้ามีอยู่ก่อนบันทึก
-                  </p>
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      disabled={isPending}
-                      onClick={() => {
-                        setAddingLandingPath(false);
-                        setLandingPathDraft("");
-                      }}
-                    >
-                      ยกเลิก
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={isPending || !landingPathDraft.trim()}
-                      onClick={onLandingPathCreate}
-                    >
-                      {isPending ? "กำลังตรวจ..." : "เพิ่มและเลือก"}
-                    </Button>
-                  </div>
-                </div>
-              )}
             </div>
             <div className="space-y-1.5">
               <Label>utm_campaign</Label>

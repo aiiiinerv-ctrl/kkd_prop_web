@@ -183,30 +183,6 @@ async function seedPromoChannels() {
   console.log(`Promo channels: ${channels.length}`);
 }
 
-async function seedPromoLandingPaths() {
-  const paths = [
-    "/th/packages",
-    "/th",
-    "/th/booking",
-    "/th/calculator",
-    "/th/about",
-    "/th/contact",
-    "/th/cookie-policy",
-    "/th/portfolio",
-    "/th/services",
-    "/th/testimonials",
-  ];
-
-  for (const landingPath of paths) {
-    await prisma.promoLandingPath.upsert({
-      where: { path: landingPath },
-      update: {},
-      create: { path: landingPath },
-    });
-  }
-  console.log(`Promo landing paths: ${paths.length}`);
-}
-
 // Sprint 2 (RBAC) test accounts — one per non-ADMIN role, so the access
 // control matrix can be manually/scriptedly verified without touching real
 // staff credentials. Idempotent: only created if missing, never overwrites
@@ -835,7 +811,6 @@ async function seedAboutContent() {
 
 async function main() {
   await seedAdmin();
-  await seedPromoLandingPaths();
   await seedPromoChannels();
   await seedTestRoleAccounts();
   await seedBookingCapacitySetting();

@@ -577,8 +577,8 @@ async function main() {
     await prisma.service.delete({ where: { id: editorTestServiceId } }).catch(() => {});
   }
 
-  // --- Pure capability-function checks (deleteService/createLandingPath/
-  // createChannel etc. all gate on requireRole(), which calls auth() — that
+  // --- Pure capability-function checks (deleteService/createChannel etc.
+  // all gate on requireRole(), which calls auth() — that
   // needs a live Next.js request context and can't be driven from a plain
   // script, same limitation noted for FINANCE below). The capability
   // predicates in src/lib/auth/index.ts are what those requireRole() calls

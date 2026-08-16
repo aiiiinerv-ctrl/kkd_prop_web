@@ -14,7 +14,7 @@ export default async function AdminChannelsPage() {
   // CHANNEL_EXECUTIVE gets the narrowed, self-only query.
   const isChannelExecutive = session.user.role === "CHANNEL_EXECUTIVE";
 
-  const [channels, landingPaths, adminUsers] = await Promise.all([
+  const [channels, adminUsers] = await Promise.all([
     prisma.promoChannel.findMany({
       where: isChannelExecutive
         ? { id: session.user.linkedChannelId ?? "__no_channel_link__" }
@@ -25,7 +25,6 @@ export default async function AdminChannelsPage() {
         executives: { orderBy: { refCode: "asc" } },
       },
     }),
-    prisma.promoLandingPath.findMany({ orderBy: { path: "asc" } }),
     // Only roles that can manage executives ever see the create form
     // (gated by canManageExecutives below), but fetching unconditionally
     // keeps this a plain parallel load. Deliberately NOT widened to include
@@ -44,7 +43,6 @@ export default async function AdminChannelsPage() {
       siteUrl={SITE_URL}
       canManageChannels={canManageChannels(session.user.role)}
       canManageExecutives={canManageChannelExecutives(session.user.role)}
-      landingPaths={landingPaths.map((item) => item.path)}
       adminUsers={adminUsers}
       channels={channels.map((c) => ({
         id: c.id,
