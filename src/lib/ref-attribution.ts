@@ -49,11 +49,12 @@ export async function resolveRefAttribution(): Promise<RefAttribution> {
 }
 
 /**
- * Resolves the `kkd_ref` cookie to a ChannelExecutive's name, to prefill the
- * booking form's "ผู้แนะนำ" (referrer) field. Only fills in when the ref code
- * matches a ChannelExecutive — a channel-only ref code (e.g. a Facebook page
- * link) has no person to name, and that attribution is already captured via
- * autoSourceChannelId, so this returns "" for it.
+ * Resolves the `kkd_ref` cookie to prefill the booking form's "ผู้แนะนำ"
+ * (referrer) field. A person-level ref code (ChannelExecutive) prefills
+ * their name. A channel-only ref code (e.g. a Facebook page link) has no
+ * person to name, so it prefills the ref code itself (e.g. "CH015") instead
+ * of being left blank — the customer can still edit or clear it. Falls back
+ * to "" only when the cookie is missing or doesn't match anything.
  */
 export async function resolveRefReferrerName(): Promise<string> {
   const jar = await cookies();
@@ -64,7 +65,13 @@ export async function resolveRefReferrerName(): Promise<string> {
     where: { refCode: ref },
     select: { name: true },
   });
-  return executive?.name ?? "";
+  if (executive) return executive.name;
+
+  const channel = await prisma.promoChannel.findUnique({
+    where: { refCode: ref },
+    select: { id: true },
+  });
+  return channel ? ref : "";
 }
 
 export type UtmAttribution = {

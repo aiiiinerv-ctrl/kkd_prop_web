@@ -199,8 +199,10 @@ export function ChannelsClient({
 
       <p className="text-xs text-muted-foreground">
         ลิงก์ในตารางนี้เป็นลิงก์ของ<strong className="font-medium">ช่องทาง</strong>
-        {" — "}บันทึกว่า lead มาจากช่องทางไหน แต่ไม่เติมชื่อในช่อง &ldquo;ผู้แนะนำ&rdquo; ให้ลูกค้า
-        ถ้าต้องการให้เติมชื่อด้วย ให้ใช้ลิงก์รายบุคคลในปุ่ม &ldquo;ผู้ดำเนินการ&rdquo; ของช่องทางนั้น
+        {" — "}บันทึกว่า lead มาจากช่องทางไหน และเติม<strong className="font-medium">รหัสช่องทาง</strong>
+        (เช่น &ldquo;CH015&rdquo;) ลงช่อง &ldquo;ผู้แนะนำ&rdquo; ให้ลูกค้าอัตโนมัติ
+        ถ้าต้องการให้เติม<strong className="font-medium">ชื่อคน</strong>แทนรหัส
+        ให้ใช้ลิงก์รายบุคคลในปุ่ม &ldquo;ผู้ดำเนินการ&rdquo; ของช่องทางนั้น
       </p>
 
       <div className="min-w-0 rounded-xl border border-border/70 bg-card">
@@ -212,11 +214,11 @@ export function ChannelsClient({
               <TableHead>ประเภท</TableHead>
               <TableHead>ประเภทย่อย</TableHead>
               {/* The channel-level and executive-level links are both produced
-                  by promoLink() and look identical once copied, but only the
-                  executive one carries a person's name — so only it prefills
-                  the customer's "ผู้แนะนำ" field on the booking form. Say which
-                  is which here, or the shorter link in the main table gets
-                  handed out by default and the prefill never fires. */}
+                  by promoLink() and look identical once copied. The executive
+                  one prefills the customer's "ผู้แนะนำ" field with a person's
+                  name; the channel-level one falls back to prefilling the ref
+                  code itself (see resolveRefReferrerName). Say which is which
+                  here so the right link gets handed out on purpose. */}
               <TableHead>รหัส / ลิงก์โปรโมทระดับช่องทาง</TableHead>
               <TableHead>จำนวน Lead</TableHead>
               <TableHead>ลำดับ</TableHead>
