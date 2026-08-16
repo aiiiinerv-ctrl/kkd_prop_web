@@ -39,14 +39,11 @@ const channelSchema = z.object({
  * these actions return, instead of letting it escape as an unhandled server
  * error that leaves the dialog stuck on "กำลังบันทึก..." with no toast.
  *
- * Two ways to hit this, one of them ordinary: `PromoChannel.slug` is unique
- * and derived from nameEn, so any two channels sharing an English name
- * collide — an everyday admin mistake, not a race. The other is genuinely
- * concurrent creation: refCode is chosen by reading the current maximum and
- * adding one, which is a separate round-trip from the insert, so two admins
- * submitting the same subType at the same moment can compute the same code.
- * Retrying is not worth it for two admins on one site; telling them plainly
- * that the code or name was taken is.
+ * refCode is the only unique column left in play here: it's chosen by
+ * reading the current maximum and adding one, which is a separate round-trip
+ * from the insert, so two admins submitting the same subType at the same
+ * moment can compute the same code. Retrying is not worth it for two admins
+ * on one site; telling them plainly that the code was taken is.
  */
 async function asResult(write: () => Promise<unknown>): Promise<ActionResult> {
   try {
@@ -57,7 +54,7 @@ async function asResult(write: () => Promise<unknown>): Promise<ActionResult> {
     if (code === "P2002") {
       return {
         ok: false,
-        error: "ชื่อหรือรหัสนี้ถูกใช้ไปแล้ว กรุณาลองใหม่อีกครั้งหรือเปลี่ยนชื่อ",
+        error: "รหัสนี้ถูกใช้ไปแล้ว กรุณาลองใหม่อีกครั้ง",
       };
     }
     throw err;

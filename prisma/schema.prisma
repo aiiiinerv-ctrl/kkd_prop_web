@@ -100,7 +100,7 @@ model AdminUser {
 
 model PromoChannel {
   id         String             @id @default(cuid())
-  slug       String             @unique
+  slug       String
   nameTh     String
   nameEn     String
   type       ChannelType        @default(INDIVIDUAL)
