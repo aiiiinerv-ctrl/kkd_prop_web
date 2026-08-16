@@ -186,8 +186,8 @@
     "empty": "No packages available right now. Please check back later."
   },
   "portfolio": {
-    "title": "Our Installation Portfolio",
-    "subtitle": "Real projects we designed and installed",
+    "title": "Projects We've Installed",
+    "subtitle": "Residential rooftop solar systems designed and installed by our own engineering team — covering both metal-sheet and tiled roofs",
     "filterAll": "All",
     "filterResidential": "Residential",
     "filterCommercial": "Commercial",
@@ -367,7 +367,7 @@
     "packagesTitle": "Solar Packages | KKD PROPERTY",
     "packagesDesc": "3KW, 5KW and 10KW solar packages with pricing. Tier 1 panels, 25-year warranty. Choose by your monthly bill.",
     "portfolioTitle": "Installation Portfolio | KKD PROPERTY",
-    "portfolioDesc": "Real solar installations for homes, commercial buildings and industrial factories across Thailand.",
+    "portfolioDesc": "Real residential solar installations by KKD PROPERTY, with system size and site details for each home.",
     "bookingTitle": "Request a Quote / Book Site Survey | KKD PROPERTY",
     "bookingDesc": "Get a free solar quote, or book an engineer site survey for only ฿199 with a custom system design.",
     "contactTitle": "Contact Us | KKD PROPERTY",

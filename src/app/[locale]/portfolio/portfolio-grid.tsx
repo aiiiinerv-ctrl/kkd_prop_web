@@ -33,8 +33,13 @@ export function PortfolioGrid({
   initialCategory: string;
 }) {
   const t = useTranslations("portfolio");
+  const present = new Set(projects.map((p) => p.category));
+  const availableFilters = FILTERS.filter(
+    (f) => f.value === "all" || present.has(f.value)
+  );
+  const showFilters = availableFilters.length > 2;
   const [filter, setFilter] = useState<Filter>(
-    FILTERS.find((f) => f.value === initialCategory)?.value ?? "all"
+    availableFilters.find((f) => f.value === initialCategory)?.value ?? "all"
   );
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
@@ -43,31 +48,33 @@ export function PortfolioGrid({
 
   return (
     <>
-      <div className="mb-9 flex flex-wrap justify-center gap-2">
-        {FILTERS.map((f) => (
-          <button
-            key={f.value}
-            type="button"
-            onClick={() => setFilter(f.value)}
-            className={cn(
-              "rounded-full border px-5 py-2 text-sm font-medium transition-colors",
-              filter === f.value
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-primary bg-transparent text-primary hover:bg-primary hover:text-primary-foreground"
-            )}
-          >
-            {t(f.key)}
-          </button>
-        ))}
-      </div>
+      {showFilters && (
+        <div className="mb-9 flex flex-wrap justify-center gap-2">
+          {availableFilters.map((f) => (
+            <button
+              key={f.value}
+              type="button"
+              onClick={() => setFilter(f.value)}
+              className={cn(
+                "rounded-full border px-5 py-2 text-sm font-medium transition-colors",
+                filter === f.value
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-primary bg-transparent text-primary hover:bg-primary hover:text-primary-foreground"
+              )}
+            >
+              {t(f.key)}
+            </button>
+          ))}
+        </div>
+      )}
 
       {visible.length === 0 ? (
-        <p className="py-16 text-center text-muted-foreground">{t("empty")}</p>
+        <p className="mt-9 py-16 text-center text-muted-foreground">{t("empty")}</p>
       ) : (
         <div
           key={filter}
           className={cn(
-            "mx-auto grid max-w-6xl gap-7 sm:grid-cols-2",
+            "mx-auto mt-9 grid max-w-6xl gap-7 sm:grid-cols-2",
             visible.length >= 3 ? "lg:grid-cols-3" : "lg:max-w-[860px]"
           )}
         >
