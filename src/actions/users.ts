@@ -12,6 +12,7 @@ export type ActionResult = { ok: true } | { ok: false; error: string };
 const userSchema = z.object({
   email: z.string().trim().toLowerCase().pipe(z.email()),
   name: z.string().trim().min(2).max(120),
+  phone: z.string().trim().max(30).optional().or(z.literal("")),
   role: zodEnum(ROLES),
   password: z.string().min(8).max(200).optional().or(z.literal("")),
   linkedChannelExecutiveId: z.string().trim().optional().or(z.literal("")),
@@ -25,6 +26,7 @@ const users = auditedEntity({
     id: user.id,
     email: user.email,
     name: user.name,
+    phone: user.phone ?? null,
     role: user.role,
     isActive: user.isActive,
     linkedChannelExecutiveId: user.linkedChannelExecutiveId ?? null,
@@ -62,12 +64,13 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
   const parsed = userSchema.safeParse({
     email: formData.get("email"),
     name: formData.get("name"),
+    phone: formData.get("phone"),
     role: formData.get("role"),
     password: formData.get("password"),
     linkedChannelExecutiveId: formData.get("linkedChannelExecutiveId"),
   });
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
-  const { email, name, role, password, linkedChannelExecutiveId } = parsed.data;
+  const { email, name, phone, role, password, linkedChannelExecutiveId } = parsed.data;
   if (!password) {
     return { ok: false, error: "กรุณาระบุรหัสผ่าน (อย่างน้อย 8 ตัวอักษร)" };
   }
@@ -82,6 +85,7 @@ export async function createUser(formData: FormData): Promise<ActionResult> {
   await users.create({
     email,
     name,
+    phone: phone || null,
     role,
     passwordHash,
     linkedChannelExecutiveId: link.value,
@@ -99,12 +103,13 @@ export async function updateUser(
   const parsed = userSchema.safeParse({
     email: formData.get("email"),
     name: formData.get("name"),
+    phone: formData.get("phone"),
     role: formData.get("role"),
     password: formData.get("password"),
     linkedChannelExecutiveId: formData.get("linkedChannelExecutiveId"),
   });
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
-  const { email, name, role, password, linkedChannelExecutiveId } = parsed.data;
+  const { email, name, phone, role, password, linkedChannelExecutiveId } = parsed.data;
 
   const link = await resolveChannelExecutiveLink(role, linkedChannelExecutiveId);
   if ("error" in link) return { ok: false, error: link.error };
@@ -112,6 +117,7 @@ export async function updateUser(
   const updated = await users.update(id, {
     email,
     name,
+    phone: phone || null,
     role,
     linkedChannelExecutiveId: link.value,
     ...(password ? { passwordHash: await bcrypt.hash(password, 12) } : {}),

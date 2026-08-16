@@ -28,6 +28,7 @@ type UserRow = {
   id: string;
   email: string;
   name: string;
+  phone: string | null;
   role: "ADMIN" | "SALES" | "FINANCE" | "CHANNEL_EXECUTIVE";
   isActive: boolean;
   createdAt: string;
@@ -124,6 +125,14 @@ export function UsersClient({
                 />
               </div>
               <div className="space-y-1.5">
+                <Label htmlFor="u-phone">เบอร์โทร</Label>
+                <Input
+                  id="u-phone"
+                  name="phone"
+                  defaultValue={editing?.phone ?? ""}
+                />
+              </div>
+              <div className="space-y-1.5">
                 <Label htmlFor="u-role">บทบาท</Label>
                 <select
                   id="u-role"
@@ -189,6 +198,7 @@ export function UsersClient({
             <TableRow>
               <TableHead>ชื่อ</TableHead>
               <TableHead>อีเมล</TableHead>
+              <TableHead>เบอร์โทร</TableHead>
               <TableHead>บทบาท</TableHead>
               <TableHead>สถานะ</TableHead>
               <TableHead className="text-right">จัดการ</TableHead>
@@ -204,6 +214,7 @@ export function UsersClient({
                   )}
                 </TableCell>
                 <TableCell>{user.email}</TableCell>
+                <TableCell>{user.phone || "-"}</TableCell>
                 <TableCell>
                   <Badge variant={user.role === "ADMIN" ? "default" : "secondary"}>
                     {user.role}

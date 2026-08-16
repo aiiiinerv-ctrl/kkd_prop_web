@@ -81,6 +81,7 @@ model AdminUser {
   email        String     @unique
   passwordHash String
   name         String
+  phone        String?
   role         Role       @default(SALES)
   isActive     Boolean    @default(true)
   createdAt    DateTime   @default(now())

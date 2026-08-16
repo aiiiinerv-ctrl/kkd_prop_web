@@ -274,7 +274,7 @@ if (!salesUser) {
     `USERS: AdminUser snapshot is the declared projection, no passwordHash ${
       JSON.stringify(snapshotKeys) ===
       JSON.stringify(
-        ["id", "email", "name", "role", "isActive", "linkedChannelExecutiveId"].sort()
+        ["id", "email", "name", "phone", "role", "isActive", "linkedChannelExecutiveId"].sort()
       )
         ? "✓"
         : `✗ FAIL (${JSON.stringify(snapshotKeys)})`
