@@ -29,6 +29,7 @@ import {
   TIME_SLOT_RANGE_LABELS,
   PAYMENT_STATUS_META,
 } from "@/lib/enum-labels";
+import { formatAutoSource } from "@/lib/leads/auto-source";
 import type {
   BuildingType,
   LeadStatus,
@@ -300,11 +301,7 @@ export function LeadDetailClient({
               ช่องทางอัตโนมัติ (จากลิงก์โปรโมท)
             </dt>
             <dd className="font-medium">
-              {lead.autoSourceRefCode
-                ? lead.autoSourceName
-                  ? `${lead.autoSourceRefCode} - ${lead.autoSourceName}`
-                  : lead.autoSourceRefCode
-                : "เข้าโดยตรง"}
+              {formatAutoSource(lead.autoSourceRefCode, lead.autoSourceName)}
             </dd>
           </div>
         </dl>

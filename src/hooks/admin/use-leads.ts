@@ -31,8 +31,8 @@ export type LeadListItem = {
   lastFollowUpAt: string | null;
   booking: { paymentStatus: string; preferredDate: string } | null;
   sourceChannel: { nameTh: string } | null;
-  autoSourceChannel: { nameTh: string } | null;
-  autoSourceExecutive: { name: string } | null;
+  autoSourceChannel: { nameTh: string; refCode: string } | null;
+  autoSourceExecutive: { name: string; refCode: string } | null;
   assignedSales: { name: string } | null;
 };
 

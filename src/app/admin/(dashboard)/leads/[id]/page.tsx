@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { canMutateLead, requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { resolveAutoSource } from "@/lib/leads/auto-source";
 import { LeadDetailClient } from "./lead-detail-client";
 
 export default async function LeadDetailPage({
@@ -56,6 +57,7 @@ export default async function LeadDetailPage({
   // Sales assignment sets ownership/attribution (see getLeadScopeFilter()),
   // not day-to-day follow-up — kept ADMIN-only, same as canEditChannel.
   const canAssignSales = session.user.role === "ADMIN";
+  const autoSource = resolveAutoSource(lead);
 
   return (
     <LeadDetailClient
@@ -80,12 +82,8 @@ export default async function LeadDetailPage({
         customerMessage: lead.customerMessage,
         internalNotes: lead.internalNotes,
         sourceChannelId: lead.sourceChannelId,
-        // The executive's refCode is the one the customer actually clicked
-        // (resolveRefAttribution() matches ChannelExecutive before
-        // PromoChannel), so it wins over the channel-level code here.
-        autoSourceRefCode:
-          lead.autoSourceExecutive?.refCode ?? lead.autoSourceChannel?.refCode ?? null,
-        autoSourceName: lead.autoSourceExecutive?.name ?? lead.autoSourceChannel?.nameTh ?? null,
+        autoSourceRefCode: autoSource.refCode,
+        autoSourceName: autoSource.name,
         assignedSalesId: lead.assignedSalesId,
         assignedSalesName: lead.assignedSales?.name ?? null,
         lastFollowUpAt: lead.lastFollowUpAt ? lead.lastFollowUpAt.toISOString() : null,

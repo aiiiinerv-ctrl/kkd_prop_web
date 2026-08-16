@@ -18,6 +18,7 @@ import {
 import { LEAD_STATUS_LABELS } from "@/lib/enum-labels";
 import { useLeads, type LeadFilters } from "@/hooks/admin/use-leads";
 import type { Role } from "@/lib/auth";
+import { formatLeadAutoSource } from "@/lib/leads/auto-source";
 
 const selectCls =
   "rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none";
@@ -178,11 +179,7 @@ export function LeadsClient({
                     </TableCell>
                     <TableCell>{lead.province}</TableCell>
                     <TableCell>{lead.sourceChannel?.nameTh ?? "-"}</TableCell>
-                    <TableCell>
-                      {lead.autoSourceExecutive
-                        ? `${lead.autoSourceChannel?.nameTh ?? "-"} · ${lead.autoSourceExecutive.name}`
-                        : (lead.autoSourceChannel?.nameTh ?? "เข้าโดยตรง")}
-                    </TableCell>
+                    <TableCell>{formatLeadAutoSource(lead)}</TableCell>
                     <TableCell>
                       {new Date(lead.createdAt).toLocaleDateString("th-TH")}
                     </TableCell>
