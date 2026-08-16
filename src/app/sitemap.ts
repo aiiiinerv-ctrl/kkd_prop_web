@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { routing } from "@/i18n/routing";
-import { getPublishedPackages } from "@/lib/content";
+import { getPublishedPackages, getPublishedTestimonials } from "@/lib/content";
 import { SITE_URL } from "@/lib/seo";
 
 const PATHS = [
@@ -12,11 +12,16 @@ const PATHS = [
   "/booking",
   "/contact",
   "/calculator",
-  "/testimonials",
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const staticEntries = PATHS.flatMap((path) =>
+  // /testimonials returns a real 404 (see src/app/[locale]/testimonials/page.tsx)
+  // when there are no published testimonials, so keep it out of the sitemap
+  // until at least one review is published.
+  const testimonials = await getPublishedTestimonials(routing.defaultLocale);
+  const paths = testimonials.length > 0 ? [...PATHS, "/testimonials"] : PATHS;
+
+  const staticEntries = paths.flatMap((path) =>
     routing.locales.map((locale) => ({
       url: `${SITE_URL}/${locale}${path}`,
       lastModified: new Date(),

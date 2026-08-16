@@ -42,6 +42,7 @@ const testimonials = auditedEntity({
     ["/[locale]", "page"],
     ["/[locale]/about", "page"],
     ["/[locale]/testimonials", "page"],
+    "/sitemap.xml",
   ],
 });
 
