@@ -19,6 +19,7 @@ export type AuditEntityType =
   | "PaymentSettings"
   | "PortfolioProject"
   | "PromoChannel"
+  | "PromoLandingPath"
   | "Service"
   | "SurveyBooking"
   | "Testimonial";

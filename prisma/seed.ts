@@ -145,15 +145,21 @@ async function seedPromoChannels() {
   ];
   for (const c of channels) {
     const { executive, subType, ...channelData } = c;
-    const existing = await prisma.promoChannel.findUnique({ where: { slug: c.slug } });
+    const existing = await prisma.promoChannel.findFirst({
+      where: { slug: c.slug },
+      orderBy: { createdAt: "asc" },
+    });
     // update never touches subType — a pre-existing row (dev or production)
     // keeps whatever an admin has or hasn't set (default #10: no auto-migrate).
     const refCode = existing?.refCode ?? (await nextChannelRefCode(subType ?? "CH"));
-    const channel = await prisma.promoChannel.upsert({
-      where: { slug: c.slug },
-      update: { type: c.type },
-      create: { ...channelData, subType, refCode },
-    });
+    const channel = existing
+      ? await prisma.promoChannel.update({
+          where: { id: existing.id },
+          data: { type: c.type },
+        })
+      : await prisma.promoChannel.create({
+          data: { ...channelData, subType, refCode },
+        });
 
     const existingExec = await prisma.channelExecutive.findFirst({
       where: { channelId: channel.id },
@@ -175,6 +181,30 @@ async function seedPromoChannels() {
     }
   }
   console.log(`Promo channels: ${channels.length}`);
+}
+
+async function seedPromoLandingPaths() {
+  const paths = [
+    "/th/packages",
+    "/th",
+    "/th/booking",
+    "/th/calculator",
+    "/th/about",
+    "/th/contact",
+    "/th/cookie-policy",
+    "/th/portfolio",
+    "/th/services",
+    "/th/testimonials",
+  ];
+
+  for (const landingPath of paths) {
+    await prisma.promoLandingPath.upsert({
+      where: { path: landingPath },
+      update: {},
+      create: { path: landingPath },
+    });
+  }
+  console.log(`Promo landing paths: ${paths.length}`);
 }
 
 // Sprint 2 (RBAC) test accounts — one per non-ADMIN role, so the access
@@ -208,8 +238,9 @@ async function seedTestRoleAccounts() {
 
   // Link to the Facebook channel's seeded executive (CH001-EX01) so the
   // CHANNEL_EXECUTIVE scope filter has a real row to resolve against.
-  const facebookChannel = await prisma.promoChannel.findUnique({
+  const facebookChannel = await prisma.promoChannel.findFirst({
     where: { slug: "facebook" },
+    orderBy: { createdAt: "asc" },
   });
   const linkedExecutive = facebookChannel
     ? await prisma.channelExecutive.findFirst({
@@ -576,6 +607,7 @@ async function seedPortfolio() {
 
 async function main() {
   await seedAdmin();
+  await seedPromoLandingPaths();
   await seedPromoChannels();
   await seedTestRoleAccounts();
   await seedBookingCapacitySetting();

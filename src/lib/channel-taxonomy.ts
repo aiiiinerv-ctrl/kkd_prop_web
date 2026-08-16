@@ -57,21 +57,9 @@ export function subTypeOf(code: string | null | undefined): ChannelSubType | und
   return CHANNEL_SUB_TYPES.find((s) => s.code === code);
 }
 
-/**
- * The landing page a promo link points to. Kept as a closed dropdown rather
- * than a free-text field (default #6, sa-channel-taxonomy-utm-tasks.md) — a
- * mistyped URL would 404 silently after a link is already handed out.
- */
-export const CHANNEL_LANDING_PATHS = [
-  "/th/packages",
-  "/th",
-  "/th/booking",
-  "/th/calculator",
-] as const;
-
-export type ChannelLandingPath = (typeof CHANNEL_LANDING_PATHS)[number];
-
-export const CHANNEL_DEFAULT_LANDING_PATH: ChannelLandingPath = "/th/packages";
+// Options live in PromoLandingPath so ADMIN can extend the allowlist without
+// a deploy. This constant is only the fallback for old/missing form values.
+export const CHANNEL_DEFAULT_LANDING_PATH = "/th/packages";
 
 /** utm_campaign is a closed choice per the SA sheet, not free text. */
 export const CHANNEL_UTM_CAMPAIGNS = ["package_info", "always_on"] as const;

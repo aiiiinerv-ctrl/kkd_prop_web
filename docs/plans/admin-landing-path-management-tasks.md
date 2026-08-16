@@ -39,6 +39,29 @@
 
 ## Production gate
 
-- เขียน phpMyAdmin-safe DDL/seed SQL ใน migration notes
+- Prisma migration สำหรับ dev อยู่ที่ `prisma/migrations/20260816163000_add_promo_landing_paths/migration.sql`
+- Production ใช้ phpMyAdmin-safe SQL ด้านล่าง: DDL ใช้ `IF NOT EXISTS`, กำหนด `ENGINE=InnoDB`, และ seed ใช้ `INSERT IGNORE` จึงรันซ้ำได้
 - อ่าน `docs/plans/kkd-shared-hosting-redeploy-runbook.md` จบก่อน deploy
 - production schema ก่อน code; deploy และ smoke test หลังผู้ใช้อนุมัติเท่านั้น
+
+```sql
+CREATE TABLE IF NOT EXISTS `PromoLandingPath` (
+  `id` VARCHAR(191) NOT NULL,
+  `path` VARCHAR(180) NOT NULL,
+  `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  UNIQUE INDEX `PromoLandingPath_path_key` (`path`),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO `PromoLandingPath` (`id`, `path`, `createdAt`) VALUES
+  ('landing_th_packages', '/th/packages', CURRENT_TIMESTAMP(3)),
+  ('landing_th_home', '/th', CURRENT_TIMESTAMP(3)),
+  ('landing_th_booking', '/th/booking', CURRENT_TIMESTAMP(3)),
+  ('landing_th_calculator', '/th/calculator', CURRENT_TIMESTAMP(3)),
+  ('landing_th_about', '/th/about', CURRENT_TIMESTAMP(3)),
+  ('landing_th_contact', '/th/contact', CURRENT_TIMESTAMP(3)),
+  ('landing_th_cookie_policy', '/th/cookie-policy', CURRENT_TIMESTAMP(3)),
+  ('landing_th_portfolio', '/th/portfolio', CURRENT_TIMESTAMP(3)),
+  ('landing_th_services', '/th/services', CURRENT_TIMESTAMP(3)),
+  ('landing_th_testimonials', '/th/testimonials', CURRENT_TIMESTAMP(3));
+```

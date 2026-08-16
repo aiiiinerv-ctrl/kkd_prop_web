@@ -6,11 +6,12 @@ import { auditedEntity } from "@/lib/audit";
 import { requireRole } from "@/lib/auth";
 import { CHANNEL_TYPES, zodEnum } from "@/lib/enums";
 import {
-  CHANNEL_LANDING_PATHS,
+  CHANNEL_DEFAULT_LANDING_PATH,
   CHANNEL_SUB_TYPE_CODES,
   CHANNEL_UTM_CAMPAIGNS,
 } from "@/lib/channel-taxonomy";
 import { prisma } from "@/lib/db";
+import { SITE_URL } from "@/lib/seo";
 import type { ActionResult } from "./users";
 
 // Empty-string form values collapse to null — a channel created before this
@@ -23,12 +24,39 @@ const optionalCode = (allowed: readonly string[], message: string) =>
     z.string().nullable()
   ).refine((v) => v === null || allowed.includes(v), { message });
 
+const landingPathSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(180)
+  .refine((value) => /^\/(?:th|en)(?:\/|$)/.test(value), {
+    message: "path ต้องขึ้นต้นด้วย /th หรือ /en",
+  })
+  .refine(
+    (value) =>
+      !value.startsWith("//") &&
+      !value.includes("?") &&
+      !value.includes("#") &&
+      !value.includes("\\") &&
+      !value.split("/").some((segment) => segment === "." || segment === ".."),
+    { message: "path ต้องเป็นหน้าเว็บภายในและไม่มี query หรือ hash" }
+  )
+  .transform((value) => {
+    const normalized = new URL(value, "https://landing-path.invalid").pathname;
+    return normalized.length > 3 && normalized.endsWith("/")
+      ? normalized.slice(0, -1)
+      : normalized;
+  })
+  .refine((value) => /^\/(?:th|en)(?:\/|$)/.test(value), {
+    message: "path ต้องอยู่ใต้ /th หรือ /en หลัง normalize",
+  });
+
 const channelSchema = z.object({
   nameTh: z.string().trim().min(1).max(120),
   nameEn: z.string().trim().min(1).max(120),
   type: zodEnum(CHANNEL_TYPES),
   subType: optionalCode(CHANNEL_SUB_TYPE_CODES, "รหัสประเภทช่องทางย่อยไม่ถูกต้อง"),
-  landingPath: zodEnum(CHANNEL_LANDING_PATHS),
+  landingPath: landingPathSchema,
   utmCampaign: optionalCode(CHANNEL_UTM_CAMPAIGNS, "utm_campaign ไม่ถูกต้อง"),
   isActive: z.coerce.boolean(),
   sortOrder: z.coerce.number().int().min(0).max(999).default(0),
@@ -67,7 +95,7 @@ function parseChannel(formData: FormData) {
     nameEn: formData.get("nameEn"),
     type: formData.get("type"),
     subType: formData.get("subType"),
-    landingPath: formData.get("landingPath") || "/th/packages",
+    landingPath: formData.get("landingPath") || CHANNEL_DEFAULT_LANDING_PATH,
     utmCampaign: formData.get("utmCampaign"),
     isActive: formData.get("isActive") === "on",
     sortOrder: formData.get("sortOrder") || 0,
@@ -88,6 +116,76 @@ const executives = auditedEntity({
   revalidate: () => ["/admin/channels"],
 });
 
+const landingPaths = auditedEntity({
+  entityType: "PromoLandingPath",
+  model: (client) => client.promoLandingPath,
+  snapshot: "full",
+  revalidate: () => ["/admin/channels"],
+});
+
+async function isRegisteredLandingPath(path: string): Promise<boolean> {
+  return Boolean(
+    await prisma.promoLandingPath.findUnique({
+      where: { path },
+      select: { id: true },
+    })
+  );
+}
+
+async function publicLandingPathExists(path: string): Promise<boolean> {
+  try {
+    const response = await fetch(new URL(path, SITE_URL), {
+      cache: "no-store",
+      redirect: "follow",
+      signal: AbortSignal.timeout(5_000),
+    });
+    await response.body?.cancel();
+    const finalUrl = new URL(response.url);
+    return (
+      response.ok &&
+      finalUrl.origin === new URL(SITE_URL).origin &&
+      /^\/(?:th|en)(?:\/|$)/.test(finalUrl.pathname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+export type LandingPathActionResult =
+  | { ok: true; path: string }
+  | { ok: false; error: string };
+
+export async function createLandingPath(
+  formData: FormData
+): Promise<LandingPathActionResult> {
+  await requireRole("ADMIN");
+
+  const parsed = landingPathSchema.safeParse(formData.get("path"));
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "path ไม่ถูกต้อง",
+    };
+  }
+
+  if (await isRegisteredLandingPath(parsed.data)) {
+    return { ok: false, error: "path นี้มีอยู่แล้ว" };
+  }
+  if (!(await publicLandingPathExists(parsed.data))) {
+    return { ok: false, error: "ไม่พบหน้าเว็บนี้ กรุณาตรวจ path แล้วลองใหม่" };
+  }
+
+  try {
+    const created = await landingPaths.create({ path: parsed.data });
+    return { ok: true, path: created.path };
+  } catch (err) {
+    if ((err as { code?: string })?.code === "P2002") {
+      return { ok: false, error: "path นี้มีอยู่แล้ว" };
+    }
+    throw err;
+  }
+}
+
 // One running-3-digit counter per subType prefix (TE001, TE002, FB001, …) —
 // never a table-wide counter, or a new prefix would collide with whatever
 // number the *last-inserted* channel happened to have (see the old bug this
@@ -107,6 +205,9 @@ export async function createChannel(formData: FormData): Promise<ActionResult> {
 
   const parsed = parseChannel(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
+  if (!(await isRegisteredLandingPath(parsed.data.landingPath))) {
+    return { ok: false, error: "หน้า Landing ไม่อยู่ในรายการที่อนุญาต" };
+  }
 
   // No subType picked -> continues the pre-taxonomy "CH0xx" scheme, matching
   // the "- ไม่ระบุ (คงรหัสเดิม) -" option in the admin dropdown.
@@ -128,6 +229,9 @@ export async function updateChannel(
 
   const parsed = parseChannel(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
+  if (!(await isRegisteredLandingPath(parsed.data.landingPath))) {
+    return { ok: false, error: "หน้า Landing ไม่อยู่ในรายการที่อนุญาต" };
+  }
 
   const updated = await channels.update(id, parsed.data);
   if (!updated) return { ok: false, error: "ไม่พบช่องทาง" };

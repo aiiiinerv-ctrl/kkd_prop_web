@@ -10,21 +10,25 @@ export default async function AdminChannelsPage() {
   const session = await requireRole("ADMIN", "CHANNEL_EXECUTIVE");
   const isAdmin = session.user.role === "ADMIN";
 
-  const channels = await prisma.promoChannel.findMany({
-    where: isAdmin
-      ? undefined
-      : { id: session.user.linkedChannelId ?? "__no_channel_link__" },
-    orderBy: { sortOrder: "asc" },
-    include: {
-      _count: { select: { leads: true, autoLeads: true } },
-      executives: { orderBy: { refCode: "asc" } },
-    },
-  });
+  const [channels, landingPaths] = await Promise.all([
+    prisma.promoChannel.findMany({
+      where: isAdmin
+        ? undefined
+        : { id: session.user.linkedChannelId ?? "__no_channel_link__" },
+      orderBy: { sortOrder: "asc" },
+      include: {
+        _count: { select: { leads: true, autoLeads: true } },
+        executives: { orderBy: { refCode: "asc" } },
+      },
+    }),
+    prisma.promoLandingPath.findMany({ orderBy: { path: "asc" } }),
+  ]);
 
   return (
     <ChannelsClient
       siteUrl={SITE_URL}
       readOnly={!isAdmin}
+      landingPaths={landingPaths.map((item) => item.path)}
       channels={channels.map((c) => ({
         id: c.id,
         nameTh: c.nameTh,

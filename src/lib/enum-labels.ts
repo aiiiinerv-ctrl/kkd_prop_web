@@ -108,6 +108,7 @@ export const AUDIT_ENTITY_LABELS: Record<AuditEntityType, string> = {
   PaymentSettings: "การตั้งค่าการชำระเงิน",
   PortfolioProject: "ผลงาน",
   PromoChannel: "ช่องทางโปรโมท",
+  PromoLandingPath: "หน้า Landing ของลิงก์โปรโมท",
   Service: "บริการ",
   SurveyBooking: "การนัดสำรวจ",
   Testimonial: "รีวิวลูกค้า",
