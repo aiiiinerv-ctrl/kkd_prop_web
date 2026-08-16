@@ -132,7 +132,7 @@ export function AdminSidebar({ role }: { role: Role }) {
               {item.href === "/admin/leads" && unreadLeadCount > 0 && (
                 <span
                   aria-label={`Lead ใหม่ที่ยังไม่ได้เปิด ${unreadLeadCount} รายการ`}
-                  className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-orange px-1.5 text-xs font-semibold text-white"
+                  className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-orange px-1.5 text-xs font-semibold text-black"
                 >
                   {unreadLeadCount > 99 ? "99+" : unreadLeadCount}
                 </span>
