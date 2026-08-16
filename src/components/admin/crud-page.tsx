@@ -61,6 +61,7 @@ export function CrudPage<T extends Row>({
   onDelete,
   deleteTitle,
   deleteDescription = "การลบจะถูกบันทึกในประวัติการแก้ไข และหน้าเว็บจะไม่แสดงรายการนี้อีก",
+  canDelete = true,
 }: {
   title: string;
   addLabel: string;
@@ -77,6 +78,8 @@ export function CrudPage<T extends Row>({
   onDelete: (id: string) => Promise<ActionResult>;
   deleteTitle: (row: T) => string;
   deleteDescription?: string;
+  /** Hides the delete button entirely — for roles that can create/update but never delete (e.g. EDITOR). Defaults true so existing callers are unaffected. */
+  canDelete?: boolean;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<T | null>(null);
@@ -143,12 +146,14 @@ export function CrudPage<T extends Row>({
                   >
                     <Pencil className="size-4" />
                   </Button>
-                  <DeleteConfirm
-                    title={deleteTitle(row)}
-                    description={deleteDescription}
-                    disabled={isPending}
-                    onConfirm={() => remove(row.id)}
-                  />
+                  {canDelete && (
+                    <DeleteConfirm
+                      title={deleteTitle(row)}
+                      description={deleteDescription}
+                      disabled={isPending}
+                      onConfirm={() => remove(row.id)}
+                    />
+                  )}
                 </TableCell>
               </TableRow>
             ))}

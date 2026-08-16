@@ -1,9 +1,9 @@
-import { requireAdmin } from "@/lib/auth";
+import { canDeleteContent, canPublishContent, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { ServicesClient } from "./services-client";
 
 export default async function AdminServicesPage() {
-  await requireAdmin();
+  const session = await requireRole("ADMIN", "SALES", "MARKETING", "EDITOR");
 
   const services = await prisma.service.findMany({
     orderBy: { sortOrder: "asc" },
@@ -24,6 +24,8 @@ export default async function AdminServicesPage() {
         sortOrder: s.sortOrder,
         isPublished: s.isPublished,
       }))}
+      canPublish={canPublishContent(session.user.role)}
+      canDelete={canDeleteContent(session.user.role)}
     />
   );
 }

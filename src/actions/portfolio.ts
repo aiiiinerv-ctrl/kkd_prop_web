@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { slugify, storePublicImages } from "@/lib/admin-content";
 import { auditedEntity } from "@/lib/audit";
-import { requireAdmin } from "@/lib/auth";
+import { canPublishContent, requireRole } from "@/lib/auth";
 import { storage } from "@/lib/storage";
 import type { ActionResult } from "./users";
 
@@ -47,7 +47,7 @@ const projects = auditedEntity({
 });
 
 export async function createProject(formData: FormData): Promise<ActionResult> {
-  await requireAdmin();
+  const session = await requireRole("ADMIN", "SALES", "MARKETING", "EDITOR");
 
   const parsed = parseProject(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
@@ -56,8 +56,13 @@ export async function createProject(formData: FormData): Promise<ActionResult> {
   if (!images.ok) return { ok: false, error: images.error };
   if (images.keys.length === 0) return { ok: false, error: "กรุณาแนบรูปผลงาน" };
 
+  // EDITOR can't publish — every create lands as a draft regardless of what
+  // the form sent, enforced here (not just hidden in the UI).
+  const canPublish = canPublishContent(session.user.role);
+
   await projects.create({
     ...parsed.data,
+    isPublished: canPublish ? parsed.data.isPublished : false,
     slug: slugify(parsed.data.titleEn),
     imageKeys: images.keys,
   });
@@ -69,7 +74,7 @@ export async function updateProject(
   id: string,
   formData: FormData
 ): Promise<ActionResult> {
-  await requireAdmin();
+  const session = await requireRole("ADMIN", "SALES", "MARKETING", "EDITOR");
 
   const parsed = parseProject(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
@@ -77,8 +82,14 @@ export async function updateProject(
   const images = await storePublicImages(formData.getAll("images"), "portfolio");
   if (!images.ok) return { ok: false, error: images.error };
 
+  // EDITOR can't publish/unpublish — drop isPublished from the payload
+  // entirely so the existing DB value wins over whatever the form sent.
+  const { isPublished, ...rest } = parsed.data;
+  const canPublish = canPublishContent(session.user.role);
+
   const result = await projects.update(id, {
-    ...parsed.data,
+    ...rest,
+    ...(canPublish ? { isPublished } : {}),
     ...(images.keys.length > 0 ? { imageKeys: images.keys } : {}),
   });
   if (!result) return { ok: false, error: "ไม่พบผลงาน" };
@@ -92,7 +103,7 @@ export async function updateProject(
 }
 
 export async function deleteProject(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireRole("ADMIN", "SALES", "MARKETING");
 
   const before = await projects.remove(id);
   if (!before) return { ok: false, error: "ไม่พบผลงาน" };

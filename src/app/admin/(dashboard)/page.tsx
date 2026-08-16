@@ -10,6 +10,9 @@ export default async function AdminDashboardPage() {
   const session = await requireAdmin();
   // CHANNEL_EXECUTIVE only ever gets the aggregate leads view, not this
   // dashboard (which shows customer name/phone in "recent leads").
+  // MARKETING/EDITOR/EXECUTIVE stay on this dashboard: they already see full
+  // lead PII elsewhere (getLeadScopeFilter returns {} for them below), so
+  // there's nothing extra exposed here that redirecting would prevent.
   if (session.user.role === "CHANNEL_EXECUTIVE") {
     redirect("/admin/leads");
   }

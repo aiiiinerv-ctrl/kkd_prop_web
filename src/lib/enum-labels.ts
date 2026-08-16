@@ -8,6 +8,7 @@ import type {
   TimeSlot,
 } from "@/generated/prisma/enums";
 import type { AuditEntityType } from "@/lib/audit";
+import type { Role } from "@/lib/auth";
 
 /**
  * The Thai words the admin UI shows for each schema enum value. One map per
@@ -112,6 +113,43 @@ export const AUDIT_ENTITY_LABELS: Record<AuditEntityType, string> = {
   Service: "บริการ",
   SurveyBooking: "การนัดสำรวจ",
   Testimonial: "รีวิวลูกค้า",
+};
+
+/**
+ * Admin role labels + one-line Thai descriptions. Order here is the intended
+ * `<option>` order in the user-creation form: least to most privileged
+ * (SALES → EDITOR → MARKETING → FINANCE → CHANNEL_EXECUTIVE → EXECUTIVE →
+ * ADMIN) — see docs/plans/rbac-marketing-editor-executive-tasks.md default #11.
+ */
+export const ROLE_LABELS: Record<Role, { label: string; description: string }> = {
+  SALES: {
+    label: "SALES",
+    description: "จัดการ lead และนัดสำรวจที่รับผิดชอบ",
+  },
+  EDITOR: {
+    label: "EDITOR",
+    description: "ผู้ดูแลเนื้อหา — แก้ไขเนื้อหา (ไม่มีสิทธิ์เผยแพร่/ลบ)",
+  },
+  MARKETING: {
+    label: "MARKETING",
+    description: "การตลาด — จัดการเนื้อหา/ช่องทาง และดู lead",
+  },
+  FINANCE: {
+    label: "FINANCE",
+    description: "ตรวจสอบการเงินและออกรายงาน",
+  },
+  CHANNEL_EXECUTIVE: {
+    label: "CHANNEL_EXECUTIVE",
+    description: "ดูข้อมูลช่องทางของตนเอง",
+  },
+  EXECUTIVE: {
+    label: "EXECUTIVE",
+    description: "ผู้บริหาร — ดูรายงานและข้อมูลภาพรวม",
+  },
+  ADMIN: {
+    label: "ADMIN",
+    description: "ทุกสิทธิ์รวมถึงจัดการผู้ใช้",
+  },
 };
 
 /**

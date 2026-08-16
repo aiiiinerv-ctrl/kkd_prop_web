@@ -5,7 +5,14 @@ import type { Prisma } from "@/generated/prisma/client";
 
 export const { auth, handlers, signIn, signOut } = NextAuth(authConfig);
 
-export type Role = "ADMIN" | "SALES" | "FINANCE" | "CHANNEL_EXECUTIVE";
+export type Role =
+  | "ADMIN"
+  | "SALES"
+  | "FINANCE"
+  | "CHANNEL_EXECUTIVE"
+  | "MARKETING"
+  | "EDITOR"
+  | "EXECUTIVE";
 
 export type SessionUser = {
   id: string;
@@ -86,6 +93,10 @@ export function getLeadScopeFilter(
       // Fail closed: no link configured => no leads visible.
       return or.length > 0 ? { OR: or } : { id: "__no_channel_link__" };
     }
+    case "MARKETING":
+    case "EDITOR":
+    case "EXECUTIVE":
+      return {};
   }
 }
 
@@ -114,6 +125,14 @@ export function getBookingScopeFilter(
       }
       return or.length > 0 ? { lead: { OR: or } } : { id: "__no_channel_link__" };
     }
+    case "EDITOR":
+      return {};
+    case "MARKETING":
+    case "EXECUTIVE":
+      // Fail closed: page/API gate is the primary control (task #7/#8 —
+      // MARKETING and EXECUTIVE have no /admin/bookings access at all), this
+      // is a defense-in-depth backstop only.
+      return { id: "__no_booking_access__" };
   }
 }
 
@@ -170,4 +189,45 @@ export function redactLeadPII<T extends Record<string, unknown>>(
     delete clone[field];
   }
   return clone;
+}
+
+/** Can create/update services, packages, portfolio projects, and testimonials. */
+export function canManageContent(role: Role): boolean {
+  return role === "ADMIN" || role === "SALES" || role === "MARKETING" || role === "EDITOR";
+}
+
+/** Can toggle `isPublished` on content (create as published, or flip it on update). */
+export function canPublishContent(role: Role): boolean {
+  return role === "ADMIN" || role === "SALES" || role === "MARKETING";
+}
+
+/** Can delete services, packages, portfolio projects, and testimonials. */
+export function canDeleteContent(role: Role): boolean {
+  return role === "ADMIN" || role === "SALES" || role === "MARKETING";
+}
+
+/** Can create/update/delete promo channels (not the executives attached to them). */
+export function canManageChannels(role: Role): boolean {
+  return role === "ADMIN" || role === "MARKETING";
+}
+
+/** Can create/update/delete channel executives. */
+export function canManageChannelExecutives(role: Role): boolean {
+  return role === "ADMIN" || role === "MARKETING" || role === "EDITOR";
+}
+
+/** Can view /admin/reports and its summary API. */
+export function canViewReports(role: Role): boolean {
+  return (
+    role === "ADMIN" ||
+    role === "FINANCE" ||
+    role === "MARKETING" ||
+    role === "EDITOR" ||
+    role === "EXECUTIVE"
+  );
+}
+
+/** Can export /admin/reports data as xlsx. */
+export function canExportReports(role: Role): boolean {
+  return role === "ADMIN" || role === "FINANCE" || role === "MARKETING" || role === "EDITOR";
 }

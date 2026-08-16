@@ -16,8 +16,14 @@ export async function GET(req: NextRequest) {
   }
   // Bookings carry address/phone PII beyond what the leads list exposes to
   // CHANNEL_EXECUTIVE (which is already redacted) — this module isn't part
-  // of that role's scope at all.
-  if (session.user.role === "CHANNEL_EXECUTIVE") {
+  // of that role's scope at all. MARKETING and EXECUTIVE also have no
+  // bookings access at all per the permission matrix (only EDITOR gets
+  // read-only bookings among the new roles).
+  if (
+    session.user.role === "CHANNEL_EXECUTIVE" ||
+    session.user.role === "MARKETING" ||
+    session.user.role === "EXECUTIVE"
+  ) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 

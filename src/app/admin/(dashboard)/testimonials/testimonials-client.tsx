@@ -33,9 +33,13 @@ const inputCls = "w-full rounded-lg border border-input bg-background px-3 py-2 
 export function TestimonialsClient({
   testimonials,
   projects,
+  canPublish,
+  canDelete,
 }: {
   testimonials: TestimonialRow[];
   projects: ProjectOption[];
+  canPublish: boolean;
+  canDelete: boolean;
 }) {
   return (
     <CrudPage
@@ -46,6 +50,7 @@ export function TestimonialsClient({
       onCreate={createTestimonial}
       onUpdate={updateTestimonial}
       onDelete={deleteTestimonial}
+      canDelete={canDelete}
       deleteTitle={(t) => `ลบรีวิวของ "${t.customerName}"?`}
       deleteDescription="รูปภาพที่แนบจะถูกลบด้วย และการลบจะถูกบันทึกในประวัติการแก้ไข"
       headers={
@@ -142,14 +147,20 @@ export function TestimonialsClient({
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="isPublished"
-              defaultChecked={editing?.isPublished ?? false}
-            />
-            เผยแพร่บนหน้าเว็บ
-          </label>
+          {canPublish ? (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="isPublished"
+                defaultChecked={editing?.isPublished ?? false}
+              />
+              เผยแพร่บนหน้าเว็บ
+            </label>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              ต้องให้ ADMIN/การตลาด เผยแพร่ให้
+            </p>
+          )}
         </>
       )}
     />

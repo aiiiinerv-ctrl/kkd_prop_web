@@ -158,7 +158,7 @@ export type LandingPathActionResult =
 export async function createLandingPath(
   formData: FormData
 ): Promise<LandingPathActionResult> {
-  await requireRole("ADMIN");
+  await requireRole("ADMIN", "MARKETING");
 
   const parsed = landingPathSchema.safeParse(formData.get("path"));
   if (!parsed.success) {
@@ -201,7 +201,7 @@ async function nextChannelRefCode(subTypePrefix: string): Promise<string> {
 }
 
 export async function createChannel(formData: FormData): Promise<ActionResult> {
-  await requireRole("ADMIN");
+  await requireRole("ADMIN", "MARKETING");
 
   const parsed = parseChannel(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
@@ -225,7 +225,7 @@ export async function updateChannel(
   id: string,
   formData: FormData
 ): Promise<ActionResult> {
-  await requireRole("ADMIN");
+  await requireRole("ADMIN", "MARKETING");
 
   const parsed = parseChannel(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
@@ -317,7 +317,7 @@ export async function createChannelExecutive(
   channelId: string,
   formData: FormData
 ): Promise<ActionResult> {
-  await requireRole("ADMIN");
+  await requireRole("ADMIN", "MARKETING", "EDITOR");
 
   const channel = await prisma.promoChannel.findUnique({
     where: { id: channelId },
@@ -355,7 +355,7 @@ export async function updateChannelExecutive(
   id: string,
   formData: FormData
 ): Promise<ActionResult> {
-  await requireRole("ADMIN");
+  await requireRole("ADMIN", "MARKETING", "EDITOR");
 
   const parsed = parseExecutive(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
@@ -371,7 +371,7 @@ export async function updateChannelExecutive(
 }
 
 export async function deleteChannelExecutive(id: string): Promise<ActionResult> {
-  await requireRole("ADMIN");
+  await requireRole("ADMIN", "MARKETING", "EDITOR");
 
   // Referential guard only — the module loads its own snapshot row, so the
   // `_count` include no longer has to be stripped back out before auditing.
@@ -394,7 +394,7 @@ export async function deleteChannelExecutive(id: string): Promise<ActionResult> 
 }
 
 export async function deleteChannel(id: string): Promise<ActionResult> {
-  await requireRole("ADMIN");
+  await requireRole("ADMIN", "MARKETING");
 
   const guard = await prisma.promoChannel.findUnique({
     where: { id },

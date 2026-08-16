@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { storePublicImage } from "@/lib/admin-content";
 import { auditedEntity } from "@/lib/audit";
-import { requireAdmin } from "@/lib/auth";
+import { canPublishContent, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { storage } from "@/lib/storage";
 import type { ActionResult } from "./users";
@@ -55,7 +55,7 @@ async function resolveProjectId(projectId: string | undefined) {
 }
 
 export async function createTestimonial(formData: FormData): Promise<ActionResult> {
-  await requireAdmin();
+  const session = await requireRole("ADMIN", "SALES", "MARKETING", "EDITOR");
 
   const parsed = parseTestimonial(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
@@ -65,9 +65,13 @@ export async function createTestimonial(formData: FormData): Promise<ActionResul
 
   const { role, province, projectId, ...rest } = parsed.data;
   const resolvedProjectId = await resolveProjectId(projectId);
+  // EDITOR can't publish — every create lands as a draft regardless of what
+  // the form sent, enforced here (not just hidden in the UI).
+  const canPublish = canPublishContent(session.user.role);
 
   await testimonials.create({
     ...rest,
+    isPublished: canPublish ? rest.isPublished : false,
     role: role || null,
     province: province || null,
     projectId: resolvedProjectId,
@@ -81,7 +85,7 @@ export async function updateTestimonial(
   id: string,
   formData: FormData
 ): Promise<ActionResult> {
-  await requireAdmin();
+  const session = await requireRole("ADMIN", "SALES", "MARKETING", "EDITOR");
 
   const parsed = parseTestimonial(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
@@ -89,11 +93,15 @@ export async function updateTestimonial(
   const photo = await storePublicImage(formData.get("photo"), "testimonials");
   if (!photo.ok) return { ok: false, error: photo.error };
 
-  const { role, province, projectId, ...rest } = parsed.data;
+  const { role, province, projectId, isPublished, ...rest } = parsed.data;
   const resolvedProjectId = await resolveProjectId(projectId);
+  // EDITOR can't publish/unpublish — drop isPublished from the payload
+  // entirely so the existing DB value wins over whatever the form sent.
+  const canPublish = canPublishContent(session.user.role);
 
   const result = await testimonials.update(id, {
     ...rest,
+    ...(canPublish ? { isPublished } : {}),
     role: role || null,
     province: province || null,
     projectId: resolvedProjectId,
@@ -108,7 +116,7 @@ export async function updateTestimonial(
 }
 
 export async function deleteTestimonial(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireRole("ADMIN", "SALES", "MARKETING");
 
   const before = await testimonials.remove(id);
   if (!before) return { ok: false, error: "ไม่พบรีวิว" };

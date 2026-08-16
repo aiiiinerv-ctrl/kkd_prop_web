@@ -23,13 +23,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { Role } from "@/lib/auth";
+import { ROLE_LABELS } from "@/lib/enum-labels";
 
 type UserRow = {
   id: string;
   email: string;
   name: string;
   phone: string | null;
-  role: "ADMIN" | "SALES" | "FINANCE" | "CHANNEL_EXECUTIVE";
+  role: Role;
   isActive: boolean;
   createdAt: string;
   linkedChannelExecutiveId: string | null;
@@ -41,10 +43,13 @@ export function UsersClient({
   users,
   currentUserId,
   channelExecutives,
+  readOnly,
 }: {
   users: UserRow[];
   currentUserId: string;
   channelExecutives: ChannelExecutiveOption[];
+  /** True for the EXECUTIVE oversight view — hides every mutation control. */
+  readOnly: boolean;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<UserRow | null>(null);
@@ -81,6 +86,7 @@ export function UsersClient({
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">ผู้ใช้ระบบ</h1>
+        {!readOnly && (
         <Dialog
           open={dialogOpen}
           onOpenChange={(open) => {
@@ -141,10 +147,13 @@ export function UsersClient({
                   onChange={(e) => setSelectedRole(e.target.value as UserRow["role"])}
                   className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
                 >
-                  <option value="SALES">SALES — จัดการ lead และนัดสำรวจที่รับผิดชอบ</option>
-                  <option value="FINANCE">FINANCE — ตรวจสอบการเงินและออกรายงาน</option>
-                  <option value="CHANNEL_EXECUTIVE">CHANNEL_EXECUTIVE — ดูข้อมูลช่องทางของตนเอง</option>
-                  <option value="ADMIN">ADMIN — ทุกสิทธิ์รวมถึงจัดการผู้ใช้</option>
+                  {(Object.entries(ROLE_LABELS) as [Role, (typeof ROLE_LABELS)[Role]][]).map(
+                    ([value, meta]) => (
+                      <option key={value} value={value}>
+                        {meta.label} — {meta.description}
+                      </option>
+                    )
+                  )}
                 </select>
               </div>
               {selectedRole === "CHANNEL_EXECUTIVE" ? (
@@ -195,6 +204,7 @@ export function UsersClient({
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <div className="rounded-xl border border-border/70 bg-card">
@@ -231,32 +241,38 @@ export function UsersClient({
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    className="p-2"
-                    aria-label="แก้ไข"
-                    onClick={() => {
-                      setEditing(user);
-                      setSelectedRole(user.role);
-                      setDialogOpen(true);
-                    }}
-                  >
-                    <Pencil className="size-4" />
-                  </Button>
-                  {user.id !== currentUserId && (
-                    <Button
-                      variant="ghost"
-                      className="p-2"
-                      aria-label={user.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
-                      disabled={isPending}
-                      onClick={() => onToggle(user)}
-                    >
-                      {user.isActive ? (
-                        <UserX className="size-4 text-destructive" />
-                      ) : (
-                        <UserCheck className="size-4 text-green-600" />
+                  {readOnly ? (
+                    <span className="text-xs text-muted-foreground">ดูได้อย่างเดียว</span>
+                  ) : (
+                    <>
+                      <Button
+                        variant="ghost"
+                        className="p-2"
+                        aria-label="แก้ไข"
+                        onClick={() => {
+                          setEditing(user);
+                          setSelectedRole(user.role);
+                          setDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                      {user.id !== currentUserId && (
+                        <Button
+                          variant="ghost"
+                          className="p-2"
+                          aria-label={user.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+                          disabled={isPending}
+                          onClick={() => onToggle(user)}
+                        >
+                          {user.isActive ? (
+                            <UserX className="size-4 text-destructive" />
+                          ) : (
+                            <UserCheck className="size-4 text-green-600" />
+                          )}
+                        </Button>
                       )}
-                    </Button>
+                    </>
                   )}
                 </TableCell>
               </TableRow>

@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { linesToList, slugify, storePublicImage } from "@/lib/admin-content";
 import { auditedEntity } from "@/lib/audit";
-import { requireAdmin } from "@/lib/auth";
+import { canPublishContent, requireRole } from "@/lib/auth";
 import { storage } from "@/lib/storage";
 import type { ActionResult } from "./users";
 
@@ -56,7 +56,7 @@ const packages = auditedEntity({
 });
 
 export async function createPackage(formData: FormData): Promise<ActionResult> {
-  await requireAdmin();
+  const session = await requireRole("ADMIN", "SALES", "MARKETING", "EDITOR");
 
   const parsed = parsePackage(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
@@ -64,8 +64,13 @@ export async function createPackage(formData: FormData): Promise<ActionResult> {
   const image = await storePublicImage(formData.get("image"), "packages");
   if (!image.ok) return { ok: false, error: image.error };
 
+  // EDITOR can't publish — every create lands as a draft regardless of what
+  // the form sent, enforced here (not just hidden in the UI).
+  const canPublish = canPublishContent(session.user.role);
+
   await packages.create({
     ...parsed.data,
+    isPublished: canPublish ? parsed.data.isPublished : false,
     slug: slugify(parsed.data.nameEn),
     featuresTh: linesToList(formData.get("featuresTh")),
     featuresEn: linesToList(formData.get("featuresEn")),
@@ -80,7 +85,7 @@ export async function updatePackage(
   id: string,
   formData: FormData
 ): Promise<ActionResult> {
-  await requireAdmin();
+  const session = await requireRole("ADMIN", "SALES", "MARKETING", "EDITOR");
 
   const parsed = parsePackage(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
@@ -88,8 +93,14 @@ export async function updatePackage(
   const image = await storePublicImage(formData.get("image"), "packages");
   if (!image.ok) return { ok: false, error: image.error };
 
+  // EDITOR can't publish/unpublish — drop isPublished from the payload
+  // entirely so the existing DB value wins over whatever the form sent.
+  const { isPublished, ...rest } = parsed.data;
+  const canPublish = canPublishContent(session.user.role);
+
   const result = await packages.update(id, {
-    ...parsed.data,
+    ...rest,
+    ...(canPublish ? { isPublished } : {}),
     featuresTh: linesToList(formData.get("featuresTh")),
     featuresEn: linesToList(formData.get("featuresEn")),
     seasonalProduction: seasonalProduction(parsed.data.sizeKw),
@@ -104,7 +115,7 @@ export async function updatePackage(
 }
 
 export async function deletePackage(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  await requireRole("ADMIN", "SALES", "MARKETING");
 
   const before = await packages.remove(id);
   if (!before) return { ok: false, error: "ไม่พบแพ็กเกจ" };

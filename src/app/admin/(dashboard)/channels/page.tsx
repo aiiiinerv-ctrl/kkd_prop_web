@@ -1,20 +1,24 @@
-import { requireRole } from "@/lib/auth";
+import { canManageChannelExecutives, canManageChannels, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { SITE_URL } from "@/lib/seo";
 import { ChannelsClient } from "./channels-client";
 
-// Channel *management* (create/edit channels + executives, promote links) is
-// ADMIN-only. CHANNEL_EXECUTIVE gets a read-only view scoped to their own
-// linked channel. SALES/FINANCE have no access to this page at all.
+// Channel *management* (create/edit channels + promote links) is ADMIN and
+// MARKETING. Channel *executive* management is also open to EDITOR (they
+// can add/edit executives but not touch the channel itself). CHANNEL_EXECUTIVE
+// gets a read-only view scoped to their own linked channel. SALES/FINANCE/
+// EXECUTIVE have no access to this page at all.
 export default async function AdminChannelsPage() {
-  const session = await requireRole("ADMIN", "CHANNEL_EXECUTIVE");
-  const isAdmin = session.user.role === "ADMIN";
+  const session = await requireRole("ADMIN", "CHANNEL_EXECUTIVE", "MARKETING", "EDITOR");
+  // MARKETING/EDITOR see every channel (not scoped to a linked one) — only
+  // CHANNEL_EXECUTIVE gets the narrowed, self-only query.
+  const isChannelExecutive = session.user.role === "CHANNEL_EXECUTIVE";
 
   const [channels, landingPaths, adminUsers] = await Promise.all([
     prisma.promoChannel.findMany({
-      where: isAdmin
-        ? undefined
-        : { id: session.user.linkedChannelId ?? "__no_channel_link__" },
+      where: isChannelExecutive
+        ? { id: session.user.linkedChannelId ?? "__no_channel_link__" }
+        : undefined,
       orderBy: { sortOrder: "asc" },
       include: {
         _count: { select: { leads: true, autoLeads: true } },
@@ -22,8 +26,12 @@ export default async function AdminChannelsPage() {
       },
     }),
     prisma.promoLandingPath.findMany({ orderBy: { path: "asc" } }),
-    // Only ADMIN can create executives (readOnly gates the create form), but
-    // fetching unconditionally keeps this a plain parallel load.
+    // Only roles that can manage executives ever see the create form
+    // (gated by canManageExecutives below), but fetching unconditionally
+    // keeps this a plain parallel load. Deliberately NOT widened to include
+    // MARKETING/EDITOR/EXECUTIVE — this list is "who can be picked as a
+    // channel executive" (people whose sales get measured), not "who can
+    // administer channels", so it stays SALES/CHANNEL_EXECUTIVE only.
     prisma.adminUser.findMany({
       where: { role: { in: ["SALES", "CHANNEL_EXECUTIVE"] }, isActive: true },
       orderBy: { name: "asc" },
@@ -34,7 +42,8 @@ export default async function AdminChannelsPage() {
   return (
     <ChannelsClient
       siteUrl={SITE_URL}
-      readOnly={!isAdmin}
+      canManageChannels={canManageChannels(session.user.role)}
+      canManageExecutives={canManageChannelExecutives(session.user.role)}
       landingPaths={landingPaths.map((item) => item.path)}
       adminUsers={adminUsers}
       channels={channels.map((c) => ({

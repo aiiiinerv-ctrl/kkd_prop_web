@@ -1,9 +1,9 @@
-import { requireAdmin } from "@/lib/auth";
+import { canDeleteContent, canPublishContent, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { PackagesClient } from "./packages-client";
 
 export default async function AdminPackagesPage() {
-  await requireAdmin();
+  const session = await requireRole("ADMIN", "SALES", "MARKETING", "EDITOR");
 
   const packages = await prisma.package.findMany({
     orderBy: { sortOrder: "asc" },
@@ -25,6 +25,8 @@ export default async function AdminPackagesPage() {
         sortOrder: p.sortOrder,
         isPublished: p.isPublished,
       }))}
+      canPublish={canPublishContent(session.user.role)}
+      canDelete={canDeleteContent(session.user.role)}
     />
   );
 }

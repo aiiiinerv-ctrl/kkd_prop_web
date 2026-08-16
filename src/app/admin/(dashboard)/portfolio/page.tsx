@@ -1,9 +1,9 @@
-import { requireAdmin } from "@/lib/auth";
+import { canDeleteContent, canPublishContent, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { PortfolioClient } from "./portfolio-client";
 
 export default async function AdminPortfolioPage() {
-  await requireAdmin();
+  const session = await requireRole("ADMIN", "SALES", "MARKETING", "EDITOR");
 
   const projects = await prisma.portfolioProject.findMany({
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
@@ -25,6 +25,8 @@ export default async function AdminPortfolioPage() {
         sortOrder: p.sortOrder,
         isPublished: p.isPublished,
       }))}
+      canPublish={canPublishContent(session.user.role)}
+      canDelete={canDeleteContent(session.user.role)}
     />
   );
 }

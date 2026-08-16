@@ -1,9 +1,9 @@
-import { requireAdmin } from "@/lib/auth";
+import { canDeleteContent, canPublishContent, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { TestimonialsClient } from "./testimonials-client";
 
 export default async function AdminTestimonialsPage() {
-  await requireAdmin();
+  const session = await requireRole("ADMIN", "SALES", "MARKETING", "EDITOR");
 
   const [testimonials, projects] = await Promise.all([
     prisma.testimonial.findMany({
@@ -35,6 +35,8 @@ export default async function AdminTestimonialsPage() {
         id: p.id,
         titleTh: p.titleTh,
       }))}
+      canPublish={canPublishContent(session.user.role)}
+      canDelete={canDeleteContent(session.user.role)}
     />
   );
 }

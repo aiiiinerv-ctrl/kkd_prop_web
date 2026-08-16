@@ -1,11 +1,13 @@
-import { requireRole } from "@/lib/auth";
+import { canExportReports, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { ReportsClient } from "./reports-client";
 
-// Reports (dashboard breakdown + Excel export) are ADMIN+FINANCE only —
-// mirrors the role gate already enforced in /api/admin/reports/*.
+// Reports (dashboard breakdown) are open to ADMIN, FINANCE, and the three
+// new roles per the permission matrix; export (xlsx, full PII) is further
+// restricted to everyone except EXECUTIVE — mirrors the role gate already
+// enforced in /api/admin/reports/*.
 export default async function ReportsPage() {
-  await requireRole("ADMIN", "FINANCE");
+  const session = await requireRole("ADMIN", "FINANCE", "MARKETING", "EDITOR", "EXECUTIVE");
 
   const [channels, executives, salesUsers] = await Promise.all([
     prisma.promoChannel.findMany({
@@ -23,5 +25,12 @@ export default async function ReportsPage() {
     }),
   ]);
 
-  return <ReportsClient channels={channels} executives={executives} salesUsers={salesUsers} />;
+  return (
+    <ReportsClient
+      channels={channels}
+      executives={executives}
+      salesUsers={salesUsers}
+      canExport={canExportReports(session.user.role)}
+    />
+  );
 }

@@ -29,6 +29,9 @@ async function isAuthorizedForPrivate(key: string): Promise<boolean> {
       return Boolean(booking && booking.assignedSalesId === session.user.id);
     }
 
+    // MARKETING, EDITOR, and EXECUTIVE (added 2026-08-16) fall through to
+    // here — none of the 3 new roles get financial/slip data (permission
+    // matrix: no role beyond ADMIN/FINANCE/own-SALES-booking ever does).
     return false;
   } catch {
     return false;

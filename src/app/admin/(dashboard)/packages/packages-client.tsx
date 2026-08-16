@@ -23,7 +23,15 @@ type PackageRow = {
   isPublished: boolean;
 };
 
-export function PackagesClient({ packages }: { packages: PackageRow[] }) {
+export function PackagesClient({
+  packages,
+  canPublish,
+  canDelete,
+}: {
+  packages: PackageRow[];
+  canPublish: boolean;
+  canDelete: boolean;
+}) {
   return (
     <CrudPage
       title="แพ็กเกจ"
@@ -33,6 +41,7 @@ export function PackagesClient({ packages }: { packages: PackageRow[] }) {
       onCreate={createPackage}
       onUpdate={updatePackage}
       onDelete={deletePackage}
+      canDelete={canDelete}
       deleteTitle={(p) => `ลบแพ็กเกจ "${p.nameTh}"?`}
       deleteDescription="การลบจะถูกบันทึกในประวัติการแก้ไข"
       headers={
@@ -151,15 +160,23 @@ export function PackagesClient({ packages }: { packages: PackageRow[] }) {
               />
               แพ็กเกจยอดนิยม
             </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                name="isPublished"
-                defaultChecked={editing?.isPublished ?? true}
-              />
-              เผยแพร่บนหน้าเว็บ
-            </label>
+            {canPublish && (
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="isPublished"
+                  defaultChecked={editing?.isPublished ?? true}
+                />
+                เผยแพร่บนหน้าเว็บ
+              </label>
+            )}
           </div>
+
+          {!canPublish && (
+            <p className="text-xs text-muted-foreground">
+              ต้องให้ ADMIN/การตลาด เผยแพร่ให้
+            </p>
+          )}
 
           <p className="text-xs text-muted-foreground">
             ตารางผลิตไฟตามฤดูจะคำนวณอัตโนมัติจากขนาดระบบ (KW)

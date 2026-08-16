@@ -220,14 +220,17 @@ export function ChannelsClient({
   channels,
   landingPaths,
   siteUrl,
-  readOnly = false,
+  canManageChannels = false,
+  canManageExecutives = false,
   adminUsers = [],
 }: {
   channels: ChannelRow[];
   landingPaths: string[];
   siteUrl: string;
-  /** CHANNEL_EXECUTIVE sessions get a read-only view of their own channel — no create/edit/delete. */
-  readOnly?: boolean;
+  /** Create/edit/delete channels + landing paths — ADMIN and MARKETING only. */
+  canManageChannels?: boolean;
+  /** Create/edit/delete channel executives — ADMIN, MARKETING, and EDITOR. */
+  canManageExecutives?: boolean;
   /** Active SALES/CHANNEL_EXECUTIVE admin users, offered as a picker on the executive create form. */
   adminUsers?: AdminUserOption[];
 }) {
@@ -328,7 +331,7 @@ export function ChannelsClient({
             และลิงก์โปรโมทด้านล่างจะบันทึกที่มาของลูกค้าอัตโนมัติเมื่อคลิกเข้ามา
           </p>
         </div>
-        {!readOnly && (
+        {canManageChannels && (
           <Button
             onClick={() => {
               setEditing(null);
@@ -426,7 +429,7 @@ export function ChannelsClient({
                     >
                       <Users className="size-4" />
                     </Button>
-                    {!readOnly && (
+                    {canManageChannels && (
                       <>
                         <Button
                           variant="ghost"
@@ -658,14 +661,16 @@ export function ChannelsClient({
                       <TableHead>เบอร์โทร</TableHead>
                       <TableHead>รหัส / ลิงก์โปรโมทรายบุคคล</TableHead>
                       <TableHead>วันที่สร้าง</TableHead>
-                      {!readOnly && <TableHead className="text-right">จัดการ</TableHead>}
+                      {canManageExecutives && (
+                        <TableHead className="text-right">จัดการ</TableHead>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {execDialogChannel.executives.length === 0 && (
                       <TableRow>
                         <TableCell
-                          colSpan={readOnly ? 4 : 5}
+                          colSpan={canManageExecutives ? 5 : 4}
                           className="py-6 text-center text-sm text-muted-foreground"
                         >
                           ยังไม่มีผู้ดำเนินการ
@@ -708,7 +713,7 @@ export function ChannelsClient({
                         <TableCell className="text-xs text-muted-foreground">
                           {formatDate(e.createdAt)}
                         </TableCell>
-                        {!readOnly && (
+                        {canManageExecutives && (
                           <TableCell className="text-right">
                             <Button
                               variant="ghost"
@@ -733,7 +738,7 @@ export function ChannelsClient({
                 </Table>
               </div>
 
-              {!readOnly && (
+              {canManageExecutives && (
                 <form
                   action={(fd) => onExecSubmit(execDialogChannel.id, fd)}
                   className="grid grid-cols-1 gap-3 rounded-lg border border-dashed border-border p-4 sm:grid-cols-3"

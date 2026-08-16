@@ -9,8 +9,9 @@ export default async function AuditPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
-  // Audit trail is ADMIN-only — matches the sidebar link visibility.
-  await requireRole("ADMIN");
+  // Audit trail is ADMIN + EXECUTIVE (read-only oversight) — matches the
+  // sidebar link visibility. The page has no mutation to gate.
+  await requireRole("ADMIN", "EXECUTIVE");
   const { page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
 

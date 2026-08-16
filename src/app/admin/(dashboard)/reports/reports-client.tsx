@@ -63,10 +63,12 @@ export function ReportsClient({
   channels,
   executives,
   salesUsers,
+  canExport,
 }: {
   channels: { id: string; nameTh: string }[];
   executives: { id: string; name: string }[];
   salesUsers: { id: string; name: string }[];
+  canExport: boolean;
 }) {
   const [filters, setFilters] = useState<ReportFilters>(EMPTY_FILTERS);
   const [monthPreset, setMonthPreset] = useState<MonthPreset>("custom");
@@ -88,10 +90,12 @@ export function ReportsClient({
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">รายงาน</h1>
-        <a href={exportHref} download className={buttonVariants({ variant: "default" })}>
-          <Download className="size-4" />
-          Export Excel
-        </a>
+        {canExport && (
+          <a href={exportHref} download className={buttonVariants({ variant: "default" })}>
+            <Download className="size-4" />
+            Export Excel
+          </a>
+        )}
       </div>
 
       <div className="flex flex-wrap items-end gap-3 rounded-xl border border-border/70 bg-card p-4">

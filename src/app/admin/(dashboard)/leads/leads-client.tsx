@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/table";
 import { LEAD_STATUS_LABELS } from "@/lib/enum-labels";
 import { useLeads, type LeadFilters } from "@/hooks/admin/use-leads";
+import type { Role } from "@/lib/auth";
 
 const selectCls =
   "rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none";
@@ -26,7 +27,7 @@ export function LeadsClient({
   role,
 }: {
   channels: { id: string; nameTh: string }[];
-  role: "ADMIN" | "SALES" | "FINANCE" | "CHANNEL_EXECUTIVE";
+  role: Role;
 }) {
   // CHANNEL_EXECUTIVE never sees customer PII or a detail page — the API
   // already strips name/phone from the payload, this just adapts the table.

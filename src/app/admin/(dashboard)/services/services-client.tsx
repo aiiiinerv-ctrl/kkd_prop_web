@@ -24,7 +24,15 @@ type ServiceRow = {
 
 const inputCls = "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm";
 
-export function ServicesClient({ services }: { services: ServiceRow[] }) {
+export function ServicesClient({
+  services,
+  canPublish,
+  canDelete,
+}: {
+  services: ServiceRow[];
+  canPublish: boolean;
+  canDelete: boolean;
+}) {
   return (
     <CrudPage
       title="บริการ"
@@ -34,6 +42,7 @@ export function ServicesClient({ services }: { services: ServiceRow[] }) {
       onCreate={createService}
       onUpdate={updateService}
       onDelete={deleteService}
+      canDelete={canDelete}
       deleteTitle={(s) => `ลบบริการ "${s.titleTh}"?`}
       deleteDescription="การลบจะถูกบันทึกในประวัติการแก้ไข และหน้าเว็บจะไม่แสดงบริการนี้อีก"
       headers={
@@ -135,14 +144,20 @@ export function ServicesClient({ services }: { services: ServiceRow[] }) {
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="isPublished"
-              defaultChecked={editing?.isPublished ?? true}
-            />
-            เผยแพร่บนหน้าเว็บ
-          </label>
+          {canPublish ? (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="isPublished"
+                defaultChecked={editing?.isPublished ?? true}
+              />
+              เผยแพร่บนหน้าเว็บ
+            </label>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              ต้องให้ ADMIN/การตลาด เผยแพร่ให้
+            </p>
+          )}
         </>
       )}
     />

@@ -3,7 +3,10 @@ import { prisma } from "@/lib/db";
 import { UsersClient } from "./users-client";
 
 export default async function UsersPage() {
-  const session = await requireRole("ADMIN");
+  // EXECUTIVE gets read-only oversight of this page; all mutations still
+  // live behind requireRole("ADMIN") in src/actions/users.ts — never relax
+  // that even though the page itself now admits a second role.
+  const session = await requireRole("ADMIN", "EXECUTIVE");
 
   const [users, channelExecutives] = await Promise.all([
     prisma.adminUser.findMany({
@@ -36,6 +39,7 @@ export default async function UsersPage() {
         id: e.id,
         label: `${e.channel.nameTh} · ${e.name} (${e.refCode})`,
       }))}
+      readOnly={session.user.role !== "ADMIN"}
     />
   );
 }

@@ -63,11 +63,11 @@ type BookingDetail = {
 export function BookingDetailClient({
   booking,
   staff,
-  canEdit,
+  canMutate,
 }: {
   booking: BookingDetail;
   staff: StaffOption[];
-  canEdit: boolean;
+  canMutate: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -94,7 +94,7 @@ export function BookingDetailClient({
           </Button>
         </Link>
         <h1 className="flex-1 text-xl font-bold">{booking.bookingNumber}</h1>
-        {canEdit ? (
+        {canMutate ? (
           <select
             className={selectCls}
             value={booking.status}
@@ -200,7 +200,7 @@ export function BookingDetailClient({
             </DialogContent>
           </Dialog>
 
-          {canEdit && booking.paymentStatus === "PENDING_REVIEW" && (
+          {canMutate && booking.paymentStatus === "PENDING_REVIEW" && (
             <>
               <Button
                 disabled={isPending}
@@ -229,7 +229,7 @@ export function BookingDetailClient({
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="b-engineer">วิศวกรผู้สำรวจ</Label>
-            {canEdit ? (
+            {canMutate ? (
               <select
                 id="b-engineer"
                 className={`${selectCls} w-full`}
@@ -257,7 +257,7 @@ export function BookingDetailClient({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="b-sales">เซลส์ผู้รับผิดชอบ</Label>
-            {canEdit ? (
+            {canMutate ? (
               <select
                 id="b-sales"
                 className={`${selectCls} w-full`}
@@ -291,7 +291,7 @@ export function BookingDetailClient({
             type="checkbox"
             className="size-4 rounded border-input"
             checked={booking.giftSent}
-            disabled={!canEdit || isPending}
+            disabled={!canMutate || isPending}
             onChange={(e) => {
               const checked = e.target.checked;
               run(

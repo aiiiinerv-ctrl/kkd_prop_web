@@ -12,6 +12,11 @@ enum Role {
   SALES
   FINANCE
   CHANNEL_EXECUTIVE
+  // Read-only / content-scoped roles added 2026-08-16 (RBAC sprint) — see
+  // docs/plans/rbac-marketing-editor-executive-tasks.md for the permission matrix.
+  MARKETING
+  EDITOR
+  EXECUTIVE
 }
 
 enum LeadType {

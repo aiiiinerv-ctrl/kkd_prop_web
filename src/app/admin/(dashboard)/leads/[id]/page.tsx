@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { requireAdmin } from "@/lib/auth";
+import { canMutateLead, requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { LeadDetailClient } from "./lead-detail-client";
 
@@ -48,9 +48,10 @@ export default async function LeadDetailPage({
     notFound();
   }
 
-  // FINANCE is fully read-only across leads/bookings; ADMIN and (their own)
-  // SALES leads can edit status/notes/payment.
-  const canEdit = session.user.role !== "FINANCE";
+  // FINANCE and the new read-only roles (MARKETING/EDITOR/EXECUTIVE) never
+  // mutate a lead; ADMIN and (their own) SALES leads can edit status/notes/
+  // payment. canMutateLead is the single source of truth for this check.
+  const canMutate = canMutateLead(session, lead);
   const canEditChannel = session.user.role === "ADMIN";
   // Sales assignment sets ownership/attribution (see getLeadScopeFilter()),
   // not day-to-day follow-up — kept ADMIN-only, same as canEditChannel.
@@ -105,7 +106,7 @@ export default async function LeadDetailPage({
       }}
       channels={channels}
       salesUsers={salesUsers}
-      canEdit={canEdit}
+      canMutate={canMutate}
       canEditChannel={canEditChannel}
       canAssignSales={canAssignSales}
     />

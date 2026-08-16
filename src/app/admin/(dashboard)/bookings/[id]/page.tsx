@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireRole } from "@/lib/auth";
+import { canMutateBooking, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { BookingDetailClient } from "./booking-detail-client";
 
@@ -8,8 +8,9 @@ export default async function BookingDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  // Same role gate as the list — CHANNEL_EXECUTIVE never reaches this page.
-  const session = await requireRole("ADMIN", "SALES", "FINANCE");
+  // Same role gate as the list — CHANNEL_EXECUTIVE/MARKETING/EXECUTIVE never
+  // reach this page; EDITOR reaches it read-only.
+  const session = await requireRole("ADMIN", "SALES", "FINANCE", "EDITOR");
   const { id } = await params;
 
   const [booking, staff] = await Promise.all([
@@ -34,9 +35,9 @@ export default async function BookingDetailPage({
     notFound();
   }
 
-  // FINANCE is read-only across bookings (same as leads); ADMIN and (their
-  // own) SALES bookings can be edited.
-  const canEdit = session.user.role !== "FINANCE";
+  // FINANCE and EDITOR are read-only across bookings (same as leads); ADMIN
+  // and (their own) SALES bookings can be edited.
+  const canMutate = canMutateBooking(session, booking);
 
   return (
     <BookingDetailClient
@@ -62,7 +63,7 @@ export default async function BookingDetailPage({
         },
       }}
       staff={staff}
-      canEdit={canEdit}
+      canMutate={canMutate}
     />
   );
 }

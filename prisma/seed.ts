@@ -260,7 +260,42 @@ async function seedTestRoleAccounts() {
     },
   });
 
-  console.log("Test role accounts: sales/finance/channel_executive ready (password: Test1234!)");
+  await prisma.adminUser.upsert({
+    where: { email: "marketing.test@kkdproperty.local" },
+    update: {},
+    create: {
+      email: "marketing.test@kkdproperty.local",
+      passwordHash,
+      name: "ทดสอบ ฝ่ายการตลาด",
+      role: "MARKETING",
+    },
+  });
+
+  await prisma.adminUser.upsert({
+    where: { email: "editor.test@kkdproperty.local" },
+    update: {},
+    create: {
+      email: "editor.test@kkdproperty.local",
+      passwordHash,
+      name: "ทดสอบ ผู้ดูแลเนื้อหา",
+      role: "EDITOR",
+    },
+  });
+
+  await prisma.adminUser.upsert({
+    where: { email: "executive.test@kkdproperty.local" },
+    update: {},
+    create: {
+      email: "executive.test@kkdproperty.local",
+      passwordHash,
+      name: "ทดสอบ ผู้บริหาร",
+      role: "EXECUTIVE",
+    },
+  });
+
+  console.log(
+    "Test role accounts: sales/finance/channel_executive/marketing/editor/executive ready (password: Test1234!)"
+  );
 }
 
 async function seedBookingCapacitySetting() {

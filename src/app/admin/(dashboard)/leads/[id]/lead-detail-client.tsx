@@ -85,14 +85,14 @@ export function LeadDetailClient({
   lead,
   channels,
   salesUsers,
-  canEdit,
+  canMutate,
   canEditChannel,
   canAssignSales,
 }: {
   lead: LeadDetail;
   channels: { id: string; nameTh: string }[];
   salesUsers: { id: string; name: string }[];
-  canEdit: boolean;
+  canMutate: boolean;
   canEditChannel: boolean;
   canAssignSales: boolean;
 }) {
@@ -124,7 +124,7 @@ export function LeadDetailClient({
           </Button>
         </Link>
         <h1 className="flex-1 text-xl font-bold">{lead.name}</h1>
-        {canEdit ? (
+        {canMutate ? (
           <select
             className={selectCls}
             value={lead.status}
@@ -349,7 +349,7 @@ export function LeadDetailClient({
               </DialogContent>
             </Dialog>
 
-            {canEdit && lead.booking.paymentStatus === "PENDING_REVIEW" && (
+            {canMutate && lead.booking.paymentStatus === "PENDING_REVIEW" && (
               <>
                 <Button
                   disabled={isPending}
@@ -430,7 +430,7 @@ export function LeadDetailClient({
 
       <div className="rounded-xl border border-border/70 bg-card p-6">
         <h2 className="mb-3 font-semibold">บันทึกภายใน</h2>
-        {canEdit ? (
+        {canMutate ? (
           <>
             <Textarea
               rows={4}

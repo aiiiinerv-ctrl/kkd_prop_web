@@ -21,72 +21,78 @@ import { BrandLogo } from "@/components/site/brand-logo";
 import { cn } from "@/lib/utils";
 import { ROLES } from "@/lib/enums";
 import { useUnreadLeadCount } from "@/hooks/admin/use-unread-lead-count";
-
-type Role = "ADMIN" | "SALES" | "FINANCE" | "CHANNEL_EXECUTIVE";
+import type { Role } from "@/lib/auth";
 
 const ALL_ROLES: Role[] = ROLES;
 
 // Each item lists the roles allowed to see it. CHANNEL_EXECUTIVE is scoped
 // to leads (read-only, aggregate view) + their own channel; FINANCE loses
 // every content/management link since it never mutates anything; SALES
-// loses channel/user management per spec.
+// loses channel/user management per spec. MARKETING/EDITOR/EXECUTIVE (added
+// 2026-08-16) follow the permission matrix in
+// docs/plans/rbac-marketing-editor-executive-tasks.md.
 const ITEMS = [
   {
     href: "/admin",
     label: "แดชบอร์ด",
     icon: LayoutDashboard,
     exact: true,
-    roles: ["ADMIN", "SALES", "FINANCE"] as Role[],
+    roles: ["ADMIN", "SALES", "FINANCE", "MARKETING", "EDITOR", "EXECUTIVE"] as Role[],
   },
   { href: "/admin/leads", label: "ลูกค้า (Leads)", icon: ClipboardList, roles: ALL_ROLES },
   {
     href: "/admin/bookings",
     label: "การจองสำรวจ",
     icon: CalendarCheck,
-    roles: ["ADMIN", "SALES", "FINANCE"] as Role[],
+    roles: ["ADMIN", "SALES", "FINANCE", "EDITOR"] as Role[],
   },
   {
     href: "/admin/services",
     label: "บริการ",
     icon: Wrench,
-    roles: ["ADMIN", "SALES"] as Role[],
+    roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
   },
   {
     href: "/admin/packages",
     label: "แพ็กเกจ",
     icon: Package,
-    roles: ["ADMIN", "SALES"] as Role[],
+    roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
   },
   {
     href: "/admin/portfolio",
     label: "ผลงาน",
     icon: Images,
-    roles: ["ADMIN", "SALES"] as Role[],
+    roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
   },
   {
     href: "/admin/testimonials",
     label: "รีวิวลูกค้า",
     icon: MessageSquareQuote,
-    roles: ["ADMIN", "SALES"] as Role[],
+    roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
   },
   {
     href: "/admin/channels",
     label: "ช่องทางโปรโมท",
     icon: Megaphone,
-    roles: ["ADMIN", "CHANNEL_EXECUTIVE"] as Role[],
+    roles: ["ADMIN", "CHANNEL_EXECUTIVE", "MARKETING", "EDITOR"] as Role[],
   },
   {
     href: "/admin/reports",
     label: "รายงาน",
     icon: FileBarChart,
-    roles: ["ADMIN", "FINANCE"] as Role[],
+    roles: ["ADMIN", "FINANCE", "MARKETING", "EDITOR", "EXECUTIVE"] as Role[],
   },
-  { href: "/admin/users", label: "ผู้ใช้ระบบ", icon: Users, roles: ["ADMIN"] as Role[] },
+  {
+    href: "/admin/users",
+    label: "ผู้ใช้ระบบ",
+    icon: Users,
+    roles: ["ADMIN", "EXECUTIVE"] as Role[],
+  },
   {
     href: "/admin/audit",
     label: "ประวัติการแก้ไข",
     icon: ScrollText,
-    roles: ["ADMIN"] as Role[],
+    roles: ["ADMIN", "EXECUTIVE"] as Role[],
   },
   {
     href: "/admin/settings",
@@ -98,13 +104,14 @@ const ITEMS = [
 
 export function AdminSidebar({ role }: { role: Role }) {
   const pathname = usePathname();
-  // Only ADMIN/SALES/FINANCE get the leads detail view (CHANNEL_EXECUTIVE
-  // is scoped to the read-only aggregate list — see /api/admin/leads/unread-count),
-  // so the hook is skipped entirely for that role rather than showing a
-  // badge that's always zero.
+  // Only ADMIN/SALES/FINANCE get the leads detail view (CHANNEL_EXECUTIVE is
+  // scoped to the read-only aggregate list, and MARKETING/EDITOR/EXECUTIVE
+  // are read-only across leads entirely — see
+  // /api/admin/leads/unread-count), so the hook's count is zeroed out client-
+  // side too rather than showing a badge that's always stale for these roles.
   const { data: unreadLeads } = useUnreadLeadCount();
-  const unreadLeadCount =
-    role === "CHANNEL_EXECUTIVE" ? 0 : (unreadLeads?.count ?? 0);
+  const READ_ONLY_LEAD_ROLES: Role[] = ["CHANNEL_EXECUTIVE", "MARKETING", "EDITOR", "EXECUTIVE"];
+  const unreadLeadCount = READ_ONLY_LEAD_ROLES.includes(role) ? 0 : (unreadLeads?.count ?? 0);
 
   return (
     <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-background md:flex">

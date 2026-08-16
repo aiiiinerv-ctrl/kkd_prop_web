@@ -34,7 +34,15 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 const inputCls = "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm";
 
-export function PortfolioClient({ projects }: { projects: ProjectRow[] }) {
+export function PortfolioClient({
+  projects,
+  canPublish,
+  canDelete,
+}: {
+  projects: ProjectRow[];
+  canPublish: boolean;
+  canDelete: boolean;
+}) {
   return (
     <CrudPage
       title="ผลงานติดตั้ง"
@@ -44,6 +52,7 @@ export function PortfolioClient({ projects }: { projects: ProjectRow[] }) {
       onCreate={createProject}
       onUpdate={updateProject}
       onDelete={deleteProject}
+      canDelete={canDelete}
       deleteTitle={(p) => `ลบผลงาน "${p.titleTh}"?`}
       deleteDescription="รูปภาพที่แนบจะถูกลบด้วย และการลบจะถูกบันทึกในประวัติการแก้ไข"
       headers={
@@ -178,14 +187,20 @@ export function PortfolioClient({ projects }: { projects: ProjectRow[] }) {
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="isPublished"
-              defaultChecked={editing?.isPublished ?? true}
-            />
-            เผยแพร่บนหน้าเว็บ
-          </label>
+          {canPublish ? (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="isPublished"
+                defaultChecked={editing?.isPublished ?? true}
+              />
+              เผยแพร่บนหน้าเว็บ
+            </label>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              ต้องให้ ADMIN/การตลาด เผยแพร่ให้
+            </p>
+          )}
         </>
       )}
     />

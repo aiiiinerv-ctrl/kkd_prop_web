@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import ExcelJS from "exceljs";
-import { auth, getLeadScopeFilter } from "@/lib/auth";
+import { auth, canExportReports, getLeadScopeFilter } from "@/lib/auth";
 import {
   EXPORT_COLUMNS,
   FULL_EXPORT_COLUMNS,
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   if (!session?.user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  if (!["ADMIN", "FINANCE"].includes(session.user.role)) {
+  if (!canExportReports(session.user.role)) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
