@@ -242,12 +242,53 @@ export async function updateChannel(
 const executiveSchema = z.object({
   name: z.string().trim().min(1).max(120),
   phone: z.string().trim().min(1).max(30),
+  // Set only when the admin picked a system user from the dropdown instead
+  // of typing a name — see linkAdminUserToExecutive() below. Absent (or
+  // empty string, from the "พิมพ์ชื่อเอง" fallback) keeps today's plain
+  // free-text behavior exactly as-is.
+  linkedAdminUserId: z.string().trim().optional().or(z.literal("")),
 });
 
 function parseExecutive(formData: FormData) {
   return executiveSchema.safeParse({
     name: formData.get("name"),
     phone: formData.get("phone"),
+    linkedAdminUserId: formData.get("linkedAdminUserId"),
+  });
+}
+
+/**
+ * Mirrors the projection in src/actions/users.ts — passwordHash must never
+ * reach an audit snapshot.
+ */
+const adminUserLinks = auditedEntity({
+  entityType: "AdminUser",
+  model: (client) => client.adminUser,
+  snapshot: (user) => ({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    isActive: user.isActive,
+    linkedChannelExecutiveId: user.linkedChannelExecutiveId ?? null,
+  }),
+  revalidate: () => ["/admin/users"],
+});
+
+/**
+ * When an executive is created from a picked system user (not the manual
+ * "พิมพ์ชื่อเอง" fallback), closes the loop from the channel side by pointing
+ * that AdminUser.linkedChannelExecutiveId at the new executive. Last-write-
+ * wins: if the user was already linked to a different executive, this
+ * re-links it — the old executive row is untouched, it just loses its admin
+ * login attachment and stays a valid free-text-style executive.
+ */
+async function linkAdminUserToExecutive(
+  linkedAdminUserId: string,
+  executiveId: string
+) {
+  await adminUserLinks.update(linkedAdminUserId, {
+    linkedChannelExecutiveId: executiveId,
   });
 }
 
@@ -286,8 +327,28 @@ export async function createChannelExecutive(
   const parsed = parseExecutive(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
 
+  const { linkedAdminUserId, ...data } = parsed.data;
+  let name = data.name;
+  if (linkedAdminUserId) {
+    const adminUser = await prisma.adminUser.findUnique({
+      where: { id: linkedAdminUserId },
+    });
+    if (!adminUser) return { ok: false, error: "ไม่พบผู้ใช้ที่เลือก" };
+    name = adminUser.name;
+  }
+
   const refCode = await nextExecutiveRefCode(channelId, channel.refCode);
-  return asResult(() => executives.create({ ...parsed.data, channelId, refCode }));
+  return asResult(async () => {
+    const created = await executives.create({
+      name,
+      phone: data.phone,
+      channelId,
+      refCode,
+    });
+    if (linkedAdminUserId) {
+      await linkAdminUserToExecutive(linkedAdminUserId, created.id);
+    }
+  });
 }
 
 export async function updateChannelExecutive(
@@ -299,7 +360,11 @@ export async function updateChannelExecutive(
   const parsed = parseExecutive(formData);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
 
-  const updated = await executives.update(id, parsed.data);
+  // Editing an existing executive stays plain free-text (see channels-client:
+  // the user-picker dropdown only appears on the "เพิ่ม" create form) — the
+  // admin-user link, if any, is left as-is here.
+  const { linkedAdminUserId: _linkedAdminUserId, ...data } = parsed.data;
+  const updated = await executives.update(id, data);
   if (!updated) return { ok: false, error: "ไม่พบผู้ดำเนินการ" };
 
   return { ok: true };

@@ -84,6 +84,65 @@ function stripSiteUrl(url: string, siteUrl: string) {
   return url.startsWith(siteUrl) ? url.slice(siteUrl.length) : url;
 }
 
+/**
+ * The "ชื่อผู้ดำเนินการ" field on the create form: a dropdown of active
+ * SALES/CHANNEL_EXECUTIVE admin users, plus a "พิมพ์ชื่อเอง" option that
+ * swaps in the original free-text input (for people with no system login,
+ * e.g. outsourced staff). Only used on create — editing an existing
+ * executive stays plain free-text, matching updateChannelExecutive's
+ * server-side behavior.
+ */
+function ExecutiveNameField({ adminUsers }: { adminUsers: AdminUserOption[] }) {
+  const [pick, setPick] = useState<string>(
+    adminUsers.length > 0 ? "" : MANUAL_ENTRY_VALUE
+  );
+  const manual = pick === MANUAL_ENTRY_VALUE || adminUsers.length === 0;
+
+  return (
+    <div className="space-y-1.5">
+      <Label>ชื่อผู้ดำเนินการ</Label>
+      {adminUsers.length > 0 && (
+        <select
+          required
+          value={pick}
+          onChange={(e) => setPick(e.target.value)}
+          className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/50"
+        >
+          <option value="" disabled>
+            - เลือกผู้ใช้ระบบ -
+          </option>
+          {adminUsers.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name} ({u.email})
+            </option>
+          ))}
+          <option value={MANUAL_ENTRY_VALUE}>พิมพ์ชื่อเอง</option>
+        </select>
+      )}
+      {manual ? (
+        <>
+          <Input name="name" required placeholder="ชื่อผู้ดำเนินการ" />
+          {/* formData.get() returns null (not undefined) when a field is
+              absent entirely, which fails the optional-string zod schema —
+              so this stays present, just empty, in manual mode. */}
+          <input type="hidden" name="linkedAdminUserId" value="" />
+        </>
+      ) : (
+        <>
+          {/* Server looks up and uses the admin user's current name — this
+              hidden value only satisfies the shared schema's required field. */}
+          <input
+            type="hidden"
+            name="name"
+            value={adminUsers.find((u) => u.id === pick)?.name ?? ""}
+          />
+          <input type="hidden" name="linkedAdminUserId" value={pick} />
+        </>
+      )}
+    </div>
+  );
+}
+
 function CopyButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
   return (
@@ -112,17 +171,29 @@ function CopyButton({ value }: { value: string }) {
   );
 }
 
+type AdminUserOption = {
+  id: string;
+  name: string;
+  email: string;
+};
+
+/** Sentinel <select> value for the "พิมพ์ชื่อเอง" fallback — never a real AdminUser id. */
+const MANUAL_ENTRY_VALUE = "__manual__";
+
 export function ChannelsClient({
   channels,
   landingPaths,
   siteUrl,
   readOnly = false,
+  adminUsers = [],
 }: {
   channels: ChannelRow[];
   landingPaths: string[];
   siteUrl: string;
   /** CHANNEL_EXECUTIVE sessions get a read-only view of their own channel — no create/edit/delete. */
   readOnly?: boolean;
+  /** Active SALES/CHANNEL_EXECUTIVE admin users, offered as a picker on the executive create form. */
+  adminUsers?: AdminUserOption[];
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ChannelRow | null>(null);
@@ -625,10 +696,14 @@ export function ChannelsClient({
                   className="grid grid-cols-1 gap-3 rounded-lg border border-dashed border-border p-4 sm:grid-cols-3"
                   key={editingExec?.id ?? "new-exec"}
                 >
-                  <div className="space-y-1.5">
-                    <Label>ชื่อผู้ดำเนินการ</Label>
-                    <Input name="name" required defaultValue={editingExec?.name} />
-                  </div>
+                  {editingExec ? (
+                    <div className="space-y-1.5">
+                      <Label>ชื่อผู้ดำเนินการ</Label>
+                      <Input name="name" required defaultValue={editingExec.name} />
+                    </div>
+                  ) : (
+                    <ExecutiveNameField adminUsers={adminUsers} />
+                  )}
                   <div className="space-y-1.5">
                     <Label>เบอร์โทร</Label>
                     <Input name="phone" required defaultValue={editingExec?.phone} />

@@ -10,7 +10,7 @@ export default async function AdminChannelsPage() {
   const session = await requireRole("ADMIN", "CHANNEL_EXECUTIVE");
   const isAdmin = session.user.role === "ADMIN";
 
-  const [channels, landingPaths] = await Promise.all([
+  const [channels, landingPaths, adminUsers] = await Promise.all([
     prisma.promoChannel.findMany({
       where: isAdmin
         ? undefined
@@ -22,6 +22,13 @@ export default async function AdminChannelsPage() {
       },
     }),
     prisma.promoLandingPath.findMany({ orderBy: { path: "asc" } }),
+    // Only ADMIN can create executives (readOnly gates the create form), but
+    // fetching unconditionally keeps this a plain parallel load.
+    prisma.adminUser.findMany({
+      where: { role: { in: ["SALES", "CHANNEL_EXECUTIVE"] }, isActive: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, email: true },
+    }),
   ]);
 
   return (
@@ -29,6 +36,7 @@ export default async function AdminChannelsPage() {
       siteUrl={SITE_URL}
       readOnly={!isAdmin}
       landingPaths={landingPaths.map((item) => item.path)}
+      adminUsers={adminUsers}
       channels={channels.map((c) => ({
         id: c.id,
         nameTh: c.nameTh,
