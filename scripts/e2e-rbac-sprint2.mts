@@ -39,6 +39,17 @@ async function main() {
     where: { id: ceUser.linkedChannelExecutiveId },
   });
   const otherAdmin = await prisma.adminUser.findFirstOrThrow({ where: { role: "ADMIN" } });
+  // Sprint 5 (RBAC): MARKETING/EDITOR/EXECUTIVE test accounts, seeded
+  // alongside sales/finance/channel_executive in prisma/seed.ts.
+  const marketingUser = await prisma.adminUser.findUniqueOrThrow({
+    where: { email: "marketing.test@kkdproperty.local" },
+  });
+  const editorUser = await prisma.adminUser.findUniqueOrThrow({
+    where: { email: "editor.test@kkdproperty.local" },
+  });
+  const executiveUser = await prisma.adminUser.findUniqueOrThrow({
+    where: { email: "executive.test@kkdproperty.local" },
+  });
   // A second real AdminUser row to stand in as "a different salesperson" —
   // assignedSalesId is a real FK, so it must reference an existing row.
   const otherSalesUser = await prisma.adminUser.upsert({
@@ -54,6 +65,7 @@ async function main() {
 
   // Clean any leftover fixtures from a previous run.
   await prisma.lead.deleteMany({ where: { phone: { startsWith: "0999000" } } });
+  await prisma.service.deleteMany({ where: { titleTh: { startsWith: "RBAC E2E" } } });
 
   const ownLead = await prisma.lead.create({
     data: {
@@ -282,7 +294,275 @@ async function main() {
     await page.close();
   }
 
+  // === (d) MARKETING ===================================================
+  {
+    const page = await browser.newPage();
+    await login(page, "marketing.test@kkdproperty.local");
+
+    // (b) Bookings are entirely off-limits for MARKETING (not read-only).
+    await page.goto(`${BASE}/admin/bookings`);
+    const mktBookingsBlocked = page.url().endsWith("/admin");
+    console.log(`MARKETING: /admin/bookings blocked (redirected to /admin) ${mktBookingsBlocked ? "✓" : "✗ FAIL"}`);
+    const mktBookingsApiRes = await page.request.get(`${BASE}/api/admin/bookings`);
+    console.log(
+      `MARKETING: /api/admin/bookings rejected (403) ${mktBookingsApiRes.status() === 403 ? "✓" : "✗ FAIL"}`
+    );
+
+    // (a) users/audit/settings stay ADMIN(+EXECUTIVE for users/audit)-only.
+    await page.goto(`${BASE}/admin/users`);
+    console.log(`MARKETING: /admin/users blocked ${page.url().endsWith("/admin") ? "✓" : "✗ FAIL"}`);
+    await page.goto(`${BASE}/admin/audit`);
+    console.log(`MARKETING: /admin/audit blocked ${page.url().endsWith("/admin") ? "✓" : "✗ FAIL"}`);
+    await page.goto(`${BASE}/admin/settings`);
+    console.log(`MARKETING: /admin/settings blocked ${page.url().endsWith("/admin") ? "✓" : "✗ FAIL"}`);
+
+    // MARKETING gets full content management (publish + delete visible).
+    await page.goto(`${BASE}/admin/services`);
+    const mktCanAdd = (await page.getByText("เพิ่มบริการ").count()) > 0;
+    console.log(`MARKETING: /admin/services "add" button visible ${mktCanAdd ? "✓" : "✗ FAIL"}`);
+
+    // MARKETING can manage channels (create/edit) — the exec-only EDITOR
+    // view is checked separately below.
+    await page.goto(`${BASE}/admin/channels`);
+    const mktCanAddChannel = (await page.getByText("เพิ่มช่องทาง").count()) > 0;
+    console.log(`MARKETING: /admin/channels "add channel" button visible ${mktCanAddChannel ? "✓" : "✗ FAIL"}`);
+
+    // (c) Reports: MARKETING can view + export.
+    const mktExportRes = await page.request.get(`${BASE}/api/admin/reports/export`);
+    console.log(
+      `MARKETING: /api/admin/reports/export allowed (200) ${mktExportRes.status() === 200 ? "✓" : "✗ FAIL"}`
+    );
+
+    // (f) Full lead PII, never redacted for MARKETING.
+    const mktLeadsRes = await page.request.get(`${BASE}/api/admin/leads?page=1`);
+    const mktLeadsJson = await mktLeadsRes.json();
+    const mktLeadRow = mktLeadsJson.leads.find((l: { id: string }) => l.id === channelLead.id);
+    console.log(
+      `MARKETING: /api/admin/leads includes name/phone (not redacted) ${
+        mktLeadRow && "name" in mktLeadRow && "phone" in mktLeadRow ? "✓" : "✗ FAIL"
+      }`
+    );
+
+    // (g) Payment slips stay off-limits for every new role, per the
+    // permission matrix — none of MARKETING/EDITOR/EXECUTIVE ever gets
+    // financial data. The route returns 401 "Unauthorized" (not 403) for a
+    // denied private key — see src/app/files/[...key]/route.ts.
+    const mktSlipRes = await page.request.get(`${BASE}/files/private/slips/nonexistent.png`);
+    console.log(
+      `MARKETING: /files/private/slips/* rejected (401) ${mktSlipRes.status() === 401 ? "✓" : "✗ FAIL"}`
+    );
+
+    await page.close();
+  }
+
+  // === (e) EDITOR =======================================================
+  let editorTestServiceId: string | null = null;
+  {
+    const page = await browser.newPage();
+    await login(page, "editor.test@kkdproperty.local");
+
+    // (a) users/audit/settings blocked; bookings ALLOWED (read-only).
+    await page.goto(`${BASE}/admin/users`);
+    console.log(`EDITOR: /admin/users blocked ${page.url().endsWith("/admin") ? "✓" : "✗ FAIL"}`);
+    await page.goto(`${BASE}/admin/audit`);
+    console.log(`EDITOR: /admin/audit blocked ${page.url().endsWith("/admin") ? "✓" : "✗ FAIL"}`);
+    await page.goto(`${BASE}/admin/settings`);
+    console.log(`EDITOR: /admin/settings blocked ${page.url().endsWith("/admin") ? "✓" : "✗ FAIL"}`);
+    await page.goto(`${BASE}/admin/bookings`);
+    const editorBookingsAllowed = page.url().endsWith("/admin/bookings");
+    console.log(`EDITOR: /admin/bookings accessible (read-only) ${editorBookingsAllowed ? "✓" : "✗ FAIL"}`);
+    const editorBookingsApiRes = await page.request.get(`${BASE}/api/admin/bookings`);
+    console.log(
+      `EDITOR: /api/admin/bookings allowed (200) ${editorBookingsApiRes.status() === 200 ? "✓" : "✗ FAIL"}`
+    );
+
+    // (c) Reports: EDITOR can view + export.
+    const editorExportRes = await page.request.get(`${BASE}/api/admin/reports/export`);
+    console.log(
+      `EDITOR: /api/admin/reports/export allowed (200) ${editorExportRes.status() === 200 ? "✓" : "✗ FAIL"}`
+    );
+
+    // (f) Full lead PII, never redacted for EDITOR.
+    const editorLeadsRes = await page.request.get(`${BASE}/api/admin/leads?page=1`);
+    const editorLeadsJson = await editorLeadsRes.json();
+    const editorLeadRow = editorLeadsJson.leads.find((l: { id: string }) => l.id === channelLead.id);
+    console.log(
+      `EDITOR: /api/admin/leads includes name/phone (not redacted) ${
+        editorLeadRow && "name" in editorLeadRow && "phone" in editorLeadRow ? "✓" : "✗ FAIL"
+      }`
+    );
+
+    // (g) Payment slips — see MARKETING block above for the 401-not-403 note.
+    const editorSlipRes = await page.request.get(`${BASE}/files/private/slips/nonexistent.png`);
+    console.log(
+      `EDITOR: /files/private/slips/* rejected (401) ${editorSlipRes.status() === 401 ? "✓" : "✗ FAIL"}`
+    );
+
+    // (d) create -> forced draft; the publish checkbox itself must not render.
+    await page.goto(`${BASE}/admin/services`);
+    const editorPublishCheckboxOnAdd = await page
+      .getByText("เพิ่มบริการ")
+      .click()
+      .then(() => page.locator('input[name="isPublished"]').count());
+    console.log(
+      `EDITOR: create-service dialog has no publish checkbox ${editorPublishCheckboxOnAdd === 0 ? "✓" : "✗ FAIL"}`
+    );
+    await page.locator('input[name="titleTh"]').fill("RBAC E2E บริการทดสอบ");
+    await page.locator('textarea[name="descriptionTh"]').fill("คำอธิบายทดสอบ RBAC E2E ภาษาไทย");
+    await page.getByRole("tab", { name: "English" }).click();
+    await page.locator('input[name="titleEn"]').fill("RBAC E2E Test Service");
+    await page.locator('textarea[name="descriptionEn"]').fill("RBAC E2E test description in English");
+    await page.getByRole("button", { name: "บันทึก" }).click();
+    await page.waitForSelector("text=บันทึกเรียบร้อย", { timeout: 10000 }).catch(() => {});
+
+    const createdService = await prisma.service.findFirst({
+      where: { titleTh: "RBAC E2E บริการทดสอบ" },
+      orderBy: { createdAt: "desc" },
+    });
+    editorTestServiceId = createdService?.id ?? null;
+    console.log(
+      `EDITOR: created service exists, isPublished forced false ${
+        createdService && createdService.isPublished === false ? "✓" : "✗ FAIL"
+      }`
+    );
+
+    if (createdService) {
+      // Simulate the service having been published by an ADMIN/MARKETING
+      // session earlier — EDITOR must not be able to flip this back via an
+      // update, even indirectly (isPublished absent from the form payload
+      // entirely means the DB value must win).
+      await prisma.service.update({
+        where: { id: createdService.id },
+        data: { isPublished: true },
+      });
+
+      await page.reload();
+      const row = page.locator("tr", { hasText: "RBAC E2E บริการทดสอบ" });
+      await row.getByLabel("แก้ไข").click();
+      const editPublishCheckbox = await page.locator('input[name="isPublished"]').count();
+      console.log(
+        `EDITOR: edit-service dialog has no publish checkbox ${editPublishCheckbox === 0 ? "✓" : "✗ FAIL"}`
+      );
+      // Touch an unrelated field and save — isPublished must stay untouched.
+      await page.locator('input[name="sortOrder"]').fill("7");
+      await page.getByRole("button", { name: "บันทึก" }).click();
+      await page.waitForSelector("text=บันทึกเรียบร้อย", { timeout: 10000 }).catch(() => {});
+
+      const afterUpdate = await prisma.service.findUniqueOrThrow({
+        where: { id: createdService.id },
+      });
+      console.log(
+        `EDITOR: update did not change existing isPublished=true ${
+          afterUpdate.isPublished === true ? "✓" : "✗ FAIL"
+        }`
+      );
+
+      // (e) delete: the trash button must not render at all for EDITOR.
+      const deleteButtonCount = await row.getByLabel("ลบ").count();
+      console.log(`EDITOR: delete button not rendered ${deleteButtonCount === 0 ? "✓" : "✗ FAIL"}`);
+    }
+
+    // EDITOR can manage channel executives but not the channel itself.
+    await page.goto(`${BASE}/admin/channels`);
+    const editorCanAddChannel = (await page.getByText("เพิ่มช่องทาง").count()) > 0;
+    console.log(
+      `EDITOR: /admin/channels "add channel" button hidden ${!editorCanAddChannel ? "✓" : "✗ FAIL"}`
+    );
+
+    await page.close();
+  }
+
+  // === (f) EXECUTIVE ====================================================
+  {
+    const page = await browser.newPage();
+    await login(page, "executive.test@kkdproperty.local");
+
+    // (a) content/bookings/settings entirely blocked.
+    for (const path of [
+      "/admin/services",
+      "/admin/packages",
+      "/admin/portfolio",
+      "/admin/testimonials",
+      "/admin/channels",
+      "/admin/bookings",
+      "/admin/settings",
+    ]) {
+      await page.goto(`${BASE}${path}`);
+      const blocked = page.url().endsWith("/admin");
+      console.log(`EXECUTIVE: ${path} blocked (redirected to /admin) ${blocked ? "✓" : "✗ FAIL"}`);
+    }
+    const execBookingsApiRes = await page.request.get(`${BASE}/api/admin/bookings`);
+    console.log(
+      `EXECUTIVE: /api/admin/bookings rejected (403) ${execBookingsApiRes.status() === 403 ? "✓" : "✗ FAIL"}`
+    );
+
+    // users/audit: read-only oversight, page reachable.
+    await page.goto(`${BASE}/admin/users`);
+    console.log(`EXECUTIVE: /admin/users accessible ${page.url().endsWith("/admin/users") ? "✓" : "✗ FAIL"}`);
+    const execAddUserCount = await page.getByText("เพิ่มผู้ใช้").count();
+    console.log(`EXECUTIVE: /admin/users "add user" button hidden ${execAddUserCount === 0 ? "✓" : "✗ FAIL"}`);
+    await page.goto(`${BASE}/admin/audit`);
+    console.log(`EXECUTIVE: /admin/audit accessible ${page.url().endsWith("/admin/audit") ? "✓" : "✗ FAIL"}`);
+
+    // (c) Reports: view-only, export forbidden.
+    await page.goto(`${BASE}/admin/reports`);
+    const execReportsAllowed = page.url().endsWith("/admin/reports");
+    console.log(`EXECUTIVE: /admin/reports accessible ${execReportsAllowed ? "✓" : "✗ FAIL"}`);
+    const execExportButtonCount = await page.getByText("Export Excel").count();
+    console.log(
+      `EXECUTIVE: /admin/reports export button hidden ${execExportButtonCount === 0 ? "✓" : "✗ FAIL"}`
+    );
+    const execExportRes = await page.request.get(`${BASE}/api/admin/reports/export`);
+    console.log(
+      `EXECUTIVE: /api/admin/reports/export rejected (403) ${execExportRes.status() === 403 ? "✓" : "✗ FAIL"}`
+    );
+
+    // (f) Full lead PII, never redacted for EXECUTIVE.
+    const execLeadsRes = await page.request.get(`${BASE}/api/admin/leads?page=1`);
+    const execLeadsJson = await execLeadsRes.json();
+    const execLeadRow = execLeadsJson.leads.find((l: { id: string }) => l.id === channelLead.id);
+    console.log(
+      `EXECUTIVE: /api/admin/leads includes name/phone (not redacted) ${
+        execLeadRow && "name" in execLeadRow && "phone" in execLeadRow ? "✓" : "✗ FAIL"
+      }`
+    );
+
+    // (g) Payment slips — see MARKETING block above for the 401-not-403 note.
+    const execSlipRes = await page.request.get(`${BASE}/files/private/slips/nonexistent.png`);
+    console.log(
+      `EXECUTIVE: /files/private/slips/* rejected (401) ${execSlipRes.status() === 401 ? "✓" : "✗ FAIL"}`
+    );
+
+    await page.close();
+  }
+
   await browser.close();
+
+  // Cleanup the service fixture created by the EDITOR block above — EDITOR
+  // itself never gets a delete button (verified above), so the harness
+  // removes it directly, same as the SALES/CE lead fixtures below.
+  if (editorTestServiceId) {
+    await prisma.service.delete({ where: { id: editorTestServiceId } }).catch(() => {});
+  }
+
+  // --- Pure capability-function checks (deleteService/createLandingPath/
+  // createChannel etc. all gate on requireRole(), which calls auth() — that
+  // needs a live Next.js request context and can't be driven from a plain
+  // script, same limitation noted for FINANCE below). The capability
+  // predicates in src/lib/auth/index.ts are what those requireRole() calls
+  // are built from, so checking them directly is the equivalent
+  // code-level guarantee for "EDITOR delete service -> rejected".
+  console.log("\n--- Direct capability-function checks (RBAC Sprint 5) ---");
+  {
+    const { canDeleteContent, canPublishContent, canManageChannels, canExportReports } = await import(
+      "../src/lib/auth/index"
+    );
+    console.log(`EDITOR canDeleteContent -> false ${!canDeleteContent("EDITOR") ? "✓" : "✗ FAIL"}`);
+    console.log(`EDITOR canPublishContent -> false ${!canPublishContent("EDITOR") ? "✓" : "✗ FAIL"}`);
+    console.log(`EDITOR canManageChannels -> false ${!canManageChannels("EDITOR") ? "✓" : "✗ FAIL"}`);
+    console.log(`EXECUTIVE canExportReports -> false ${!canExportReports("EXECUTIVE") ? "✓" : "✗ FAIL"}`);
+    console.log(`MARKETING canDeleteContent -> true ${canDeleteContent("MARKETING") ? "✓" : "✗ FAIL"}`);
+  }
 
   // --- Server-side mutation rejection (direct action import) ----------
   // Exercises the exact server action code path (not just the UI) for the
