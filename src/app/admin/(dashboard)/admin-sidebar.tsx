@@ -20,6 +20,7 @@ import { usePathname } from "next/navigation";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { cn } from "@/lib/utils";
 import { ROLES } from "@/lib/enums";
+import { useUnreadLeadCount } from "@/hooks/admin/use-unread-lead-count";
 
 type Role = "ADMIN" | "SALES" | "FINANCE" | "CHANNEL_EXECUTIVE";
 
@@ -97,6 +98,13 @@ const ITEMS = [
 
 export function AdminSidebar({ role }: { role: Role }) {
   const pathname = usePathname();
+  // Only ADMIN/SALES/FINANCE get the leads detail view (CHANNEL_EXECUTIVE
+  // is scoped to the read-only aggregate list — see /api/admin/leads/unread-count),
+  // so the hook is skipped entirely for that role rather than showing a
+  // badge that's always zero.
+  const { data: unreadLeads } = useUnreadLeadCount();
+  const unreadLeadCount =
+    role === "CHANNEL_EXECUTIVE" ? 0 : (unreadLeads?.count ?? 0);
 
   return (
     <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-background md:flex">
@@ -120,7 +128,15 @@ export function AdminSidebar({ role }: { role: Role }) {
               )}
             >
               <item.icon className="size-4" />
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {item.href === "/admin/leads" && unreadLeadCount > 0 && (
+                <span
+                  aria-label={`Lead ใหม่ที่ยังไม่ได้เปิด ${unreadLeadCount} รายการ`}
+                  className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-orange px-1.5 text-xs font-semibold text-white"
+                >
+                  {unreadLeadCount > 99 ? "99+" : unreadLeadCount}
+                </span>
+              )}
             </Link>
           );
         })}
