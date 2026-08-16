@@ -95,8 +95,8 @@ export default async function AboutPage({
 
       <StatsRow
         overrides={{
-          statsProjectsValue: String(projectCount),
-          statsCustomersValue: String(closedLeadCount),
+          statsProjectsValue: projectCount > 0 ? String(projectCount) : null,
+          statsCustomersValue: closedLeadCount > 0 ? String(closedLeadCount) : null,
         }}
       />
 
