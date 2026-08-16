@@ -85,61 +85,96 @@ function stripSiteUrl(url: string, siteUrl: string) {
 }
 
 /**
- * The "ชื่อผู้ดำเนินการ" field on the create form: a dropdown of active
- * SALES/CHANNEL_EXECUTIVE admin users, plus a "พิมพ์ชื่อเอง" option that
- * swaps in the original free-text input (for people with no system login,
- * e.g. outsourced staff). Only used on create — editing an existing
+ * The "ชื่อผู้ดำเนินการ" + "เบอร์โทร" fields on the create form: a dropdown
+ * of active SALES/CHANNEL_EXECUTIVE admin users, plus a "พิมพ์ชื่อเอง" option
+ * that swaps in the original free-text input (for people with no system
+ * login, e.g. outsourced staff). Only used on create — editing an existing
  * executive stays plain free-text, matching updateChannelExecutive's
  * server-side behavior.
+ *
+ * Picking a system user also prefills the phone input from that user's
+ * `phone` on file, as a convenience — not a hard sync. The admin can still
+ * freely edit/clear it, and a manual edit is never overwritten by a later
+ * pick (tracked via `autoFilledPhone`).
  */
 function ExecutiveNameField({ adminUsers }: { adminUsers: AdminUserOption[] }) {
   const [pick, setPick] = useState<string>(
     adminUsers.length > 0 ? "" : MANUAL_ENTRY_VALUE
   );
+  const [phone, setPhone] = useState("");
+  const [autoFilledPhone, setAutoFilledPhone] = useState("");
   const manual = pick === MANUAL_ENTRY_VALUE || adminUsers.length === 0;
 
+  function handlePickChange(value: string) {
+    setPick(value);
+    if (value === MANUAL_ENTRY_VALUE) {
+      // Don't carry over a prefilled phone into manual entry mode — but
+      // leave anything the admin typed themselves alone.
+      setPhone((prev) => (prev === autoFilledPhone ? "" : prev));
+      setAutoFilledPhone("");
+      return;
+    }
+    const userPhone = adminUsers.find((u) => u.id === value)?.phone ?? "";
+    if (!userPhone) return; // No phone on file — leave the field as-is.
+    // Only overwrite if the current value is empty or itself a previous
+    // auto-fill, never a value the admin typed in manually.
+    setPhone((prev) => (prev === "" || prev === autoFilledPhone ? userPhone : prev));
+    setAutoFilledPhone(userPhone);
+  }
+
   return (
-    <div className="space-y-1.5">
-      <Label>ชื่อผู้ดำเนินการ</Label>
-      {adminUsers.length > 0 && (
-        <select
-          required
-          value={pick}
-          onChange={(e) => setPick(e.target.value)}
-          className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/50"
-        >
-          <option value="" disabled>
-            - เลือกผู้ใช้ระบบ -
-          </option>
-          {adminUsers.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.name} ({u.email})
+    <>
+      <div className="space-y-1.5">
+        <Label>ชื่อผู้ดำเนินการ</Label>
+        {adminUsers.length > 0 && (
+          <select
+            required
+            value={pick}
+            onChange={(e) => handlePickChange(e.target.value)}
+            className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/50"
+          >
+            <option value="" disabled>
+              - เลือกผู้ใช้ระบบ -
             </option>
-          ))}
-          <option value={MANUAL_ENTRY_VALUE}>พิมพ์ชื่อเอง</option>
-        </select>
-      )}
-      {manual ? (
-        <>
-          <Input name="name" required placeholder="ชื่อผู้ดำเนินการ" />
-          {/* formData.get() returns null (not undefined) when a field is
-              absent entirely, which fails the optional-string zod schema —
-              so this stays present, just empty, in manual mode. */}
-          <input type="hidden" name="linkedAdminUserId" value="" />
-        </>
-      ) : (
-        <>
-          {/* Server looks up and uses the admin user's current name — this
-              hidden value only satisfies the shared schema's required field. */}
-          <input
-            type="hidden"
-            name="name"
-            value={adminUsers.find((u) => u.id === pick)?.name ?? ""}
-          />
-          <input type="hidden" name="linkedAdminUserId" value={pick} />
-        </>
-      )}
-    </div>
+            {adminUsers.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name} ({u.email})
+              </option>
+            ))}
+            <option value={MANUAL_ENTRY_VALUE}>พิมพ์ชื่อเอง</option>
+          </select>
+        )}
+        {manual ? (
+          <>
+            <Input name="name" required placeholder="ชื่อผู้ดำเนินการ" />
+            {/* formData.get() returns null (not undefined) when a field is
+                absent entirely, which fails the optional-string zod schema —
+                so this stays present, just empty, in manual mode. */}
+            <input type="hidden" name="linkedAdminUserId" value="" />
+          </>
+        ) : (
+          <>
+            {/* Server looks up and uses the admin user's current name — this
+                hidden value only satisfies the shared schema's required field. */}
+            <input
+              type="hidden"
+              name="name"
+              value={adminUsers.find((u) => u.id === pick)?.name ?? ""}
+            />
+            <input type="hidden" name="linkedAdminUserId" value={pick} />
+          </>
+        )}
+      </div>
+      <div className="space-y-1.5">
+        <Label>เบอร์โทร</Label>
+        <Input
+          name="phone"
+          required
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+        />
+      </div>
+    </>
   );
 }
 
@@ -175,6 +210,7 @@ type AdminUserOption = {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
 };
 
 /** Sentinel <select> value for the "พิมพ์ชื่อเอง" fallback — never a real AdminUser id. */
@@ -697,17 +733,19 @@ export function ChannelsClient({
                   key={editingExec?.id ?? "new-exec"}
                 >
                   {editingExec ? (
-                    <div className="space-y-1.5">
-                      <Label>ชื่อผู้ดำเนินการ</Label>
-                      <Input name="name" required defaultValue={editingExec.name} />
-                    </div>
+                    <>
+                      <div className="space-y-1.5">
+                        <Label>ชื่อผู้ดำเนินการ</Label>
+                        <Input name="name" required defaultValue={editingExec.name} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>เบอร์โทร</Label>
+                        <Input name="phone" required defaultValue={editingExec.phone} />
+                      </div>
+                    </>
                   ) : (
                     <ExecutiveNameField adminUsers={adminUsers} />
                   )}
-                  <div className="space-y-1.5">
-                    <Label>เบอร์โทร</Label>
-                    <Input name="phone" required defaultValue={editingExec?.phone} />
-                  </div>
                   <div className="flex items-end gap-2">
                     <Button type="submit" disabled={isPending} className="flex-1">
                       {editingExec ? "บันทึก" : "เพิ่ม"}
