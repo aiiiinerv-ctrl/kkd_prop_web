@@ -5,7 +5,7 @@ export default function NotFoundPage() {
   const t = useTranslations("nav");
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-24 text-center">
+    <main className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-16 text-center">
       <p className="text-6xl font-bold text-primary">404</p>
       <Link
         href="/"
