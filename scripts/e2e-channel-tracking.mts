@@ -25,14 +25,16 @@ const browser = await chromium.launch({ channel: "chrome", headless: true });
 // Resolve real seeded ref codes from the DB rather than hardcoding
 // "CH001"-style codes, since nextChannelRefCode() in prisma/seed.ts assigns
 // sequentially and existing e2e-created channels can shift the numbering.
-const facebookChannel = await prisma.promoChannel.findUniqueOrThrow({
+const facebookChannel = await prisma.promoChannel.findFirstOrThrow({
   where: { slug: "facebook" },
+  orderBy: { createdAt: "asc" },
 });
 const facebookExecutive = await prisma.channelExecutive.findFirstOrThrow({
   where: { channelId: facebookChannel.id },
 });
-const referralChannel = await prisma.promoChannel.findUniqueOrThrow({
+const referralChannel = await prisma.promoChannel.findFirstOrThrow({
   where: { slug: "referral" },
+  orderBy: { createdAt: "asc" },
 });
 
 function randPhone() {
@@ -392,18 +394,17 @@ async function referrerValueAfterHydration(
   await context.close();
 }
 
-// --- Case 10: channel-only ref code (no executive) -> referrer field stays
-// empty; the channel is already captured via autoSourceChannelId and there is
-// no person's name to fill in. ---
+// --- Case 10: channel-only ref code (no executive) -> referrer field falls
+// back to the ref code so attribution stays visible (8ff2797). ---
 {
   const context = await consentedContext();
   const page = await context.newPage();
 
   await page.goto(`http://localhost:3000/th/booking?tab=quote&ref=${referralChannel.refCode}`);
-  const value = await referrerValueAfterHydration(page, "");
+  const value = await referrerValueAfterHydration(page, referralChannel.refCode);
   console.log(
-    `CHANNEL TRACKING: channel-only ref leaves the referrer field empty ${
-      value === "" ? "✓" : `✗ FAIL (got "${value}")`
+    `CHANNEL TRACKING: channel-only ref falls back to ref code ${
+      value === referralChannel.refCode ? "✓" : `✗ FAIL (got "${value}")`
     }`
   );
 
