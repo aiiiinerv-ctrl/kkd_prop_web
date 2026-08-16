@@ -27,7 +27,7 @@ export default async function AdminChannelsPage() {
     prisma.adminUser.findMany({
       where: { role: { in: ["SALES", "CHANNEL_EXECUTIVE"] }, isActive: true },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, email: true },
+      select: { id: true, name: true, email: true, phone: true },
     }),
   ]);
 
