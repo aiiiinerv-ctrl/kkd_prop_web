@@ -147,7 +147,7 @@ export function UsersClient({
                   <option value="ADMIN">ADMIN — ทุกสิทธิ์รวมถึงจัดการผู้ใช้</option>
                 </select>
               </div>
-              {selectedRole === "CHANNEL_EXECUTIVE" && (
+              {selectedRole === "CHANNEL_EXECUTIVE" ? (
                 <div className="space-y-1.5">
                   <Label htmlFor="u-linked-exec">ผู้ดำเนินการช่องทางที่ผูก</Label>
                   <select
@@ -170,6 +170,11 @@ export function UsersClient({
                     </p>
                   )}
                 </div>
+              ) : (
+                /* formData.get() returns null (not undefined) when a field is
+                   absent entirely, which fails the optional-string zod schema —
+                   so this stays present, just empty, for non-executive roles. */
+                <input type="hidden" name="linkedChannelExecutiveId" value="" />
               )}
               <div className="space-y-1.5">
                 <Label htmlFor="u-password">
