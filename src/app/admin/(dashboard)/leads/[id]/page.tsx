@@ -80,8 +80,12 @@ export default async function LeadDetailPage({
         customerMessage: lead.customerMessage,
         internalNotes: lead.internalNotes,
         sourceChannelId: lead.sourceChannelId,
-        autoSourceChannelName: lead.autoSourceChannel?.nameTh ?? null,
-        autoSourceExecutiveName: lead.autoSourceExecutive?.name ?? null,
+        // The executive's refCode is the one the customer actually clicked
+        // (resolveRefAttribution() matches ChannelExecutive before
+        // PromoChannel), so it wins over the channel-level code here.
+        autoSourceRefCode:
+          lead.autoSourceExecutive?.refCode ?? lead.autoSourceChannel?.refCode ?? null,
+        autoSourceName: lead.autoSourceExecutive?.name ?? lead.autoSourceChannel?.nameTh ?? null,
         assignedSalesId: lead.assignedSalesId,
         assignedSalesName: lead.assignedSales?.name ?? null,
         lastFollowUpAt: lead.lastFollowUpAt ? lead.lastFollowUpAt.toISOString() : null,

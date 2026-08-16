@@ -58,8 +58,8 @@ type LeadDetail = {
   customerMessage: string | null;
   internalNotes: string | null;
   sourceChannelId: string | null;
-  autoSourceChannelName: string | null;
-  autoSourceExecutiveName: string | null;
+  autoSourceRefCode: string | null;
+  autoSourceName: string | null;
   assignedSalesId: string | null;
   assignedSalesName: string | null;
   lastFollowUpAt: string | null;
@@ -219,47 +219,6 @@ export function LeadDetailClient({
             </div>
           )}
           <div>
-            <dt className="text-muted-foreground">ช่องทางที่รู้จักเรา</dt>
-            <dd>
-              {canEditChannel ? (
-                <select
-                  className={selectCls}
-                  value={lead.sourceChannelId ?? ""}
-                  disabled={isPending}
-                  onChange={(e) =>
-                    run(
-                      () => updateLeadSourceChannel(lead.id, e.target.value),
-                      "อัปเดตช่องทางแล้ว"
-                    )
-                  }
-                >
-                  <option value="">ไม่ระบุ</option>
-                  {channels.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nameTh}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <span className="font-medium">
-                  {channels.find((c) => c.id === lead.sourceChannelId)?.nameTh ?? "ไม่ระบุ"}
-                </span>
-              )}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">
-              ช่องทางอัตโนมัติ (จากลิงก์โปรโมท)
-            </dt>
-            <dd className="font-medium">
-              {lead.autoSourceChannelName
-                ? lead.autoSourceExecutiveName
-                  ? `${lead.autoSourceChannelName} · ${lead.autoSourceExecutiveName}`
-                  : lead.autoSourceChannelName
-                : "เข้าโดยตรง"}
-            </dd>
-          </div>
-          <div>
             <dt className="text-muted-foreground">เซลส์ที่รับผิดชอบ</dt>
             <dd>
               {canAssignSales ? (
@@ -295,6 +254,57 @@ export function LeadDetailClient({
               {lead.lastFollowUpAt
                 ? new Date(lead.lastFollowUpAt).toLocaleString("th-TH")
                 : "ยังไม่เคยติดตาม"}
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      {/* Attribution lives in its own card: the manual dropdown ("how did you
+          hear about us", what the customer said) and the automatic ?ref=
+          tracking are two different answers to the same question, and reading
+          them side by side is the only way to spot a mismatch. */}
+      <div className="rounded-xl border border-border/70 bg-card p-6">
+        <h2 className="mb-4 font-semibold">ที่มาของลูกค้า</h2>
+        <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-muted-foreground">ช่องทางที่รู้จักเรา</dt>
+            <dd>
+              {canEditChannel ? (
+                <select
+                  className={selectCls}
+                  value={lead.sourceChannelId ?? ""}
+                  disabled={isPending}
+                  onChange={(e) =>
+                    run(
+                      () => updateLeadSourceChannel(lead.id, e.target.value),
+                      "อัปเดตช่องทางแล้ว"
+                    )
+                  }
+                >
+                  <option value="">ไม่ระบุ</option>
+                  {channels.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nameTh}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="font-medium">
+                  {channels.find((c) => c.id === lead.sourceChannelId)?.nameTh ?? "ไม่ระบุ"}
+                </span>
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">
+              ช่องทางอัตโนมัติ (จากลิงก์โปรโมท)
+            </dt>
+            <dd className="font-medium">
+              {lead.autoSourceRefCode
+                ? lead.autoSourceName
+                  ? `${lead.autoSourceRefCode} - ${lead.autoSourceName}`
+                  : lead.autoSourceRefCode
+                : "เข้าโดยตรง"}
             </dd>
           </div>
         </dl>
