@@ -124,7 +124,7 @@
 31. `scripts/e2e-rbac-sprint2.mts` — ต่อยอด assert ครบ 3 role ใหม่ | `nextjs-dev` | ✅ (slip assert ใช้ 401 ตามโค้ดจริง ไม่ใช่ 403 ในแผนเดิม)
 32. Verify: build + seed + e2e-rbac + e2e-admin + e2e-admin-crud | `nextjs-dev` | ✅ ผ่านครบ (2026-08-16)
 33. Audit/permission review อิสระ | `audit-compliance-reviewer` | ✅ PASS (LOW-1 `linkAdminUserToExecutive` intentional)
-34. Commit ตาม Conventional Commits — 2 ก้อน feat + test | `nextjs-dev` | ⏳
+34. Commit ตาม Conventional Commits — 2 ก้อน feat + test | `nextjs-dev` | ✅ `e80667c` + `b3c17ed`
 
 ### Sprint 7 — Deploy (แยกรอบ รอผู้ใช้เคาะเวลา)
 
