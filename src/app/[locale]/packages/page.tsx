@@ -44,6 +44,9 @@ export default async function PackagesPage({
           headingClassName="font-extrabold tracking-[-0.01em]"
         />
 
+        {packages.length === 0 ? (
+          <p className="py-16 text-center text-muted-foreground">{t("empty")}</p>
+        ) : (
         <div className="grid gap-7 md:grid-cols-3">
           {packages.map((pkg) => (
             <div
@@ -94,6 +97,7 @@ export default async function PackagesPage({
             </div>
           ))}
         </div>
+        )}
 
         <div className="mx-auto mt-14 grid max-w-3xl gap-7">
           {seasonal && popular && (

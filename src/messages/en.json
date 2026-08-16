@@ -182,7 +182,8 @@
     "paybackHybrid": "Hybrid (with battery): 6-8 years",
     "paybackOffGrid": "Off-Grid: 8-12 years",
     "featuresTitle": "Package Details",
-    "backToPackages": "Back to all packages"
+    "backToPackages": "Back to all packages",
+    "empty": "No packages available right now. Please check back later."
   },
   "portfolio": {
     "title": "Our Installation Portfolio",
