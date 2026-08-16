@@ -153,6 +153,8 @@ export function BookingForms({
   initialBill,
   initialPackageSlug,
   initialServiceSlug,
+  initialInterestedSystems,
+  initialSourceChannelId,
   initialReferrerName,
   channels,
   bankInfo,
@@ -163,6 +165,8 @@ export function BookingForms({
   initialBill: string;
   initialPackageSlug: string;
   initialServiceSlug: string;
+  initialInterestedSystems: string[];
+  initialSourceChannelId: string;
   initialReferrerName: string;
   channels: Channel[];
   bankInfo: BankInfo;
@@ -259,6 +263,8 @@ export function BookingForms({
           initialBill={initialBill}
           initialPackageSlug={initialPackageSlug}
           initialServiceSlug={initialServiceSlug}
+          initialInterestedSystems={initialInterestedSystems}
+          initialSourceChannelId={initialSourceChannelId}
           initialReferrerName={initialReferrerName}
           onSuccess={() => setSuccess("quote")}
           phone={phone}
@@ -269,6 +275,8 @@ export function BookingForms({
           initialBill={initialBill}
           initialPackageSlug={initialPackageSlug}
           initialServiceSlug={initialServiceSlug}
+          initialInterestedSystems={initialInterestedSystems}
+          initialSourceChannelId={initialSourceChannelId}
           initialReferrerName={initialReferrerName}
           onSuccess={() => setSuccess("survey")}
           bankInfo={bankInfo}
@@ -520,7 +528,7 @@ function SourceChannelField({
   return (
     <div>
       <label className={labelCls}>{t("fieldSource")}</label>
-      <select className={inputCls} {...register("sourceChannelId")} defaultValue="">
+      <select className={inputCls} {...register("sourceChannelId")}>
         <option value="">{t("fieldSourcePlaceholder")}</option>
         {channels.map((c) => (
           <option key={c.id} value={c.id}>
@@ -566,6 +574,8 @@ function QuoteForm({
   initialBill,
   initialPackageSlug,
   initialServiceSlug,
+  initialInterestedSystems,
+  initialSourceChannelId,
   initialReferrerName,
   onSuccess,
   phone,
@@ -574,6 +584,8 @@ function QuoteForm({
   initialBill: string;
   initialPackageSlug: string;
   initialServiceSlug: string;
+  initialInterestedSystems: string[];
+  initialSourceChannelId: string;
   initialReferrerName: string;
   onSuccess: () => void;
   phone: string;
@@ -596,9 +608,10 @@ function QuoteForm({
     resolver: zodResolver(quoteSchema),
     defaultValues: {
       avgMonthlyBill: initialBill,
-      interestedSystems: [],
+      interestedSystems: initialInterestedSystems as QuoteFormInput["interestedSystems"],
       interestedPackageSlug: initialPackageSlug,
       interestedServiceSlug: initialServiceSlug,
+      sourceChannelId: initialSourceChannelId,
       referrerName: initialReferrerName,
     },
   });
@@ -614,6 +627,11 @@ function QuoteForm({
       avgMonthlyBill: initialBill || undefined,
       interestedPackageSlug: initialPackageSlug || undefined,
       interestedServiceSlug: initialServiceSlug || undefined,
+      // A system service link pre-ticks its system, and (like package/service)
+      // wins over a stale draft; a link without one leaves the draft/default.
+      interestedSystems: initialInterestedSystems.length
+        ? (initialInterestedSystems as QuoteFormInput["interestedSystems"])
+        : undefined,
     };
     const merged = mergeDraftForForm(base, tabDraft, urlParams);
     for (const [field, value] of Object.entries(merged)) {
@@ -621,10 +639,13 @@ function QuoteForm({
         setValue(field as FieldPath<QuoteFormInput>, value as never, { shouldDirty: false });
       }
     }
-    // A ref link's referrer name only fills in the blank the customer left —
-    // anything they (or an earlier draft) already put in the field wins.
+    // A ref link's referrer name / channel only fill the blanks the customer
+    // left — anything they (or an earlier draft) already chose wins.
     if (initialReferrerName && !merged.referrerName) {
       setValue("referrerName", initialReferrerName, { shouldDirty: false });
+    }
+    if (initialSourceChannelId && !merged.sourceChannelId) {
+      setValue("sourceChannelId", initialSourceChannelId, { shouldDirty: false });
     }
     if (typeof merged.avgMonthlyBill !== "undefined") {
       setBillMode(billBucketMode(String(merged.avgMonthlyBill ?? "")));
@@ -690,6 +711,8 @@ function SurveyForm({
   initialBill,
   initialPackageSlug,
   initialServiceSlug,
+  initialInterestedSystems,
+  initialSourceChannelId,
   initialReferrerName,
   onSuccess,
   bankInfo,
@@ -700,6 +723,8 @@ function SurveyForm({
   initialBill: string;
   initialPackageSlug: string;
   initialServiceSlug: string;
+  initialInterestedSystems: string[];
+  initialSourceChannelId: string;
   initialReferrerName: string;
   onSuccess: () => void;
   bankInfo: BankInfo;
@@ -731,9 +756,10 @@ function SurveyForm({
     resolver: zodResolver(surveySchema),
     defaultValues: {
       avgMonthlyBill: initialBill,
-      interestedSystems: [],
+      interestedSystems: initialInterestedSystems as SurveyFormInput["interestedSystems"],
       interestedPackageSlug: initialPackageSlug,
       interestedServiceSlug: initialServiceSlug,
+      sourceChannelId: initialSourceChannelId,
       referrerName: initialReferrerName,
     },
   });
@@ -759,6 +785,9 @@ function SurveyForm({
       avgMonthlyBill: initialBill || undefined,
       interestedPackageSlug: initialPackageSlug || undefined,
       interestedServiceSlug: initialServiceSlug || undefined,
+      interestedSystems: initialInterestedSystems.length
+        ? (initialInterestedSystems as SurveyFormInput["interestedSystems"])
+        : undefined,
     };
     const merged = mergeDraftForForm(base, tabDraft, urlParams);
     for (const [field, value] of Object.entries(merged)) {
@@ -766,10 +795,13 @@ function SurveyForm({
         setValue(field as FieldPath<SurveyFormInput>, value as never, { shouldDirty: false });
       }
     }
-    // A ref link's referrer name only fills in the blank the customer left —
-    // anything they (or an earlier draft) already put in the field wins.
+    // A ref link's referrer name / channel only fill the blanks the customer
+    // left — anything they (or an earlier draft) already chose wins.
     if (initialReferrerName && !merged.referrerName) {
       setValue("referrerName", initialReferrerName, { shouldDirty: false });
+    }
+    if (initialSourceChannelId && !merged.sourceChannelId) {
+      setValue("sourceChannelId", initialSourceChannelId, { shouldDirty: false });
     }
     if (typeof merged.avgMonthlyBill !== "undefined") {
       setBillMode(billBucketMode(String(merged.avgMonthlyBill ?? "")));

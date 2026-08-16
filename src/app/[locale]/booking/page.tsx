@@ -1,7 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 import { SectionHeading } from "@/components/site/section-heading";
-import { bookingLinkParamsSchema } from "@/lib/booking-links";
+import { bookingLinkParamsSchema, SERVICE_SLUG_TO_INTERESTED_SYSTEM } from "@/lib/booking-links";
 import {
   getActiveChannels,
   getPackageBySlug,
@@ -10,7 +10,7 @@ import {
   getSiteSettings,
 } from "@/lib/content";
 import { generatePromptPayQrDataUrl } from "@/lib/promptpay";
-import { resolveRefReferrerName } from "@/lib/ref-attribution";
+import { resolveRefAttribution, resolveRefReferrerName } from "@/lib/ref-attribution";
 import { BookingForms } from "./booking-forms";
 import { pageMetadata } from "@/lib/seo";
 
@@ -44,21 +44,47 @@ export default async function BookingPage({
   setRequestLocale(locale);
   const t = await getTranslations("booking");
 
-  const [channels, paymentSettings, packageRow, serviceRow, initialReferrerName, siteSettings] =
-    await Promise.all([
-      getActiveChannels(locale),
-      getPaymentSettings(),
-      packageSlug ? getPackageBySlug(packageSlug, locale) : null,
-      serviceSlug ? getServiceBySlug(serviceSlug, locale) : null,
-      resolveRefReferrerName(),
-      getSiteSettings(locale),
-    ]);
+  const [
+    channels,
+    paymentSettings,
+    packageRow,
+    serviceRow,
+    initialReferrerName,
+    refAttribution,
+    siteSettings,
+  ] = await Promise.all([
+    getActiveChannels(locale),
+    getPaymentSettings(),
+    packageSlug ? getPackageBySlug(packageSlug, locale) : null,
+    serviceSlug ? getServiceBySlug(serviceSlug, locale) : null,
+    resolveRefReferrerName(),
+    resolveRefAttribution(),
+    getSiteSettings(locale),
+  ]);
+
+  // A promo link's channel pre-selects the visible "รู้จักเราจากช่องทางไหน"
+  // dropdown, mirroring the "ผู้แนะนำ" prefill. Only when the resolved channel
+  // is actually one of the active options shown (an inactive/unknown channel
+  // would just render blank). Reporting still counts by the ref (auto column),
+  // not this self-report field — see effectiveChannel() in lib/reports/aggregate.
+  const initialSourceChannelId =
+    refAttribution.autoSourceChannelId &&
+    channels.some((c) => c.id === refAttribution.autoSourceChannelId)
+      ? refAttribution.autoSourceChannelId
+      : "";
 
   // Survey booking fee is a fixed ฿199 (same constant used in the UI copy
   // and lib/notifications/format.ts) — embed it so scanning apps prefill it.
   const promptpayQrDataUrl = paymentSettings?.promptpayId
     ? await generatePromptPayQrDataUrl(paymentSettings.promptpayId, 199)
     : null;
+
+  // A system service card ("ขอใบเสนอราคา" on on-grid/hybrid/off-grid) pre-ticks
+  // the matching "ระบบที่สนใจ" checkbox. Derived from the resolved (real) slug,
+  // so an unknown/maintenance service pre-selects nothing.
+  const interestedSystem = serviceRow
+    ? SERVICE_SLUG_TO_INTERESTED_SYSTEM[serviceRow.slug]
+    : undefined;
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6">
@@ -75,6 +101,8 @@ export default async function BookingPage({
           initialBill={bill ?? ""}
           initialPackageSlug={packageRow?.slug ?? ""}
           initialServiceSlug={serviceRow?.slug ?? ""}
+          initialInterestedSystems={interestedSystem ? [interestedSystem] : []}
+          initialSourceChannelId={initialSourceChannelId}
           initialReferrerName={initialReferrerName}
           channels={channels}
           bankInfo={{

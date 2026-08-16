@@ -20,6 +20,23 @@ export const bookingLinkParamsSchema = z
 
 export type BookingLinkParams = z.infer<typeof bookingLinkParamsSchema>;
 
+/**
+ * Maps a SYSTEM service's slug to the matching "ระบบที่สนใจ" checkbox value on
+ * the booking form, so clicking "ขอใบเสนอราคา" on a system service card
+ * pre-selects that system. Keyed by the seeded system slugs (on-grid/hybrid/
+ * off-grid, see prisma/seed.ts); maintenance services aren't listed and
+ * pre-select nothing. Same slug-convention coupling as SERVICE_ICONS on the
+ * services page — there is no DB column linking a Service to the enum.
+ */
+export const SERVICE_SLUG_TO_INTERESTED_SYSTEM: Record<
+  string,
+  "ON_GRID" | "HYBRID" | "OFF_GRID"
+> = {
+  "on-grid": "ON_GRID",
+  hybrid: "HYBRID",
+  "off-grid": "OFF_GRID",
+};
+
 type BookingHref = "/booking" | { pathname: "/booking"; query: Record<string, string> };
 
 /**
