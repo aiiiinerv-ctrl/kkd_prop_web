@@ -54,8 +54,10 @@ const FAKE_IP = "203.0.113.50";
 // A browser that has already accepted advertisement cookies. Real visitors get
 // this cookie from the CookieYes banner; here we plant it directly so these
 // cases test attribution rather than the third-party banner's own UI.
-async function consentedContext() {
-  const context = await browser.newContext({ extraHTTPHeaders: { "x-forwarded-for": FAKE_IP } });
+// `ip` defaults to FAKE_IP; the click-through cases below pass their own so
+// each keeps a separate 5-per-window rate-limit budget (see the Case 4 note).
+async function consentedContext(ip: string = FAKE_IP) {
+  const context = await browser.newContext({ extraHTTPHeaders: { "x-forwarded-for": ip } });
   await context.addCookies([
     {
       name: "cookieyes-consent",
@@ -570,6 +572,135 @@ async function referrerValueAfterHydration(
         ? "✓"
         : `✗ FAIL (status ${status}, utm ${JSON.stringify(utmValue)})`
     }`
+  );
+
+  await context.close();
+}
+
+// --- Cases 17-21: the ref cookie must survive an in-app click from a content
+// page ("ดูใบเสนอราคา / นัดสำรวจ") through to the booking form and onto the
+// submitted lead — the exact path a promo visitor takes. The cookie is set on
+// the landing document (proxy.ts) and next-intl <Link> navigations are
+// client-side and never carry ?ref=, so this proves attribution rides the
+// cookie, not the URL, from every entry point. Each submitting case uses its
+// own x-forwarded-for so the 5-per-window rate limit never bites. ---
+
+// Confirms a booking CTA click preserves the ref cookie and lands on /booking
+// with the expected query param, returning the resolved booking URL.
+async function clickBookingCta(
+  context: import("playwright").BrowserContext,
+  page: import("playwright").Page,
+  from: string,
+  expectParam: RegExp
+): Promise<string> {
+  await page.goto(from);
+  await page.waitForLoadState("networkidle");
+  await page.locator('a[href*="/booking?tab="]').first().click();
+  await page.waitForURL(/\/booking\?tab=/, { timeout: 15000 });
+  const url = page.url();
+  const cookie = (await context.cookies()).find((c) => c.name === "kkd_ref");
+  const okParam = expectParam.test(url);
+  const okCookie = Boolean(cookie);
+  console.log(
+    `CHANNEL TRACKING: CTA from ${from.replace("http://localhost:3000", "")} keeps ref cookie + carries param ${
+      okParam && okCookie ? "✓" : `✗ FAIL (param ${okParam}, cookie ${okCookie}, url ${url})`
+    }`
+  );
+  return url;
+}
+
+// --- Case 17: packages list → "ขอใบเสนอราคา" on a package card. Submit and
+// confirm the lead carries BOTH the executive attribution (from the cookie)
+// and the interestedPackageSlug (from the click-built URL). ---
+{
+  const context = await consentedContext("203.0.113.60");
+  const page = await context.newPage();
+  const phone = randPhone();
+
+  const url = await clickBookingCta(
+    context,
+    page,
+    `http://localhost:3000/th/packages?ref=${facebookExecutive.refCode}`,
+    /[?&]package=/
+  );
+  const slug = new URL(url).searchParams.get("package");
+  await submitQuoteLead(page, "ทดสอบ Package CTA", phone);
+
+  const lead = await prisma.lead.findFirst({ where: { phone }, orderBy: { createdAt: "desc" } });
+  console.log(
+    `CHANNEL TRACKING: package-card CTA lead keeps exec attribution + package slug ${
+      lead?.autoSourceChannelId === facebookChannel.id &&
+      lead?.autoSourceExecutiveId === facebookExecutive.id &&
+      lead?.interestedPackageSlug === slug
+        ? "✓"
+        : `✗ FAIL (ch ${lead?.autoSourceChannelId}, ex ${lead?.autoSourceExecutiveId}, pkg ${lead?.interestedPackageSlug} vs ${slug})`
+    }`
+  );
+
+  await context.close();
+}
+
+// --- Case 18: services list → "ขอใบเสนอราคา" on a service card. Channel-only
+// ref this time. Submit and confirm channel attribution + interestedServiceSlug. ---
+{
+  const context = await consentedContext("203.0.113.61");
+  const page = await context.newPage();
+  const phone = randPhone();
+
+  const url = await clickBookingCta(
+    context,
+    page,
+    `http://localhost:3000/th/services?ref=${referralChannel.refCode}`,
+    /[?&]service=/
+  );
+  const slug = new URL(url).searchParams.get("service");
+  await submitQuoteLead(page, "ทดสอบ Service CTA", phone);
+
+  const lead = await prisma.lead.findFirst({ where: { phone }, orderBy: { createdAt: "desc" } });
+  console.log(
+    `CHANNEL TRACKING: service-card CTA lead keeps channel attribution + service slug ${
+      lead?.autoSourceChannelId === referralChannel.id &&
+      lead?.autoSourceExecutiveId === null &&
+      lead?.interestedServiceSlug === slug
+        ? "✓"
+        : `✗ FAIL (ch ${lead?.autoSourceChannelId}, svc ${lead?.interestedServiceSlug} vs ${slug})`
+    }`
+  );
+
+  await context.close();
+}
+
+// --- Case 19: package DETAIL page → CTA (cookie + URL param only, no submit
+// to stay within budget; attribution-on-submit already proven by Case 17). ---
+{
+  const context = await consentedContext("203.0.113.62");
+  const page = await context.newPage();
+
+  const detailPackage = await prisma.package.findFirstOrThrow({
+    where: { isPublished: true },
+    orderBy: { sortOrder: "asc" },
+  });
+  await clickBookingCta(
+    context,
+    page,
+    `http://localhost:3000/th/packages/${detailPackage.slug}?ref=${facebookExecutive.refCode}`,
+    new RegExp(`[?&]package=${detailPackage.slug}(?:&|$)`)
+  );
+
+  await context.close();
+}
+
+// --- Case 20: home page hero/CTA → booking (cookie only; home CTAs carry no
+// package/service, so just prove the cookie survives the click). ---
+{
+  const context = await consentedContext("203.0.113.63");
+  const page = await context.newPage();
+
+  await clickBookingCta(
+    context,
+    page,
+    `http://localhost:3000/th?ref=${facebookExecutive.refCode}`,
+    /\/booking\?tab=/
   );
 
   await context.close();
