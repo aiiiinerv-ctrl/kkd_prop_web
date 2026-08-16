@@ -220,6 +220,11 @@ async function main() {
     const settingsBlocked = page.url().endsWith("/admin");
     console.log(`FINANCE: /admin/settings blocked (redirected to /admin) ${settingsBlocked ? "✓" : "✗ FAIL"}`);
 
+    // Sprint 5 CMS: /admin/content/about requires canManageContent — FINANCE is excluded.
+    await page.goto(`${BASE}/admin/content/about`);
+    const financeAboutBlocked = page.url().endsWith("/admin");
+    console.log(`FINANCE: /admin/content/about blocked (redirected to /admin) ${financeAboutBlocked ? "✓" : "✗ FAIL"}`);
+
     // Sprint 5: FINANCE is one of the two roles allowed on Reports.
     await page.goto(`${BASE}/admin/reports`);
     const reportsAllowed = page.url().endsWith("/admin/reports");
@@ -291,6 +296,12 @@ async function main() {
     const ceSettingsBlocked = page.url().endsWith("/admin/leads");
     console.log(`CE: /admin/settings blocked (redirected away) ${ceSettingsBlocked ? "✓" : "✗ FAIL"}`);
 
+    // Sprint 5 CMS: /admin/content/about requires canManageContent — CE is excluded.
+    // CE dashboard redirect → /admin/leads (same pattern as /admin/settings above).
+    await page.goto(`${BASE}/admin/content/about`);
+    const ceAboutBlocked = page.url().endsWith("/admin/leads");
+    console.log(`CE: /admin/content/about blocked (redirected away) ${ceAboutBlocked ? "✓" : "✗ FAIL"}`);
+
     await page.close();
   }
 
@@ -308,13 +319,28 @@ async function main() {
       `MARKETING: /api/admin/bookings rejected (403) ${mktBookingsApiRes.status() === 403 ? "✓" : "✗ FAIL"}`
     );
 
-    // (a) users/audit/settings stay ADMIN(+EXECUTIVE for users/audit)-only.
+    // (a) users/audit stay ADMIN(+EXECUTIVE for users/audit)-only.
     await page.goto(`${BASE}/admin/users`);
     console.log(`MARKETING: /admin/users blocked ${page.url().endsWith("/admin") ? "✓" : "✗ FAIL"}`);
     await page.goto(`${BASE}/admin/audit`);
     console.log(`MARKETING: /admin/audit blocked ${page.url().endsWith("/admin") ? "✓" : "✗ FAIL"}`);
+
+    // Sprint 5 CMS: /admin/settings is now open to MARKETING (SEO/Contact/Header-Footer tabs).
     await page.goto(`${BASE}/admin/settings`);
-    console.log(`MARKETING: /admin/settings blocked ${page.url().endsWith("/admin") ? "✓" : "✗ FAIL"}`);
+    const mktSettingsAllowed = page.url().endsWith("/admin/settings");
+    console.log(
+      `MARKETING: /admin/settings accessible ${mktSettingsAllowed ? "✓" : "✗ FAIL"}`
+    );
+    // The capacity & payment tab must NOT render — those actions require ADMIN.
+    const mktCapacityTabCount = await page.locator("#st-tab-capacity").count();
+    console.log(
+      `MARKETING: capacity/payment tab hidden ${mktCapacityTabCount === 0 ? "✓" : "✗ FAIL"}`
+    );
+
+    // /admin/content/about is accessible to MARKETING (canManageContent).
+    await page.goto(`${BASE}/admin/content/about`);
+    const mktAboutAllowed = page.url().endsWith("/admin/content/about");
+    console.log(`MARKETING: /admin/content/about accessible ${mktAboutAllowed ? "✓" : "✗ FAIL"}`);
 
     // MARKETING gets full content management (publish + delete visible).
     await page.goto(`${BASE}/admin/services`);
@@ -368,6 +394,11 @@ async function main() {
     console.log(`EDITOR: /admin/audit blocked ${page.url().endsWith("/admin") ? "✓" : "✗ FAIL"}`);
     await page.goto(`${BASE}/admin/settings`);
     console.log(`EDITOR: /admin/settings blocked ${page.url().endsWith("/admin") ? "✓" : "✗ FAIL"}`);
+
+    // Sprint 5 CMS: /admin/content/about is accessible to EDITOR (canManageContent).
+    await page.goto(`${BASE}/admin/content/about`);
+    const editorAboutAllowed = page.url().endsWith("/admin/content/about");
+    console.log(`EDITOR: /admin/content/about accessible ${editorAboutAllowed ? "✓" : "✗ FAIL"}`);
     await page.goto(`${BASE}/admin/bookings`);
     const editorBookingsAllowed = page.url().endsWith("/admin/bookings");
     console.log(`EDITOR: /admin/bookings accessible (read-only) ${editorBookingsAllowed ? "✓" : "✗ FAIL"}`);
@@ -477,7 +508,7 @@ async function main() {
     const page = await browser.newPage();
     await login(page, "executive.test@kkdproperty.local");
 
-    // (a) content/bookings/settings entirely blocked.
+    // (a) content/bookings/settings/about entirely blocked.
     for (const path of [
       "/admin/services",
       "/admin/packages",
@@ -486,6 +517,7 @@ async function main() {
       "/admin/channels",
       "/admin/bookings",
       "/admin/settings",
+      "/admin/content/about",
     ]) {
       await page.goto(`${BASE}${path}`);
       const blocked = page.url().endsWith("/admin");
@@ -554,14 +586,30 @@ async function main() {
   // code-level guarantee for "EDITOR delete service -> rejected".
   console.log("\n--- Direct capability-function checks (RBAC Sprint 5) ---");
   {
-    const { canDeleteContent, canPublishContent, canManageChannels, canExportReports } = await import(
-      "../src/lib/auth/index"
-    );
+    const {
+      canDeleteContent,
+      canPublishContent,
+      canManageChannels,
+      canExportReports,
+      canManageSiteSettings,
+      canManageContent,
+    } = await import("../src/lib/auth/index");
     console.log(`EDITOR canDeleteContent -> false ${!canDeleteContent("EDITOR") ? "✓" : "✗ FAIL"}`);
     console.log(`EDITOR canPublishContent -> false ${!canPublishContent("EDITOR") ? "✓" : "✗ FAIL"}`);
     console.log(`EDITOR canManageChannels -> false ${!canManageChannels("EDITOR") ? "✓" : "✗ FAIL"}`);
     console.log(`EXECUTIVE canExportReports -> false ${!canExportReports("EXECUTIVE") ? "✓" : "✗ FAIL"}`);
     console.log(`MARKETING canDeleteContent -> true ${canDeleteContent("MARKETING") ? "✓" : "✗ FAIL"}`);
+    // Sprint 5 CMS: canManageSiteSettings (ADMIN|MARKETING) — gates /admin/settings + new actions.
+    // updatePaymentSettings & updateBookingCapacitySetting keep requireRole("ADMIN") so
+    // MARKETING calling them directly would still be redirected; the UI hides those forms.
+    console.log(`MARKETING canManageSiteSettings -> true ${canManageSiteSettings("MARKETING") ? "✓" : "✗ FAIL"}`);
+    console.log(`EDITOR canManageSiteSettings -> false ${!canManageSiteSettings("EDITOR") ? "✓" : "✗ FAIL"}`);
+    console.log(`FINANCE canManageSiteSettings -> false ${!canManageSiteSettings("FINANCE") ? "✓" : "✗ FAIL"}`);
+    // canManageContent (ADMIN|SALES|MARKETING|EDITOR) — gates /admin/content/about.
+    console.log(`EDITOR canManageContent -> true ${canManageContent("EDITOR") ? "✓" : "✗ FAIL"}`);
+    console.log(`FINANCE canManageContent -> false ${!canManageContent("FINANCE") ? "✓" : "✗ FAIL"}`);
+    console.log(`CHANNEL_EXECUTIVE canManageContent -> false ${!canManageContent("CHANNEL_EXECUTIVE") ? "✓" : "✗ FAIL"}`);
+    console.log(`EXECUTIVE canManageContent -> false ${!canManageContent("EXECUTIVE") ? "✓" : "✗ FAIL"}`);
   }
 
   // --- Server-side mutation rejection (direct action import) ----------

@@ -631,6 +631,9 @@ await page.goto("http://localhost:3000/admin/settings");
 await page.waitForSelector("text=ตั้งค่าระบบ", { timeout: 10000 });
 console.log("SETTINGS: page loads ✓");
 
+// Settings now has multiple tabs — click the capacity tab explicitly so this
+// test keeps working regardless of which tab is the default for the role.
+await page.click("#st-tab-capacity");
 const maxPerDayInput = page.locator('input[name="maxPerDay"]');
 await maxPerDayInput.waitFor({ timeout: 5000 });
 const originalMaxPerDay = await maxPerDayInput.inputValue();
@@ -676,12 +679,137 @@ await page.click("#p-payment-submit");
 await page.waitForSelector("text=บันทึกข้อมูลการชำระเงินเรียบร้อย", { timeout: 10000 });
 console.log("PAYMENT SETTINGS: restored ✓");
 
+// --- CMS: Contact settings tab — edit phone, verify public footer, restore ---
+await page.goto("http://localhost:3000/admin/settings");
+await page.waitForSelector("text=ตั้งค่าระบบ", { timeout: 10000 });
+await page.click("#st-tab-contact");
+await page.locator("#c-phone").waitFor({ timeout: 5000 });
+const originalPhone = await page.locator("#c-phone").inputValue();
+const testPhone = "0811223344";
+
+await page.fill("#c-phone", testPhone);
+await page.click("#c-contact-submit");
+await page.waitForSelector("text=บันทึกข้อมูลติดต่อเรียบร้อย", { timeout: 10000 });
+console.log("SITE SETTINGS: contact phone updated ✓");
+
+const publicThFooterRes = await page.request.get("http://localhost:3000/th");
+const publicThFooterHtml = await publicThFooterRes.text();
+console.log(
+  `SITE SETTINGS: new phone visible in /th footer ${publicThFooterHtml.includes(testPhone) ? "✓" : "✗ FAIL (may be cached)"}`
+);
+
+await page.fill("#c-phone", originalPhone);
+await page.click("#c-contact-submit");
+await page.waitForSelector("text=บันทึกข้อมูลติดต่อเรียบร้อย", { timeout: 10000 });
+console.log("SITE SETTINGS: contact phone restored ✓");
+
+const siteSettingsAudit = await prisma.auditLog.findFirst({
+  where: { entityType: "SiteSettings", action: "UPDATE" },
+  orderBy: { createdAt: "desc" },
+});
+console.log(
+  `SITE SETTINGS: mutation recorded in AuditLog ${siteSettingsAudit ? "✓" : "✗ FAIL"}`
+);
+
+// --- CMS: SEO tab — edit home title, verify /th <title>, restore ---
+await page.goto("http://localhost:3000/admin/settings");
+await page.waitForSelector("text=ตั้งค่าระบบ", { timeout: 10000 });
+await page.click("#st-tab-seo");
+// All SEO page forms are kept-mounted by the TabsContent keepMounted default;
+// use the stable ID (seo-home-title-th) to avoid ambiguity across the 10 forms.
+const homeSeoTitleInput = page.locator("#seo-home-title-th");
+await homeSeoTitleInput.waitFor({ timeout: 5000 });
+const originalSeoTitle = await homeSeoTitleInput.inputValue();
+const testSeoTitle = `ทดสอบ SEO ${Date.now().toString(36)}`;
+
+await homeSeoTitleInput.fill(testSeoTitle);
+await page.click("#seo-home-submit");
+await page.waitForSelector("text=บันทึก SEO ของหน้า", { timeout: 10000 });
+console.log("PAGE SEO: home title updated ✓");
+
+const publicThSeoRes = await page.request.get("http://localhost:3000/th");
+const publicThSeoHtml = await publicThSeoRes.text();
+console.log(
+  `PAGE SEO: updated title in /th <title> ${publicThSeoHtml.includes(testSeoTitle) ? "✓" : "✗ FAIL (may be cached)"}`
+);
+
+await homeSeoTitleInput.fill(originalSeoTitle);
+await page.click("#seo-home-submit");
+await page.waitForSelector("text=บันทึก SEO ของหน้า", { timeout: 10000 });
+console.log("PAGE SEO: home title restored ✓");
+
+const pageSeoAudit = await prisma.auditLog.findFirst({
+  where: { entityType: "PageSeo", action: "UPDATE" },
+  orderBy: { createdAt: "desc" },
+});
+console.log(
+  `PAGE SEO: mutation recorded in AuditLog ${pageSeoAudit ? "✓" : "✗ FAIL"}`
+);
+
+// --- CMS: About content — edit TH title (visible tab) + EN title (activate tab), verify pages, restore ---
+await page.goto("http://localhost:3000/admin/content/about");
+await page.waitForSelector("text=เนื้อหาหน้าเกี่ยวกับเรา", { timeout: 10000 });
+
+// TH tab is active by default — fill titleTh directly.
+const aboutTitleThInput = page.locator("#ab-titleTh");
+await aboutTitleThInput.waitFor({ timeout: 5000 });
+const originalAboutTitleTh = await aboutTitleThInput.inputValue();
+const testAboutTitleTh = `ทดสอบ About TH ${Date.now().toString(36)}`;
+await aboutTitleThInput.fill(testAboutTitleTh);
+
+// Switch to EN tab to fill titleEn (keepMounted keeps it in DOM but it's hidden until tab is active).
+await page.getByRole("tab", { name: "English" }).first().click();
+const aboutTitleEnInput = page.locator("#ab-titleEn");
+await aboutTitleEnInput.waitFor({ timeout: 5000 });
+const originalAboutTitleEn = await aboutTitleEnInput.inputValue();
+const testAboutTitleEn = `E2E About EN ${Date.now().toString(36)}`;
+await aboutTitleEnInput.fill(testAboutTitleEn);
+
+await page.click("#ab-submit-top");
+await page.waitForSelector("text=บันทึกเนื้อหาหน้าเกี่ยวกับเราเรียบร้อย", { timeout: 10000 });
+console.log("ABOUT CONTENT: TH + EN titles updated ✓");
+
+const publicThAboutRes = await page.request.get("http://localhost:3000/th/about");
+const publicThAboutHtml = await publicThAboutRes.text();
+console.log(
+  `ABOUT CONTENT: updated TH title visible on /th/about ${publicThAboutHtml.includes(testAboutTitleTh) ? "✓" : "✗ FAIL"}`
+);
+
+const publicEnAboutRes = await page.request.get("http://localhost:3000/en/about");
+const publicEnAboutHtml = await publicEnAboutRes.text();
+console.log(
+  `ABOUT CONTENT: updated EN title visible on /en/about ${publicEnAboutHtml.includes(testAboutTitleEn) ? "✓" : "✗ FAIL"}`
+);
+
+// Restore: switch back to TH tab first, fill TH, then EN
+await page.goto("http://localhost:3000/admin/content/about");
+await page.waitForSelector("text=เนื้อหาหน้าเกี่ยวกับเรา", { timeout: 10000 });
+await page.locator("#ab-titleTh").waitFor({ timeout: 5000 });
+await page.locator("#ab-titleTh").fill(originalAboutTitleTh);
+await page.getByRole("tab", { name: "English" }).first().click();
+await page.locator("#ab-titleEn").waitFor({ timeout: 5000 });
+await page.locator("#ab-titleEn").fill(originalAboutTitleEn);
+await page.click("#ab-submit-top");
+await page.waitForSelector("text=บันทึกเนื้อหาหน้าเกี่ยวกับเราเรียบร้อย", { timeout: 10000 });
+console.log("ABOUT CONTENT: titles restored ✓");
+
+const aboutAudit = await prisma.auditLog.findFirst({
+  where: { entityType: "AboutContent", action: "UPDATE" },
+  orderBy: { createdAt: "desc" },
+});
+console.log(
+  `ABOUT CONTENT: mutation recorded in AuditLog ${aboutAudit ? "✓" : "✗ FAIL"}`
+);
+
 // --- Audit: entries with diff ---
 await page.goto("http://localhost:3000/admin/audit");
 await page.waitForSelector("text=ประวัติการแก้ไข", { timeout: 10000 });
 await page.waitForSelector("text=แก้ไข", { timeout: 5000 });
-// Expand the first UPDATE row and look for the diff table
-const updateRow = page.locator("tr", { hasText: "บริการ" }).first();
+// Expand the first visible UPDATE row — use the first tr containing the "แก้ไข" badge.
+// (Previous tests wrote SiteSettings/PageSeo/AboutContent rows which are now at the top,
+// so we don't rely on "บริการ" appearing on the first page anymore.)
+const updateRow = page.locator("tr").filter({ hasText: "แก้ไข" }).first();
+await updateRow.waitFor({ timeout: 10000 });
 await updateRow.click();
 await page.waitForSelector("text=ฟิลด์", { timeout: 5000 });
 console.log("AUDIT: diff table expands ✓");

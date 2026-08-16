@@ -24,15 +24,19 @@ function assert(label: string, ok: boolean, detail = "") {
 // Mirrors the AuditEntityType union — kept as a value here so the check can
 // run at runtime; the `satisfies` ties it back to the type.
 const KNOWN_ENTITY_TYPES = [
+  "AboutContent",
   "AdminUser",
   "BookingCapacitySetting",
   "ChannelExecutive",
   "Lead",
   "Package",
+  "PageSeo",
   "PaymentSettings",
   "PortfolioProject",
   "PromoChannel",
+  "PromoLandingPath",
   "Service",
+  "SiteSettings",
   "SurveyBooking",
   "Testimonial",
 ] as const satisfies readonly AuditEntityType[];
@@ -100,17 +104,16 @@ for (const key of SECRET_KEYS) {
 
 console.log("\n=== AdminUser snapshots keep the declared projection ===");
 const userSnapshots = logs.filter((l) => l.entityType === "AdminUser" && l.after != null);
-const EXPECTED_USER_FIELDS = [
-  "id",
-  "email",
-  "name",
-  "role",
-  "isActive",
-  "linkedChannelExecutiveId",
-];
+// Accept both legacy projection (no phone) and current projection (with phone).
+const EXPECTED_USER_FIELDS_V1 = ["email", "id", "isActive", "linkedChannelExecutiveId", "name", "role"];
+const EXPECTED_USER_FIELDS_V2 = ["email", "id", "isActive", "linkedChannelExecutiveId", "name", "phone", "role"];
+const BANNED_USER_FIELDS = ["passwordHash", "password", "sessionToken"];
 const wrongShape = userSnapshots.filter((l) => {
   const keys = Object.keys(l.after as Record<string, unknown>).sort();
-  return JSON.stringify(keys) !== JSON.stringify([...EXPECTED_USER_FIELDS].sort());
+  const hasBanned = keys.some((k) => BANNED_USER_FIELDS.includes(k));
+  const matchesV1 = JSON.stringify(keys) === JSON.stringify(EXPECTED_USER_FIELDS_V1);
+  const matchesV2 = JSON.stringify(keys) === JSON.stringify(EXPECTED_USER_FIELDS_V2);
+  return hasBanned || (!matchesV1 && !matchesV2);
 });
 assert(
   "AdminUser after-snapshots contain exactly the projected fields",
