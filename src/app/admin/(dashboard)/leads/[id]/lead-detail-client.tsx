@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Receipt } from "lucide-react";
+import { ArrowLeft, Receipt, Share2, UserCog } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -116,8 +116,16 @@ export function LeadDetailClient({
     ? PAYMENT_STATUS_META[lead.booking.paymentStatus]
     : null;
 
+  const hasUtm =
+    lead.utmSource ||
+    lead.utmMedium ||
+    lead.utmCampaign ||
+    lead.utmContent ||
+    lead.utmTerm ||
+    lead.landingPath;
+
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
+    <div className="mx-auto max-w-6xl space-y-5">
       <div className="flex items-center gap-3">
         <Link href="/admin/leads">
           <Button variant="ghost" className="p-2" aria-label="กลับ">
@@ -145,319 +153,339 @@ export function LeadDetailClient({
         )}
       </div>
 
-      <div className="rounded-xl border border-border/70 bg-card p-6">
-        <h2 className="mb-4 font-semibold">
-          {lead.type === "SURVEY" ? "นัดสำรวจหน้างาน 199฿" : "ขอใบเสนอราคา"}
-          <span className="ml-2 text-xs font-normal text-muted-foreground">
-            {new Date(lead.createdAt).toLocaleString("th-TH")} · ภาษา{" "}
-            {lead.locale === "en" ? "EN" : "TH"}
-          </span>
-        </h2>
-        <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="text-muted-foreground">เบอร์โทร</dt>
-            <dd className="font-medium">
-              <a href={`tel:${lead.phone}`} className="text-primary hover:underline">
-                {lead.phone}
-              </a>
-            </dd>
-          </div>
-          {lead.lineId && (
-            <div>
-              <dt className="text-muted-foreground">LINE ID</dt>
-              <dd className="font-medium">{lead.lineId}</dd>
-            </div>
-          )}
-          {lead.referrerName && (
-            <div>
-              <dt className="text-muted-foreground">ผู้แนะนำ</dt>
-              <dd className="font-medium">{lead.referrerName}</dd>
-            </div>
-          )}
-          <div>
-            <dt className="text-muted-foreground">จังหวัด</dt>
-            <dd className="font-medium">{lead.province}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">ประเภทอาคาร</dt>
-            <dd className="font-medium">
-              {BUILDING_TYPE_LABELS[lead.buildingType] ?? lead.buildingType}
-              {lead.buildingType === "OTHER" && lead.buildingTypeOtherText
-                ? ` (${lead.buildingTypeOtherText})`
-                : ""}
-            </dd>
-          </div>
-          {lead.interestedSystems && lead.interestedSystems.length > 0 && (
-            <div>
-              <dt className="text-muted-foreground">ระบบที่สนใจ</dt>
-              <dd className="flex flex-wrap gap-1.5">
-                {lead.interestedSystems.map((s) => (
-                  <Badge key={s} variant="secondary">
-                    {INTERESTED_SYSTEM_LABELS[s] ?? s}
-                  </Badge>
-                ))}
-              </dd>
-            </div>
-          )}
-          {lead.avgMonthlyBill != null && (
-            <div>
-              <dt className="text-muted-foreground">ค่าไฟเฉลี่ย</dt>
-              <dd className="font-medium">
-                {lead.avgMonthlyBill.toLocaleString()} บาท/เดือน
-              </dd>
-            </div>
-          )}
-          {lead.interestedPackageSlug && (
-            <div>
-              <dt className="text-muted-foreground">แพ็กเกจที่สนใจ (จากลิงก์)</dt>
-              <dd className="font-medium">{lead.interestedPackageSlug}</dd>
-            </div>
-          )}
-          {lead.interestedServiceSlug && (
-            <div>
-              <dt className="text-muted-foreground">บริการที่สนใจ (จากลิงก์)</dt>
-              <dd className="font-medium">{lead.interestedServiceSlug}</dd>
-            </div>
-          )}
-          <div>
-            <dt className="text-muted-foreground">เซลส์ที่รับผิดชอบ</dt>
-            <dd>
-              {canAssignSales ? (
-                <select
-                  id="lead-sales"
-                  className={selectCls}
-                  value={lead.assignedSalesId ?? ""}
-                  disabled={isPending}
-                  onChange={(e) =>
-                    run(
-                      () => assignLeadSales(lead.id, e.target.value),
-                      "มอบหมายเซลส์แล้ว"
-                    )
-                  }
-                >
-                  <option value="">ไม่ระบุ</option>
-                  {salesUsers.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <span className="font-medium">
-                  {lead.assignedSalesName ?? "ยังไม่มอบหมาย"}
-                </span>
+      {/* Design B: left column is read-only reference info (who the
+          customer is, what they're interested in); right column is
+          everything actionable/operational (sales work + attribution),
+          kept sticky so it stays in view while scrolling the reference
+          column. On mobile the actionable column surfaces first via
+          order-* so it isn't buried below reference-only content. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+        <div className="order-2 flex flex-col gap-6 lg:order-1">
+          <div className="rounded-xl border border-border/70 bg-card p-6">
+            <h2 className="mb-4 font-semibold">
+              ข้อมูลลูกค้า
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                {lead.type === "SURVEY" ? "นัดสำรวจหน้างาน 199฿" : "ขอใบเสนอราคา"} ·{" "}
+                {new Date(lead.createdAt).toLocaleString("th-TH")} · ภาษา{" "}
+                {lead.locale === "en" ? "EN" : "TH"}
+              </span>
+            </h2>
+            <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-muted-foreground">เบอร์โทร</dt>
+                <dd className="font-medium">
+                  <a href={`tel:${lead.phone}`} className="text-primary hover:underline">
+                    {lead.phone}
+                  </a>
+                </dd>
+              </div>
+              {lead.lineId && (
+                <div>
+                  <dt className="text-muted-foreground">LINE ID</dt>
+                  <dd className="font-medium">{lead.lineId}</dd>
+                </div>
               )}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">ติดตามล่าสุด</dt>
-            <dd className="font-medium">
-              {lead.lastFollowUpAt
-                ? new Date(lead.lastFollowUpAt).toLocaleString("th-TH")
-                : "ยังไม่เคยติดตาม"}
-            </dd>
-          </div>
-        </dl>
-      </div>
-
-      {/* Attribution lives in its own card: the manual dropdown ("how did you
-          hear about us", what the customer said) and the automatic ?ref=
-          tracking are two different answers to the same question, and reading
-          them side by side is the only way to spot a mismatch. */}
-      <div className="rounded-xl border border-border/70 bg-card p-6">
-        <h2 className="mb-4 font-semibold">ที่มาของลูกค้า</h2>
-        <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="text-muted-foreground">ช่องทางที่รู้จักเรา</dt>
-            <dd>
-              {canEditChannel ? (
-                <select
-                  className={selectCls}
-                  value={lead.sourceChannelId ?? ""}
-                  disabled={isPending}
-                  onChange={(e) =>
-                    run(
-                      () => updateLeadSourceChannel(lead.id, e.target.value),
-                      "อัปเดตช่องทางแล้ว"
-                    )
-                  }
-                >
-                  <option value="">ไม่ระบุ</option>
-                  {channels.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nameTh}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <span className="font-medium">
-                  {channels.find((c) => c.id === lead.sourceChannelId)?.nameTh ?? "ไม่ระบุ"}
-                </span>
+              {lead.referrerName && (
+                <div>
+                  <dt className="text-muted-foreground">ผู้แนะนำ</dt>
+                  <dd className="font-medium">{lead.referrerName}</dd>
+                </div>
               )}
-            </dd>
+              <div>
+                <dt className="text-muted-foreground">จังหวัด</dt>
+                <dd className="font-medium">{lead.province}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">ประเภทอาคาร</dt>
+                <dd className="font-medium">
+                  {BUILDING_TYPE_LABELS[lead.buildingType] ?? lead.buildingType}
+                  {lead.buildingType === "OTHER" && lead.buildingTypeOtherText
+                    ? ` (${lead.buildingTypeOtherText})`
+                    : ""}
+                </dd>
+              </div>
+              {lead.interestedSystems && lead.interestedSystems.length > 0 && (
+                <div>
+                  <dt className="text-muted-foreground">ระบบที่สนใจ</dt>
+                  <dd className="flex flex-wrap gap-1.5">
+                    {lead.interestedSystems.map((s) => (
+                      <Badge key={s} variant="secondary">
+                        {INTERESTED_SYSTEM_LABELS[s] ?? s}
+                      </Badge>
+                    ))}
+                  </dd>
+                </div>
+              )}
+              {lead.avgMonthlyBill != null && (
+                <div>
+                  <dt className="text-muted-foreground">ค่าไฟเฉลี่ย</dt>
+                  <dd className="font-medium">
+                    {lead.avgMonthlyBill.toLocaleString()} บาท/เดือน
+                  </dd>
+                </div>
+              )}
+              {lead.interestedPackageSlug && (
+                <div>
+                  <dt className="text-muted-foreground">แพ็กเกจที่สนใจ (จากลิงก์)</dt>
+                  <dd className="font-medium">{lead.interestedPackageSlug}</dd>
+                </div>
+              )}
+              {lead.interestedServiceSlug && (
+                <div>
+                  <dt className="text-muted-foreground">บริการที่สนใจ (จากลิงก์)</dt>
+                  <dd className="font-medium">{lead.interestedServiceSlug}</dd>
+                </div>
+              )}
+            </dl>
           </div>
-          <div>
-            <dt className="text-muted-foreground">
-              ช่องทางอัตโนมัติ (จากลิงก์โปรโมท)
-            </dt>
-            <dd className="font-medium">
-              {formatAutoSource(lead.autoSourceRefCode, lead.autoSourceName)}
-            </dd>
-          </div>
-        </dl>
-      </div>
 
-      {lead.booking && payment && (
-        <div className="rounded-xl border border-border/70 bg-card p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-semibold">ข้อมูลการนัดสำรวจ</h2>
-            <Badge variant={payment.variant}>{payment.label}</Badge>
-          </div>
-          <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <dt className="text-muted-foreground">ที่อยู่</dt>
-              <dd className="font-medium">{lead.booking.address}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">วันนัด</dt>
-              <dd className="font-medium">
-                {new Date(lead.booking.preferredDate).toLocaleDateString("th-TH", {
-                  dateStyle: "long",
-                })}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">ช่วงเวลา</dt>
-              <dd className="font-medium">
-                {TIME_SLOT_RANGE_LABELS[lead.booking.timeSlot] ?? lead.booking.timeSlot}
-              </dd>
-            </div>
-          </dl>
+          {lead.booking && payment && (
+            <div className="rounded-xl border border-border/70 bg-card p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="font-semibold">ข้อมูลการนัดสำรวจ</h2>
+                <Badge variant={payment.variant}>{payment.label}</Badge>
+              </div>
+              <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <dt className="text-muted-foreground">ที่อยู่</dt>
+                  <dd className="font-medium">{lead.booking.address}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">วันนัด</dt>
+                  <dd className="font-medium">
+                    {new Date(lead.booking.preferredDate).toLocaleDateString("th-TH", {
+                      dateStyle: "long",
+                    })}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">ช่วงเวลา</dt>
+                  <dd className="font-medium">
+                    {TIME_SLOT_RANGE_LABELS[lead.booking.timeSlot] ?? lead.booking.timeSlot}
+                  </dd>
+                </div>
+              </dl>
 
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <Dialog>
-              <DialogTrigger
-                render={
-                  <Button variant="outline">
-                    <Receipt className="size-4" /> ดูสลิปโอนเงิน ({lead.booking.amountThb}฿)
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <Dialog>
+                  <DialogTrigger
+                    render={
+                      <Button variant="outline">
+                        <Receipt className="size-4" /> ดูสลิปโอนเงิน ({lead.booking.amountThb}
+                        ฿)
+                      </Button>
+                    }
+                  />
+                  <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                      <DialogTitle>สลิปโอนเงิน {lead.booking.amountThb} บาท</DialogTitle>
+                    </DialogHeader>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`/files/${lead.booking.paymentSlipKey}`}
+                      alt="สลิปโอนเงิน"
+                      className="max-h-[70vh] w-full rounded-lg object-contain"
+                    />
+                  </DialogContent>
+                </Dialog>
+
+                {canMutate && lead.booking.paymentStatus === "PENDING_REVIEW" && (
+                  <>
+                    <Button
+                      disabled={isPending}
+                      onClick={() =>
+                        run(
+                          () => updatePaymentStatus(lead.booking!.id, "VERIFIED"),
+                          "ยืนยันสลิปแล้ว"
+                        )
+                      }
+                    >
+                      ยืนยันการชำระเงิน
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      disabled={isPending}
+                      onClick={() =>
+                        run(
+                          () => updatePaymentStatus(lead.booking!.id, "REJECTED"),
+                          "ปฏิเสธสลิปแล้ว"
+                        )
+                      }
+                    >
+                      ปฏิเสธ
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {lead.customerMessage && (
+            <div className="rounded-xl border border-border/70 bg-card p-6">
+              <h2 className="mb-3 font-semibold">ข้อความจากลูกค้า</h2>
+              <p className="text-sm whitespace-pre-wrap">{lead.customerMessage}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="order-1 flex flex-col gap-6 lg:order-2 lg:sticky lg:top-6 lg:self-start">
+          <div className="rounded-xl border border-border/70 bg-card p-6">
+            <h2 className="mb-4 flex items-center gap-2 font-semibold text-admin-sales">
+              <UserCog className="size-4" aria-hidden="true" />
+              งานขาย
+            </h2>
+            <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-muted-foreground">เซลส์ที่รับผิดชอบ</dt>
+                <dd>
+                  {canAssignSales ? (
+                    <select
+                      id="lead-sales"
+                      className={selectCls}
+                      value={lead.assignedSalesId ?? ""}
+                      disabled={isPending}
+                      onChange={(e) =>
+                        run(
+                          () => assignLeadSales(lead.id, e.target.value),
+                          "มอบหมายเซลส์แล้ว"
+                        )
+                      }
+                    >
+                      <option value="">ไม่ระบุ</option>
+                      {salesUsers.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="font-medium">
+                      {lead.assignedSalesName ?? "ยังไม่มอบหมาย"}
+                    </span>
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">ติดตามล่าสุด</dt>
+                <dd className="font-medium">
+                  {lead.lastFollowUpAt
+                    ? new Date(lead.lastFollowUpAt).toLocaleString("th-TH")
+                    : "ยังไม่เคยติดตาม"}
+                </dd>
+              </div>
+            </dl>
+
+            <div className="mt-5 border-t border-border/70 pt-5">
+              <h3 className="mb-3 text-sm font-semibold">บันทึกภายใน</h3>
+              {canMutate ? (
+                <>
+                  <Textarea
+                    rows={4}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="บันทึกการติดต่อ ข้อตกลง หรือรายละเอียดเพิ่มเติม..."
+                  />
+                  <Button
+                    className="mt-3"
+                    disabled={isPending || notes === (lead.internalNotes ?? "")}
+                    onClick={() => run(() => updateLeadNotes(lead.id, notes), "บันทึกแล้ว")}
+                  >
+                    บันทึก
                   </Button>
-                }
-              />
-              <DialogContent className="max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>สลิปโอนเงิน {lead.booking.amountThb} บาท</DialogTitle>
-                </DialogHeader>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`/files/${lead.booking.paymentSlipKey}`}
-                  alt="สลิปโอนเงิน"
-                  className="max-h-[70vh] w-full rounded-lg object-contain"
-                />
-              </DialogContent>
-            </Dialog>
+                </>
+              ) : (
+                <p className="text-sm whitespace-pre-wrap text-muted-foreground">
+                  {lead.internalNotes || "ยังไม่มีบันทึก"}
+                </p>
+              )}
+            </div>
+          </div>
 
-            {canMutate && lead.booking.paymentStatus === "PENDING_REVIEW" && (
-              <>
-                <Button
-                  disabled={isPending}
-                  onClick={() =>
-                    run(
-                      () => updatePaymentStatus(lead.booking!.id, "VERIFIED"),
-                      "ยืนยันสลิปแล้ว"
-                    )
-                  }
-                >
-                  ยืนยันการชำระเงิน
-                </Button>
-                <Button
-                  variant="destructive"
-                  disabled={isPending}
-                  onClick={() =>
-                    run(
-                      () => updatePaymentStatus(lead.booking!.id, "REJECTED"),
-                      "ปฏิเสธสลิปแล้ว"
-                    )
-                  }
-                >
-                  ปฏิเสธ
-                </Button>
-              </>
+          {/* Attribution + UTM sit adjacent on purpose: the manual dropdown
+              ("what the customer told us") and the automatic ?ref= click
+              tracking are two different answers to the same "where did this
+              lead come from" question, and UTM campaign data is the same
+              question from a third angle — reading all three together is
+              the only way to spot a mismatch. */}
+          <div className="rounded-xl border border-border/70 bg-card p-6">
+            <h2 className="mb-4 flex items-center gap-2 font-semibold text-admin-source">
+              <Share2 className="size-4" aria-hidden="true" />
+              ที่มาของลูกค้า
+            </h2>
+            <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-muted-foreground">ช่องทางที่ลูกค้าบอกเอง</dt>
+                <dd>
+                  {canEditChannel ? (
+                    <select
+                      className={selectCls}
+                      value={lead.sourceChannelId ?? ""}
+                      disabled={isPending}
+                      onChange={(e) =>
+                        run(
+                          () => updateLeadSourceChannel(lead.id, e.target.value),
+                          "อัปเดตช่องทางแล้ว"
+                        )
+                      }
+                    >
+                      <option value="">ไม่ระบุ</option>
+                      {channels.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nameTh}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="font-medium">
+                      {channels.find((c) => c.id === lead.sourceChannelId)?.nameTh ??
+                        "ไม่ระบุ"}
+                    </span>
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">ลิงก์โปรโมทที่คลิกจริง</dt>
+                <dd className="font-medium">
+                  {formatAutoSource(lead.autoSourceRefCode, lead.autoSourceName)}
+                </dd>
+              </div>
+            </dl>
+
+            {hasUtm && (
+              <dl className="mt-5 grid gap-x-8 gap-y-3 border-t border-border/70 pt-5 text-sm sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <dt className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                    ข้อมูลแคมเปญ (UTM)
+                  </dt>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">UTM Source</dt>
+                  <dd className="font-medium">{lead.utmSource ?? "-"}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">UTM Medium</dt>
+                  <dd className="font-medium">{lead.utmMedium ?? "-"}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">UTM Campaign</dt>
+                  <dd className="font-medium">{lead.utmCampaign ?? "-"}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">UTM Content</dt>
+                  <dd className="font-medium">{lead.utmContent ?? "-"}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">UTM Term</dt>
+                  <dd className="font-medium">{lead.utmTerm ?? "-"}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Landing Path</dt>
+                  <dd className="font-medium">{lead.landingPath ?? "-"}</dd>
+                </div>
+              </dl>
             )}
           </div>
         </div>
-      )}
-
-      {lead.customerMessage && (
-        <div className="rounded-xl border border-border/70 bg-card p-6">
-          <h2 className="mb-3 font-semibold">ข้อความจากลูกค้า</h2>
-          <p className="text-sm whitespace-pre-wrap">{lead.customerMessage}</p>
-        </div>
-      )}
-
-      {/* Marketing metadata, not something sales reads while working a lead —
-          kept below internal notes so the fields that matter for follow-up
-          (address, message, notes) don't require scrolling past a section
-          nobody but marketing checks. */}
-      {(lead.utmSource ||
-        lead.utmMedium ||
-        lead.utmCampaign ||
-        lead.utmContent ||
-        lead.utmTerm ||
-        lead.landingPath) && (
-        <div className="rounded-xl border border-border/70 bg-card p-6">
-          <h2 className="mb-4 font-semibold">ข้อมูลแคมเปญ (UTM)</h2>
-          <dl className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
-            <div>
-              <dt className="text-muted-foreground">UTM Source</dt>
-              <dd className="font-medium">{lead.utmSource ?? "-"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">UTM Medium</dt>
-              <dd className="font-medium">{lead.utmMedium ?? "-"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">UTM Campaign</dt>
-              <dd className="font-medium">{lead.utmCampaign ?? "-"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">UTM Content</dt>
-              <dd className="font-medium">{lead.utmContent ?? "-"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">UTM Term</dt>
-              <dd className="font-medium">{lead.utmTerm ?? "-"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Landing Path</dt>
-              <dd className="font-medium">{lead.landingPath ?? "-"}</dd>
-            </div>
-          </dl>
-        </div>
-      )}
-
-      <div className="rounded-xl border border-border/70 bg-card p-6">
-        <h2 className="mb-3 font-semibold">บันทึกภายใน</h2>
-        {canMutate ? (
-          <>
-            <Textarea
-              rows={4}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="บันทึกการติดต่อ ข้อตกลง หรือรายละเอียดเพิ่มเติม..."
-            />
-            <Button
-              className="mt-3"
-              disabled={isPending || notes === (lead.internalNotes ?? "")}
-              onClick={() => run(() => updateLeadNotes(lead.id, notes), "บันทึกแล้ว")}
-            >
-              บันทึก
-            </Button>
-          </>
-        ) : (
-          <p className="text-sm whitespace-pre-wrap text-muted-foreground">
-            {lead.internalNotes || "ยังไม่มีบันทึก"}
-          </p>
-        )}
       </div>
     </div>
   );

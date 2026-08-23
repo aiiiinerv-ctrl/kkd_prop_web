@@ -52,6 +52,8 @@
   --color-brand-gold: var(--brand-gold);
   --color-brand-orange-cta: var(--brand-orange-cta);
   --color-brand-orange-cta-dark: var(--brand-orange-cta-dark);
+  --color-admin-sales: var(--admin-sales);
+  --color-admin-source: var(--admin-source);
   --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.06);
   --shadow-md: 0 4px 16px hsl(var(--shadow-color) / 0.08), 0 1px 3px hsl(var(--shadow-color) / 0.06);
   --shadow-lg: 0 12px 32px hsl(var(--shadow-color) / 0.12), 0 2px 6px hsl(var(--shadow-color) / 0.06);
@@ -88,6 +90,11 @@
   --brand-gold: #f0b429;
   --brand-orange-cta: #d99a1b;
   --brand-orange-cta-dark: #b57f0e;
+  /* Admin lead-detail page (Design B): secondary visual aids distinguishing
+     the "sales work" card group from the "attribution/source" card group.
+     Headings/icons carry the meaning; these colors are accents only. */
+  --admin-sales: #0f7b4f;
+  --admin-source: #5b3fa8;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
