@@ -63,10 +63,10 @@ import {
   BACKUP_MODELS,
   SCHEMA_METADATA_FILENAME,
   SNAPSHOT_DIR_PATTERN,
-  operationalErrorCode,
   sqlLiteral,
 } from "./lib/backup-format.mjs";
 import { buildSnapshotMetadata, inspectSchema, sha256 } from "./lib/schema-metadata.mjs";
+import { operationalErrorCode } from "./lib/operational-output.mjs";
 
 function fail(message: string): never {
   console.error(`✗ backup-db: ${message}`);

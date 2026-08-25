@@ -219,7 +219,7 @@ async function main() {
       { DATABASE_URL: targetUrl.toString(), STORAGE_ROOT: storageRoot!, BACKUP_ROOT: backupRoot! },
       1
     );
-    if (!schemaMismatchOutput.includes("restore target column mismatch")) {
+    if (!schemaMismatchOutput.includes("RESTORE_COLUMN_MISMATCH")) {
       throw new Error("restore did not reject a mismatched target schema");
     }
     await connection.query("ALTER TABLE `AdminUser` DROP COLUMN `rehearsalUnexpectedColumn`");

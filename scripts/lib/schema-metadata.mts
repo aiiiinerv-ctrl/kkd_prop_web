@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { APPLICATION_TABLES, FOREIGN_KEY_CONTRACTS, INFRASTRUCTURE_TABLES, quoteIdentifier } from "./storage-engine-contract.mjs";
 import { SCHEMA_METADATA_VERSION, type SnapshotForeignKeyMetadata, type SnapshotSchemaMetadata } from "./backup-format.mjs";
+import { OperationalError } from "./operational-output.mjs";
 
 export type SchemaRow = Record<string, unknown>;
 type SqlClient = { $queryRawUnsafe(query: string): Promise<unknown> };
@@ -115,7 +116,7 @@ export async function assertTransactionalRestoreTarget(client: SqlClient, snapsh
   if (nonTransactional.length) throw new Error(`restore target is not fully transactional: ${nonTransactional.map((table) => table.table).join(",")}`);
   for (const snapshotTable of snapshot.tables) {
     const targetTable = target.tables.find((table) => table.table === snapshotTable.table)!;
-    if (targetTable.columnHash !== snapshotTable.columnHash) throw new Error(`restore target column mismatch: ${snapshotTable.table}`);
+    if (targetTable.columnHash !== snapshotTable.columnHash) throw new OperationalError("RESTORE_COLUMN_MISMATCH");
     if (snapshotTable.indexes.some((index) => !targetTable.indexes.includes(index))) throw new Error(`restore target is missing a source index: ${snapshotTable.table}`);
   }
   if (JSON.stringify(target.foreignKeys) !== JSON.stringify(expectedForeignKeys())) throw new Error("restore target does not have the exact eleven foreign-key definitions");

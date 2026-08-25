@@ -34,7 +34,6 @@ import { PrismaClient } from "../src/generated/prisma/client.js";
 import {
   SCHEMA_METADATA_FILENAME,
   SNAPSHOT_DIR_PATTERN,
-  operationalErrorCode,
 } from "./lib/backup-format.mjs";
 import {
   assertTransactionalRestoreTarget,
@@ -42,6 +41,7 @@ import {
   sha256,
   validateDumpStatements,
 } from "./lib/schema-metadata.mjs";
+import { operationalErrorCode } from "./lib/operational-output.mjs";
 
 function fail(message: string): never {
   console.error(`✗ restore-db: ${message}`);
@@ -151,7 +151,7 @@ async function main() {
     await assertTransactionalRestoreTarget(prisma, metadata);
   } catch (err) {
     await prisma.$disconnect();
-    fail(`restore preflight failed: ${(err as Error).message}`);
+    fail(`restore preflight failed (${operationalErrorCode(err)})`);
   }
   try {
     // One interactive transaction so that SET FOREIGN_KEY_CHECKS=0 and the
@@ -189,6 +189,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(err);
+  console.error(`✗ restore-db: failed (${operationalErrorCode(err)})`);
   process.exitCode = 1;
 });
