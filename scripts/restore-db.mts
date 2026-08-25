@@ -44,6 +44,14 @@ function fail(message: string): never {
   process.exit(1);
 }
 
+function errorCode(error: unknown): string {
+  if (typeof error === "object" && error !== null && "code" in error) {
+    const code = String((error as { code: unknown }).code);
+    if (/^[A-Z0-9_]+$/.test(code)) return code;
+  }
+  return error instanceof Error ? error.name : "UnknownError";
+}
+
 const args = process.argv.slice(2);
 const confirm = args.includes("--confirm");
 const withStorage = args.includes("--with-storage");
@@ -63,7 +71,7 @@ if (!databaseUrl.startsWith("mysql://")) {
 /** Newest snapshot directory under BACKUP_ROOT — names are ISO timestamps, so lexical sort is chronological. */
 function latestSnapshot(): string {
   if (!existsSync(backupRoot)) {
-    fail(`no backup root at ${backupRoot} — run scripts/backup-db.mts first`);
+    fail("configured backup root does not exist — run scripts/backup-db.mts first");
   }
   // Hand-made backup directories live here too and would otherwise sort
   // above the timestamps ("pre-..." > "2026-..."), so match the pattern.
@@ -71,7 +79,7 @@ function latestSnapshot(): string {
     .filter((e) => e.isDirectory() && SNAPSHOT_DIR_PATTERN.test(e.name))
     .map((e) => e.name)
     .sort();
-  if (dirs.length === 0) fail(`no snapshots found under ${backupRoot}`);
+  if (dirs.length === 0) fail("no timestamped snapshots found under configured backup root");
   return path.join(backupRoot, dirs[dirs.length - 1]);
 }
 
@@ -164,7 +172,7 @@ async function main() {
     );
     console.log(`✓ restore-db: applied ${statements.length} statement(s) to the database`);
   } catch (err) {
-    fail(`database restore failed (transaction rolled back): ${(err as Error).message}`);
+    fail(`database restore failed; transaction rolled back (${errorCode(err)})`);
   } finally {
     await prisma.$disconnect();
   }
@@ -176,9 +184,9 @@ async function main() {
       try {
         rmSync(livePrivatePath, { recursive: true, force: true });
         cpSync(snapshotPrivatePath, livePrivatePath, { recursive: true });
-        console.log(`✓ restore-db: storage/private restored to ${livePrivatePath}`);
+        console.log("✓ restore-db: configured storage/private restored");
       } catch (err) {
-        fail(`failed to restore storage/private: ${(err as Error).message}`);
+        fail(`failed to restore storage/private (${errorCode(err)})`);
       }
     }
   }

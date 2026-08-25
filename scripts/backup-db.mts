@@ -72,6 +72,14 @@ function fail(message: string): never {
   process.exit(1);
 }
 
+function errorCode(error: unknown): string {
+  if (typeof error === "object" && error !== null && "code" in error) {
+    const code = String((error as { code: unknown }).code);
+    if (/^[A-Z0-9_]+$/.test(code)) return code;
+  }
+  return error instanceof Error ? error.name : "UnknownError";
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   const units = ["KB", "MB", "GB"];
@@ -198,7 +206,7 @@ async function main() {
   try {
     writeFileSync(dbDestPath, sql, "utf8");
   } catch (err) {
-    fail(`failed to write SQL dump: ${(err as Error).message}`);
+    fail(`failed to write SQL dump (${errorCode(err)})`);
   }
 
   const metadata = buildSnapshotMetadata(inspected, {
@@ -210,7 +218,7 @@ async function main() {
   try {
     writeFileSync(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`, "utf8");
   } catch (err) {
-    fail(`failed to write schema metadata: ${(err as Error).message}`);
+    fail(`failed to write schema metadata (${errorCode(err)})`);
   }
 
   // 2. Copy storage/private (if present).
@@ -220,7 +228,7 @@ async function main() {
     try {
       cpSync(privateStoragePath, privateDestPath, { recursive: true });
     } catch (err) {
-      fail(`failed to copy storage/private: ${(err as Error).message}`);
+      fail(`failed to copy storage/private (${errorCode(err)})`);
     }
   }
 
@@ -277,7 +285,7 @@ async function main() {
 
 main()
   .catch((err) => {
-    console.error(err);
+    console.error(`✗ backup-db: failed (${errorCode(err)})`);
     process.exitCode = 1;
   })
   .finally(async () => {
