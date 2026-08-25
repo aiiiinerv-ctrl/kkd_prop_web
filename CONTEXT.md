@@ -35,6 +35,22 @@ State of a Survey Booking's uploaded payment slip as staff review it: `PENDING_R
 
 ### Content
 
+**Page Content**:
+Localized presentation content owned by one public page, such as its hero, section headings, calls to action, and section visibility. It may select reusable Content Items but never owns copies of them.
+_Avoid_: Page copy, page settings
+
+**Shared Site Content**:
+Localized presentation content intentionally reused unchanged across multiple public pages, such as the global call-to-action banner, header, footer, and contact details. It has one site-wide owner; individual Page Content may control only whether a shared section is shown.
+_Avoid_: Global page content, copied shared content
+
+**Content Item**:
+A reusable business record that can appear on one or more public pages, such as a Service, Package, or Portfolio Project. Its business details have one owner regardless of where the item is displayed.
+_Avoid_: Page item, section item
+
+**Featured Reference**:
+An ordered selection from Page Content to an existing Content Item. It controls where an item is featured without copying or overriding the item's business details.
+_Avoid_: Featured copy, duplicated item
+
 **Service**:
 A published offering shown on the public site (e.g. installation, maintenance), distinguished by `kind` (`SYSTEM` vs `MAINTENANCE`).
 
