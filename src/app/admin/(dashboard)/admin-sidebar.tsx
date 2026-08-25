@@ -2,9 +2,12 @@
 
 import {
   CalendarCheck,
+  ChevronDown,
+  ChevronRight,
   ClipboardList,
   FileBarChart,
   FileText,
+  FolderOpen,
   Home,
   Images,
   LayoutDashboard,
@@ -17,7 +20,7 @@ import {
   Wrench,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { cn } from "@/lib/utils";
 import { ROLES } from "@/lib/enums";
@@ -111,6 +114,10 @@ const ITEMS = [
 
 export function AdminSidebar({ role }: { role: Role }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const isPagesPrototype = pathname.startsWith("/admin/pages-prototype");
+  const prototypeVariant = searchParams.get("variant")?.toUpperCase() ?? "A";
+  const prototypePage = searchParams.get("page") ?? "home";
   // Only ADMIN/SALES/FINANCE get the leads detail view (CHANNEL_EXECUTIVE is
   // scoped to the read-only aggregate list, and MARKETING/EDITOR/EXECUTIVE
   // are read-only across leads entirely — see
@@ -126,7 +133,44 @@ export function AdminSidebar({ role }: { role: Role }) {
         <BrandLogo />
       </div>
       <nav className="flex-1 space-y-0.5 p-3">
-        {ITEMS.filter((i) => i.roles.includes(role)).map((item) => {
+        {isPagesPrototype && (
+          <div className="mb-1">
+            <Link
+              href={`/admin/pages-prototype?variant=${prototypeVariant}&page=${prototypePage}`}
+              className="flex items-center gap-2.5 rounded-lg border-l-[3px] border-brand-orange bg-primary/8 px-3 py-2.5 text-sm font-medium text-primary"
+            >
+              <FolderOpen className="size-4" />
+              <span className="flex-1">Pages</span>
+              {prototypeVariant === "A" ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+            </Link>
+            {prototypeVariant === "A" && (
+              <div className="ml-5 mt-1 space-y-0.5 border-l pl-2">
+                {[
+                  ["home", "หน้าแรก"],
+                  ["about", "เกี่ยวกับเรา"],
+                  ["services", "บริการ"],
+                  ["packages", "แพ็กเกจ"],
+                  ["portfolio", "ผลงาน"],
+                  ["calculator", "เครื่องคำนวณ"],
+                ].map(([key, label]) => (
+                  <Link
+                    key={key}
+                    href={`/admin/pages-prototype?variant=A&page=${key}`}
+                    className={cn(
+                      "block rounded-md px-3 py-1.5 text-xs transition-colors",
+                      prototypePage === key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {ITEMS.filter((i) => i.roles.includes(role))
+          .filter((i) => !isPagesPrototype || !["/admin/services", "/admin/packages", "/admin/portfolio", "/admin/content/about"].includes(i.href))
+          .map((item) => {
           const active = item.exact
             ? pathname === item.href
             : pathname.startsWith(item.href);
