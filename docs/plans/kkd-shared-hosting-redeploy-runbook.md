@@ -71,8 +71,10 @@ table at runtime) but means the migration history in the repo is not a
 description of production's schema. Check the real columns, not the folder.
 
 Also note: production tables are **MyISAM**, which has no transactions — so
-`$transaction` in `withAudit()` does not actually roll back there. Not a
-deploy blocker; worth knowing before relying on atomicity.
+`$transaction` in `withAudit()` does not actually roll back there. This is a
+release blocker for Pages CMS writes. Follow
+`docs/plans/pages-cms-innodb-conversion-runbook.md`; do not deploy Pages CMS or
+run a destructive restore until the InnoDB/FK gate is green.
 
 ## Prerequisites
 
@@ -310,7 +312,7 @@ curl -s -o /dev/null -L -w "hops: %{num_redirects} final: %{url_effective}\n" ht
 | `curl: no URL specified` / weird zsh errors from the FTP password | Password contains `[`/`]`, zsh glob-expands it | Prefix the command with `noglob` |
 | Admin form submission → "A server error occurred" after attaching a few images | Next's default 1MB server-action body limit | Already fixed via `experimental.serverActions.bodySizeLimit` in `next.config.ts`; if it recurs for a different form, raise the same config |
 | `getaddrinfo ENOTFOUND localhost` in `DATABASE_URL` | This host doesn't resolve `localhost` inside the app runtime | Use `127.0.0.1` explicitly |
-| `Specified key was too long` (MySQL 1071) | Index on multiple default `VARCHAR(191)` columns exceeds this panel's InnoDB key-length limit | Use explicit shorter `@db.VarChar(n)` |
+| `Specified key was too long` (MySQL 1071, maximum 1000 bytes) | Engine-less DDL inherited the host's MyISAM default; 1000 bytes is MyISAM's key limit, not evidence of an InnoDB limit | Use reviewed shorter `@db.VarChar(n)`, then verify/convert the table engine per the Pages CMS InnoDB runbook |
 | Pages all return 200 but every form submit returns 500, and `/api/admin/leads` 500s | A migration in the deploy never reached production — Prisma is querying a column that doesn't exist | Apply the DDL via phpMyAdmin (`ADD COLUMN IF NOT EXISTS`), verify with `SHOW COLUMNS`; no redeploy needed, the fix takes effect immediately |
 | Upload output contains the FTP password in cleartext | `deploy/upload-dist.sh` runs `curl -v`, which prints the `PASS` line | Rotate the password if it has been pasted anywhere; consider filtering `PASS` out of the script's output |
 | `www.` serves the whole site again with no redirect | The panel rewrote `.htaccess` (editing env vars through the Node.js Selector does this) and dropped the appended canonical-host block | Re-append it — see "Host-level config that lives only on the server" above |

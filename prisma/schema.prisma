@@ -437,8 +437,8 @@ model AuditLog {
   action     AuditAction
   // Explicit shorter lengths (longest real value is a model name / cuid,
   // both well under these caps) — the composite index below on two
-  // default VARCHAR(191) utf8mb4 columns exceeds this host's InnoDB
-  // key-length limit (confirmed live against production, error 1071).
+  // default VARCHAR(191) utf8mb4 columns exceeded the production host's
+  // inherited MyISAM 1000-byte key limit (error 1071). See ADR-0006.
   entityType String @db.VarChar(50)
   entityId   String @db.VarChar(40)
   before     Json?
