@@ -186,7 +186,7 @@ async function main() {
   const hasPrivateStorage = existsSync(privateStoragePath);
   if (!hasPrivateStorage) {
     console.warn(
-      `⚠ backup-db: ${privateStoragePath} does not exist — skipping storage/private copy (DB backup will still proceed)`
+      "⚠ backup-db: configured storage/private does not exist — skipping private copy"
     );
   }
 

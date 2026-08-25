@@ -4,7 +4,6 @@
  * at a validated loopback rehearsal database.
  */
 import "dotenv/config";
-import { createHash } from "node:crypto";
 import process from "node:process";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient } from "../src/generated/prisma/client.js";
@@ -15,8 +14,9 @@ import {
   assertDisposableLocalDatabase,
   quoteIdentifier,
 } from "./lib/storage-engine-contract.mjs";
+import { collectSchemaInventory, rowValue, stableSha256, type SchemaRow } from "./lib/schema-metadata.mjs";
 
-type Row = Record<string, unknown>;
+type Row = SchemaRow;
 
 const databaseUrl = process.env.DATABASE_URL;
 const faultInjection = process.argv.includes("--fault-injection");
@@ -38,15 +38,9 @@ if (faultInjection) {
 
 const prisma = new PrismaClient({ adapter: new PrismaMariaDb(databaseUrl) });
 
-function stableHash(value: unknown): string {
-  return createHash("sha256")
-    .update(JSON.stringify(value, (_key, item) => (typeof item === "bigint" ? item.toString() : item)))
-    .digest("hex");
-}
-
 function value(row: Row, ...names: string[]): string {
   for (const name of names) {
-    if (row[name] !== undefined && row[name] !== null) return String(row[name]);
+    if (row[name] !== undefined && row[name] !== null) return rowValue(row, name);
   }
   return "";
 }
@@ -96,22 +90,8 @@ async function runFaultInjection(): Promise<boolean> {
 
 async function main() {
   const issues: string[] = [];
-  const [serverRows, engineRows, tableRows, fkRows, indexRows, columnRows] = await Promise.all([
-    query("SELECT VERSION() AS version, @@default_storage_engine AS defaultEngine"),
-    query("SHOW ENGINES"),
-    query(
-      "SELECT TABLE_NAME AS tableName, ENGINE AS engine FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME"
-    ),
-    query(
-      "SELECT rc.CONSTRAINT_NAME AS constraintName, rc.TABLE_NAME AS tableName, kcu.COLUMN_NAME AS columnName, rc.REFERENCED_TABLE_NAME AS referencedTableName, kcu.REFERENCED_COLUMN_NAME AS referencedColumnName, rc.DELETE_RULE AS deleteRule, rc.UPDATE_RULE AS updateRule FROM information_schema.REFERENTIAL_CONSTRAINTS rc JOIN information_schema.KEY_COLUMN_USAGE kcu ON kcu.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA AND kcu.CONSTRAINT_NAME = rc.CONSTRAINT_NAME AND kcu.TABLE_NAME = rc.TABLE_NAME WHERE rc.CONSTRAINT_SCHEMA = DATABASE() ORDER BY rc.CONSTRAINT_NAME, kcu.ORDINAL_POSITION"
-    ),
-    query(
-      "SELECT TABLE_NAME AS tableName, INDEX_NAME AS indexName, NON_UNIQUE AS nonUnique, SEQ_IN_INDEX AS sequenceNumber, COLUMN_NAME AS columnName, SUB_PART AS subPart FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX"
-    ),
-    query(
-      "SELECT TABLE_NAME AS tableName, COLUMN_NAME AS columnName, COLUMN_TYPE AS columnType, IS_NULLABLE AS isNullable, COLUMN_DEFAULT AS columnDefault, EXTRA AS extra FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME, ORDINAL_POSITION"
-    ),
-  ]);
+  const inventory = await collectSchemaInventory(prisma);
+  const { server: serverRows, engines: engineRows, tables: tableRows, foreignKeys: fkRows, indexes: indexRows, columns: columnRows } = inventory;
 
   const supportedInnoDb = engineRows.some(
     (row) => value(row, "Engine", "ENGINE") === "InnoDB" && ["YES", "DEFAULT"].includes(value(row, "Support", "SUPPORT"))
@@ -132,7 +112,7 @@ async function main() {
     if (engines[table] !== "InnoDB") issues.push(`${table} engine is ${engines[table]}`);
   }
 
-  const actualFkByName = new Map(fkRows.map((row) => [value(row, "constraintName"), row]));
+  const actualFkByName = new Map(fkRows.map((row) => [value(row, "name"), row]));
   for (const expected of FOREIGN_KEY_CONTRACTS) {
     const actual = actualFkByName.get(expected.name);
     if (
@@ -177,8 +157,8 @@ async function main() {
 
   const applicationIndexes = indexRows.filter((row) => APPLICATION_TABLES.includes(value(row, "tableName") as never));
   const applicationColumns = columnRows.filter((row) => APPLICATION_TABLES.includes(value(row, "tableName") as never));
-  const signature = stableHash({
-    serverVersion: value(serverRows[0], "version"),
+  const signature = stableSha256({
+    serverVersion: value(serverRows[0], "serverVersion"),
     defaultEngine: value(serverRows[0], "defaultEngine"),
     engines,
     foreignKeys: fkRows,
@@ -189,7 +169,7 @@ async function main() {
     rollbackPassed,
   });
 
-  console.log(`SERVER_VERSION=${value(serverRows[0], "version")}`);
+  console.log(`SERVER_VERSION=${value(serverRows[0], "serverVersion")}`);
   console.log(`DEFAULT_ENGINE=${value(serverRows[0], "defaultEngine")}`);
   console.log(`INNODB_SUPPORTED=${supportedInnoDb}`);
   console.log(`TABLE_COUNT=${Object.keys(rowCounts).length}`);

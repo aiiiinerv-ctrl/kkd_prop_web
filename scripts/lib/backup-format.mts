@@ -8,6 +8,7 @@
  * by line on that basis. Change the escaping here and both sides move
  * together.
  */
+import { APPLICATION_TABLE_CONTRACTS } from "./storage-engine-contract.mjs";
 
 /**
  * Directory name of a snapshot this tooling created, e.g. "2026-08-12T03-13-18".
@@ -29,24 +30,7 @@ export const SNAPSHOT_DIR_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}$/;
  * `table` is also the Prisma model name: this schema declares no `@map`, so
  * field and model names match their columns and tables one-to-one.
  */
-export const BACKUP_MODELS = [
-  { table: "PromoChannel", delegate: "promoChannel" },
-  { table: "PromoLandingPath", delegate: "promoLandingPath" },
-  { table: "ChannelExecutive", delegate: "channelExecutive" },
-  { table: "AdminUser", delegate: "adminUser" },
-  { table: "Lead", delegate: "lead" },
-  { table: "SurveyBooking", delegate: "surveyBooking" },
-  { table: "BookingCapacitySetting", delegate: "bookingCapacitySetting" },
-  { table: "PaymentSettings", delegate: "paymentSettings" },
-  { table: "SiteSettings", delegate: "siteSettings" },
-  { table: "PageSeo", delegate: "pageSeo" },
-  { table: "AboutContent", delegate: "aboutContent" },
-  { table: "Service", delegate: "service" },
-  { table: "Package", delegate: "package" },
-  { table: "PortfolioProject", delegate: "portfolioProject" },
-  { table: "Testimonial", delegate: "testimonial" },
-  { table: "AuditLog", delegate: "auditLog" },
-] as const;
+export const BACKUP_MODELS = APPLICATION_TABLE_CONTRACTS;
 
 export const SCHEMA_METADATA_FILENAME = "schema-metadata.json";
 export const SCHEMA_METADATA_VERSION = 1;
@@ -57,6 +41,17 @@ export type SnapshotTableMetadata = {
   rowCount: number;
   columnHash: string;
   indexHash: string;
+  indexes: string[];
+};
+
+export type SnapshotForeignKeyMetadata = {
+  name: string;
+  table: string;
+  column: string;
+  referencedTable: string;
+  referencedColumn: string;
+  deleteRule: string;
+  updateRule: string;
 };
 
 export type SnapshotSchemaMetadata = {
@@ -70,7 +65,8 @@ export type SnapshotSchemaMetadata = {
   databaseSqlSha256: string;
   schemaSha256: string;
   tables: SnapshotTableMetadata[];
-  foreignKeys: string[];
+  foreignKeys: SnapshotForeignKeyMetadata[];
+  orphanCounts: Record<string, number>;
 };
 
 /**

@@ -82,10 +82,10 @@ const snapshotPrivatePath = path.join(snapshotDir, "private");
 const livePrivatePath = path.resolve(process.cwd(), storageRoot, "private");
 
 if (!existsSync(sqlPath)) {
-  fail(`no database.sql in ${snapshotDir} (is that a snapshot directory?)`);
+  fail(`snapshot ${path.basename(snapshotDir)} has no database.sql`);
 }
 if (!existsSync(metadataPath)) {
-  fail(`no ${SCHEMA_METADATA_FILENAME} in ${snapshotDir}; legacy snapshots require a separately reviewed restore path`);
+  fail(`snapshot ${path.basename(snapshotDir)} has no ${SCHEMA_METADATA_FILENAME}; legacy snapshots require separate review`);
 }
 
 /**
@@ -102,9 +102,8 @@ function readStatements(): string[] {
 }
 
 function summarize(statements: string[]): void {
-  const target = databaseUrl!.replace(/(:\/\/[^:]*:)[^@]*@/, "$1***@");
   console.log(`Snapshot:  ${path.basename(snapshotDir)}`);
-  console.log(`Target DB: ${target}`);
+  console.log("Target DB: configured target (connection details suppressed)");
   console.log(`Dump size: ${(statSync(sqlPath).size / 1024).toFixed(1)} KB, ${statements.length} statement(s)`);
   console.log("");
 
@@ -145,7 +144,12 @@ async function main() {
 
   const prisma = new PrismaClient({ adapter: new PrismaMariaDb(databaseUrl!) });
   try {
-    await assertTransactionalRestoreTarget(prisma);
+    await assertTransactionalRestoreTarget(prisma, metadata);
+  } catch (err) {
+    await prisma.$disconnect();
+    fail(`restore preflight failed: ${(err as Error).message}`);
+  }
+  try {
     // One interactive transaction so that SET FOREIGN_KEY_CHECKS=0 and the
     // writes it protects run on the same connection — with a pool they
     // could otherwise land on different ones, and the DELETEs would fail

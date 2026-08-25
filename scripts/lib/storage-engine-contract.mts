@@ -1,23 +1,27 @@
-export const APPLICATION_TABLES = [
-  "PromoChannel",
-  "PromoLandingPath",
-  "ChannelExecutive",
-  "AdminUser",
-  "Lead",
-  "SurveyBooking",
-  "BookingCapacitySetting",
-  "PaymentSettings",
-  "SiteSettings",
-  "PageSeo",
-  "AboutContent",
-  "Service",
-  "Package",
-  "PortfolioProject",
-  "Testimonial",
-  "AuditLog",
+/** Foreign-key-safe backup/restore order and the matching Prisma delegate. */
+export const APPLICATION_TABLE_CONTRACTS = [
+  { table: "PromoChannel", delegate: "promoChannel" },
+  { table: "PromoLandingPath", delegate: "promoLandingPath" },
+  { table: "ChannelExecutive", delegate: "channelExecutive" },
+  { table: "AdminUser", delegate: "adminUser" },
+  { table: "Lead", delegate: "lead" },
+  { table: "SurveyBooking", delegate: "surveyBooking" },
+  { table: "BookingCapacitySetting", delegate: "bookingCapacitySetting" },
+  { table: "PaymentSettings", delegate: "paymentSettings" },
+  { table: "SiteSettings", delegate: "siteSettings" },
+  { table: "PageSeo", delegate: "pageSeo" },
+  { table: "AboutContent", delegate: "aboutContent" },
+  { table: "Service", delegate: "service" },
+  { table: "Package", delegate: "package" },
+  { table: "PortfolioProject", delegate: "portfolioProject" },
+  { table: "Testimonial", delegate: "testimonial" },
+  { table: "AuditLog", delegate: "auditLog" },
 ] as const;
 
-export type ApplicationTable = (typeof APPLICATION_TABLES)[number];
+export type ApplicationTable = (typeof APPLICATION_TABLE_CONTRACTS)[number]["table"];
+export const APPLICATION_TABLES: readonly ApplicationTable[] = APPLICATION_TABLE_CONTRACTS.map(
+  ({ table }) => table
+);
 
 export const INFRASTRUCTURE_TABLES = ["_prisma_migrations"] as const;
 
@@ -137,7 +141,6 @@ export function quoteIdentifier(identifier: string): string {
   const allowed = new Set<string>([
     ...APPLICATION_TABLES,
     ...INFRASTRUCTURE_TABLES,
-    ...APPLICATION_TABLES.flatMap((table) => [`${table}_rehearsal`]),
     ...FOREIGN_KEY_CONTRACTS.flatMap((fk) => [fk.name, fk.column, fk.referencedColumn]),
     "id",
   ]);

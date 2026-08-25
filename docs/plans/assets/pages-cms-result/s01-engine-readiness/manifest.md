@@ -45,7 +45,8 @@ Implemented:
   transactional source under repeatable-read, requires explicit quiescence for
   MyISAM, and writes `schema-metadata.json` with hashes/engines/counts.
 - Restore refuses legacy/mismatched/unknown SQL, verifies dump hash, exact table
-  inventory, InnoDB engines, and all 11 Foreign Keys before its transaction.
+  inventory, source columns/indexes, zero-orphan metadata, target columns,
+  InnoDB engines, and the complete rules of all 11 Foreign Keys before its transaction.
 - `deploy/maintenance/pages-cms-maintenance.html` is self-contained, noindex,
   CSP-restricted, form-free, bilingual, responsive, and dependency-free.
 - `docs/plans/pages-cms-innodb-conversion-runbook.md` defines owner-controlled
@@ -55,11 +56,13 @@ Implemented:
 
 Observed results:
 
-- Three final rehearsals: MyISAM RED; InnoDB GREEN; restore rollback PASS;
-  non-transactional backup and unknown-table guards PASS.
+- Two review-fixed final rehearsals: MyISAM rollback specifically reported FAIL
+  while its gate stayed RED; InnoDB GREEN; restore rollback PASS;
+  non-transactional backup, unknown-table, column/index preservation, and
+  restore schema-mismatch guards PASS.
 - Deterministic signature in every final run:
-  `0249f206a1bbbb207fb6bec54cab423ef86df9e8ab45646cb3a1a39d3a54d540`.
-- Conversion duration: 860–1751 ms; snapshot size: 6,827 bytes; table count 16;
+  `9ebedff82dd842c42e88d3217f394a1e1c8e1d25829d1001112d981cf8f3b7bc`.
+- Conversion duration: 947–1145 ms; snapshot size: 12,198 bytes; table count 16;
   Foreign Key count 11; GREEN gate includes zero orphan relationships.
 - Cleanup query returned zero matching disposable databases. Temporary storage
   was removed by the guarded `finally` path.
@@ -69,6 +72,9 @@ Observed results:
   --check`, and escalated `npm run build` passed. A read-only gate against the
   local application DB reported 16 tables, 11 Foreign Keys, zero orphans, and
   `ENGINE_GATE=GREEN`.
+- `npx prisma migrate dev` reported the database already in sync; `npx prisma
+  db seed` completed successfully, satisfying the repo gate for the comment-only
+  `schema.prisma` correction without creating a migration.
 - Booking, admin auth, admin CRUD/public propagation, channel tracking, and
   audit invariant E2Es passed against `next start`.
 
