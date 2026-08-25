@@ -1,6 +1,6 @@
 # Pages CMS navigation prototype
 
-Status: owner review required. This is a read-only throwaway prototype, not production implementation.
+Status: owner-approved direction on 2026-08-25. This remains a read-only throwaway prototype, not production implementation.
 
 ## Question
 
@@ -24,9 +24,13 @@ All variants are mocked and read-only. They do not call server actions, write th
 - Mobile replaces the hidden desktop sidebar with a page selector.
 - Tabs use tab roles, controls have accessible names, and the prototype switcher supports left/right arrow keys unless a text field is focused.
 
-## Recommendation for owner review
+## Owner verdict
 
-Use A as the navigation foundation because it most literally and predictably represents the agreed Pages root and six children. Borrow B's persistent preview as an optional desktop preview mode or drawer rather than making it the only editing layout. Keep C's readiness summary for a later Pages overview if editors need cross-page triage; do not make the hub a prerequisite for every edit.
+The owner approved the recommended hybrid:
+
+- Use A as the navigation foundation because it most literally and predictably represents the agreed Pages root and six children.
+- Borrow B's persistent preview as an optional desktop preview mode or drawer rather than making it the only editing layout.
+- Do not adopt C as the primary editing flow. Its readiness summary may be reconsidered later if editors need cross-page triage; a hub must not become a prerequisite for every edit.
 
 ## Evidence
 
