@@ -31,7 +31,11 @@ import path from "node:path";
 import process from "node:process";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient } from "../src/generated/prisma/client.js";
-import { SCHEMA_METADATA_FILENAME, SNAPSHOT_DIR_PATTERN } from "./lib/backup-format.mjs";
+import {
+  SCHEMA_METADATA_FILENAME,
+  SNAPSHOT_DIR_PATTERN,
+  operationalErrorCode,
+} from "./lib/backup-format.mjs";
 import {
   assertTransactionalRestoreTarget,
   parseSnapshotMetadata,
@@ -42,14 +46,6 @@ import {
 function fail(message: string): never {
   console.error(`✗ restore-db: ${message}`);
   process.exit(1);
-}
-
-function errorCode(error: unknown): string {
-  if (typeof error === "object" && error !== null && "code" in error) {
-    const code = String((error as { code: unknown }).code);
-    if (/^[A-Z0-9_]+$/.test(code)) return code;
-  }
-  return error instanceof Error ? error.name : "UnknownError";
 }
 
 const args = process.argv.slice(2);
@@ -172,7 +168,7 @@ async function main() {
     );
     console.log(`✓ restore-db: applied ${statements.length} statement(s) to the database`);
   } catch (err) {
-    fail(`database restore failed; transaction rolled back (${errorCode(err)})`);
+    fail(`database restore failed; transaction rolled back (${operationalErrorCode(err)})`);
   } finally {
     await prisma.$disconnect();
   }
@@ -186,7 +182,7 @@ async function main() {
         cpSync(snapshotPrivatePath, livePrivatePath, { recursive: true });
         console.log("✓ restore-db: configured storage/private restored");
       } catch (err) {
-        fail(`failed to restore storage/private (${errorCode(err)})`);
+        fail(`failed to restore storage/private (${operationalErrorCode(err)})`);
       }
     }
   }

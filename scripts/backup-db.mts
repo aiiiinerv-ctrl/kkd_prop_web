@@ -63,6 +63,7 @@ import {
   BACKUP_MODELS,
   SCHEMA_METADATA_FILENAME,
   SNAPSHOT_DIR_PATTERN,
+  operationalErrorCode,
   sqlLiteral,
 } from "./lib/backup-format.mjs";
 import { buildSnapshotMetadata, inspectSchema, sha256 } from "./lib/schema-metadata.mjs";
@@ -70,14 +71,6 @@ import { buildSnapshotMetadata, inspectSchema, sha256 } from "./lib/schema-metad
 function fail(message: string): never {
   console.error(`✗ backup-db: ${message}`);
   process.exit(1);
-}
-
-function errorCode(error: unknown): string {
-  if (typeof error === "object" && error !== null && "code" in error) {
-    const code = String((error as { code: unknown }).code);
-    if (/^[A-Z0-9_]+$/.test(code)) return code;
-  }
-  return error instanceof Error ? error.name : "UnknownError";
 }
 
 function formatBytes(bytes: number): string {
@@ -206,7 +199,7 @@ async function main() {
   try {
     writeFileSync(dbDestPath, sql, "utf8");
   } catch (err) {
-    fail(`failed to write SQL dump (${errorCode(err)})`);
+    fail(`failed to write SQL dump (${operationalErrorCode(err)})`);
   }
 
   const metadata = buildSnapshotMetadata(inspected, {
@@ -218,7 +211,7 @@ async function main() {
   try {
     writeFileSync(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`, "utf8");
   } catch (err) {
-    fail(`failed to write schema metadata (${errorCode(err)})`);
+    fail(`failed to write schema metadata (${operationalErrorCode(err)})`);
   }
 
   // 2. Copy storage/private (if present).
@@ -228,7 +221,7 @@ async function main() {
     try {
       cpSync(privateStoragePath, privateDestPath, { recursive: true });
     } catch (err) {
-      fail(`failed to copy storage/private (${errorCode(err)})`);
+      fail(`failed to copy storage/private (${operationalErrorCode(err)})`);
     }
   }
 
@@ -285,7 +278,7 @@ async function main() {
 
 main()
   .catch((err) => {
-    console.error(`✗ backup-db: failed (${errorCode(err)})`);
+    console.error(`✗ backup-db: failed (${operationalErrorCode(err)})`);
     process.exitCode = 1;
   })
   .finally(async () => {

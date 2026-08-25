@@ -35,6 +35,15 @@ export const BACKUP_MODELS = APPLICATION_TABLE_CONTRACTS;
 export const SCHEMA_METADATA_FILENAME = "schema-metadata.json";
 export const SCHEMA_METADATA_VERSION = 1;
 
+/** Returns a path/value-free identifier suitable for operational evidence. */
+export function operationalErrorCode(error: unknown): string {
+  if (typeof error === "object" && error !== null && "code" in error) {
+    const code = String((error as { code: unknown }).code);
+    if (/^[A-Z0-9_]+$/.test(code)) return code;
+  }
+  return error instanceof Error ? error.name : "UnknownError";
+}
+
 export type SnapshotTableMetadata = {
   table: string;
   engine: string;
