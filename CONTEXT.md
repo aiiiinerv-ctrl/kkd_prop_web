@@ -39,6 +39,14 @@ State of a Survey Booking's uploaded payment slip as staff review it: `PENDING_R
 Localized presentation content owned by one public page, such as its hero, section headings, calls to action, and section visibility. It may select reusable Content Items but never owns copies of them.
 _Avoid_: Page copy, page settings
 
+**Page Properties**:
+Structured, page-owned metadata that controls how one public page is described, shared, canonicalized, and indexed. It is distinct from Page Content and never accepts raw metadata HTML.
+_Avoid_: Meta tags, SEO settings, page settings
+
+**High-risk SEO Change**:
+A Page Properties change that can remove a public page from search results or transfer its canonical authority, such as enabling `noindex`/`nofollow` or overriding its canonical target. It requires explicit acknowledgement in addition to normal authorization and audit; acknowledgement is not a security boundary.
+_Avoid_: Dangerous setting, advanced SEO change
+
 **Shared Site Content**:
 Localized presentation content intentionally reused unchanged across multiple public pages, such as the global call-to-action banner, header, footer, and contact details. It has one site-wide owner; individual Page Content may control only whether a shared section is shown.
 _Avoid_: Global page content, copied shared content
