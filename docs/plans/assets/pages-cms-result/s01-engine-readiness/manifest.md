@@ -77,6 +77,10 @@ Observed results:
   `schema.prisma` correction without creating a migration.
 - Booking, admin auth, admin CRUD/public propagation, channel tracking, and
   audit invariant E2Es passed against `next start`.
+- Independent Standards and Spec reviews first found verification, duplication,
+  restore-shape, fault-specificity, preservation, and output-sanitization gaps.
+  Follow-up commits closed each item; the final closure reviews reported no
+  remaining standards finding, spec gap, or scope creep.
 
 Full-pipeline deviation:
 
