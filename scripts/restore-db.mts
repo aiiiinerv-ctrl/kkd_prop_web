@@ -19,7 +19,9 @@
  *
  * Where no shell is available (DirectAdmin shared hosting), import the
  * snapshot's `database.sql` through phpMyAdmin instead — the file is plain
- * data-only SQL and expects the schema to already exist.
+ * data-only SQL and expects the schema to already exist. Scripted restores
+ * require the matching `schema-metadata.json`, an InnoDB target, and all
+ * eleven expected Foreign Keys; legacy snapshots need separate review.
  */
 
 import "dotenv/config";
@@ -29,7 +31,13 @@ import path from "node:path";
 import process from "node:process";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient } from "../src/generated/prisma/client.js";
-import { SNAPSHOT_DIR_PATTERN } from "./lib/backup-format.mjs";
+import { SCHEMA_METADATA_FILENAME, SNAPSHOT_DIR_PATTERN } from "./lib/backup-format.mjs";
+import {
+  assertTransactionalRestoreTarget,
+  parseSnapshotMetadata,
+  sha256,
+  validateDumpStatements,
+} from "./lib/schema-metadata.mjs";
 
 function fail(message: string): never {
   console.error(`✗ restore-db: ${message}`);
@@ -69,11 +77,15 @@ function latestSnapshot(): string {
 
 const snapshotDir = positional[0] ? path.resolve(process.cwd(), positional[0]) : latestSnapshot();
 const sqlPath = path.join(snapshotDir, "database.sql");
+const metadataPath = path.join(snapshotDir, SCHEMA_METADATA_FILENAME);
 const snapshotPrivatePath = path.join(snapshotDir, "private");
 const livePrivatePath = path.resolve(process.cwd(), storageRoot, "private");
 
 if (!existsSync(sqlPath)) {
   fail(`no database.sql in ${snapshotDir} (is that a snapshot directory?)`);
+}
+if (!existsSync(metadataPath)) {
+  fail(`no ${SCHEMA_METADATA_FILENAME} in ${snapshotDir}; legacy snapshots require a separately reviewed restore path`);
 }
 
 /**
@@ -91,7 +103,7 @@ function readStatements(): string[] {
 
 function summarize(statements: string[]): void {
   const target = databaseUrl!.replace(/(:\/\/[^:]*:)[^@]*@/, "$1***@");
-  console.log(`Snapshot:  ${snapshotDir}`);
+  console.log(`Snapshot:  ${path.basename(snapshotDir)}`);
   console.log(`Target DB: ${target}`);
   console.log(`Dump size: ${(statSync(sqlPath).size / 1024).toFixed(1)} KB, ${statements.length} statement(s)`);
   console.log("");
@@ -105,14 +117,22 @@ function summarize(statements: string[]): void {
   console.log("");
   console.log(
     existsSync(snapshotPrivatePath)
-      ? `  storage/private in snapshot: yes -> ${withStorage ? "WILL overwrite" : "will be left alone (pass --with-storage to restore)"} ${livePrivatePath}`
+      ? `  storage/private in snapshot: yes -> ${withStorage ? "WILL overwrite configured private storage" : "will be left alone (pass --with-storage to restore)"}`
       : "  storage/private in snapshot: none"
   );
 }
 
 async function main() {
   const statements = readStatements();
+  validateDumpStatements(statements);
+  const sql = readFileSync(sqlPath, "utf8");
+  const metadata = parseSnapshotMetadata(readFileSync(metadataPath, "utf8"));
+  if (sha256(sql) !== metadata.databaseSqlSha256) {
+    fail("database.sql hash does not match schema metadata");
+  }
   summarize(statements);
+  console.log(`Schema:    v${metadata.formatVersion}, ${metadata.schemaSha256}`);
+  console.log(`Source:    transactional=${metadata.sourceTransactional}, writesQuiesced=${metadata.writesQuiesced}`);
 
   if (!confirm) {
     console.log("");
@@ -125,6 +145,7 @@ async function main() {
 
   const prisma = new PrismaClient({ adapter: new PrismaMariaDb(databaseUrl!) });
   try {
+    await assertTransactionalRestoreTarget(prisma);
     // One interactive transaction so that SET FOREIGN_KEY_CHECKS=0 and the
     // writes it protects run on the same connection — with a pool they
     // could otherwise land on different ones, and the DELETEs would fail

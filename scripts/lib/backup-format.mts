@@ -31,6 +31,7 @@ export const SNAPSHOT_DIR_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}$/;
  */
 export const BACKUP_MODELS = [
   { table: "PromoChannel", delegate: "promoChannel" },
+  { table: "PromoLandingPath", delegate: "promoLandingPath" },
   { table: "ChannelExecutive", delegate: "channelExecutive" },
   { table: "AdminUser", delegate: "adminUser" },
   { table: "Lead", delegate: "lead" },
@@ -46,6 +47,31 @@ export const BACKUP_MODELS = [
   { table: "Testimonial", delegate: "testimonial" },
   { table: "AuditLog", delegate: "auditLog" },
 ] as const;
+
+export const SCHEMA_METADATA_FILENAME = "schema-metadata.json";
+export const SCHEMA_METADATA_VERSION = 1;
+
+export type SnapshotTableMetadata = {
+  table: string;
+  engine: string;
+  rowCount: number;
+  columnHash: string;
+  indexHash: string;
+};
+
+export type SnapshotSchemaMetadata = {
+  formatVersion: number;
+  createdAt: string;
+  serverVersion: string;
+  defaultEngine: string;
+  innoDbSupported: boolean;
+  sourceTransactional: boolean;
+  writesQuiesced: boolean;
+  databaseSqlSha256: string;
+  schemaSha256: string;
+  tables: SnapshotTableMetadata[];
+  foreignKeys: string[];
+};
 
 /**
  * MySQL string escaping. Note that `\n`, `\r` and `\0` become their escape

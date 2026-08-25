@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'" />
+    <title>KKD Property — ปรับปรุงระบบชั่วคราว</title>
+    <style>
+      :root { color-scheme: light; font-family: "Noto Sans Thai", "Noto Sans", system-ui, sans-serif; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; color: #17332c; background: radial-gradient(circle at top left, #fff8dc 0, transparent 38%), linear-gradient(145deg, #eef7f1, #f8fbf9); }
+      main { width: min(680px, 100%); padding: clamp(28px, 7vw, 56px); border: 1px solid #d4e5da; border-radius: 28px; background: rgba(255,255,255,.94); box-shadow: 0 24px 70px rgba(20,65,51,.12); }
+      .brand { display: flex; align-items: center; gap: 12px; font-weight: 800; letter-spacing: .02em; }
+      .mark { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 13px; color: #fff; background: #176b4c; }
+      .eyebrow { margin: 42px 0 10px; color: #28795d; font-size: .84rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+      h1 { margin: 0; max-width: 560px; font-size: clamp(2rem, 7vw, 3.8rem); line-height: 1.08; letter-spacing: -.04em; }
+      p { margin: 22px 0 0; max-width: 560px; color: #526b63; font-size: clamp(1rem, 2.5vw, 1.12rem); line-height: 1.75; }
+      .status { display: flex; gap: 11px; align-items: flex-start; margin-top: 30px; padding: 16px 18px; border-radius: 16px; background: #f1f8f4; color: #285445; font-size: .95rem; line-height: 1.55; }
+      .dot { flex: 0 0 auto; width: 10px; height: 10px; margin-top: 6px; border-radius: 50%; background: #e7a61a; box-shadow: 0 0 0 5px #fff0c6; }
+      nav { display: flex; gap: 8px; margin-top: 34px; }
+      button { border: 1px solid #bdd5c7; border-radius: 999px; padding: 9px 15px; color: #245744; background: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+      button[aria-pressed="true"] { border-color: #176b4c; color: #fff; background: #176b4c; }
+      [data-language="en"] { display: none; }
+      body.en [data-language="th"] { display: none; }
+      body.en [data-language="en"] { display: block; }
+      @media (max-width: 520px) { body { padding: 14px; } main { border-radius: 22px; } .eyebrow { margin-top: 34px; } }
+      @media (prefers-reduced-motion: no-preference) { main { animation: enter .45s ease-out both; } @keyframes enter { from { opacity: 0; transform: translateY(10px); } } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="brand"><span class="mark" aria-hidden="true">K</span><span>KKD PROPERTY</span></div>
+      <section data-language="th">
+        <div class="eyebrow">ปรับปรุงระบบตามกำหนด</div>
+        <h1>ขออภัย เว็บไซต์ปิดให้บริการชั่วคราว</h1>
+        <p>ทีมงานกำลังปรับปรุงระบบจัดการเนื้อหาเพื่อให้ใช้งานได้สะดวกและปลอดภัยยิ่งขึ้น กรุณากลับมาใหม่อีกครั้งหลังการปรับปรุงเสร็จสิ้น</p>
+        <div class="status"><span class="dot" aria-hidden="true"></span><span>ระบบส่งใบเสนอราคา แบบฟอร์มนัดสำรวจ และระบบผู้ดูแลถูกปิดรับข้อมูลชั่วคราว ข้อมูลของคุณจะไม่ถูกส่งจนกว่าระบบจะเปิดให้บริการอีกครั้ง</span></div>
+      </section>
+      <section data-language="en" lang="en">
+        <div class="eyebrow">Scheduled maintenance</div>
+        <h1>We’ll be back shortly.</h1>
+        <p>We are upgrading our content management system to make it safer and easier to use. Please return after the maintenance window has ended.</p>
+        <div class="status"><span class="dot" aria-hidden="true"></span><span>Quote requests, survey bookings, and admin changes are temporarily unavailable. Nothing you enter will be submitted until service resumes.</span></div>
+      </section>
+      <nav aria-label="Language"><button type="button" data-set-language="th" aria-pressed="true">ไทย</button><button type="button" data-set-language="en" aria-pressed="false">English</button></nav>
+    </main>
+    <script>
+      const requested = new URLSearchParams(location.search).get("lang");
+      const initial = requested === "en" ? "en" : "th";
+      function setLanguage(language) {
+        document.body.classList.toggle("en", language === "en");
+        document.documentElement.lang = language;
+        document.title = language === "en" ? "KKD Property — Scheduled maintenance" : "KKD Property — ปรับปรุงระบบชั่วคราว";
+        document.querySelectorAll("[data-set-language]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.setLanguage === language)));
+      }
+      document.querySelectorAll("[data-set-language]").forEach((button) => button.addEventListener("click", () => setLanguage(button.dataset.setLanguage)));
+      setLanguage(initial);
+    </script>
+  </body>
+</html>
