@@ -152,9 +152,34 @@ the pre-deploy behavioral proof.
 
 ### Decision and rollback
 
-**GO for a separate deploy approval; not deployed.** The rollback point is
+**Pre-deploy decision: GO for a separate deploy approval; not yet deployed at
+this checkpoint.** The rollback point is
 the recorded production baseline `72da1be`. A reproducible rollback artifact
 can be built from that exact commit with the same shared-hosting builder,
 uploaded by the human-only FTP procedure, extracted, restarted, and followed
 by the standard production smoke suite. This code-only release has no database
 rollback step and does not remediate the known production orphan.
+
+## Production deployment
+
+Owner approval for the guard-only deployment was received on 2026-08-26. The
+human-only FTP upload completed with `226 File successfully transferred`; the
+remote transfer and local artifact sizes both reported `27,722,446` bytes.
+No agent-run upload path was used.
+
+After a separate owner approval for the production mutations:
+
+- DirectAdmin extracted `kkd-app-production/dist.zip` with `File Extracted`
+  and HTTP 200.
+- Resaving `tmp/restart.txt` returned HTTP 302, the documented successful
+  graceful Passenger restart response.
+- The immediate read-only post-restart smoke returned `/th` 200, `/admin` 307,
+  the nonexistent private slip route 401, and `/api/admin/leads` 401.
+- No production login, canary record, delete attempt, schema/configuration
+  change, or database mutation occurred. The existing orphan is unchanged.
+
+**Deployment status: released and read-only smoke green.** The exact uploaded
+ZIP is identified by the SHA-256 and build ID above. Guard behavior in the
+deployed process is not claimed from a production delete attempt; that would
+require a separate named-canary mutation approval. The production-mode local
+regression against the extracted release remains the behavioral evidence.
