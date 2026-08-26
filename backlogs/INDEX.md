@@ -7,6 +7,7 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 | GitHub | PLAN | Notes |
 |---|---|---|
+| [#52](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/52) | [`ISSUE_052_home_cms_slice_map`](ISSUE_052_home_cms_slice_map/PLAN.md) | Wayfinder map — Home CMS slice (plan only; #53–#60) |
 | [#51](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/51) | [`ISSUE_051_pages_cms_gate_b_c`](ISSUE_051_pages_cms_gate_b_c/PLAN.md) | Gate B/C — blocked on maintenance window time |
 | [#38](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/38) | [`ISSUE_038_cookieyes_banner_locale_en`](ISSUE_038_cookieyes_banner_locale_en/PLAN.md) | CookieYes Free = one language — owner decision |
 | [#32](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/32) | [`ISSUE_032_lead_notifications_resend_line`](ISSUE_032_lead_notifications_resend_line/PLAN.md) | Blocked on Resend/LINE secrets |
