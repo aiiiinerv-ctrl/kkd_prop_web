@@ -189,6 +189,23 @@ async function main() {
       throw new Error("verifier output was not deterministic");
     }
 
+    const backupLockPath = path.join(backupRoot, ".pages-cms-backup.lock");
+    mkdirSync(backupLockPath);
+    const concurrentBackupOutput = runScript(
+      ["scripts/backup-db.mts"],
+      {
+        DATABASE_URL: targetUrl.toString(),
+        STORAGE_ROOT: storageRoot!,
+        BACKUP_ROOT: backupRoot!,
+        BACKUP_WRITES_QUIESCED: "true",
+      },
+      1
+    );
+    if (!concurrentBackupOutput.includes("BACKUP_IN_PROGRESS")) {
+      throw new Error("backup did not reject an existing cross-process lock");
+    }
+    rmSync(backupLockPath, { recursive: true });
+
     runScript(
       ["scripts/backup-db.mts"],
       {
@@ -267,6 +284,7 @@ async function main() {
     console.log("UNKNOWN_TABLE_GUARD=PASS");
     console.log("COLUMN_INDEX_PRESERVATION=PASS");
     console.log("RESTORE_SCHEMA_GUARD=PASS");
+    console.log("CONCURRENT_BACKUP_GUARD=PASS");
     console.log(`VERIFICATION_SIGNATURE=${signature(firstGreen)}`);
     console.log(`TABLE_COUNT=${APPLICATION_TABLES.length}`);
     console.log(`FOREIGN_KEY_COUNT=${FOREIGN_KEY_CONTRACTS.length}`);
