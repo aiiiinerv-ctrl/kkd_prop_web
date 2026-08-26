@@ -269,6 +269,16 @@ Both CloudLinux blocks are marked `DO NOT REMOVE`. Anything added has to be
 diff against what you intended before trusting it. There is no SSH, so a
 mangled `.htaccess` means a site that is down with no shell to fix it from.
 
+**Never use `CMD_FILE_MANAGER` `action=edit` to read `.htaccess`.** A POST with
+`action=edit` and no `text` body is treated as a save that truncates the file
+to 0 bytes (confirmed 2026-08-26 — wiped Passenger + env blocks and took the
+site offline). Read-only download must use the GET path form
+`/CMD_FILE_MANAGER/domains/.../public_html/.htaccess`. If the file is emptied,
+CloudLinux's source of truth is still `.cl.selector/node-selector.json`; the
+fastest recovery is Node.js Selector → open the app → Save (regenerates the
+managed blocks), then re-append the canonical www→bare redirect. Reconstructing
+Passenger + `SetEnv` lines from that JSON is a last-resort fallback only.
+
 Editing env vars through the panel's Node.js Selector rewrites this file. If
 that ever drops the appended block, `www` silently starts serving a duplicate
 of the whole site again — so re-check the redirect after any env-var change.
