@@ -13,8 +13,8 @@ import {
   INFRASTRUCTURE_TABLES,
   assertDisposableLocalDatabase,
   quoteIdentifier,
-} from "./lib/storage-engine-contract.mjs";
-import { collectSchemaInventory, rowValue, stableSha256, type SchemaRow } from "./lib/schema-metadata.mjs";
+} from "./lib/storage-engine-contract.js";
+import { collectSchemaInventory, rowValue, stableSha256, type SchemaRow } from "./lib/schema-metadata.js";
 
 type Row = SchemaRow;
 

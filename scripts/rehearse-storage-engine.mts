@@ -17,9 +17,9 @@ import {
   FOREIGN_KEY_CONTRACTS,
   assertDisposableLocalDatabase,
   quoteIdentifier,
-} from "./lib/storage-engine-contract.mjs";
-import { SCHEMA_METADATA_FILENAME, type SnapshotSchemaMetadata } from "./lib/backup-format.mjs";
-import { sha256, stableSha256 } from "./lib/schema-metadata.mjs";
+} from "./lib/storage-engine-contract.js";
+import { SCHEMA_METADATA_FILENAME, type SnapshotSchemaMetadata } from "./lib/backup-format.js";
+import { sha256, stableSha256 } from "./lib/schema-metadata.js";
 
 const adminUrl = process.env.REHEARSAL_ADMIN_DATABASE_URL;
 const sourceDatabase = process.env.REHEARSAL_SOURCE_DATABASE ?? "kkd_prop_dev";

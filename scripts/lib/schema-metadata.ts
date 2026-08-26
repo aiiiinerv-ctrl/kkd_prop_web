@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { APPLICATION_TABLES, FOREIGN_KEY_CONTRACTS, INFRASTRUCTURE_TABLES, quoteIdentifier } from "./storage-engine-contract.mjs";
-import { SCHEMA_METADATA_VERSION, type SnapshotForeignKeyMetadata, type SnapshotSchemaMetadata } from "./backup-format.mjs";
-import { OperationalError } from "./operational-output.mjs";
+import { APPLICATION_TABLES, FOREIGN_KEY_CONTRACTS, INFRASTRUCTURE_TABLES, quoteIdentifier } from "./storage-engine-contract";
+import { SCHEMA_METADATA_VERSION, type SnapshotForeignKeyMetadata, type SnapshotSchemaMetadata } from "./backup-format";
+import { OperationalError } from "./operational-output";
 
 export type SchemaRow = Record<string, unknown>;
 type SqlClient = { $queryRawUnsafe(query: string): Promise<unknown> };

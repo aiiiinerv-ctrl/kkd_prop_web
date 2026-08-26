@@ -35,6 +35,7 @@ const secretHandler = createPagesCmsBackupHandler({
   }),
   createBackup: async () => {
     unauthorizedBackupCalled = true;
+    throw new Error("unauthorized route must not invoke backup");
   },
 });
 
@@ -63,6 +64,7 @@ const unquiescedHandler = createPagesCmsBackupHandler({
   }),
   createBackup: async () => {
     unquiescedBackupCalled = true;
+    throw new Error("unquiesced route must not invoke backup");
   },
 });
 const unquiescedResponse = await unquiescedHandler(

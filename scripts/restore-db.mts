@@ -34,14 +34,14 @@ import { PrismaClient } from "../src/generated/prisma/client.js";
 import {
   SCHEMA_METADATA_FILENAME,
   SNAPSHOT_DIR_PATTERN,
-} from "./lib/backup-format.mjs";
+} from "./lib/backup-format.js";
 import {
   assertTransactionalRestoreTarget,
   parseSnapshotMetadata,
   sha256,
   validateDumpStatements,
-} from "./lib/schema-metadata.mjs";
-import { operationalErrorCode } from "./lib/operational-output.mjs";
+} from "./lib/schema-metadata.js";
+import { operationalErrorCode } from "./lib/operational-output.js";
 
 function fail(message: string): never {
   console.error(`✗ restore-db: ${message}`);

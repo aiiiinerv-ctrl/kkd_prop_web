@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import { operationalErrorCode } from "../../../../../scripts/lib/operational-output.mjs";
+import { createBackupSnapshot } from "../../../../../scripts/lib/create-backup";
+import { operationalErrorCode } from "../../../../../scripts/lib/operational-output";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -73,7 +74,10 @@ export const POST = createPagesCmsBackupHandler({
     secret: process.env.PAGES_CMS_BACKUP_SECRET ?? "",
     writesQuiesced: process.env.BACKUP_WRITES_QUIESCED === "true",
   }),
-  createBackup: async () => {
-    throw new Error("temporary backup route is not implemented");
-  },
+  createBackup: () =>
+    createBackupSnapshot({
+      environment: process.env,
+      retentionEnabled: false,
+      onWarning: (message) => console.warn(`pages-cms-backup: ${message}`),
+    }),
 });

@@ -8,7 +8,7 @@
  * by line on that basis. Change the escaping here and both sides move
  * together.
  */
-import { APPLICATION_TABLE_CONTRACTS } from "./storage-engine-contract.mjs";
+import { APPLICATION_TABLE_CONTRACTS } from "./storage-engine-contract";
 
 /**
  * Directory name of a snapshot this tooling created, e.g. "2026-08-12T03-13-18".
