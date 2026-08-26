@@ -73,5 +73,96 @@ Any missing or additional base table is a stop condition until reviewed.
 
 ## Inventory result
 
-Pending. This section will contain sanitized aggregate findings, the Gate A
-decision, and the exact next owner checkpoint after the read-only run.
+Gate A decision: **NO-GO — production conversion must not start.**
+
+### Server and capacity
+
+- Server: MariaDB `10.6.24-MariaDB-cll-lve`.
+- Default engine: `MyISAM`; all 16 application tables currently use MyISAM.
+- InnoDB support: `YES`, including transactions, XA, and savepoints.
+- InnoDB page size: 16,384 bytes; SQL mode includes
+  `NO_ENGINE_SUBSTITUTION`.
+- Exact base-table contract: 16 present, zero missing, zero unknown.
+- Exact current application rows: 602 total.
+- Allocated database size: 681,692 bytes (approximately 0.65 MiB), comprising
+  458,460 data bytes and 223,232 index bytes.
+- Account-level free disk is approximately 10.0 GiB and free inode headroom is
+  approximately 176,880. This is ample relative to the current database, but
+  it is not a substitute for a restorable off-host backup.
+
+### Schema compatibility
+
+- Production exposes 215 application columns and 45 index entries.
+- The set of table/column identities matches the reviewed local schema.
+- All 45 index entries match the reviewed local schema exactly.
+- All 11 enum type lengths and server-side SHA-256 signatures match the
+  reviewed local schema exactly.
+- Remaining column-metadata differences are the expected MariaDB 10.6 versus
+  MySQL 8 representations: `int(11)` versus `int`, JSON-as-LONGTEXT with
+  binary collation versus native JSON, quoted defaults, timestamp casing, and
+  MySQL's `DEFAULT_GENERATED` marker.
+- Existing enforced Foreign Keys: zero, consistent with the current MyISAM
+  engine state.
+- `SHOW CREATE TABLE` ran for every application table, but this phpMyAdmin
+  configuration truncates displayed values after 50 characters. The 16
+  displayed snippets are therefore not accepted as full DDL evidence. Before
+  any DDL approval, Gate A still needs a full-text schema export or an
+  equivalent exact, hashed definition capture.
+
+### Blocking orphan and root cause
+
+Ten relationship checks are zero. One relationship is not:
+
+- `AdminUser_linkedChannelExecutiveId_fkey`: 1 orphan.
+
+The affected aggregate is one active `CHANNEL_EXECUTIVE` account. A matching
+audited `ChannelExecutive` delete exists. No identity, email, record ID, or
+Audit Log snapshot was exported.
+
+The code path explains the failure: `deleteChannelExecutive()` guards only
+automatic Lead references before deleting the executive. It does not guard or
+clear linked Admin Users and relies on the intended `ON DELETE SET NULL`
+Foreign Key. MyISAM ignored that Foreign Key, so the delete left the active
+account's link stale. This is a fail-closed availability problem rather than a
+known cross-account disclosure: login resolves no linked channel, while the
+lead filter still contains the deleted executive ID and therefore matches no
+current executive/channel records.
+
+No orphan was deleted, nulled, remapped, or otherwise changed during this
+inventory.
+
+### Live read-only verification
+
+The unchanged production site passed GET-only smoke after the inventory:
+
+- `/th` and `/en`: 200;
+- TH/EN About, Services, Packages, Portfolio, and Calculator routes: 200 with
+  their expected localized navigation text;
+- unauthenticated `/admin`: 307 redirect; and
+- unauthenticated private-slip path: 401.
+
+No authenticated screenshot was captured or committed.
+
+## Recommended remediation checkpoint
+
+The owner must choose the business-correct treatment of the one active account
+in the secured admin UI. The safe choices are:
+
+1. Relink it to the correct existing Channel Executive if the account should
+   remain active in that role (recommended when such a relationship exists).
+2. Change its role or deactivate it and clear the stale link if it should no
+   longer act as a Channel Executive.
+3. Restore the deleted Channel Executive only if the original deletion was a
+   business mistake.
+
+Blindly setting the link to `NULL` is not recommended: it would leave an active
+Channel Executive account that violates the create/update invariant and sees
+no scoped Leads.
+
+Separately, the application should block future Channel Executive deletion
+while linked Admin Users exist and tell the admin to relink/change those users
+first. That source/test change and the one-time production data remediation are
+separate approvals. After the chosen remediation, rerun all eleven orphan
+checks and obtain full-text DDL evidence. Only a clean rerun can move Gate A
+from `NO-GO` to owner review for maintenance/backup; it still does not authorize
+conversion DDL.
