@@ -8,6 +8,7 @@ prisma/*.db-journal
 storage/private
 .env.local
 .env
+.env*
 deploy/dist
 deploy/dist.zip
 deploy/linux-build

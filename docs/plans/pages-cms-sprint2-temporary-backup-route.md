@@ -87,13 +87,28 @@ filesystem behavior and must reject non-loopback database URLs.
 
 ## Production sequence requiring later approvals
 
+Gate C path is **(ก) temporary secret-gated backup route** (not panel-native
+export). Step 2 may ship while the three env controls stay disabled/unset.
+Steps 3–7 still need an exact Bangkok maintenance window and separate owner
+approval for each production state change.
+
 1. Agree an exact Bangkok date/time and expected write-free duration.
-2. Build and deploy the temporary route without enabling it.
-3. Enter maintenance, set the three production controls, and restart Passenger.
+2. Build and deploy the temporary route without enabling it. Confirm
+   `ENABLE_PAGES_CMS_BACKUP_ROUTE` is not `true`, `PAGES_CMS_BACKUP_SECRET` is
+   empty/unset, and `BACKUP_WRITES_QUIESCED` is not `true` on the host. POST
+   `/api/operations/pages-cms-backup` must return `404 {"error":"not_found"}`.
+3. Enter maintenance, set the three production controls (high-entropy secret),
+   and restart Passenger. After any Node.js Selector env edit, re-download and
+   diff `public_html/.htaccess` — panel env edits rewrite that file and have
+   previously dropped the appended www→bare canonical redirect.
 4. Trigger one POST, verify sanitized success metadata and snapshot files, then
    download the snapshot off-host and validate it without restoring production.
+   If every call returns `409 backup_in_progress` with no concurrent run, delete
+   only `backups/.pages-cms-backup.lock` (stale lock after a killed Passenger
+   worker) and retry once — do not delete snapshot directories.
 5. Unset the feature flag, secret, and quiescence confirmation; restart and
-   verify the route is 404 before leaving maintenance.
+   verify the route is 404 before leaving maintenance. Re-check `.htaccess`
+   again after the unset edit.
 6. Remove the route and temporary configuration documentation in code, deploy
    the clean artifact, and verify the route remains absent.
 7. Only then seek separate approval for the InnoDB/foreign-key DDL gate.
