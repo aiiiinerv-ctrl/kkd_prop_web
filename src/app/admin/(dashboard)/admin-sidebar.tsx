@@ -117,8 +117,15 @@ export function AdminSidebar({ role }: { role: Role }) {
   // /api/admin/leads/unread-count), so the hook's count is zeroed out client-
   // side too rather than showing a badge that's always stale for these roles.
   const { data: unreadLeads } = useUnreadLeadCount();
-  const READ_ONLY_LEAD_ROLES: Role[] = ["CHANNEL_EXECUTIVE", "MARKETING", "EDITOR", "EXECUTIVE"];
-  const unreadLeadCount = READ_ONLY_LEAD_ROLES.includes(role) ? 0 : (unreadLeads?.count ?? 0);
+  // Semantic subset (who must not see a live unread badge), not a copy of the
+  // Role enum — keep inline so verify-enums does not treat it as a redeclared map.
+  const unreadLeadCount =
+    role === "CHANNEL_EXECUTIVE" ||
+    role === "MARKETING" ||
+    role === "EDITOR" ||
+    role === "EXECUTIVE"
+      ? 0
+      : (unreadLeads?.count ?? 0);
 
   return (
     <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-background md:flex">
