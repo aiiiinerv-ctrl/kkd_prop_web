@@ -1,6 +1,7 @@
 # Sprint 2 production InnoDB evidence
 
-Status: Gate A read-only inventory in progress on 2026-08-26 (Asia/Bangkok).
+Status: Gate A complete and green on 2026-08-26 (Asia/Bangkok); awaiting a
+separate owner checkpoint for maintenance and the production backup path.
 
 ## Owner-approved scope
 
@@ -73,7 +74,7 @@ Any missing or additional base table is a stop condition until reviewed.
 
 ## Inventory result
 
-Gate A decision: **NO-GO — production conversion must not start.**
+Initial Gate A decision: **NO-GO — production conversion must not start.**
 
 ### Server and capacity
 
@@ -166,3 +167,42 @@ separate approvals. After the chosen remediation, rerun all eleven orphan
 checks and obtain full-text DDL evidence. Only a clean rerun can move Gate A
 from `NO-GO` to owner review for maintenance/backup; it still does not authorize
 conversion DDL.
+
+## Approved remediation and Gate A rerun
+
+The owner separately approved remediation of the identified test account. The
+production admin UI and audited server actions were used to change its role
+from `CHANNEL_EXECUTIVE` to `SALES`, which cleared the stale
+`linkedChannelExecutiveId`, and then deactivate it. The account was not linked
+to any real Channel Executive. A reload confirmed the persisted role and
+inactive state; Audit Log diffs confirmed `role`,
+`linkedChannelExecutiveId`, and `isActive` were recorded. No other production
+record was selected for mutation.
+
+The exact eleven aggregate orphan checks were rerun through the
+database-specific phpMyAdmin SSO surface using one fail-closed, `SELECT`-only
+query. All eleven returned zero and the aggregate orphan total was zero. No
+business rows were printed or saved.
+
+phpMyAdmin's `Full texts` result option was then applied per query and all 16
+`SHOW CREATE TABLE` results were captured without the earlier 50-character
+truncation. Each displayed definition length met its reported original length.
+Only table names, lengths, and SHA-256 digests were retained. The combined
+ordered DDL signature is
+`e97d81922a2ea892d0b5db7059859409ada076bb82859c0c3e50979b05a73731`.
+
+### Current Gate A decision
+
+**GREEN for owner review of the next checkpoint; no maintenance, backup, or
+DDL is authorized by this result.** InnoDB is supported, the exact 16-table
+contract is understood, capacity is ample, column/index/enum metadata matches,
+full DDL fingerprints exist, and all eleven orphan counts are zero.
+
+The earlier exact row total of 602 predates the two audited remediation
+mutations. Gate B/C must refresh table counts, newest timestamps, and hashes
+immediately before quiescence/backup rather than treating the earlier total as
+current.
+
+The post-remediation read-only smoke remained green: `/th` returned 200,
+unauthenticated `/admin` returned 307, and both the private-file denial and
+unauthenticated admin API returned 401.
