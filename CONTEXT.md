@@ -2,6 +2,20 @@
 
 Bilingual (TH/EN) marketing site + admin backend for a solar installation company. Public visitors submit leads through two flows; staff work those leads to close through an admin backend whose every mutation is audited.
 
+## Delivery & backlog
+
+**Backlog Plan**:
+The markdown execution record for one GitHub issue, living at
+`backlogs/ISSUE_XXX_<slug>/PLAN.md` with the same number as that issue. It holds
+goal, scope, known/unknowns, task table, definition of done, and evidence. It
+does not replace GitHub labels as live triage status.
+_Avoid_: ticket file, local issue, war-room task
+
+**Backlog Index**:
+`backlogs/INDEX.md` — a table of contents linking GitHub `#N` to active and done
+PLAN paths. Not the source of truth for open/closed state.
+_Avoid_: dashboard status board, kanban
+
 ## Language
 
 ### Lead capture

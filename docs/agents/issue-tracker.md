@@ -25,6 +25,21 @@ When set to `yes`, PRs run through the same labels and states as issues, using t
 
 GitHub shares one number space across issues and PRs, so a bare `#42` may be either — resolve with `gh pr view 42` and fall back to `gh issue view 42`.
 
+## Dual source of truth with `backlogs/`
+
+GitHub remains the live triage surface (labels, comments, close). Work that is
+`ready-for-agent`, `ready-for-human`, in progress, on a **wayfinder** track, or
+a **diagnosing-bugs** session must also have:
+
+`backlogs/ISSUE_XXX_<short_slug>/PLAN.md`
+
+where `XXX` matches the GitHub issue number. See `backlogs/README.md` for
+layout, DoD, and when to move folders into `backlogs/done/`. `backlogs/INDEX.md`
+is a TOC of PLAN links only — not a second status board.
+
+When a skill says "publish to the issue tracker", still create the GitHub
+issue first, then add the matching PLAN and INDEX row.
+
 ## When a skill says "publish to the issue tracker"
 
 Create a GitHub issue.
