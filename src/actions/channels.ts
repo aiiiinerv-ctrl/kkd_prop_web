@@ -307,13 +307,21 @@ export async function deleteChannelExecutive(id: string): Promise<ActionResult> 
   // `_count` include no longer has to be stripped back out before auditing.
   const guard = await prisma.channelExecutive.findUnique({
     where: { id },
-    select: { _count: { select: { autoLeads: true } } },
+    select: {
+      _count: { select: { autoLeads: true, linkedAdminUsers: true } },
+    },
   });
   if (!guard) return { ok: false, error: "ไม่พบผู้ดำเนินการ" };
   if (guard._count.autoLeads > 0) {
     return {
       ok: false,
       error: `ลบไม่ได้ มี lead อ้างอิงผู้ดำเนินการนี้ ${guard._count.autoLeads} รายการ`,
+    };
+  }
+  if (guard._count.linkedAdminUsers > 0) {
+    return {
+      ok: false,
+      error: `ลบไม่ได้ มีบัญชีผู้ใช้เชื่อมกับผู้ดำเนินการนี้ ${guard._count.linkedAdminUsers} บัญชี กรุณาเชื่อมบัญชีไปยังผู้ดำเนินการอื่นหรือเปลี่ยนบทบาทก่อน`,
     };
   }
 
