@@ -275,6 +275,10 @@ application remains the only reader/writer.
 
 **Depends on:** production InnoDB gate complete.
 
+**Prep (docs only, pre-unlock):** [`pages-cms-sprint3-prep.md`](pages-cms-sprint3-prep.md)
+— checklist before the first migration PR; do not implement until Gate B–E is
+green.
+
 ### Scope and files/surfaces
 
 - `prisma/schema.prisma`, a new additive migration with explicit

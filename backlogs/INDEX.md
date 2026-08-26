@@ -23,3 +23,5 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 Wayfinder maps and grilling that are open but not in the nearby queue, e.g. #1, #10, #21, #24, #25, #27, #36 — create `ISSUE_XXX_…/PLAN.md` when claimed or when labeled `ready-for-agent` / `ready-for-human`.
 
 Pages CMS Sprint 3–12 remain in [`docs/plans/pages-cms-implementation-sprints.md`](../docs/plans/pages-cms-implementation-sprints.md) until Sprint 2 (Gate B–E) is green. Closed slice ticket: [#50](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/50).
+
+Sprint 3 prep (docs only): [`docs/plans/pages-cms-sprint3-prep.md`](../docs/plans/pages-cms-sprint3-prep.md).
