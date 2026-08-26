@@ -273,7 +273,14 @@ mangled `.htaccess` means a site that is down with no shell to fix it from.
 `action=edit` and no `text` body is treated as a save that truncates the file
 to 0 bytes (confirmed 2026-08-26 — wiped Passenger + env blocks and took the
 site offline). Read-only download must use the GET path form
-`/CMD_FILE_MANAGER/domains/.../public_html/.htaccess`. If the file is emptied,
+`/CMD_FILE_MANAGER/domains/.../public_html/.htaccess` via:
+
+```bash
+npx tsx scripts/download-production-htaccess.mts
+```
+
+That helper refuses `action=edit`, writes under `$TMPDIR/kkd-htaccess/`, and
+prints only structural markers (never `SetEnv` values). If the file is emptied,
 CloudLinux's source of truth is still `.cl.selector/node-selector.json`; the
 fastest recovery is Node.js Selector → open the app → Save (regenerates the
 managed blocks), then re-append the canonical www→bare redirect. Reconstructing

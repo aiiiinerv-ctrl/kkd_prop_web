@@ -66,33 +66,60 @@ layer to intercept every method before Passenger. The versioned page is
 `deploy/maintenance/pages-cms-maintenance.html`; it contains no form, external
 asset, analytics call, or writable endpoint and explains the outage in TH/EN.
 
+Gate C uses the temporary secret-gated backup route, so the maintenance rewrite
+must **exclude** `/api/operations/pages-cms-backup` or the snapshot POST never
+reaches Passenger. Every other path (public forms, admin, other `/api`, `/files`)
+must still return 503.
+
+### Pre-flight (required before any production `.htaccess` mutation)
+
+1. Site healthy: `/th` 200, `/api/admin/leads` 401, backup POST → JSON
+   `404 {"error":"not_found"}` while the route is deployed but disabled.
+2. Download `.htaccess` with the GET-only helper (never `action=edit`):
+
+```bash
+npx tsx scripts/download-production-htaccess.mts
+```
+
+   Expect `OK` for CloudLinux Passenger + env markers and the canonical
+   www→bare redirect. The raw file lands under `$TMPDIR/kkd-htaccess/` — do not
+   commit or paste it.
+3. Owner supplies an **exact** Bangkok end-of-window timestamp for
+   `Retry-After` (do not invent one from “ตอนนี้”).
+
+### Activation steps
+
 1. Upload the HTML as `pages-cms-maintenance.html` under the domain document
    root. This is a human FTP action under the redeploy runbook's non-negotiable
    rule.
-2. Download and preserve the current `.htaccess`; it contains secrets and must
-   never be committed or pasted into logs.
+2. Re-run `download-production-htaccess.mts` and keep that baseline outside the
+   repo; it contains secrets and must never be committed or pasted into logs.
 3. Append the block below after the CloudLinux-managed blocks. Replace the
-   timestamp with the approved end of the window.
+   `Retry-After` timestamp with the owner-approved end of the window (GMT).
 
 ```apache
 <IfModule mod_headers.c>
-Header always set Retry-After "Wed, 26 Aug 2026 03:00:00 GMT"
+Header always set Retry-After "Wed, 26 Aug 2026 17:00:00 GMT"
 </IfModule>
 ErrorDocument 503 /pages-cms-maintenance.html
 
 <IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteCond %{REQUEST_URI} !^/pages-cms-maintenance\.html$ [NC]
+RewriteCond %{REQUEST_URI} !^/api/operations/pages-cms-backup$ [NC]
 RewriteRule ^ - [R=503,L]
 </IfModule>
 ```
 
-4. Re-download `.htaccess` and diff locally against the intended append. Do not
-   publish either copy.
+4. Re-download with the GET-only helper and diff locally against the intended
+   append. Confirm CloudLinux blocks are still present. Do not publish either
+   copy.
 5. Verify desktop/mobile TH and EN; verify `GET`, public form `POST`, admin
-   mutation `POST`, `/api`, and `/files`. Every intercepted request must return
-   503 and must not reach Passenger. A rendered maintenance page with a 200 POST is a
-   failure because it could falsely imply a save.
+   mutation `POST`, other `/api`, and `/files`. Every intercepted request must
+   return 503 and must not reach Passenger. A rendered maintenance page with a
+   200 POST is a failure because it could falsely imply a save. The backup path
+   alone may reach the app (404 while disabled, or authenticated success during
+   Gate C).
 6. Check database aggregate counts and newest timestamps before/after a blocked
    test POST. They must not change. Only then mark writes quiesced.
 

@@ -97,10 +97,12 @@ approval for each production state change.
    `ENABLE_PAGES_CMS_BACKUP_ROUTE` is not `true`, `PAGES_CMS_BACKUP_SECRET` is
    empty/unset, and `BACKUP_WRITES_QUIESCED` is not `true` on the host. POST
    `/api/operations/pages-cms-backup` must return `404 {"error":"not_found"}`.
-3. Enter maintenance, set the three production controls (high-entropy secret),
-   and restart Passenger. After any Node.js Selector env edit, re-download and
-   diff `public_html/.htaccess` — panel env edits rewrite that file and have
-   previously dropped the appended www→bare canonical redirect.
+3. Enter maintenance (Gate B block with backup-path exclusion — see
+   `pages-cms-innodb-conversion-runbook.md`), set the three production controls
+   (high-entropy secret), and restart Passenger. After any Node.js Selector env
+   edit, re-run `npx tsx scripts/download-production-htaccess.mts` and confirm
+   CloudLinux + canonical + maintenance markers are still `OK` — panel env edits
+   rewrite that file and have previously dropped the appended www→bare redirect.
 4. Trigger one POST, verify sanitized success metadata and snapshot files, then
    download the snapshot off-host and validate it without restoring production.
    If every call returns `409 backup_in_progress` with no concurrent run, delete
