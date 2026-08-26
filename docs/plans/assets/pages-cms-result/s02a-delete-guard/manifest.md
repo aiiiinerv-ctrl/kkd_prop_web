@@ -71,3 +71,90 @@ or account identity.
   evidence is captured.
 - Deploying this guard and performing any production remediation remain
   separate approvals.
+
+## Guard-only release readiness
+
+Checked on 2026-08-26 under the authorization boundary in
+`docs/plans/pages-cms-sprint2a-guard-deploy-readiness.md`. This checkpoint did
+not upload or extract files on the host, restart Passenger, change production
+configuration or schema, authenticate to production, or mutate production
+data.
+
+### Provenance and scope
+
+- `origin/main` was refreshed at `d7143e47801fcd37c6f91fc54d5121b26f13d9d9`.
+  Local `main` was `518525c1f44698e6c7ac813ff79cb86a0530ec30`,
+  26 commits ahead and zero commits behind.
+- An isolated detached worktree started at the last recorded production
+  baseline `72da1be6c3859b9eef8e9a180b56b826f97b1b72` and cherry-picked only the
+  source patch from `fa08277`.
+- The resulting release commit was
+  `ceb6aa2a9e92ab716686feb67f76a30089161d6b`.
+- The complete release diff against `72da1be` was exactly
+  `src/actions/channels.ts` (9 insertions, 1 deletion). There was no Prisma,
+  migration, dependency, environment, public asset, storage, or bilingual
+  message change.
+
+### Artifact
+
+- Built with `scripts/build-shared-hosting-deploy.mts` using the AlmaLinux 8 /
+  Node 20.20 Linux target. The successful invocation pinned the repo's arm64
+  Node/tsx runtime because the first `npx` attempt selected a stale x64
+  esbuild cache before Docker started.
+- Next build ID: `_JPOENcC3vWsakoG-WHkW`.
+- ZIP size: `27,722,446` bytes.
+- ZIP SHA-256:
+  `b766dd18a9304340f2f802562446b6eecde5f210b2bdee17df50a0b31f6989fb`.
+- ZIP integrity passed. The compiled guard text was present in a server chunk,
+  and the staged Sharp runtime was an x86-64 Linux ELF shared object.
+- The allowlisted staging tree and ZIP contained no `.env*`, credentials,
+  local database, `storage/`, `backups/`, user uploads, or repository metadata.
+  A targeted content scan also found no local database password, panel
+  credential assignment, verification-only auth secret, or private key.
+- The staging directory contains Next-generated relative package symlinks that
+  become host-absolute when copied by the assembler, so mounting staging
+  directly into a container cannot resolve the hashed Prisma adapter. The ZIP
+  materializes those package files. The extracted ZIP contained the hashed
+  adapter package and started successfully in the Linux container; verification
+  therefore exercised the actual extraction path used on production.
+
+### Local behavior
+
+The extracted ZIP ran at local production mode against loopback MySQL. The
+focused regression passed:
+
+```text
+FRIENDLY_ERROR_VISIBLE=PASS
+EXECUTIVE_RETAINED=PASS
+ADMIN_USER_LINK_RETAINED=PASS
+DELETE_AUDIT_NOT_CREATED=PASS
+CHANNEL_EXECUTIVE_DELETE_GUARD=PASS
+```
+
+The existing admin CRUD/audit browser regression exited 0. It covered login,
+Leads, Services, Users, Packages, Portfolio, Testimonials, Channels, Bookings,
+Settings, Page SEO, paired TH/EN About Content, Audit Log, and Reports. Its
+synthetic mutations targeted local MySQL only.
+
+### Read-only production preflight
+
+```text
+HOMEPAGE: /th -> 200
+ADMIN_REDIRECT: /admin -> 307
+PRIVATE_FILE: /files/private/slips/nonexistent -> 401
+ADMIN_API: /api/admin/leads -> 401
+```
+
+No feature-specific authenticated production deletion was attempted. The
+guard's production behavior remains intentionally unproven until the owner
+authorizes a named canary mutation; the extracted-ZIP browser regression is
+the pre-deploy behavioral proof.
+
+### Decision and rollback
+
+**GO for a separate deploy approval; not deployed.** The rollback point is
+the recorded production baseline `72da1be`. A reproducible rollback artifact
+can be built from that exact commit with the same shared-hosting builder,
+uploaded by the human-only FTP procedure, extracted, restarted, and followed
+by the standard production smoke suite. This code-only release has no database
+rollback step and does not remediate the known production orphan.
