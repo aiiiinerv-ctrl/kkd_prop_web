@@ -20,6 +20,7 @@ import {
 } from "./backup-format";
 import { buildSnapshotMetadata, inspectSchema, sha256 } from "./schema-metadata";
 import { OperationalError } from "./operational-output";
+import { CMS_PUBLIC_STORAGE_NAMESPACES } from "./storage-engine-contract";
 
 const BACKUP_LOCK_DIRECTORY = ".pages-cms-backup.lock";
 const PARTIAL_DIRECTORY_PREFIX = ".pages-cms-backup-partial-";
@@ -32,8 +33,11 @@ export type BackupSnapshotResult = {
   writesQuiesced: boolean;
   rowCounts: Readonly<Record<string, number>>;
   privateStorageCopied: boolean;
+  cmsPublicStorageCopied: boolean;
+  cmsPublicNamespacesCopied: readonly string[];
   databaseBytes: number;
   privateStorageBytes: number;
+  cmsPublicStorageBytes: number;
   totalBytes: number;
   prunedCount: number;
 };
@@ -130,11 +134,8 @@ export async function createBackupSnapshot(
   if (!databaseUrl.startsWith("mysql://")) throw new OperationalError("DATABASE_URL_INVALID");
 
   const backupRoot = path.resolve(process.cwd(), environment.BACKUP_ROOT ?? "./backups");
-  const privateStoragePath = path.resolve(
-    process.cwd(),
-    environment.STORAGE_ROOT ?? "./storage",
-    "private"
-  );
+  const storageRoot = path.resolve(process.cwd(), environment.STORAGE_ROOT ?? "./storage");
+  const privateStoragePath = path.join(storageRoot, "private");
   const writesQuiesced = environment.BACKUP_WRITES_QUIESCED === "true";
   const onWarning = options.onWarning ?? (() => undefined);
   const createdAt = (options.now?.() ?? new Date()).toISOString();
@@ -202,6 +203,25 @@ export async function createBackupSnapshot(
       onWarning("configured storage/private does not exist — skipping private copy");
     }
 
+    // Bounded CMS public namespaces (hero / OG) — not the whole public tree.
+    const cmsPublicNamespacesCopied: string[] = [];
+    let cmsPublicStorageBytes = 0;
+    for (const relative of CMS_PUBLIC_STORAGE_NAMESPACES) {
+      const source = path.join(storageRoot, relative);
+      if (!existsSync(source)) continue;
+      const destination = path.join(partialDirectory, "cms-public", relative);
+      mkdirSync(path.dirname(destination), { recursive: true });
+      cpSync(source, destination, { recursive: true });
+      cmsPublicNamespacesCopied.push(relative);
+      cmsPublicStorageBytes += directorySize(destination);
+    }
+    const cmsPublicStorageCopied = cmsPublicNamespacesCopied.length > 0;
+    if (!cmsPublicStorageCopied) {
+      onWarning(
+        "CMS public namespaces public/seo/og and public/pages absent — skipping cms-public copy"
+      );
+    }
+
     const databaseBytes = statSync(databasePath).size;
     renameSync(partialDirectory, finalDirectory);
     partialDirectory = undefined;
@@ -217,9 +237,12 @@ export async function createBackupSnapshot(
       writesQuiesced: metadata.writesQuiesced,
       rowCounts: counts,
       privateStorageCopied,
+      cmsPublicStorageCopied,
+      cmsPublicNamespacesCopied,
       databaseBytes,
       privateStorageBytes,
-      totalBytes: databaseBytes + privateStorageBytes,
+      cmsPublicStorageBytes,
+      totalBytes: databaseBytes + privateStorageBytes + cmsPublicStorageBytes,
       prunedCount,
     };
   } finally {

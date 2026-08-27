@@ -19,8 +19,11 @@ export type BackupRouteResult = {
   writesQuiesced: boolean;
   rowCounts: Readonly<Record<string, number>>;
   privateStorageCopied: boolean;
+  cmsPublicStorageCopied: boolean;
+  cmsPublicNamespacesCopied: readonly string[];
   databaseBytes: number;
   privateStorageBytes: number;
+  cmsPublicStorageBytes: number;
   totalBytes: number;
   prunedCount: number;
 };

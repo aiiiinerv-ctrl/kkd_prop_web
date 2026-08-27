@@ -43,6 +43,11 @@ async function main(): Promise<void> {
       ? `  - storage/private: copied (${formatBytes(result.privateStorageBytes)})`
       : "  - storage/private: skipped (source not found)"
   );
+  console.log(
+    result.cmsPublicStorageCopied
+      ? `  - cms-public (${result.cmsPublicNamespacesCopied.join(", ")}): copied (${formatBytes(result.cmsPublicStorageBytes)})`
+      : "  - cms-public (public/seo/og, public/pages): skipped (source not found)"
+  );
   console.log(`  - total snapshot size: ${formatBytes(result.totalBytes)}`);
   if (process.env.BACKUP_RETENTION_DAYS) {
     console.log(

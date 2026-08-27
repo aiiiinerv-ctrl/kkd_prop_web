@@ -95,9 +95,12 @@ const successfulHandler = createPagesCmsBackupHandler({
     writesQuiesced: true,
     rowCounts: { Lead: 7, AdminUser: 2 },
     privateStorageCopied: true,
+    cmsPublicStorageCopied: true,
+    cmsPublicNamespacesCopied: ["public/pages"],
     databaseBytes: 1234,
     privateStorageBytes: 5678,
-    totalBytes: 6912,
+    cmsPublicStorageBytes: 100,
+    totalBytes: 7012,
     prunedCount: 0,
   }),
 });
@@ -119,9 +122,12 @@ assert.deepEqual(await successfulResponse.json(), {
   writesQuiesced: true,
   rowCounts: { Lead: 7, AdminUser: 2 },
   privateStorageCopied: true,
+  cmsPublicStorageCopied: true,
+  cmsPublicNamespacesCopied: ["public/pages"],
   databaseBytes: 1234,
   privateStorageBytes: 5678,
-  totalBytes: 6912,
+  cmsPublicStorageBytes: 100,
+  totalBytes: 7012,
   prunedCount: 0,
 });
 

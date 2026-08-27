@@ -25,7 +25,7 @@
  */
 
 import "dotenv/config";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { cpSync, rmSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
@@ -83,7 +83,9 @@ const snapshotDir = positional[0] ? path.resolve(process.cwd(), positional[0]) :
 const sqlPath = path.join(snapshotDir, "database.sql");
 const metadataPath = path.join(snapshotDir, SCHEMA_METADATA_FILENAME);
 const snapshotPrivatePath = path.join(snapshotDir, "private");
+const snapshotCmsPublicPath = path.join(snapshotDir, "cms-public");
 const livePrivatePath = path.resolve(process.cwd(), storageRoot, "private");
+const liveStorageRoot = path.resolve(process.cwd(), storageRoot);
 
 if (!existsSync(sqlPath)) {
   fail(`snapshot ${path.basename(snapshotDir)} has no database.sql`);
@@ -122,6 +124,11 @@ function summarize(statements: string[]): void {
     existsSync(snapshotPrivatePath)
       ? `  storage/private in snapshot: yes -> ${withStorage ? "WILL overwrite configured private storage" : "will be left alone (pass --with-storage to restore)"}`
       : "  storage/private in snapshot: none"
+  );
+  console.log(
+    existsSync(snapshotCmsPublicPath)
+      ? `  cms-public in snapshot: yes -> ${withStorage ? "WILL overwrite public/seo/og + public/pages namespaces" : "will be left alone (pass --with-storage to restore)"}`
+      : "  cms-public in snapshot: none"
   );
 }
 
@@ -183,6 +190,26 @@ async function main() {
         console.log("✓ restore-db: configured storage/private restored");
       } catch (err) {
         fail(`failed to restore storage/private (${operationalErrorCode(err)})`);
+      }
+    }
+
+    if (!existsSync(snapshotCmsPublicPath)) {
+      console.warn(
+        "⚠ restore-db: --with-storage given but the snapshot has no cms-public/ directory — skipped"
+      );
+    } else {
+      try {
+        for (const relative of ["public/seo/og", "public/pages"] as const) {
+          const from = path.join(snapshotCmsPublicPath, relative);
+          if (!existsSync(from)) continue;
+          const to = path.join(liveStorageRoot, relative);
+          rmSync(to, { recursive: true, force: true });
+          mkdirSync(path.dirname(to), { recursive: true });
+          cpSync(from, to, { recursive: true });
+        }
+        console.log("✓ restore-db: cms-public namespaces restored (public/seo/og, public/pages)");
+      } catch (err) {
+        fail(`failed to restore cms-public storage (${operationalErrorCode(err)})`);
       }
     }
   }

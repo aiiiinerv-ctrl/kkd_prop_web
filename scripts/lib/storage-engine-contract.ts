@@ -11,10 +11,17 @@ export const APPLICATION_TABLE_CONTRACTS = [
   { table: "SiteSettings", delegate: "siteSettings" },
   { table: "PageSeo", delegate: "pageSeo" },
   { table: "AboutContent", delegate: "aboutContent" },
+  { table: "HomePageContent", delegate: "homePageContent" },
   { table: "Service", delegate: "service" },
   { table: "Package", delegate: "package" },
   { table: "PortfolioProject", delegate: "portfolioProject" },
   { table: "Testimonial", delegate: "testimonial" },
+  { table: "HomeFaqItem", delegate: "homeFaqItem" },
+  { table: "AboutFeaturedTestimonial", delegate: "aboutFeaturedTestimonial" },
+  { table: "ServicesPageContent", delegate: "servicesPageContent" },
+  { table: "PackagesPageContent", delegate: "packagesPageContent" },
+  { table: "PortfolioPageContent", delegate: "portfolioPageContent" },
+  { table: "CalculatorPageContent", delegate: "calculatorPageContent" },
   { table: "AuditLog", delegate: "auditLog" },
 ] as const;
 
@@ -22,6 +29,9 @@ export type ApplicationTable = (typeof APPLICATION_TABLE_CONTRACTS)[number]["tab
 export const APPLICATION_TABLES: readonly ApplicationTable[] = APPLICATION_TABLE_CONTRACTS.map(
   ({ table }) => table
 );
+
+/** Bounded CMS public storage namespaces included in backup/restore snapshots. */
+export const CMS_PUBLIC_STORAGE_NAMESPACES = ["public/seo/og", "public/pages"] as const;
 
 export const INFRASTRUCTURE_TABLES = ["_prisma_migrations"] as const;
 
@@ -124,6 +134,33 @@ export const FOREIGN_KEY_CONTRACTS: readonly ForeignKeyContract[] = [
     referencedTable: "PortfolioProject",
     referencedColumn: "id",
     deleteRule: "SET NULL",
+    updateRule: "CASCADE",
+  },
+  {
+    name: "HomeFaqItem_homePageContentId_fkey",
+    table: "HomeFaqItem",
+    column: "homePageContentId",
+    referencedTable: "HomePageContent",
+    referencedColumn: "id",
+    deleteRule: "CASCADE",
+    updateRule: "CASCADE",
+  },
+  {
+    name: "AboutFeaturedTestimonial_aboutContentId_fkey",
+    table: "AboutFeaturedTestimonial",
+    column: "aboutContentId",
+    referencedTable: "AboutContent",
+    referencedColumn: "id",
+    deleteRule: "CASCADE",
+    updateRule: "CASCADE",
+  },
+  {
+    name: "AboutFeaturedTestimonial_testimonialId_fkey",
+    table: "AboutFeaturedTestimonial",
+    column: "testimonialId",
+    referencedTable: "Testimonial",
+    referencedColumn: "id",
+    deleteRule: "RESTRICT",
     updateRule: "CASCADE",
   },
   {
