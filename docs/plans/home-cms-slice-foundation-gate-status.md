@@ -11,15 +11,15 @@ Which foundation gates are green/red, where evidence lives, and what unlocks Hom
 
 **This ticket records status — it does not execute maintenance, backup, or DDL.**
 
-## Gate scoreboard (2026-08-27)
+## Gate scoreboard (2026-08-27, evening)
 
 | Gate | Meaning | Status | Evidence / tracker |
 | --- | --- | --- | --- |
-| **A** | Read-only production inventory (engines, DDL fingerprints, orphans) | **GREEN** (inventory only — no mutate auth) | `docs/plans/assets/pages-cms-result/s02-production-innodb/manifest.md` — “Current Gate A decision: GREEN for owner review… no maintenance, backup, or DDL authorized” |
-| **B** | Host maintenance / write quiescence (503) | **RED** — not run | [#51](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/51) `ready-for-human`; `backlogs/ISSUE_051_pages_cms_gate_b_c/PLAN.md` task 1 **blocked on owner Bangkok `Retry-After` end time** |
-| **C** | Quiesced off-host backup via temporary route | **RED** — not run | Same #51; route deployed **disabled**; must not leave `ENABLE_PAGES_CMS_BACKUP_ROUTE=true` after window |
-| **D** | InnoDB conversion + FK DDL on production | **RED** — unauthorized | Explicitly out of scope of #51 until separate approval; runbook: `docs/plans/pages-cms-innodb-conversion-runbook.md` § Gate D |
-| **E** | Post-conversion verification; writes reopen | **RED** — blocked on D | Runbook § Gate E |
+| **A** | Read-only production inventory | **GREEN** | `s02-production-innodb/manifest.md` |
+| **B** | Host maintenance / write quiescence | **GREEN** (second window, 2026-08-27 12:47–13:48 Bangkok) | [#51](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/51), [#65](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/65) closed; `s02-gate-b-c/manifest.md`, `s02-gate-d-e/manifest.md` |
+| **C** | Quiesced off-host backup | **GREEN** (fresh snapshot `2026-08-27T05-54-14`, taken this window, dry-restore validated) | `s02-gate-d-e/manifest.md` |
+| **D** | InnoDB conversion + FK DDL | **GREEN** — 16/16 tables InnoDB, 11/11 FKs present, orphans 0/11 | [#65](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/65) closed; `s02-gate-d-e/manifest.md` |
+| **E** | Post-conversion verification | **GREEN** — row counts unchanged (607 total, exact match) proving zero writes during the window; maintenance removed, full smoke green | `s02-gate-d-e/manifest.md` |
 
 Local Sprint 1 rehearsal (MyISAM→InnoDB harness) has its own evidence under `docs/plans/assets/pages-cms-result/s01-engine-readiness/` — that is **not** production Gate B–E.
 
@@ -34,37 +34,36 @@ From s02 manifest (sanitized):
 
 ## What still waits on the owner (HITL)
 
-1. **Exact Bangkok maintenance end time** for Gate B `Retry-After` → unblocks #51 tasks 2–6.  
-2. After B/C green: **separate approval** for Gate D DDL (new checkpoint; not implied by #51).  
-3. After D: Gate E verify + explicit reopen of writes.  
-4. Before Home hero upload in prod: backup coverage for `public/pages/` (called out in Home slice security/impact research).
+1. **Non-blocking cleanup:** delete the 3 backup-route env vars (`ENABLE_PAGES_CMS_BACKUP_ROUTE`, `PAGES_CMS_BACKUP_SECRET`, `BACKUP_WRITES_QUIESCED`) from the Node.js Selector panel UI next time convenient — `.htaccess` no longer serves them (fixed at final teardown), but the panel's own stored config may still list them, and a future unrelated Node.js Selector Save could otherwise resurrect them into `.htaccess`.
+2. H0 is now fully unblocked — Home CMS H1 [#61](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/61) is ready to be planned/executed by `nextjs-dev` (schema + backfill), no DDL/maintenance approval required for that step.
 
-## Path to unlock Home CMS (H0 → H1)
+## Path to unlock Home CMS (H0 → H1) — H0 complete
 
 ```text
 Owner supplies Retry-After end time
-  → Execute #51 Gate B then C (hosting-deploy-specialist + runbooks)
-  → Close #51 with manifest evidence
-  → Owner approves Gate D window
-  → Run Gate D per innodb-conversion-runbook
-  → Gate E green
-  → H0 DoD met → open/execute H1 (Home schema + backfill) per home-cms-slice-implementation-sprints.md
+  → Execute #51 Gate B then C (hosting-deploy-specialist + runbooks)      [done]
+  → Close #51 with manifest evidence                                      [done]
+  → Owner approves Gate D window                                          [done]
+  → Run Gate D per innodb-conversion-runbook                              [done — 2026-08-27]
+  → Gate E green                                                          [done — 2026-08-27]
+  → H0 DoD met → open/execute H1 (Home schema + backfill) per home-cms-slice-implementation-sprints.md   [done locally — #61]
 ```
 
-Until Gate E is green: **no production Home Page Content writes**, no production FAQ aggregate saves, no production hero CMS upload.
-
-Local/dev isolated DBs may continue planning and (after #60) implementation against disposable schemas — that does not unlock production H1.
+Gate E is green as of 2026-08-27 ~13:50 Bangkok: production writes are reopened (maintenance removed, `/th` `/en` 200), so **production Home Page Content writes are no longer blocked by the InnoDB/FK gate.** H1 schema + local backfill landed in [#61](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/61); production still needs additive DDL + gated backfill before H2. Admin UI / public cutover remain H2/H3.
 
 ## Dual-SoT pointers
 
 | Item | Path |
 | --- | --- |
-| Gate B/C plan | `backlogs/ISSUE_051_pages_cms_gate_b_c/PLAN.md` |
+| Gate B/C plan | `backlogs/done/ISSUE_051_pages_cms_gate_b_c/PLAN.md` |
 | Gate B/C issue | https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/51 |
+| Gate D/E plan | `backlogs/done/ISSUE_065_pages_cms_gate_d_e/PLAN.md` |
+| Gate D/E issue | https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/65 |
 | InnoDB runbook | `docs/plans/pages-cms-innodb-conversion-runbook.md` |
 | Temp backup route | `docs/plans/pages-cms-sprint2-temporary-backup-route.md` |
 | Redeploy / htaccess | `docs/plans/kkd-shared-hosting-redeploy-runbook.md` |
 | Gate A evidence | `docs/plans/assets/pages-cms-result/s02-production-innodb/manifest.md` |
+| Gate D/E evidence | `docs/plans/assets/pages-cms-result/s02-gate-d-e/manifest.md` |
 
 ## Sources
 
