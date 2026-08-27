@@ -99,17 +99,17 @@ model AdminUser {
   linkedChannelExecutiveId String?
   linkedChannelExecutive   ChannelExecutive? @relation("AdminUserLinkedExecutive", fields: [linkedChannelExecutiveId], references: [id])
 
-  assignedLeads               Lead[]          @relation("LeadAssignedSales")
-  assignedBookingsAsSales     SurveyBooking[] @relation("BookingAssignedSales")
-  assignedBookingsAsEngineer  SurveyBooking[] @relation("BookingAssignedEngineer")
+  assignedLeads              Lead[]          @relation("LeadAssignedSales")
+  assignedBookingsAsSales    SurveyBooking[] @relation("BookingAssignedSales")
+  assignedBookingsAsEngineer SurveyBooking[] @relation("BookingAssignedEngineer")
 }
 
 model PromoChannel {
-  id         String             @id @default(cuid())
-  slug       String
-  nameTh     String
-  nameEn     String
-  type       ChannelType        @default(INDIVIDUAL)
+  id          String             @id @default(cuid())
+  slug        String
+  nameTh      String
+  nameEn      String
+  type        ChannelType        @default(INDIVIDUAL)
   // "ประเภทช่องทางย่อย" — a 2-letter code from src/lib/channel-taxonomy.ts
   // (TE/LN/LO/TT/FB/WS/CP/RF/EF/AG), also the refCode prefix for channels
   // created after this column shipped. Plain VarChar rather than a Prisma
@@ -118,21 +118,21 @@ model PromoChannel {
   // closed set is enforced by zod in src/actions/channels.ts instead.
   // Nullable so the 6 pre-existing channels (refCode CH0xx) keep resolving;
   // this column is never used to validate or reshape an old refCode.
-  subType    String?            @db.VarChar(4)
+  subType     String?            @db.VarChar(4)
   // Landing page for this channel's promo link. Choices come from
   // PROMO_LANDING_PATH_OPTIONS in src/lib/channel-taxonomy.ts and are
   // validated server-side via isPromoLandingPath() before writes.
-  landingPath String            @default("/th/packages")
+  landingPath String             @default("/th/packages")
   // utm_campaign for this channel's promo link — one of CHANNEL_UTM_CAMPAIGNS,
   // nullable because it has no meaningful default until an admin picks one.
-  utmCampaign String?           @db.VarChar(60)
-  refCode    String             @unique
-  isActive   Boolean            @default(true)
-  sortOrder  Int                @default(0)
-  createdAt  DateTime           @default(now())
-  leads      Lead[]
-  autoLeads  Lead[]             @relation("LeadAutoSourceChannel")
-  executives ChannelExecutive[]
+  utmCampaign String?            @db.VarChar(60)
+  refCode     String             @unique
+  isActive    Boolean            @default(true)
+  sortOrder   Int                @default(0)
+  createdAt   DateTime           @default(now())
+  leads       Lead[]
+  autoLeads   Lead[]             @relation("LeadAutoSourceChannel")
+  executives  ChannelExecutive[]
 }
 
 // Landing-path options are no longer read from this table — they come from
@@ -147,37 +147,37 @@ model PromoLandingPath {
 }
 
 model ChannelExecutive {
-  id        String       @id @default(cuid())
-  channelId String
-  channel   PromoChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  name      String
-  phone     String
-  refCode   String       @unique
-  createdAt DateTime     @default(now())
-  autoLeads Lead[]       @relation("LeadAutoSourceExecutive")
-  linkedAdminUsers AdminUser[] @relation("AdminUserLinkedExecutive")
+  id               String       @id @default(cuid())
+  channelId        String
+  channel          PromoChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  name             String
+  phone            String
+  refCode          String       @unique
+  createdAt        DateTime     @default(now())
+  autoLeads        Lead[]       @relation("LeadAutoSourceExecutive")
+  linkedAdminUsers AdminUser[]  @relation("AdminUserLinkedExecutive")
 }
 
 model Lead {
-  id              String         @id @default(cuid())
-  type            LeadType
-  status          LeadStatus     @default(NEW)
-  name            String
-  phone           String
-  lineId          String?
+  id                    String            @id @default(cuid())
+  type                  LeadType
+  status                LeadStatus        @default(NEW)
+  name                  String
+  phone                 String
+  lineId                String?
   // Free-text name of whoever personally referred this lead — supplementary
   // info, distinct from sourceChannelId (a marketing channel from a dropdown).
-  referrerName    String?
-  province        String
-  buildingType    BuildingType
+  referrerName          String?
+  province              String
+  buildingType          BuildingType
   // Free-text detail, required only when buildingType === OTHER (validated
   // in src/lib/validations/lead.ts via superRefine).
   buildingTypeOtherText String?
-  avgMonthlyBill  Int?
+  avgMonthlyBill        Int?
   // Array of "ON_GRID"|"HYBRID"|"OFF_GRID" — quote-form only ("ระบบที่สนใจ"
   // multi-select). Used as the "ประเภทระบบ" export column (see
   // src/lib/reports/export-rows.ts). Null for SURVEY-type leads.
-  interestedSystems Json?
+  interestedSystems     Json?
   // Slug of the Package/Service the lead clicked "request quote" from (the
   // `?package=`/`?service=` query param on the booking link — see
   // src/lib/booking-links.ts). Server-validated against the Package/Service
@@ -186,9 +186,9 @@ model Lead {
   // link-click context, not something the customer typed in.
   interestedPackageSlug String?
   interestedServiceSlug String?
-  locale          String         @default("th")
-  sourceChannelId String?
-  sourceChannel   PromoChannel?  @relation(fields: [sourceChannelId], references: [id])
+  locale                String            @default("th")
+  sourceChannelId       String?
+  sourceChannel         PromoChannel?     @relation(fields: [sourceChannelId], references: [id])
   autoSourceChannelId   String?
   autoSourceChannel     PromoChannel?     @relation("LeadAutoSourceChannel", fields: [autoSourceChannelId], references: [id])
   autoSourceExecutiveId String?
@@ -200,26 +200,26 @@ model Lead {
   // never reads these), while these columns are ad-campaign metadata read
   // from the `kkd_utm` cookie (src/lib/utm.ts) at submit time. Both can be
   // set on the same lead; neither one derives the other.
-  utmSource       String?        @db.VarChar(120)
-  utmMedium       String?        @db.VarChar(120)
-  utmCampaign     String?        @db.VarChar(120)
-  utmContent      String?        @db.VarChar(120)
-  utmTerm         String?        @db.VarChar(120)
-  landingPath     String?        @db.VarChar(200)
-  assignedSalesId String?
-  assignedSales   AdminUser?     @relation("LeadAssignedSales", fields: [assignedSalesId], references: [id])
-  lastFollowUpAt  DateTime?
+  utmSource             String?           @db.VarChar(120)
+  utmMedium             String?           @db.VarChar(120)
+  utmCampaign           String?           @db.VarChar(120)
+  utmContent            String?           @db.VarChar(120)
+  utmTerm               String?           @db.VarChar(120)
+  landingPath           String?           @db.VarChar(200)
+  assignedSalesId       String?
+  assignedSales         AdminUser?        @relation("LeadAssignedSales", fields: [assignedSalesId], references: [id])
+  lastFollowUpAt        DateTime?
   // Set once, the first time a lead's status transitions into SIGNED (see
   // updateLeadStatus() in src/actions/leads.ts) — represents "วันที่ปิดการขาย"
   // per the requirements PDF §4.5 export field list. Not cleared when the
   // lead advances further (INSTALLING/COMPLETED); not backfilled for leads
   // that were already SIGNED+ before this column existed (stays null, shown
   // as "-" in the export).
-  closedAt        DateTime?
+  closedAt              DateTime?
   // Written once by the public submit actions at create time
   // (submit-quote.ts / submit-survey-booking.ts) — no admin action ever
   // writes this. What the customer typed into "ข้อความเพิ่มเติม".
-  customerMessage String?        @db.Text
+  customerMessage       String?           @db.Text
   // Admin-only free text ("บันทึกภายใน"), written by updateLeadNotes().
   // Column in the DB is still named "notes" for historical reasons (this
   // field used to double as both the customer's message and the admin's
@@ -227,10 +227,10 @@ model Lead {
   // — renaming the DB column isn't worth the migration risk on a host with
   // no external MySQL access, so we keep the @map and rename only the
   // Prisma-side field name.
-  internalNotes   String?        @db.Text @map("notes")
-  booking         SurveyBooking?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  internalNotes         String?           @map("notes") @db.Text
+  booking               SurveyBooking?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
 
   @@index([status, createdAt])
 }
@@ -343,6 +343,128 @@ model AboutContent {
   updatedAt             DateTime @updatedAt
 }
 
+// Singleton (issue #61 / Home CMS slice H1) — editable content for the home
+// page (ADMIN|SALES|MARKETING|EDITOR). Unlike AboutContent (cuid-only, no
+// canonical key — predates the Pages CMS decision), this is a newly created
+// table so it follows docs/plans/pages-cms-data-model-migration-decision.md's
+// canonical-singleton-key pattern: `key` is unique and fixed to "home",
+// looked up with findUnique rather than findFirst. Backfilled from
+// messages.home + messages.faq (see src/lib/backfill/home-content.ts);
+// public readers stay message-owned until Sprint H3 — see
+// docs/plans/home-cms-slice-implementation-sprints.md.
+//
+// HomeFeaturedPortfolioProject (Latest Works item selection) is explicitly
+// deferred by owner decision — Latest Works keeps its section heading/metrics
+// here but no curated project references yet.
+model HomePageContent {
+  id  String @id @default(cuid())
+  key String @unique @default("home") @db.VarChar(40)
+
+  // Hero
+  heroKickerTh        String?
+  heroKickerEn        String?
+  heroTitleWhiteTh    String?
+  heroTitleWhiteEn    String?
+  heroTitleGoldTh     String?
+  heroTitleGoldEn     String?
+  heroSubtitleTh      String? @db.Text
+  heroSubtitleEn      String? @db.Text
+  heroAltTh           String?
+  heroAltEn           String?
+  heroImageKey        String?
+  ctaPrimaryLabelTh   String?
+  ctaPrimaryLabelEn   String?
+  ctaSecondaryLabelTh String?
+  ctaSecondaryLabelEn String?
+  quickContactLabelTh String?
+  quickContactLabelEn String?
+  proofLabelTh        String?
+  proofLabelEn        String?
+  proofTitleTh        String?
+  proofTitleEn        String?
+  proofItem1Th        String?
+  proofItem1En        String?
+  proofItem2Th        String?
+  proofItem2En        String?
+  proofItem3Th        String?
+  proofItem3En        String?
+  feature1LabelTh     String?
+  feature1LabelEn     String?
+  feature2LabelTh     String?
+  feature2LabelEn     String?
+  feature3LabelTh     String?
+  feature3LabelEn     String?
+  feature4LabelTh     String?
+  feature4LabelEn     String?
+
+  // Latest Works (optional section) — Featured Reference selection deferred
+  showLatestWorks      Boolean @default(true)
+  latestWorksHeadingTh String?
+  latestWorksHeadingEn String?
+  metric1LabelTh       String?
+  metric1LabelEn       String?
+  metric1ValueTh       String?
+  metric1ValueEn       String?
+  metric2LabelTh       String?
+  metric2LabelEn       String?
+  metric2ValueTh       String?
+  metric2ValueEn       String?
+  metric3LabelTh       String?
+  metric3LabelEn       String?
+  metric3ValueTh       String?
+  metric3ValueEn       String?
+  viewAllLabelTh       String?
+  viewAllLabelEn       String?
+
+  // Services CTA ("Our service" action row) — optional section
+  showServicesCta        Boolean @default(true)
+  servicesCtaBadgeTh     String?
+  servicesCtaBadgeEn     String?
+  servicesCtaTitleTh     String?
+  servicesCtaTitleEn     String?
+  servicesCtaTextTh      String? @db.Text
+  servicesCtaTextEn      String? @db.Text
+  servicesCtaLinkLabelTh String?
+  servicesCtaLinkLabelEn String?
+
+  // FAQ chrome — question/answer rows live in HomeFaqItem
+  showFaq              Boolean @default(true)
+  faqBadgeTh           String?
+  faqBadgeEn           String?
+  faqTitleTh           String?
+  faqTitleEn           String?
+  faqIntroTh           String? @db.Text
+  faqIntroEn           String? @db.Text
+  faqLineButtonLabelTh String?
+  faqLineButtonLabelEn String?
+
+  version   Int      @default(1)
+  updatedAt DateTime @updatedAt
+
+  faqItems HomeFaqItem[]
+}
+
+// Owned child of HomePageContent (issue #61) — 1-12 ordered, bilingual FAQ
+// rows while the FAQ section is visible (owner-locked max, see
+// docs/plans/home-cms-slice-implementation-sprints.md "Open decision"). Not a
+// Featured Reference: rows belong exclusively to Home and cascade-delete with
+// their parent. No row-level publish state or independent mutation endpoint —
+// only the Home aggregate action (H2) may change these.
+model HomeFaqItem {
+  id                String          @id @default(cuid())
+  homePageContentId String
+  homePageContent   HomePageContent @relation(fields: [homePageContentId], references: [id], onDelete: Cascade)
+  questionTh        String
+  questionEn        String
+  answerTh          String          @db.Text
+  answerEn          String          @db.Text
+  sortOrder         Int
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@unique([homePageContentId, sortOrder])
+}
+
 // Singleton (mirrors BookingCapacitySetting) — admin-configurable payment
 // info shown on the public survey-booking form (bank transfer + PromptPay QR).
 model PaymentSettings {
@@ -413,19 +535,19 @@ model PortfolioProject {
 }
 
 model Testimonial {
-  id           String           @id @default(cuid())
+  id           String            @id @default(cuid())
   customerName String
-  quoteTh      String           @db.Text
-  quoteEn      String           @db.Text
+  quoteTh      String            @db.Text
+  quoteEn      String            @db.Text
   role         String?
   province     String?
   photoKey     String?
   projectId    String?
   project      PortfolioProject? @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  sortOrder    Int              @default(0)
-  isPublished  Boolean          @default(false)
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  sortOrder    Int               @default(0)
+  isPublished  Boolean           @default(false)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 
   @@index([isPublished, sortOrder])
 }
@@ -439,8 +561,8 @@ model AuditLog {
   // both well under these caps) — the composite index below on two
   // default VARCHAR(191) utf8mb4 columns exceeded the production host's
   // inherited MyISAM 1000-byte key limit (error 1071). See ADR-0006.
-  entityType String @db.VarChar(50)
-  entityId   String @db.VarChar(40)
+  entityType String      @db.VarChar(50)
+  entityId   String      @db.VarChar(40)
   before     Json?
   after      Json?
   createdAt  DateTime    @default(now())
