@@ -8,6 +8,7 @@ import {
   Home,
   Images,
   LayoutDashboard,
+  LayoutTemplate,
   Megaphone,
   MessageSquareQuote,
   Package,
@@ -75,6 +76,16 @@ const ITEMS = [
     href: "/admin/content/about",
     label: "เนื้อหาหน้าเว็บ",
     icon: FileText,
+    roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
+  },
+  {
+    // Pages CMS registry (issue #62 / #52) — currently only `home` is
+    // enabled; About intentionally stays above at /admin/content/about
+    // until its own migration sprint (owner decision, see
+    // docs/plans/home-cms-slice-implementation-sprints.md).
+    href: "/admin/pages/home",
+    label: "หน้าแรก (Pages)",
+    icon: LayoutTemplate,
     roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
   },
   {

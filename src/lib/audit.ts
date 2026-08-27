@@ -15,6 +15,7 @@ export type AuditEntityType =
   | "AdminUser"
   | "BookingCapacitySetting"
   | "ChannelExecutive"
+  | "HomePageContent"
   | "Lead"
   | "Package"
   | "PageSeo"
@@ -204,6 +205,94 @@ export function auditedEntity<
       if (!before) return null;
       refresh(config.revalidate(before));
       return before;
+    },
+  };
+}
+
+/** The only write `auditedAggregate.save()` is allowed to make before `mutate` runs. */
+type VersionGuardDelegate = {
+  updateMany(args: {
+    where: { id: string; version: number };
+    data: { version: { increment: number } };
+  }): Promise<{ count: number }>;
+};
+
+export type AggregateSaveResult = { ok: true } | { ok: false; conflict: true };
+
+/**
+ * Declares a versioned **aggregate** mutation seam — a parent row plus its
+ * owned child rows saved as one domain operation
+ * (docs/plans/pages-cms-data-model-migration-decision.md "Aggregate save,
+ * concurrency, and audit"). Unlike `auditedEntity`, the caller supplies the
+ * entire mutation body (`mutate`) because an aggregate's child writes
+ * (create/update/delete/reorder) are shape-specific per entity — this stays
+ * generic over "one optimistic-versioned parent + arbitrary child writes"
+ * rather than a single table.
+ *
+ * `save()` guarantees the same three things `auditedEntity` gives a single
+ * row, applied to the whole aggregate:
+ * 1. A stale `expectedVersion` conflicts with **zero side effects** — the
+ *    conditional `version` increment runs first and alone; if it affects no
+ *    rows, `mutate` never runs and no audit row is written.
+ * 2. The version bump, `mutate`'s field/child writes, and the single audit
+ *    insert share one transaction, so they can never partially commit.
+ * 3. Exactly one AuditLog row is written per save, however many child rows
+ *    `mutate` touches — reorder/add/remove/edit-field all read as one
+ *    "edited <Entity>" event, per the data-model decision.
+ *
+ * What stays with the caller on purpose (same split as `auditedEntity`):
+ * authorization, field/child validation, and the snapshot shape (bounded —
+ * no image bytes, absolute paths, or secrets).
+ */
+export function auditedAggregate(config: {
+  entityType: AuditEntityType;
+  model: (client: Prisma.TransactionClient) => VersionGuardDelegate;
+  revalidate: readonly RevalidateTarget[];
+}) {
+  return {
+    async save(params: {
+      id: string;
+      expectedVersion: number;
+      /** Read before any write in this save — the audit "before" snapshot. */
+      snapshotBefore: (tx: Prisma.TransactionClient) => Promise<Record<string, unknown>>;
+      /**
+       * Parent field update + child inserts/updates/deletes. Must not touch
+       * `version` itself (the guard above owns it). Throwing aborts the
+       * whole transaction — nothing from this save (including the version
+       * bump) persists.
+       */
+      mutate: (tx: Prisma.TransactionClient) => Promise<void>;
+      /** Read after `mutate` commits within the same tx — the audit "after" snapshot. */
+      snapshotAfter: (tx: Prisma.TransactionClient) => Promise<Record<string, unknown>>;
+    }): Promise<AggregateSaveResult> {
+      const actorId = await resolveActorId();
+
+      const result = await prisma.$transaction(async (tx) => {
+        const before = await params.snapshotBefore(tx);
+
+        const { count } = await config.model(tx).updateMany({
+          where: { id: params.id, version: params.expectedVersion },
+          data: { version: { increment: 1 } },
+        });
+        if (count === 0) return { conflict: true as const };
+
+        await params.mutate(tx);
+
+        const after = await params.snapshotAfter(tx);
+        await writeAuditRow(tx, {
+          actorId,
+          action: "UPDATE",
+          entityType: config.entityType,
+          entityId: params.id,
+          before: before as unknown as Prisma.InputJsonValue,
+          after: after as unknown as Prisma.InputJsonValue,
+        });
+        return { conflict: false as const };
+      });
+
+      if (result.conflict) return { ok: false, conflict: true };
+      refresh(config.revalidate);
+      return { ok: true };
     },
   };
 }

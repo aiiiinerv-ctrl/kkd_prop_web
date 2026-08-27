@@ -105,6 +105,7 @@ export const AUDIT_ENTITY_LABELS: Record<AuditEntityType, string> = {
   AdminUser: "ผู้ใช้ระบบ",
   BookingCapacitySetting: "การตั้งค่าคิวสำรวจ",
   ChannelExecutive: "ผู้ดำเนินการช่องทาง",
+  HomePageContent: "เนื้อหาหน้าแรก",
   Lead: "Lead",
   Package: "แพ็กเกจ",
   PageSeo: "SEO หน้าเว็บ",
