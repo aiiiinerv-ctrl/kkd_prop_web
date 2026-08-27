@@ -167,6 +167,32 @@ SELECT
   (SELECT COUNT(*) FROM HomeFaqItem) AS faq_rows;
 ```
 
+## Agent-side read-only re-verification
+
+`scripts/pma-readonly-query.mts` runs a single `SELECT`/`SHOW` statement
+against production through phpMyAdmin's own SSO + AJAX endpoint (the read-only
+path proven in `docs/plans/pages-cms-innodb-conversion-runbook.md` Gate A) and
+prints the phpMyAdmin "Showing rows ... Query took ..." marker as live-execution
+proof. It hard-refuses anything that isn't `SELECT`/`SHOW`/`DESCRIBE`/`EXPLAIN`
+— DDL must still be pasted into the phpMyAdmin SQL tab by a human, never run
+through this script.
+
+```bash
+npx tsx scripts/pma-readonly-query.mts "SELECT TABLE_NAME, ENGINE, TABLE_ROWS FROM information_schema.TABLES WHERE TABLE_SCHEMA = 'kkdprop1_kkdproperty' AND TABLE_NAME IN ('HomePageContent', 'HomeFaqItem')"
+```
+
+Gotcha specific to this AJAX path (not the phpMyAdmin UI): the AJAX session
+does not carry a `USE <db>` the way the SQL tab's sidebar-selected database
+does, so `DATABASE()` resolves to nothing here — use the explicit schema name
+`kkdprop1_kkdproperty` in `WHERE TABLE_SCHEMA = ...` when running the
+verification queries above through this script. A human running the same
+queries in the actual phpMyAdmin SQL tab (sidebar already on the right
+database) does not need this substitution.
+
+Pre-DDL baseline captured 2026-08-27 (confirms clean slate before Statement 1):
+`HomePageContent`/`HomeFaqItem` — zero rows, i.e. tables do not exist yet; no
+FK named `HomeFaqItem_homePageContentId_fkey` exists yet.
+
 ## Rollback
 
 Additive only — no existing table or column is touched. If a statement fails

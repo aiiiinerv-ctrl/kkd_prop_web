@@ -67,3 +67,32 @@
 - Deferred to H2/H3 (owner-locked, per sprint doc): `HomeFeaturedPortfolioProject`,
   admin UI (`/admin/pages/home`), aggregate audit seam, page registry, public
   cutover of `home-content.tsx` / `FaqSection`.
+
+## Production rollout status (2026-08-27, `hosting-deploy-specialist`)
+
+Full status: `docs/plans/assets/home-cms-h1/production-rollout-manifest.md`.
+
+**DDL, redeploy, and backfill are all done and verified in production.**
+Owner ran the 3 DDL statements (verified InnoDB + FK + 0 rows). Redeploy hit
+one real bug, found and fixed this session: the backfill route reads
+`src/messages/*.json` via a dynamic runtime `fs.readFile`, which
+`build-shared-hosting-deploy.mts`'s artifact allowlist never copied — fixed
+by adding `src/messages/` to that script (deploy tooling, not app code) plus
+a precondition check. Redeployed clean (`BUILD_ID=X9cGREQEwFfHYOk-xKPdm`).
+Backfill ran twice: `contentDigest` identical both times
+(`e801a982dc56ab...4cffd2`, matching the local test-run digest above exactly),
+`faqRowCount=5` both times, hero blob `200`. DB verified independently via
+read-only query: `home_rows=1`, `faq_rows=5`. Public `/th`/`/en` still 100%
+message-owned (no cutover) — confirmed post-backfill.
+
+**Teardown complete — H1 production rollout is DONE.** Owner ran one Node.js
+Selector Save deleting all 5 keys (the 2 backfill vars plus the 3 resurfaced
+Gate B/C vars). Verified independently: `.htaccess` no longer contains any
+of the 5 keys, Passenger + canonical redirect blocks intact, Passenger
+restarted, `/th`/`/en` 200, both gated routes (`home-cms-backfill`,
+`pages-cms-backup`) back to `404`, DB rows retained (`home_rows=1`,
+`faq_rows=5`, unchanged from backfill). Full evidence:
+`docs/plans/assets/home-cms-h1/production-rollout-manifest.md`.
+
+H2 (#62 — admin UI, aggregate audit seam, page registry) intentionally not
+started this session.
