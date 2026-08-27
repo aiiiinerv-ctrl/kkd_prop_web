@@ -2,12 +2,11 @@
 
 Date: 2026-08-27  
 Updated: 2026-08-27 (unlocked)  
-Status: **unlocked** — Gate B–E green (#51/#65). Dual-SoT opened as
-[#66](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/66) /
-[`backlogs/ISSUE_066_pages_cms_sprint3_additive/PLAN.md`](../../backlogs/ISSUE_066_pages_cms_sprint3_additive/PLAN.md).  
-Implementation still waits on **owner-scheduled** DDL / gated backfill /
-cleanup redeploy (`needs-info` on #66). Do not apply `ready-for-agent` until
-those checkpoints are on the calendar.
+Status: **ready-for-agent** — Gate B–E green; #66 decisions locked 2026-08-27:
+window **Fri 28 Aug 2026 02:00–05:00 Asia/Bangkok** (DDL → backfill 2× →
+cleanup); **defer** `HomeFeaturedPortfolioProject`; **HTTP** secret-gated
+backfill route. Dual-SoT:
+[`backlogs/ISSUE_066_pages_cms_sprint3_additive/PLAN.md`](../../backlogs/ISSUE_066_pages_cms_sprint3_additive/PLAN.md).
 
 Canonical sprint body: [`pages-cms-implementation-sprints.md`](pages-cms-implementation-sprints.md)
 § Sprint 3. **Carve-out:** Home pilot already shipped `HomePageContent` +

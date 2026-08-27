@@ -8,8 +8,8 @@
 |---|---|
 | GitHub | https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/66 |
 | Opened | 2026-08-27 |
-| Status (disk) | active — unlocked after Gate B–E; waiting owner DDL/backfill schedule |
-| Triage labels | `enhancement`, `needs-info` (promote to `ready-for-agent` only after checkpoints scheduled) |
+| Status (disk) | active — owner decisions locked; local implement may start |
+| Triage labels | `enhancement`, `ready-for-agent` |
 | Type | enhancement (Pages CMS Sprint 3 execution) |
 
 ## Goal
@@ -18,62 +18,69 @@
 - Idempotent backfill with digest parity; old app remains sole reader/writer for non-Home surfaces.
 - Production-safe hand SQL + evidence under `docs/plans/assets/pages-cms-result/s03-additive-data/`.
 
+## Locked decisions (2026-08-27)
+
+| ID | Decision |
+|---|---|
+| A1 | Production window **Fri 28 Aug 2026 02:00–05:00 Asia/Bangkok** — DDL → gated backfill (2×) → cleanup redeploy |
+| A2 | **Defer** `HomeFeaturedPortfolioProject` (same as #60) |
+| A3 | **Temporary secret-gated HTTP backfill route** (host cannot run `tsx`); tear down in same window |
+
 ## Scope
 
 - **In-scope**
-  - Mother plan Sprint 3 (`docs/plans/pages-cms-implementation-sprints.md` § Sprint 3), adjusted for Home H1:
-    - **Already done (skip / do not recreate):** `HomePageContent`, `HomeFaqItem`, managed home hero key + Home FAQ backfill (#61)
-    - **Still to add:** `PageSeo` extensions; `AboutFeaturedTestimonial`; `ServicesPageContent`; `PackagesPageContent`; `PortfolioPageContent`; `CalculatorPageContent`; `AboutContent` / `SiteSettings` extensions per `pages-cms-data-model-migration-decision.md`
-    - **Owner decide:** `HomeFeaturedPortfolioProject` (deferred in #60) — include in this sprint or keep deferred
+  - Mother plan Sprint 3, adjusted for Home H1:
+    - **Skip (already live):** `HomePageContent`, `HomeFaqItem`, managed home hero + FAQ backfill (#61)
+    - **Add:** `PageSeo` extensions; `AboutFeaturedTestimonial`; `ServicesPageContent`; `PackagesPageContent`; `PortfolioPageContent`; `CalculatorPageContent`; `AboutContent` / `SiteSettings` extensions per data-model decision
+    - **Deferred:** `HomeFeaturedPortfolioProject`
   - Backup model order + `public/seo/og/` and `public/pages/` namespaces
-  - Idempotent backfill scripts; secret-gated HTTP route only if host still cannot run `tsx`
-  - Production additive SQL (host has no `_prisma_migrations` ledger)
+  - Idempotent backfill + secret-gated HTTP route + production additive SQL
 - **Out-of-scope**
   - Admin Pages shell (Sprint 4+)
   - Per-page public/admin cutover (Sprint 5–10)
   - Dual writers / flipping non-Home readers
-  - Down migrations; generic Page/JSON/Media Asset models
+  - Down migrations; `HomeFeaturedPortfolioProject`
 
 ## Checkpoint: Known / Unknown / Assumption
 
-- **Known:** Gate A–E green (#51/#65); Home CMS H0–H4 closed (#52/#61–#64); prep file `pages-cms-sprint3-prep.md`; data-model decision locked.
-- **Unknown:** Owner schedule for DDL / gated backfill / cleanup redeploy; whether to include `HomeFeaturedPortfolioProject` now; whether HTTP backfill route is still required vs panel/ops path.
-- **Safe assumptions:** Additive columns/tables ignored by current production build for non-Home pages; Home rows already present must remain untouched by new backfills except intentional extensions.
+- **Known:** Gate A–E green; Home H0–H4 closed; A1–A3 locked above; Home H1 HTTP backfill pattern exists.
+- **Unknown:** Exact host dwell time within the 02:00–05:00 window (±1h slip OK).
+- **Safe assumptions:** Additive columns ignored by current non-Home production readers; Home rows must not be duplicated/corrupted by new backfills.
 
 ## Task table
 
 | # | Work | Owner | Depends on | Parallel? | Status |
 |---:|---|---|---|---|---|
-| 1 | Owner: schedule DDL + backfill + cleanup checkpoints; decide Featured Portfolio model | User | — | — | **blocked** (`needs-info`) |
-| 2 | Pre-flight checklist ticks in `pages-cms-sprint3-prep.md` | `pm-expert` / `nextjs-dev` | — | ✅ w/ hygiene | in progress |
+| 1 | Owner lock A1–A3 | User | — | — | **done** |
+| 2 | Pre-flight checklist in `pages-cms-sprint3-prep.md` | `nextjs-dev` | 1 | ✅ | in progress |
 | 3 | Schema + local migrate + phpMyAdmin-safe additive SQL | `nextjs-dev` | 1 | — | pending |
 | 4 | Backup order / storage namespace coverage | `nextjs-dev` | 3 | — | pending |
-| 5 | Idempotent backfill + digests (2×); optional gated HTTP route | `nextjs-dev` | 3 | — | pending |
-| 6 | Production DDL on host | `hosting-deploy-specialist` | 1, 3 | — | pending |
-| 7 | Production gated backfill + teardown secret/route | `hosting-deploy-specialist` | 1, 5, 6 | — | pending |
-| 8 | Evidence `s03-additive-data/` + verify skill | `nextjs-dev` + specialist | 7 | — | pending |
-| 9 | Close #66; move PLAN → `backlogs/done/` | User / agent | 8 | — | pending |
+| 5 | Idempotent backfill + digests (2×) + gated HTTP route | `nextjs-dev` | 3 | — | pending |
+| 6 | Production DDL in A1 window | `hosting-deploy-specialist` | 3, A1 | — | pending |
+| 7 | Production gated backfill + teardown | `hosting-deploy-specialist` | 5, 6, A1 | — | pending |
+| 8 | Evidence `s03-additive-data/` + verify | `nextjs-dev` + specialist | 7 | — | pending |
+| 9 | Close #66; move PLAN → `done/` | User / agent | 8 | — | pending |
 
 ## Parallel lanes
 
-- P1: Owner checkpoint scheduling + Featured Portfolio decision (#66)
-- P2: Repo hygiene track (`docs/plans/repo-hygiene-docs-system-tasks.md`) — no code/schema
+- P1: Local schema/SQL/backfill (`nextjs-dev`) — now
+- P2: Repo hygiene gitignore skill packs — now
+- P3: Production window Fri 02:00 ICT (`hosting-deploy-specialist`)
 
 ## Sequential chain
 
-1. Owner answers `needs-info` → label `ready-for-agent`
-2. Local schema + SQL + backfill harness
-3. Production DDL → backfill → cleanup redeploy
-4. Evidence + close
+1. Local schema + SQL + backfill harness green
+2. Fri window: DDL → backfill 2× → cleanup redeploy
+3. Evidence + close
 
 ## Definition of Done
 
 - [ ] Remaining Sprint 3 models present locally + production (additive, InnoDB, named FKs)
-- [ ] Backfill twice with matching digests; Home pilot rows not duplicated/corrupted
+- [ ] Backfill twice with matching digests; Home pilot rows intact
 - [ ] Old build against expanded DB: non-Home public/admin visually unchanged
-- [ ] Backup → restore reproduces new tables + bounded CMS images
-- [ ] Temp backfill route/secret removed if used
-- [ ] Evidence under `s03-additive-data/`; GitHub closed; PLAN moved to `done/`; INDEX updated
+- [ ] Backup → restore reproduces new tables + bounded CMS images (`public/seo/og/`, `public/pages/`)
+- [ ] Temp backfill route/secret removed after window
+- [ ] Evidence under `s03-additive-data/`; GitHub closed; PLAN → `done/`; INDEX updated
 - [ ] No secrets in PLAN / issue comments
 
 ## Evidence
@@ -81,24 +88,19 @@
 ### 1) Research
 
 - Scope: Pages CMS Sprint 3 post–Home pilot
-- Files: mother sprints, data-model decision, sprint3-prep, Home H1 schema migration
-- Current state: unlocked; issue opened; implementation blocked on owner schedule
-- Constraints: no dual writer; no down migration; hand SQL on host
+- Decisions: comment on #66 2026-08-27
+- Constraints: no dual writer; no down migration; hand SQL on host; Featured Portfolio deferred
 
 ### 2) Fix / diagnosis
 
-- Change summary: dual-SoT opened only (no schema yet)
-- Why: prep forbids `ready-for-agent` until checkpoints scheduled
-- Alternatives: start coding before schedule — rejected (owner checkpoint rule)
-- Affected files: this PLAN, INDEX, sprint3-prep, issue #66
+- Change summary: decisions locked; implementation starting
+- Affected files: this PLAN, INDEX, issue #66, hygiene `.gitignore`
 
 ### 3) Quality
 
-- Commands run: `gh issue create` → #66
-- Observed: Gate E evidence exists at `s02-gate-d-e/manifest.md`
-- Locales: N/A until schema/backfill
+- Pending local migrate + 2× backfill digests
 
 ### 4) Risk / follow-up
 
-- Residual risk: mother Sprint 3 text still lists Home models — implementers must use this PLAN’s “already done” carve-out
-- Follow-up: Sprint 4 issue only after #66 closed with evidence
+- Window slip ±1h OK; do not start DDL outside A1 without new owner note
+- Sprint 4 only after #66 closed

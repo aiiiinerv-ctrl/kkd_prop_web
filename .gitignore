@@ -69,6 +69,16 @@ prisma/*.db-journal
 # local Claude Code settings overrides (may contain machine-specific permission rules)
 .claude/settings.local.json
 
+# Third-party skill packs from the skill installer (skills-lock.json). Repo is
+# public — do not vendor/redistribute without a license review. Keep the
+# project-owned verify skill tracked.
+.agents/
+.claude/skills/*
+!.claude/skills/verify/
+!.claude/skills/verify/**
+skills-lock.json
+.tmp-inspect-*.mts
+
 # vercel
 .vercel
 

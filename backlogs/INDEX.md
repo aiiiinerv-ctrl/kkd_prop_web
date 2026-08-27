@@ -7,7 +7,7 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 | GitHub | PLAN | Notes |
 |---|---|---|
-| [#66](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/66) | [`ISSUE_066_pages_cms_sprint3_additive`](ISSUE_066_pages_cms_sprint3_additive/PLAN.md) | Pages CMS Sprint 3 — unlocked; `needs-info` until owner schedules DDL/backfill/cleanup |
+| [#66](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/66) | [`ISSUE_066_pages_cms_sprint3_additive`](ISSUE_066_pages_cms_sprint3_additive/PLAN.md) | Pages CMS Sprint 3 — `ready-for-agent`; window Fri 28 Aug 02:00–05:00 ICT; Featured Portfolio deferred; HTTP backfill |
 | [#38](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/38) | [`ISSUE_038_cookieyes_banner_locale_en`](ISSUE_038_cookieyes_banner_locale_en/PLAN.md) | CookieYes Free = one language — owner decision |
 | [#32](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/32) | [`ISSUE_032_lead_notifications_resend_line`](ISSUE_032_lead_notifications_resend_line/PLAN.md) | Blocked on Resend/LINE secrets |
 | [#30](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/30) | [`ISSUE_030_attribution_baseline_after_consent`](ISSUE_030_attribution_baseline_after_consent/PLAN.md) | Calendar-bound attribution baselines |

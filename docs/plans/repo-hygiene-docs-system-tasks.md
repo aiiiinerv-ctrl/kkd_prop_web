@@ -21,19 +21,18 @@
 3. **ทำ index ให้ `docs/plans/` แทนการย้าย/archive ไฟล์เก่า** — 44 ไฟล์อ้างอิงกันเองด้วย relative link จำนวนมาก (เช่น `pages-cms-codex-handoff-tasks.md` ลิงก์ไป 5 ไฟล์ในโฟลเดอร์เดียวกัน) การย้ายไฟล์เข้า `archive/` เสี่ยง broken link ข้ามเอกสารโดยไม่มีใครเห็นจนกว่าจะมีคนตามลิงก์ — ทำ index (ไม่ย้ายไฟล์จริง) ได้ประโยชน์เดียวกัน (หาไฟล์ active ได้เร็ว) โดยความเสี่ยงต่ำกว่ามาก ถ้าอยากย้ายจริงในอนาคตค่อยทำเป็นแผนแยก
 4. **เพิ่มบันทึกสั้น ๆ ว่าทำไม `.claude/skills/` กับ `.agents/skills/` ซ้ำกัน** ใน `docs/agents/domain.md` เพื่อกัน agent รุ่นหลังเข้าใจผิดว่าเป็นขยะซ้ำแล้วลบทิ้งข้างใดข้างหนึ่ง (สองโฟลเดอร์นี้เป็น mirror ของ skill installer ตัวเดียวกัน สำหรับ tool คนละตัวที่อ่านคนละ path)
 
-## คำถามที่ต้องผู้ใช้ตอบก่อนเริ่ม
+## คำถามที่ผู้ใช้ตอบแล้ว
 
-1. **`.agents/`, `.claude/skills/*` (ยกเว้น `verify` ที่ track อยู่แล้ว), `skills-lock.json` → ใส่ `.gitignore` หรือ commit เข้า repo?**
-   Repo นี้เป็น **public** (ดูคอมเมนต์ `.gitignore` เรื่อง `docs/stuffs/`) เนื้อหาที่ `skills-lock.json` ดึงมาเป็นของ third-party (`mattpocock/skills` บน GitHub) — commit เข้า repo public หมายถึง redistribute โค้ด/เอกสารของคนอื่นโดยไม่ได้ตรวจ license เอกสาร handoff เดิม (25 ส.ค.) เสนอ gitignore ไว้เป็น default แต่ยังไม่ได้รับการยืนยัน ถ้าไม่ตอบ จะ**ไม่ทำ** ส่วนนี้ในรอบนี้ (ปล่อย untracked ต่อไป) เพราะเดาผิดแล้วเสียหายจริง (ประวัติ git ที่แก้คืนยาก + license risk)
-2. **ต้องการให้ archive แผนเก่าใน `docs/plans/` (ย้ายไฟล์จริง) เพิ่มจาก index ไหม?** ถ้าใช่ ต้องระบุเกณฑ์ว่า "เก่า/ปิดงานแล้ว" คืออะไร (เช่น sprint ที่ deploy ขึ้น production แล้ว) เพราะ PM จะไม่เดาเองว่าไฟล์ไหน "จบแล้วจริง" — งานนี้จะเป็นแผนแยกถ้าตอบว่าต้องการ
+1. **Skill packs → `.gitignore`** (เจ้าของยืนยันให้ทำตาม default 2026-08-27) — ไม่ commit third-party packs เข้า public repo
+2. **Archive แผนเก่า** — ไม่ทำในรอบนี้ (index-only ตาม default)
 
 ## Task List
 
 1. `docs/plans/pages-cms-codex-handoff-tasks.md` — `git add` + commit (`docs(pages-cms): add codex hand-off continuation tasks`) | ผู้รับผิดชอบ: `nextjs-dev` | ✅ done (bundled with hygiene commit 2026-08-27)
-2. `.gitignore` — เพิ่ม/ไม่เพิ่ม entry สำหรับ `.agents/`, `.claude/skills/*` (ยกเว้น `!.claude/skills/verify/`), `skills-lock.json` ตามคำตอบคำถาม #1 ข้างบน; ถ้า commit แทน ให้ `git add` แล้ว commit แยก (`chore(agents): vendor mattpocock skill packs`) | ผู้รับผิดชอบ: `nextjs-dev` | ⏳ รอคำตอบคำถาม #1
+2. `.gitignore` — เพิ่ม `.agents/`, `.claude/skills/*` (ยกเว้น `!.claude/skills/verify/`), `skills-lock.json`, `.tmp-inspect-*.mts` ตามคำตอบเจ้าของ = **gitignore** (2026-08-27) | ผู้รับผิดชอบ: `nextjs-dev` | ✅ done
 3. `docs/agents/domain.md` — เพิ่มย่อหน้าสั้นอธิบายว่า `.claude/skills/` และ `.agents/skills/` เป็น mirror ของ skill installer เดียวกัน (อ้าง `skills-lock.json`), ห้ามลบข้างใดข้างหนึ่งเพียงเพราะดูซ้ำ | ผู้รับผิดชอบ: `nextjs-dev` | ✅ done (2026-08-27)
 4. `docs/plans/README.md` (ไฟล์ใหม่) — index สั้นตามแบบ `backlogs/README.md`: อธิบาย `docs/plans/` เก็บอะไร (multi-sprint implementation plans ที่ commit ถาวร), ลิงก์ไป ADR 0008 + `backlogs/README.md` อธิบายจุดต่างจาก `backlogs/`, และตารางสถานะ (Active / Reference / Historical) — จัดสถานะโดยตรวจจริง (เทียบ GitHub + `backlogs/done/`) | ผู้รับผิดชอบ: `nextjs-dev` | ✅ done (2026-08-27)
-5. Verify: `git status --porcelain` ต้องว่างหรือมีเฉพาะรายการที่ตั้งใจปล่อย untracked ตามคำตอบคำถาม #1, เปิด `docs/plans/README.md` อ่านลิงก์ทุกอันต้อง resolve ได้จริง (ไม่มี 404 path), `git log --oneline -5` ต้องเห็น commit ใหม่ตรงตาม Commit convention ใน `AGENTS.md` | ผู้รับผิดชอบ: `nextjs-dev` | ⏳ หลัง commit + คำตอบ #1
+5. Verify: `git status --porcelain` ต้องว่างหรือมีเฉพาะรายการที่ตั้งใจปล่อย untracked ตามคำตอบคำถาม #1, เปิด `docs/plans/README.md` อ่านลิงก์ทุกอันต้อง resolve ได้จริง (ไม่มี 404 path), `git log --oneline -5` ต้องเห็น commit ใหม่ตรงตาม Commit convention ใน `AGENTS.md` | ผู้รับผิดชอบ: `nextjs-dev` | ✅ done (gitignore leaves skill packs untracked by design)
 
 ไม่ต้องใช้ `i18n-parity-checker` (ไม่แตะ `src/messages/`), ไม่ต้องใช้ `audit-compliance-reviewer` (ไม่แตะ `src/actions/`), ไม่ต้องใช้ `deploy-verify` (ไม่แตะ `deploy/`, `Dockerfile`, `fly.toml`)
 
