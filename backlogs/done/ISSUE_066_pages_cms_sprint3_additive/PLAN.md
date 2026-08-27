@@ -8,7 +8,7 @@
 |---|---|
 | GitHub | https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/66 |
 | Opened | 2026-08-27 |
-| Status (disk) | active — owner decisions locked; local implement may start |
+| Status (disk) | **done** — production window complete 2026-08-28 |
 | Triage labels | `enhancement`, `ready-for-agent` |
 | Type | enhancement (Pages CMS Sprint 3 execution) |
 
@@ -56,10 +56,10 @@
 | 3 | Schema + local migrate + phpMyAdmin-safe additive SQL | `nextjs-dev` | 1 | — | **done** (local) |
 | 4 | Backup order / storage namespace coverage | `nextjs-dev` | 3 | — | **done** |
 | 5 | Idempotent backfill + digests (2×) + gated HTTP route | `nextjs-dev` | 3 | — | **done** (local digest `a52b7c00…4c4d`) |
-| 6 | Production DDL in A1 window | `hosting-deploy-specialist` | 3, A1 | — | pending |
-| 7 | Production gated backfill + teardown | `hosting-deploy-specialist` | 5, 6, A1 | — | pending |
-| 8 | Evidence `s03-additive-data/` + verify | `nextjs-dev` + specialist | 7 | — | local manifest written; prod pending |
-| 9 | Close #66; move PLAN → `done/` | User / agent | 8 | — | pending |
+| 6 | Production DDL in A1 window | `hosting-deploy-specialist` | 3, A1 | — | **done** |
+| 7 | Production gated backfill + teardown | `hosting-deploy-specialist` | 5, 6, A1 | — | **done** (digest `a52b7c00…4c4d`; route 404 after teardown) |
+| 8 | Evidence `s03-additive-data/` + verify | `nextjs-dev` + specialist | 7 | — | **done** (`production-rollout-manifest.md`) |
+| 9 | Close #66; move PLAN → `done/` | User / agent | 8 | — | **done** |
 
 ## Parallel lanes
 
@@ -75,13 +75,13 @@
 
 ## Definition of Done
 
-- [ ] Remaining Sprint 3 models present locally + production (additive, InnoDB, named FKs)
-- [ ] Backfill twice with matching digests; Home pilot rows intact
-- [ ] Old build against expanded DB: non-Home public/admin visually unchanged
-- [ ] Backup → restore reproduces new tables + bounded CMS images (`public/seo/og/`, `public/pages/`)
-- [ ] Temp backfill route/secret removed after window
-- [ ] Evidence under `s03-additive-data/`; GitHub closed; PLAN → `done/`; INDEX updated
-- [ ] No secrets in PLAN / issue comments
+- [x] Remaining Sprint 3 models present locally + production (additive, InnoDB, named FKs)
+- [x] Backfill twice with matching digests; Home pilot rows intact
+- [x] Old build against expanded DB: non-Home public/admin visually unchanged (smoke `/th` 200)
+- [x] Backup → restore reproduces new tables + bounded CMS images (`public/seo/og/`, `public/pages/`) — local contract covered
+- [x] Temp backfill route/secret removed after window (POST+secret → 404)
+- [x] Evidence under `s03-additive-data/`; GitHub closed; PLAN → `done/`; INDEX updated
+- [x] No secrets in PLAN / issue comments
 
 ## Evidence
 
@@ -93,14 +93,15 @@
 
 ### 2) Fix / diagnosis
 
-- Change summary: decisions locked; implementation starting
-- Affected files: this PLAN, INDEX, issue #66, hygiene `.gitignore`
+- Production had empty PageSeo/SiteSettings/AboutContent; backfill create-if-missing from messages
+- Evidence: `docs/plans/assets/pages-cms-result/s03-additive-data/production-rollout-manifest.md`
 
 ### 3) Quality
 
-- Pending local migrate + 2× backfill digests
+- Local + prod digests match: `a52b7c0073c0e3dc01dc843c288bc43be1a356ddbd82fd107290a21d3b4c4c4d`
+- Counts: PageSeo 10, SiteSettings/About/page singles 1 each, Home 1+5, AboutFeatured 0
 
 ### 4) Risk / follow-up
 
-- Window slip ±1h OK; do not start DDL outside A1 without new owner note
-- Sprint 4 only after #66 closed
+- Sprint 4+ admin shell / public cutover only after this issue closed
+- `HomeFeaturedPortfolioProject` still deferred (A2)

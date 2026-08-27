@@ -1,23 +1,22 @@
 # Sprint 3 production window — live checklist (#66)
 
-Updated: 2026-08-28 ~01:15 Asia/Bangkok  
+Updated: 2026-08-28 ~02:25 Asia/Bangkok  
 Owner window: 02:00–05:00 ICT (±1h OK)
 
 ## Done
 
 - [x] Pre-DDL baseline (Home 1+5 InnoDB; Sprint 3 tables absent; no SiteSettings cta*)
-- [x] Local `deploy/dist.zip` built (~27MB, 27996250 bytes)
-- [x] Production smoke still green (`/th` 200, `/api/admin/leads` 401)
-- [x] FTP upload (`226`, 27996250 bytes)
-- [x] Panel extract + Passenger restart (smoke `/th` `/en` 200; backfill route disabled → 404 JSON)
+- [x] Local `deploy/dist.zip` built + second build after create-if-missing fix
+- [x] Production smoke (`/th` 200, canonical `https://kkdproperty.co.th/th`, `/api/admin/leads` 401)
+- [x] FTP upload + panel extract + Passenger restart (2×)
 - [x] Numbered DDL paste sheet: `production-ddl-steps.md`
+- [x] Human DDL in phpMyAdmin (DB `kkdprop1_kkdproperty`)
+- [x] Verify DDL via `pma-readonly-query` (InnoDB + columns + FKs)
+- [x] Enable backfill env → POST 2× → digests match local → disable
+- [x] Teardown verify: POST with secret → `404 {"error":"not_found"}`
+- [x] Evidence: `production-rollout-manifest.md` + #66 comments
 
-## Blocked on human
+## Out of scope (later sprints)
 
-- [ ] **DDL** — paste steps in `production-ddl-steps.md` (phpMyAdmin, DB `kkdprop1_kkdproperty`)
-
-## After DDL (agent continues)
-
-- [ ] Verify DDL via `pma-readonly-query` (InnoDB + columns + FKs)
-- [ ] Enable backfill env → POST 2× → matching digests → disable + verify 404
-- [ ] Smoke + update production evidence + #66 comment
+- Admin shell / public CMS cutover
+- `HomeFeaturedPortfolioProject` (deferred A2)

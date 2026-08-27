@@ -1,7 +1,7 @@
 # Sprint 3 local evidence — additive schema + backfill (#66)
 
 Date: 2026-08-27  
-Window (production, not run yet): Fri 28 Aug 2026 02:00–05:00 Asia/Bangkok
+Window (production): Fri 28 Aug 2026 — **COMPLETE** (see `production-rollout-manifest.md`)
 
 ## Before (local)
 
@@ -45,5 +45,7 @@ Sample counts (both runs): PageSeo 10 updated; SiteSettings CTA filled; About ex
 
 ### Not done in this evidence pack
 
-- Production DDL / gated HTTP backfill / cleanup redeploy (wait for A1 window)
 - Admin shell / public cutover (Sprint 4+)
+- `HomeFeaturedPortfolioProject` (deferred A2)
+
+Production window evidence: `production-rollout-manifest.md`, `production-window-checklist.md`, `production-ddl-steps.md`.

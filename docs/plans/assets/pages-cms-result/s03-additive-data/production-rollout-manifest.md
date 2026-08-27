@@ -3,7 +3,7 @@
 Session: 2026-08-28 ~01:12–02:25 Asia/Bangkok  
 Commits deployed: local `main` including Sprint 3 schema + backfill create-if-missing fix
 
-## Result: COMPLETE (pending env teardown by owner)
+## Result: COMPLETE
 
 | Step | Status |
 | --- | --- |
@@ -11,7 +11,7 @@ Commits deployed: local `main` including Sprint 3 schema + backfill create-if-mi
 | Human DDL (11 steps) | GREEN — all new tables InnoDB; FKs 2/2; CTA/PageSeo/About columns present |
 | FTP + extract + restart (2 builds) | GREEN — second build for create-if-missing backfill |
 | Backfill 2× | GREEN — digests match |
-| Env teardown | **Owner must delete** `ENABLE_PAGES_CMS_SPRINT3_BACKFILL_ROUTE` + `PAGES_CMS_SPRINT3_BACKFILL_SECRET` then Save |
+| Env teardown | GREEN — POST with correct secret → `404 {"error":"not_found"}` |
 
 ## Digests (production, final)
 
