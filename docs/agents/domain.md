@@ -49,3 +49,12 @@ If the concept you need isn't in the glossary yet, that's a signal — either yo
 If your output contradicts an existing ADR, surface it explicitly rather than silently overriding:
 
 > _Contradicts ADR-0007 (event-sourced orders) — but worth reopening because…_
+
+## Skill installer mirrors (do not delete as “duplicates”)
+
+This repo may contain **two mirrored copies** of the same third-party skill packs:
+
+- `.claude/skills/` — consumed by Claude Code / project agent tooling
+- `.agents/skills/` — consumed by the Cursor / Agents skill installer
+
+They are produced from the same lockfile (`skills-lock.json` at the repo root when present). Content under matching skill names is expected to be identical. **Do not delete one side** merely because it looks duplicated; that breaks the tool that reads that path. Whether those paths are gitignored or vendored is an owner hygiene decision (see `docs/plans/repo-hygiene-docs-system-tasks.md`). The tracked in-repo skill `.claude/skills/verify/` is project-owned and separate from the mirrored packs.
