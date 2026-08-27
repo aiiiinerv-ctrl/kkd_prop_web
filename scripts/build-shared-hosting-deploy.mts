@@ -59,6 +59,16 @@
  *                                dev SQLite file must never ship)
  *   - src/generated/prisma/  (generated Prisma client, incl. binaryTargets
  *                                per schema.prisma)
+ *   - src/messages/           (TH/EN static UI strings — normally inlined by
+ *                                Next's compiler for statically-imported call
+ *                                sites, but any code path that reads them via
+ *                                a *dynamic* `readFile(...\`${locale}.json\`)`
+ *                                at runtime — e.g. the Home CMS backfill route,
+ *                                src/lib/backfill/home-content.ts — needs the
+ *                                raw files on disk too. Missing until
+ *                                2026-08-27, when the backfill route's first
+ *                                production run 500'd with no detail because
+ *                                of exactly this gap.)
  *   - deploy/app.js           (Passenger fallback wrapper — not needed per
  *                                the Sprint 2 live test, kept as a documented
  *                                fallback only, available on-panel without a
@@ -203,6 +213,8 @@ requireExists(
 );
 requireExists(path.join(ROOT, "prisma", "schema.prisma"), "prisma/schema.prisma missing");
 requireExists(path.join(ROOT, "deploy", "app.js"), "deploy/app.js missing");
+requireExists(path.join(ROOT, "src", "messages", "th.json"), "src/messages/th.json missing");
+requireExists(path.join(ROOT, "src", "messages", "en.json"), "src/messages/en.json missing");
 
 // 2. Clean staging directory.
 rmSync(DIST_DIR, { recursive: true, force: true });
@@ -225,6 +237,7 @@ if (existsSync(migrationsDir)) {
   console.warn("  ⚠ prisma/migrations not found — skipping (no migrations to ship yet?)");
 }
 copyInto(GENERATED_PRISMA_DIR, path.join("src", "generated", "prisma"));
+copyInto(path.join(ROOT, "src", "messages"), path.join("src", "messages"));
 copyInto(path.join(ROOT, "deploy", "app.js"), "app.js");
 
 // 4. Sanity check: nothing sensitive leaked in via the copies above (belt
