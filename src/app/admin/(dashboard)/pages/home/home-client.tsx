@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { AlertTriangle, ExternalLink, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -187,6 +187,94 @@ function FaqEditor({
   );
 }
 
+const HERO_MAX_MB = 5;
+
+/**
+ * Hero image is not locale-specific (one blob for both `/th` and `/en`), so
+ * it lives outside the bilingual tabs as its own card. The `heroImage` file
+ * input submits alongside the rest of `home-content-form` — the server
+ * action treats a missing/empty file as "keep the current image" (matrix
+ * C1/C4/C5, security research "Image lifecycle (hero)").
+ */
+function HeroImageSection({
+  heroImageUrl,
+  heroBlobMissing,
+}: {
+  heroImageUrl: string | null;
+  heroBlobMissing: boolean;
+}) {
+  const [preview, setPreview] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setFileError(null);
+    if (!file) {
+      setPreview(null);
+      return;
+    }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setFileError("รองรับเฉพาะไฟล์ JPEG, PNG หรือ WebP");
+      e.target.value = "";
+      setPreview(null);
+      return;
+    }
+    if (file.size > HERO_MAX_MB * 1024 * 1024) {
+      setFileError(`ไฟล์ต้องมีขนาดไม่เกิน ${HERO_MAX_MB}MB`);
+      e.target.value = "";
+      setPreview(null);
+      return;
+    }
+    setPreview(URL.createObjectURL(file));
+  };
+
+  return (
+    <div className="rounded-xl border border-border/70 bg-card p-6">
+      <h2 className="mb-1 font-semibold">รูปภาพหลัก (Hero Image)</h2>
+      <p className="mb-4 text-sm text-muted-foreground">
+        ใช้ภาพเดียวกันทั้งเว็บไทยและอังกฤษ — แนะนำแนวนอน ไม่เกิน {HERO_MAX_MB}MB (JPEG/PNG/WebP)
+      </p>
+
+      {heroBlobMissing && (
+        <p className="mb-4 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          ไม่พบไฟล์รูปภาพหลักที่บันทึกไว้ในระบบจัดเก็บ — หน้าเว็บจริงจะแสดงภาพสำรองของระบบแทนจนกว่าจะอัปโหลดรูปใหม่
+        </p>
+      )}
+
+      <div className="mb-4 overflow-hidden rounded-lg border border-border/70 bg-muted/40" style={{ aspectRatio: "16/9" }}>
+        {preview || heroImageUrl ? (
+          // Preview uses a plain <img> (blob: URLs / arbitrary already-stored keys
+          // aren't part of next/image's static config) — same trade-off other
+          // admin image previews in this app make.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={preview ?? heroImageUrl ?? undefined}
+            alt="ตัวอย่างรูปภาพหลัก"
+            className="size-full object-cover"
+          />
+        ) : (
+          <div className="flex size-full items-center justify-center text-xs text-muted-foreground">
+            ยังไม่มีรูปภาพ
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="home-hero-image">แทนที่รูปภาพหลัก</Label>
+        <Input
+          id="home-hero-image"
+          name="heroImage"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={handleFileChange}
+        />
+        {fileError && <p className="text-xs text-destructive">{fileError}</p>}
+      </div>
+    </div>
+  );
+}
+
 function ContactSection({ contact }: { contact: ContactData }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -252,10 +340,14 @@ export function HomeClient({
   home,
   contact,
   canMutateContact,
+  heroImageUrl,
+  heroBlobMissing,
 }: {
   home: HomeContentData;
   contact: ContactData | null;
   canMutateContact: boolean;
+  heroImageUrl: string | null;
+  heroBlobMissing: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -296,7 +388,7 @@ export function HomeClient({
             <ExternalLink className="size-3.5" />
           </a>
           <p className="text-xs text-accent-foreground">
-            หน้าเว็บจริงยังใช้ข้อความเริ่มต้นของระบบอยู่ — การบันทึกที่นี่จะยังไม่แสดงผลบนหน้าเว็บจนกว่าจะเปิดใช้งานในสปรินต์ถัดไป
+            หน้าเว็บจริง (/th และ /en) อ่านข้อมูลจากที่นี่โดยตรง — บันทึกแล้วมีผลทันทีทั้งสองภาษา
           </p>
         </div>
         <Button type="submit" form="home-content-form" disabled={isPending}>
@@ -304,8 +396,10 @@ export function HomeClient({
         </Button>
       </div>
 
-      <form id="home-content-form" action={handleSubmit} className="space-y-6" noValidate>
+      <form id="home-content-form" action={handleSubmit} className="space-y-6" noValidate encType="multipart/form-data">
         <input type="hidden" name="version" value={home.version} />
+
+        <HeroImageSection heroImageUrl={heroImageUrl} heroBlobMissing={heroBlobMissing} />
 
         <div className="rounded-xl border border-border/70 bg-card p-6">
           <BilingualTabs
@@ -333,7 +427,7 @@ export function HomeClient({
                   <Textarea name="heroSubtitleTh" rows={2} defaultValue={home.heroSubtitleTh} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>ข้อความ alt ของรูปภาพหลัก (เพื่อการเข้าถึง)</Label>
+                  <Label>ข้อความ alt ของรูปภาพหลัก (เพื่อการเข้าถึง) — จำเป็นต้องกรอก</Label>
                   <Input name="heroAltTh" defaultValue={home.heroAltTh} />
                 </div>
                 <div className="space-y-1.5">
@@ -523,7 +617,7 @@ export function HomeClient({
                   <Textarea name="heroSubtitleEn" rows={2} defaultValue={home.heroSubtitleEn} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Hero image alt text (accessibility)</Label>
+                  <Label>Hero image alt text (accessibility) — required</Label>
                   <Input name="heroAltEn" defaultValue={home.heroAltEn} />
                 </div>
                 <div className="space-y-1.5">

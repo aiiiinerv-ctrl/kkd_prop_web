@@ -208,6 +208,109 @@ export type AboutContentView = {
   teamSupportDesc: string | null;
 };
 
+// ─── Home Page Content (Home CMS slice H3) ─────────────────────────────────
+
+export type HomeFaqItemView = {
+  id: string;
+  question: string;
+  answer: string;
+};
+
+export function toHomeFaqItemView(row: Row, locale: string): HomeFaqItemView {
+  return {
+    id: String(row.id),
+    question: pickLocale(row, "question", locale),
+    answer: pickLocale(row, "answer", locale),
+  };
+}
+
+export type HomePageContentView = {
+  id: string;
+  version: number;
+  heroKicker: string;
+  heroTitleWhite: string;
+  heroTitleGold: string;
+  heroSubtitle: string;
+  heroAlt: string;
+  heroImageKey: string | null;
+  ctaPrimaryLabel: string;
+  ctaSecondaryLabel: string;
+  quickContactLabel: string;
+  proofLabel: string;
+  proofTitle: string;
+  proofItem1: string;
+  proofItem2: string;
+  proofItem3: string;
+  feature1Label: string;
+  feature2Label: string;
+  feature3Label: string;
+  feature4Label: string;
+  showLatestWorks: boolean;
+  latestWorksHeading: string;
+  metric1Label: string;
+  metric1Value: string;
+  metric2Label: string;
+  metric2Value: string;
+  metric3Label: string;
+  metric3Value: string;
+  viewAllLabel: string;
+  showServicesCta: boolean;
+  servicesCtaBadge: string;
+  servicesCtaTitle: string;
+  servicesCtaText: string;
+  servicesCtaLinkLabel: string;
+  showFaq: boolean;
+  faqBadge: string;
+  faqTitle: string;
+  faqIntro: string;
+  faqLineButtonLabel: string;
+};
+
+export function toHomePageContentView(row: Row, locale: string): HomePageContentView {
+  const loc = (field: string) => pickLocale(row, field, locale);
+  return {
+    id: String(row.id),
+    version: Number(row.version),
+    heroKicker: loc("heroKicker"),
+    heroTitleWhite: loc("heroTitleWhite"),
+    heroTitleGold: loc("heroTitleGold"),
+    heroSubtitle: loc("heroSubtitle"),
+    heroAlt: loc("heroAlt"),
+    heroImageKey: row.heroImageKey ? String(row.heroImageKey) : null,
+    ctaPrimaryLabel: loc("ctaPrimaryLabel"),
+    ctaSecondaryLabel: loc("ctaSecondaryLabel"),
+    quickContactLabel: loc("quickContactLabel"),
+    proofLabel: loc("proofLabel"),
+    proofTitle: loc("proofTitle"),
+    proofItem1: loc("proofItem1"),
+    proofItem2: loc("proofItem2"),
+    proofItem3: loc("proofItem3"),
+    feature1Label: loc("feature1Label"),
+    feature2Label: loc("feature2Label"),
+    feature3Label: loc("feature3Label"),
+    feature4Label: loc("feature4Label"),
+    showLatestWorks: Boolean(row.showLatestWorks),
+    latestWorksHeading: loc("latestWorksHeading"),
+    metric1Label: loc("metric1Label"),
+    metric1Value: loc("metric1Value"),
+    metric2Label: loc("metric2Label"),
+    metric2Value: loc("metric2Value"),
+    metric3Label: loc("metric3Label"),
+    metric3Value: loc("metric3Value"),
+    viewAllLabel: loc("viewAllLabel"),
+    showServicesCta: Boolean(row.showServicesCta),
+    servicesCtaBadge: loc("servicesCtaBadge"),
+    servicesCtaTitle: loc("servicesCtaTitle"),
+    servicesCtaText: loc("servicesCtaText"),
+    servicesCtaLinkLabel: loc("servicesCtaLinkLabel"),
+    showFaq: Boolean(row.showFaq),
+    faqBadge: loc("faqBadge"),
+    faqTitle: loc("faqTitle"),
+    faqIntro: loc("faqIntro"),
+    faqLineButtonLabel: loc("faqLineButtonLabel"),
+  };
+}
+
 export function toAboutContentView(row: Row, locale: string): AboutContentView {
   const loc = (field: string) => pickLocale(row, field, locale) || null;
   return {

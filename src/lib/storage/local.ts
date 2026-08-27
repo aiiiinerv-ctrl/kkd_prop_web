@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { StorageDriver, StoredFile } from "./types";
 
@@ -55,6 +55,17 @@ export const localDriver: StorageDriver = {
     const safe = sanitizeKey(key);
     if (!safe) return;
     await rm(path.join(root(), safe), { force: true });
+  },
+
+  async exists(key) {
+    const safe = sanitizeKey(key);
+    if (!safe) return false;
+    try {
+      await stat(path.join(root(), safe));
+      return true;
+    } catch {
+      return false;
+    }
   },
 
   publicUrl(key) {

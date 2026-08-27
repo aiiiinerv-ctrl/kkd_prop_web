@@ -6,6 +6,14 @@ const optionalText = z
   .transform((v) => v || null);
 
 /**
+ * Hero alt text is required in both locales (live-verify matrix C5) — unlike
+ * every other Content field, it has no Thai-fallback safety net for
+ * accessibility purposes: a screen reader on `/en` must not read Thai alt
+ * text just because the English column happened to be left blank.
+ */
+const requiredAlt = z.string().trim().min(1, "ต้องกรอกข้อความ alt ของรูปภาพหลัก").max(200);
+
+/**
  * Explicit allow-list of `HomePageContent` scalar text columns editable from
  * `/admin/pages/home` (hero copy, proof panel, feature labels, Latest Works
  * heading/metrics, Services CTA copy, FAQ chrome). Kept as its own array
@@ -16,8 +24,10 @@ const optionalText = z
  * English half blank falls back to Thai on the public page (Sprint H3),
  * mirroring `about-content.ts`.
  *
- * Intentionally excluded: `heroImageKey` (hero image upload/replace is not
- * in Sprint H2 scope — see PLAN.md), `key`, `id`, `version`, `updatedAt`.
+ * Intentionally excluded: `heroImageKey` (set via the separate `heroImage`
+ * file field — see `src/actions/home-content.ts` — never as a plain string,
+ * so a client can never point the row at an arbitrary storage key), `key`,
+ * `id`, `version`, `updatedAt`.
  */
 export const HOME_CONTENT_FIELDS = [
   "heroKickerTh", "heroKickerEn",
@@ -63,7 +73,7 @@ export const homeContentFieldsSchema = z.object({
   heroTitleWhiteTh: optionalText, heroTitleWhiteEn: optionalText,
   heroTitleGoldTh: optionalText, heroTitleGoldEn: optionalText,
   heroSubtitleTh: optionalText, heroSubtitleEn: optionalText,
-  heroAltTh: optionalText, heroAltEn: optionalText,
+  heroAltTh: requiredAlt, heroAltEn: requiredAlt,
   ctaPrimaryLabelTh: optionalText, ctaPrimaryLabelEn: optionalText,
   ctaSecondaryLabelTh: optionalText, ctaSecondaryLabelEn: optionalText,
   quickContactLabelTh: optionalText, quickContactLabelEn: optionalText,

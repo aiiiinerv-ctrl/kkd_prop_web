@@ -1,9 +1,11 @@
 "use server";
 
+import { storePublicImage } from "@/lib/admin-content";
 import { auditedAggregate } from "@/lib/audit";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { PAGE_REGISTRY } from "@/lib/pages-registry";
+import { storage } from "@/lib/storage";
 import {
   HOME_BOOLEAN_FIELDS,
   HOME_CONTENT_FIELDS,
@@ -18,19 +20,27 @@ export type HomeContentActionResult =
   | { ok: false; error: string }
   | { ok: false; conflict: true };
 
+/**
+ * Namespace for a replaced hero blob (security research "Image lifecycle" —
+ * `public/pages/home/hero/<cuid>.jpg`). Stays `public/` (never `private/`):
+ * the hero is rendered on every locale's homepage, so it must be servable
+ * through `/files` without a session (S7).
+ */
+const HERO_IMAGE_PREFIX = "pages/home/hero";
+
 const HOME_ALLOWED_KEYS = new Set<string>([
   ...HOME_CONTENT_FIELDS,
   ...HOME_BOOLEAN_FIELDS,
   "version",
   "faqItemsJson",
+  "heroImage",
 ]);
 
 const homeContentAggregate = auditedAggregate({
   entityType: "HomePageContent",
   model: (client) => client.homePageContent,
-  // Sprint H2: public still reads messages (registry `home.contentRollout`
-  // stays "legacy"), so revalidating /th /en is a harmless no-op today and
-  // forward-compatible with the H3 cutover — see PAGE_REGISTRY.
+  // H3 cutover: registry `home.contentRollout` is "pages", so these
+  // revalidations now actually change what the public site shows.
   revalidate: [...PAGE_REGISTRY.home.publicPaths, PAGE_REGISTRY.home.adminContentPath],
 });
 
@@ -106,8 +116,10 @@ async function syncFaqItems(
 
 /**
  * Bounded aggregate snapshot for the audit row — display fields, visibility,
- * version, and ordered FAQ text only. No hero image bytes/paths (the hero
- * key isn't editable from this action in Sprint H2), no session/actor data.
+ * version, ordered FAQ text, and the hero **storage key** only (security
+ * research S16: key is fine, bytes/absolute paths are not). Omits the
+ * singleton `key`/row `id`/timestamps — same discipline as backfill digests
+ * in src/lib/backfill/home-content.ts.
  */
 async function homeAuditSnapshot(tx: Prisma.TransactionClient, homeId: string) {
   const [home, faqItems] = await Promise.all([
@@ -117,12 +129,9 @@ async function homeAuditSnapshot(tx: Prisma.TransactionClient, homeId: string) {
       orderBy: { sortOrder: "asc" },
     }),
   ]);
-  // Omit storage key (and singleton key / row id / timestamps) — same
-  // discipline as backfill digests in src/lib/backfill/home-content.ts.
-  const { id, updatedAt, heroImageKey, key, ...fields } = home;
+  const { id, updatedAt, key, ...fields } = home;
   void id;
   void updatedAt;
-  void heroImageKey;
   void key;
   return {
     ...fields,
@@ -137,12 +146,21 @@ async function homeAuditSnapshot(tx: Prisma.TransactionClient, homeId: string) {
 }
 
 /**
- * Saves the whole Home Page Content aggregate (parent fields + FAQ children)
- * in one optimistic-versioned, audited transaction. Content roles per the
- * security research RBAC contract — same as About (ADMIN/SALES/MARKETING/
- * EDITOR); contact/social fields are **not** handled here at all — the Home
- * admin UI calls the existing `updateContactSettings` (site-settings.ts)
- * directly, which stays ADMIN/MARKETING-only.
+ * Saves the whole Home Page Content aggregate (parent fields + FAQ children
+ * + hero image) in one optimistic-versioned, audited transaction. Content
+ * roles per the security research RBAC contract — same as About
+ * (ADMIN/SALES/MARKETING/EDITOR); contact/social fields are **not** handled
+ * here at all — the Home admin UI calls the existing `updateContactSettings`
+ * (site-settings.ts) directly, which stays ADMIN/MARKETING-only.
+ *
+ * Hero image lifecycle (security research "Image lifecycle (hero)"): the
+ * new blob is validated/re-encoded and stored under a fresh generated key
+ * *before* the transaction — never a client-supplied key/path (S4). If the
+ * aggregate save then conflicts, throws, or the request fails validation
+ * after the upload already landed, the new blob is deleted (S6) and the old
+ * key is left untouched. Only after a successful commit is the *previous*
+ * key deleted, so a mid-flight failure never leaves the public page pointing
+ * at a missing blob.
  */
 export async function updateHomeContent(formData: FormData): Promise<HomeContentActionResult> {
   await requireRole("ADMIN", "SALES", "MARKETING", "EDITOR");
@@ -183,6 +201,10 @@ export async function updateHomeContent(formData: FormData): Promise<HomeContent
   const existing = await prisma.homePageContent.findUnique({ where: { key: "home" } });
   if (!existing) return { ok: false, error: "ไม่พบข้อมูลหน้าแรก — ต้องรัน backfill ก่อน" };
 
+  const heroUpload = await storePublicImage(formData.get("heroImage"), HERO_IMAGE_PREFIX);
+  if (!heroUpload.ok) return { ok: false, error: heroUpload.error };
+  const newHeroKey = heroUpload.key;
+
   try {
     const result = await homeContentAggregate.save({
       id: existing.id,
@@ -196,6 +218,7 @@ export async function updateHomeContent(formData: FormData): Promise<HomeContent
             showLatestWorks,
             showServicesCta,
             showFaq,
+            ...(newHeroKey ? { heroImageKey: newHeroKey } : {}),
           },
         });
         await syncFaqItems(tx, existing.id, parsedFaq.data);
@@ -203,9 +226,16 @@ export async function updateHomeContent(formData: FormData): Promise<HomeContent
       snapshotAfter: (tx) => homeAuditSnapshot(tx, existing.id),
     });
 
-    if (!result.ok) return { ok: false, conflict: true };
+    if (!result.ok) {
+      if (newHeroKey) await storage.delete(newHeroKey);
+      return { ok: false, conflict: true };
+    }
+    if (newHeroKey && existing.heroImageKey && existing.heroImageKey !== newHeroKey) {
+      await storage.delete(existing.heroImageKey);
+    }
     return { ok: true };
   } catch (err) {
+    if (newHeroKey) await storage.delete(newHeroKey);
     if (err instanceof ForeignFaqIdError) {
       return { ok: false, error: "พบรายการคำถามที่ไม่ถูกต้อง กรุณาโหลดหน้าใหม่แล้วลองอีกครั้ง" };
     }

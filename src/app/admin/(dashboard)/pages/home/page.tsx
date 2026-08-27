@@ -1,5 +1,6 @@
 import { canManageContent, canManageSiteSettings, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { storage } from "@/lib/storage";
 import { HomeClient } from "./home-client";
 
 export default async function PagesHomeContentPage() {
@@ -28,10 +29,17 @@ export default async function PagesHomeContentPage() {
     );
   }
 
+  // Integrity check for the "hero: managed key" contract (matrix C4) — warn
+  // in admin rather than let the public page silently show the static
+  // fallback with no visible signal that the managed blob is gone.
+  const heroBlobMissing = home.heroImageKey ? !(await storage.exists(home.heroImageKey)) : false;
+
   return (
     <HomeClient
       key={home.version}
       canMutateContact={canManageSiteSettings(session.user.role)}
+      heroImageUrl={home.heroImageKey ? storage.publicUrl(home.heroImageKey) : null}
+      heroBlobMissing={heroBlobMissing}
       home={{
         version: home.version,
         heroKickerTh: home.heroKickerTh ?? "", heroKickerEn: home.heroKickerEn ?? "",

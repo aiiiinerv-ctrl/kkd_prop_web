@@ -1,9 +1,12 @@
 import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { CLOSED_LEAD_STATUSES } from "@/lib/reports/aggregate";
+import { storage } from "@/lib/storage";
 import {
   toAboutContentView,
   toChannelView,
+  toHomeFaqItemView,
+  toHomePageContentView,
   toPackageView,
   toPageSeoView,
   toProjectView,
@@ -12,6 +15,8 @@ import {
   toTestimonialView,
   type AboutContentView,
   type ChannelView,
+  type HomeFaqItemView,
+  type HomePageContentView,
   type PackageView,
   type PageSeoView,
   type ProjectView,
@@ -171,6 +176,52 @@ export const getAboutContent = cache(
     return toAboutContentView(row, locale);
   }
 );
+
+/**
+ * Home Page Content + its FAQ children, for the public reader
+ * (`src/app/[locale]/home-content.tsx`). Returns null when no row exists —
+ * the caller falls back to the whole `messages` bundle (Home CMS slice
+ * edge case C1: whole-record fallback, never a per-field mix with the DB
+ * row). Gated by `PAGE_REGISTRY.home.contentRollout` at the call site, not
+ * here, so this reader stays usable for admin-only staging reads too.
+ */
+export const getHomePageContent = cache(
+  async (
+    locale: string
+  ): Promise<{ content: HomePageContentView; faqItems: HomeFaqItemView[] } | null> => {
+    const row = await prisma.homePageContent.findUnique({
+      where: { key: "home" },
+      include: { faqItems: { orderBy: { sortOrder: "asc" } } },
+    });
+    if (!row) return null;
+    return {
+      content: toHomePageContentView(row, locale),
+      faqItems: row.faqItems.map((item) => toHomeFaqItemView(item, locale)),
+    };
+  }
+);
+
+const STATIC_HERO_URL = "/marketing/hero-solar.jpg";
+
+/**
+ * Resolves the Home hero `<img>` source. A managed key set on the row is
+ * preferred, but only if its blob is actually still retrievable — a key
+ * pointing at a deleted/never-written blob falls back to the bundled static
+ * asset rather than a broken image (edge case H1, matrix C4). Not cached
+ * with `react.cache()`: the existence check is a cheap `stat`, and caching
+ * it per-request would risk showing a stale "missing" state right after an
+ * admin replaces the hero within the same request lifecycle.
+ */
+export async function resolveHomeHeroImage(
+  heroImageKey: string | null
+): Promise<{ url: string; isFallback: boolean }> {
+  if (heroImageKey && (await storage.exists(heroImageKey))) {
+    return { url: storage.publicUrl(heroImageKey), isFallback: false };
+  }
+  return { url: STATIC_HERO_URL, isFallback: true };
+}
+
+export type { HomeFaqItemView, HomePageContentView };
 
 export type {
   AboutContentView,

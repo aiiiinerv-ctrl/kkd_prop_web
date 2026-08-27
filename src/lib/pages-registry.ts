@@ -24,8 +24,15 @@ export type PageRegistryEntry = {
   /**
    * "legacy": the public route still reads `src/messages/*.json` — admin
    * saves land in the database for staging/verify only.
-   * "pages": the public route reads the database Page Content row.
-   * Home stays "legacy" for the whole of Sprint H2; H3 flips it.
+   * "pages": the public route reads the database Page Content row (falling
+   * back to the whole `messages` bundle only when the row itself is
+   * missing — see docs/plans/home-cms-slice-edge-cases-research.md C1/L2).
+   *
+   * Home flipped to "pages" in Sprint H3 (#63) after local verification —
+   * see docs/plans/home-cms-slice-implementation-sprints.md Sprint H3.
+   * Rollback: set this back to "legacy" and redeploy the prior build; the
+   * public reader in src/app/[locale]/home-content.tsx branches on this
+   * flag, so no other code needs to change to revert.
    */
   contentRollout: "legacy" | "pages";
 };
@@ -36,6 +43,6 @@ export const PAGE_REGISTRY: Record<PageKey, PageRegistryEntry> = {
     labelTh: "หน้าแรก",
     adminContentPath: "/admin/pages/home",
     publicPaths: ["/th", "/en"],
-    contentRollout: "legacy",
+    contentRollout: "pages",
   },
 };

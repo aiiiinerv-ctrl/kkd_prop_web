@@ -7,7 +7,9 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 | GitHub | PLAN | Notes |
 |---|---|---|
-| [#62](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/62) | [`ISSUE_062_home_cms_h2_admin`](ISSUE_062_home_cms_h2_admin/PLAN.md) | H2 deployed to production 2026-08-27; next H3 #63 after owner reviews prod admin |
+| [#63](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/63) | [`ISSUE_063_home_cms_h3_cutover`](ISSUE_063_home_cms_h3_cutover/PLAN.md) | H3 cutover — committing + production deploy |
+| [#62](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/62) | [`ISSUE_062_home_cms_h2_admin`](ISSUE_062_home_cms_h2_admin/PLAN.md) | H2 deployed production 2026-08-27 |
+| [#52](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/52) | [`ISSUE_052_home_cms_slice_map`](ISSUE_052_home_cms_slice_map/PLAN.md) | Wayfinder map — Home CMS; H3 cutover deploying |
 | [#38](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/38) | [`ISSUE_038_cookieyes_banner_locale_en`](ISSUE_038_cookieyes_banner_locale_en/PLAN.md) | CookieYes Free = one language — owner decision |
 | [#32](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/32) | [`ISSUE_032_lead_notifications_resend_line`](ISSUE_032_lead_notifications_resend_line/PLAN.md) | Blocked on Resend/LINE secrets |
 | [#30](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/30) | [`ISSUE_030_attribution_baseline_after_consent`](ISSUE_030_attribution_baseline_after_consent/PLAN.md) | Calendar-bound attribution baselines |
