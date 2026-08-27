@@ -337,10 +337,10 @@ async function main() {
       `MARKETING: capacity/payment tab hidden ${mktCapacityTabCount === 0 ? "✓" : "✗ FAIL"}`
     );
 
-    // /admin/content/about is accessible to MARKETING (canManageContent).
+    // Pages CMS #69: /admin/content/about 307 → /admin/pages/about (canManageContent).
     await page.goto(`${BASE}/admin/content/about`);
-    const mktAboutAllowed = page.url().endsWith("/admin/content/about");
-    console.log(`MARKETING: /admin/content/about accessible ${mktAboutAllowed ? "✓" : "✗ FAIL"}`);
+    const mktAboutAllowed = page.url().includes("/admin/pages/about");
+    console.log(`MARKETING: /admin/content/about → pages/about ${mktAboutAllowed ? "✓" : "✗ FAIL"}`);
 
     // MARKETING gets full content management (publish + delete visible).
     await page.goto(`${BASE}/admin/services`);
@@ -395,10 +395,10 @@ async function main() {
     await page.goto(`${BASE}/admin/settings`);
     console.log(`EDITOR: /admin/settings blocked ${page.url().endsWith("/admin") ? "✓" : "✗ FAIL"}`);
 
-    // Sprint 5 CMS: /admin/content/about is accessible to EDITOR (canManageContent).
+    // Pages CMS #69: /admin/content/about 307 → /admin/pages/about (canManageContent).
     await page.goto(`${BASE}/admin/content/about`);
-    const editorAboutAllowed = page.url().endsWith("/admin/content/about");
-    console.log(`EDITOR: /admin/content/about accessible ${editorAboutAllowed ? "✓" : "✗ FAIL"}`);
+    const editorAboutAllowed = page.url().includes("/admin/pages/about");
+    console.log(`EDITOR: /admin/content/about → pages/about ${editorAboutAllowed ? "✓" : "✗ FAIL"}`);
     await page.goto(`${BASE}/admin/bookings`);
     const editorBookingsAllowed = page.url().endsWith("/admin/bookings");
     console.log(`EDITOR: /admin/bookings accessible (read-only) ${editorBookingsAllowed ? "✓" : "✗ FAIL"}`);
@@ -518,6 +518,7 @@ async function main() {
       "/admin/bookings",
       "/admin/settings",
       "/admin/content/about",
+      "/admin/pages/about",
     ]) {
       await page.goto(`${BASE}${path}`);
       const blocked = page.url().endsWith("/admin");

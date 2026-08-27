@@ -118,6 +118,17 @@ export async function updateTestimonial(
 export async function deleteTestimonial(id: string): Promise<ActionResult> {
   await requireRole("ADMIN", "SALES", "MARKETING");
 
+  const featuredCount = await prisma.aboutFeaturedTestimonial.count({
+    where: { testimonialId: id },
+  });
+  if (featuredCount > 0) {
+    return {
+      ok: false,
+      error:
+        "รีวิวนี้ถูกเลือกในหน้าเกี่ยวกับเรา (Pages) — ลบออกจากรายการแนะนำก่อน แล้วค่อยลบรีวิว",
+    };
+  }
+
   const before = await testimonials.remove(id);
   if (!before) return { ok: false, error: "ไม่พบรีวิว" };
 

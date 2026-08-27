@@ -182,7 +182,15 @@ export const getPageSeo = cache(
  */
 export const getAboutContent = cache(
   async (locale: string): Promise<AboutContentView | null> => {
-    const row = await prisma.aboutContent.findFirst();
+    const row = await prisma.aboutContent.findUnique({
+      where: { key: "about" },
+      include: {
+        featuredTestimonials: {
+          orderBy: { sortOrder: "asc" },
+          select: { testimonialId: true, sortOrder: true },
+        },
+      },
+    });
     if (!row) return null;
     return toAboutContentView(row, locale);
   }

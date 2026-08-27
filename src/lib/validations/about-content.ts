@@ -1,9 +1,9 @@
 import { z } from "zod";
+import { optionalPageText } from "@/lib/validations/page-content";
 
-const optionalText = z
-  .string()
-  .trim()
-  .transform((v) => v || null);
+export const ABOUT_FEATURED_MAX = 3;
+
+const optionalText = optionalPageText;
 
 export const aboutContentSchema = z.object({
   titleTh: optionalText,
@@ -38,4 +38,16 @@ export const aboutContentSchema = z.object({
   teamSupportTitleEn: optionalText,
   teamSupportDescTh: optionalText,
   teamSupportDescEn: optionalText,
+  statsProjectsLabelTh: optionalText,
+  statsProjectsLabelEn: optionalText,
+  statsYearsLabelTh: optionalText,
+  statsYearsLabelEn: optionalText,
+  statsEngineersLabelTh: optionalText,
+  statsEngineersLabelEn: optionalText,
+  statsCustomersLabelTh: optionalText,
+  statsCustomersLabelEn: optionalText,
+  testimonialsTitleTh: optionalText,
+  testimonialsTitleEn: optionalText,
+  testimonialsSubtitleTh: optionalText,
+  testimonialsSubtitleEn: optionalText,
 });

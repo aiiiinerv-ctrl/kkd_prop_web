@@ -2,15 +2,23 @@ import { UserRound } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Reveal } from "@/components/site/reveal";
 import { SectionHeading } from "@/components/site/section-heading";
-import { getPublishedTestimonials } from "@/lib/content";
+import { getPublishedTestimonials, type TestimonialView } from "@/lib/content";
 
 /**
  * Public testimonials grid. Renders nothing when there are zero published
  * rows — no placeholder/empty-state UI (no fake data, per project rules).
  */
-export async function TestimonialsSection() {
+export async function TestimonialsSection({
+  items,
+  title,
+  subtitle,
+}: {
+  items?: TestimonialView[];
+  title?: string;
+  subtitle?: string;
+} = {}) {
   const locale = await getLocale();
-  const testimonials = await getPublishedTestimonials(locale);
+  const testimonials = items ?? (await getPublishedTestimonials(locale));
 
   if (testimonials.length === 0) return null;
 
@@ -19,8 +27,8 @@ export async function TestimonialsSection() {
   return (
     <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
       <SectionHeading
-        title={t("title")}
-        subtitle={t("subtitle")}
+        title={title || t("title")}
+        subtitle={subtitle || t("subtitle")}
         headingClassName="font-extrabold tracking-[-0.01em]"
       />
       <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">

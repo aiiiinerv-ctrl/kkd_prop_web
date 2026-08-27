@@ -4,7 +4,7 @@ import type { ComponentProps } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageShell } from "@/components/admin/pages";
 import { HomeClient } from "./home-client";
-import { HomePropertiesPanel, type HomePageSeoData } from "./home-properties-panel";
+import { PagePropertiesPanel, type PageSeoFormData } from "./home-properties-panel";
 import { HomeSharedCtaPanel, type SharedCtaData } from "./home-shared-cta-panel";
 
 type HomeClientProps = ComponentProps<typeof HomeClient>;
@@ -16,7 +16,7 @@ export function HomeAdminShell({
   ...homeProps
 }: HomeClientProps & {
   canMutateProperties: boolean;
-  pageSeo: HomePageSeoData | null;
+  pageSeo: PageSeoFormData | null;
   sharedCta: SharedCtaData | null;
 }) {
   if (!canMutateProperties || !pageSeo) {
@@ -45,7 +45,7 @@ export function HomeAdminShell({
           <HomeClientEmbedded {...homeProps} />
         </TabsContent>
         <TabsContent value="properties" className="pt-4">
-          <HomePropertiesPanel key={pageSeo.version} pageSeo={pageSeo} />
+          <PagePropertiesPanel key={pageSeo.version} pageKey="home" pageSeo={pageSeo} title="Properties หน้าแรก" />
         </TabsContent>
         <TabsContent value="shared-cta" className="pt-4">
           {sharedCta ? (

@@ -73,16 +73,13 @@ const ITEMS = [
     roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
   },
   {
-    href: "/admin/content/about",
-    label: "เนื้อหาหน้าเว็บ",
+    href: "/admin/pages/about",
+    label: "เกี่ยวกับเรา (Pages)",
     icon: FileText,
     roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
   },
   {
-    // Pages CMS registry (issue #62 / #52) — currently only `home` is
-    // enabled; About intentionally stays above at /admin/content/about
-    // until its own migration sprint (owner decision, see
-    // docs/plans/home-cms-slice-implementation-sprints.md).
+    // Pages CMS — Home Content + Properties + Shared CTA (#62 / #68)
     href: "/admin/pages/home",
     label: "หน้าแรก (Pages)",
     icon: LayoutTemplate,

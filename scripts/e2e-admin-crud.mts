@@ -712,8 +712,8 @@ console.log(
 );
 
 // --- CMS: About content — edit TH title (visible tab) + EN title (activate tab), verify pages, restore ---
-await page.goto("http://localhost:3000/admin/content/about");
-await page.waitForSelector("text=เนื้อหาหน้าเกี่ยวกับเรา", { timeout: 10000 });
+await page.goto("http://localhost:3000/admin/pages/about");
+await page.waitForSelector("text=เกี่ยวกับเรา", { timeout: 10000 });
 
 // TH tab is active by default — fill titleTh directly.
 const aboutTitleThInput = page.locator("#ab-titleTh");
@@ -747,8 +747,8 @@ console.log(
 );
 
 // Restore: switch back to TH tab first, fill TH, then EN
-await page.goto("http://localhost:3000/admin/content/about");
-await page.waitForSelector("text=เนื้อหาหน้าเกี่ยวกับเรา", { timeout: 10000 });
+await page.goto("http://localhost:3000/admin/pages/about");
+await page.waitForSelector("text=เกี่ยวกับเรา", { timeout: 10000 });
 await page.locator("#ab-titleTh").waitFor({ timeout: 5000 });
 await page.locator("#ab-titleTh").fill(originalAboutTitleTh);
 await page.getByRole("tab", { name: "English" }).first().click();

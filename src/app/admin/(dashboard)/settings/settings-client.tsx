@@ -54,8 +54,7 @@ type PageSeoEntry = {
 
 // Labels for each META_KEY — hardcoded per ADR 0001 (admin is Thai-only, no message keys)
 const SEO_PAGES: { key: MetaKey; label: string; path: string }[] = [
-  // `home` moved to /admin/pages/home Properties (#68)
-  { key: "about", label: "เกี่ยวกับเรา", path: "/about" },
+  // `home` + `about` moved to Pages Properties (#68 / #69)
   { key: "services", label: "บริการ", path: "/services" },
   { key: "packages", label: "แพ็กเกจ", path: "/packages" },
   { key: "portfolio", label: "ผลงาน", path: "/portfolio" },
@@ -206,7 +205,7 @@ function SeoTab({ pageSeoMap }: { pageSeoMap: Record<string, PageSeoEntry> }) {
       )}
       <Tabs
         orientation="vertical"
-        defaultValue="about"
+        defaultValue="services"
         className="flex flex-col gap-2 md:flex-row"
       >
         <TabsList className="w-full max-h-56 overflow-y-auto md:max-h-none md:w-44 md:shrink-0">

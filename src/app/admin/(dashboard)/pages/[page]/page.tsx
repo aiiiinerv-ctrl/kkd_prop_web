@@ -20,8 +20,8 @@ export default async function AdminPagesDynamicPage({
   const entry = getPage(page);
   if (!entry.adminContentEnabled) notFound();
 
-  // Home is served by the sibling `pages/home` segment — avoid dual UI.
-  if (page === "home") notFound();
+  // Home and About use dedicated `pages/<key>/` segments — avoid dual UI.
+  if (page === "home" || page === "about") notFound();
 
   notFound();
 }

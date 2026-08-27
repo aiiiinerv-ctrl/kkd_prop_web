@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-export type HomePageSeoData = {
+export type PageSeoFormData = {
   version: number;
   titleTh: string;
   titleEn: string;
@@ -28,7 +28,18 @@ export type HomePageSeoData = {
   ogImageUrl: string | null;
 };
 
-export function HomePropertiesPanel({ pageSeo }: { pageSeo: HomePageSeoData }) {
+/** @deprecated use PageSeoFormData */
+export type HomePageSeoData = PageSeoFormData;
+
+export function PagePropertiesPanel({
+  pageKey,
+  pageSeo,
+  title = "Properties",
+}: {
+  pageKey: "home" | "about";
+  pageSeo: PageSeoFormData;
+  title?: string;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [robotsIndex, setRobotsIndex] = useState(pageSeo.robotsIndex);
@@ -40,7 +51,7 @@ export function HomePropertiesPanel({ pageSeo }: { pageSeo: HomePageSeoData }) {
     (pageSeo.robotsIndex && !robotsIndex) || (pageSeo.robotsFollow && !robotsFollow);
 
   const handleSubmit = (formData: FormData) => {
-    formData.set("pageKey", "home");
+    formData.set("pageKey", pageKey);
     formData.set("expectedVersion", String(pageSeo.version));
     formData.set("robotsIndex", robotsIndex ? "true" : "false");
     formData.set("robotsFollow", robotsFollow ? "true" : "false");
@@ -76,16 +87,16 @@ export function HomePropertiesPanel({ pageSeo }: { pageSeo: HomePageSeoData }) {
   return (
     <form action={handleSubmit} className="space-y-6" noValidate encType="multipart/form-data">
       <p className="text-sm text-muted-foreground">
-        SEO / Open Graph / robots ของหน้าแรก — ไม่แก้ที่ตั้งค่าระบบอีกต่อไป
+        {title} — SEO / Open Graph / robots (ไม่แก้ที่ตั้งค่าระบบ)
       </p>
 
       <BilingualTabs
         th={
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label htmlFor="home-prop-title-th">Title (TH)</Label>
+                <Label htmlFor={`${pageKey}-prop-title-th`}>Title (TH)</Label>
               <Input
-                id="home-prop-title-th"
+                id={`${pageKey}-prop-title-th`}
                 name="titleTh"
                 defaultValue={pageSeo.titleTh}
                 maxLength={120}
@@ -93,9 +104,9 @@ export function HomePropertiesPanel({ pageSeo }: { pageSeo: HomePageSeoData }) {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="home-prop-desc-th">Description (TH)</Label>
+              <Label htmlFor={`${pageKey}-prop-desc-th`}>Description (TH)</Label>
               <Textarea
-                id="home-prop-desc-th"
+                id={`${pageKey}-prop-desc-th`}
                 name="descriptionTh"
                 defaultValue={pageSeo.descriptionTh}
                 rows={3}
@@ -104,40 +115,40 @@ export function HomePropertiesPanel({ pageSeo }: { pageSeo: HomePageSeoData }) {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="home-prop-og-title-th">OG Title (TH)</Label>
-              <Input id="home-prop-og-title-th" name="ogTitleTh" defaultValue={pageSeo.ogTitleTh} maxLength={120} />
+              <Label htmlFor={`${pageKey}-prop-og-title-th`}>OG Title (TH)</Label>
+              <Input id={`${pageKey}-prop-og-title-th`} name="ogTitleTh" defaultValue={pageSeo.ogTitleTh} maxLength={120} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="home-prop-og-desc-th">OG Description (TH)</Label>
-              <Textarea id="home-prop-og-desc-th" name="ogDescriptionTh" defaultValue={pageSeo.ogDescriptionTh} rows={2} maxLength={500} />
+              <Label htmlFor={`${pageKey}-prop-og-desc-th`}>OG Description (TH)</Label>
+              <Textarea id={`${pageKey}-prop-og-desc-th`} name="ogDescriptionTh" defaultValue={pageSeo.ogDescriptionTh} rows={2} maxLength={500} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="home-prop-canon-th">Canonical path (TH)</Label>
-              <Input id="home-prop-canon-th" name="canonicalPathTh" defaultValue={pageSeo.canonicalPathTh} placeholder="/th" />
+              <Label htmlFor={`${pageKey}-prop-canon-th`}>Canonical path (TH)</Label>
+              <Input id={`${pageKey}-prop-canon-th`} name="canonicalPathTh" defaultValue={pageSeo.canonicalPathTh} placeholder="/th" />
             </div>
           </div>
         }
         en={
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label htmlFor="home-prop-title-en">Title (EN)</Label>
-              <Input id="home-prop-title-en" name="titleEn" defaultValue={pageSeo.titleEn} maxLength={120} required />
+              <Label htmlFor={`${pageKey}-prop-title-en`}>Title (EN)</Label>
+              <Input id={`${pageKey}-prop-title-en`} name="titleEn" defaultValue={pageSeo.titleEn} maxLength={120} required />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="home-prop-desc-en">Description (EN)</Label>
-              <Textarea id="home-prop-desc-en" name="descriptionEn" defaultValue={pageSeo.descriptionEn} rows={3} maxLength={500} required />
+              <Label htmlFor={`${pageKey}-prop-desc-en`}>Description (EN)</Label>
+              <Textarea id={`${pageKey}-prop-desc-en`} name="descriptionEn" defaultValue={pageSeo.descriptionEn} rows={3} maxLength={500} required />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="home-prop-og-title-en">OG Title (EN)</Label>
-              <Input id="home-prop-og-title-en" name="ogTitleEn" defaultValue={pageSeo.ogTitleEn} maxLength={120} />
+              <Label htmlFor={`${pageKey}-prop-og-title-en`}>OG Title (EN)</Label>
+              <Input id={`${pageKey}-prop-og-title-en`} name="ogTitleEn" defaultValue={pageSeo.ogTitleEn} maxLength={120} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="home-prop-og-desc-en">OG Description (EN)</Label>
-              <Textarea id="home-prop-og-desc-en" name="ogDescriptionEn" defaultValue={pageSeo.ogDescriptionEn} rows={2} maxLength={500} />
+              <Label htmlFor={`${pageKey}-prop-og-desc-en`}>OG Description (EN)</Label>
+              <Textarea id={`${pageKey}-prop-og-desc-en`} name="ogDescriptionEn" defaultValue={pageSeo.ogDescriptionEn} rows={2} maxLength={500} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="home-prop-canon-en">Canonical path (EN)</Label>
-              <Input id="home-prop-canon-en" name="canonicalPathEn" defaultValue={pageSeo.canonicalPathEn} placeholder="/en" />
+              <Label htmlFor={`${pageKey}-prop-canon-en`}>Canonical path (EN)</Label>
+              <Input id={`${pageKey}-prop-canon-en`} name="canonicalPathEn" defaultValue={pageSeo.canonicalPathEn} placeholder="/en" />
             </div>
           </div>
         }

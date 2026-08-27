@@ -51,27 +51,19 @@ check("isPageKey allowlist", () => {
   assert.equal(isPageKey(null), false);
 });
 
-check("rollout partition: home pages, others legacy", () => {
+check("rollout partition: home+about pages, others legacy", () => {
   const { legacy, pages } = rolloutPartition();
-  assert.deepEqual(pages, ["home"]);
-  assert.deepEqual(legacy.sort(), ["about", "calculator", "packages", "portfolio", "services"]);
-  for (const key of PAGE_KEYS) {
-    const flag = PAGE_REGISTRY[key].contentRollout;
-    assert.ok(flag === "legacy" || flag === "pages");
-  }
+  assert.deepEqual([...pages].sort(), ["about", "home"]);
+  assert.deepEqual(legacy.sort(), ["calculator", "packages", "portfolio", "services"]);
 });
 
-check("only home admin Content + Properties enabled", () => {
-  const enabled = adminEnabledPages().map((e) => e.key);
-  assert.deepEqual(enabled, ["home"]);
+check("home+about admin Content + Properties enabled", () => {
+  const enabled = adminEnabledPages().map((e) => e.key).sort();
+  assert.deepEqual(enabled, ["about", "home"]);
   for (const key of PAGE_KEYS) {
-    if (key === "home") {
-      assert.equal(PAGE_REGISTRY[key].adminContentEnabled, true);
-      assert.equal(PAGE_REGISTRY[key].propertiesAdminEnabled, true);
-    } else {
-      assert.equal(PAGE_REGISTRY[key].adminContentEnabled, false);
-      assert.equal(PAGE_REGISTRY[key].propertiesAdminEnabled, false);
-    }
+    const on = key === "home" || key === "about";
+    assert.equal(PAGE_REGISTRY[key].adminContentEnabled, on);
+    assert.equal(PAGE_REGISTRY[key].propertiesAdminEnabled, on);
   }
 });
 

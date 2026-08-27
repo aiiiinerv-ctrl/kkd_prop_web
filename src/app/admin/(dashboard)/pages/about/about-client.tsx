@@ -1,9 +1,11 @@
 "use client";
 
-import { useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 import { ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { updateAboutContent } from "@/actions/about-content";
+import { ABOUT_FEATURED_MAX } from "@/lib/validations/about-content";
 import { BilingualTabs } from "@/components/admin/crud-page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 type AboutData = {
+  version: number;
   titleTh: string; titleEn: string;
   introTh: string; introEn: string;
   credRegisteredTitleTh: string; credRegisteredTitleEn: string;
@@ -27,9 +30,18 @@ type AboutData = {
   teamInstallDescTh: string; teamInstallDescEn: string;
   teamSupportTitleTh: string; teamSupportTitleEn: string;
   teamSupportDescTh: string; teamSupportDescEn: string;
+  showCredentials: boolean;
+  showTeam: boolean;
+  showStats: boolean;
+  showTestimonials: boolean;
+  showGlobalCta: boolean;
+  featuredTestimonialIds: string[];
 };
 
+type TestimonialOption = { id: string; label: string; published: boolean };
+
 const EMPTY: AboutData = {
+  version: 1,
   titleTh: "", titleEn: "", introTh: "", introEn: "",
   credRegisteredTitleTh: "", credRegisteredTitleEn: "", credRegisteredDescTh: "", credRegisteredDescEn: "",
   credEngineerTitleTh: "", credEngineerTitleEn: "", credEngineerDescTh: "", credEngineerDescEn: "",
@@ -38,19 +50,60 @@ const EMPTY: AboutData = {
   teamDesignTitleTh: "", teamDesignTitleEn: "", teamDesignDescTh: "", teamDesignDescEn: "",
   teamInstallTitleTh: "", teamInstallTitleEn: "", teamInstallDescTh: "", teamInstallDescEn: "",
   teamSupportTitleTh: "", teamSupportTitleEn: "", teamSupportDescTh: "", teamSupportDescEn: "",
+  showCredentials: true,
+  showTeam: true,
+  showStats: true,
+  showTestimonials: true,
+  showGlobalCta: true,
+  featuredTestimonialIds: [],
 };
 
-export function AboutClient({ data }: { data: AboutData | null }) {
+export function AboutClient({
+  data,
+  testimonials = [],
+}: {
+  data: AboutData | null;
+  testimonials?: TestimonialOption[];
+}) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const d = data ?? EMPTY;
+  const [featuredIds, setFeaturedIds] = useState<string[]>(d.featuredTestimonialIds);
+  const [showCredentials, setShowCredentials] = useState(d.showCredentials);
+  const [showTeam, setShowTeam] = useState(d.showTeam);
+  const [showStats, setShowStats] = useState(d.showStats);
+  const [showTestimonials, setShowTestimonials] = useState(d.showTestimonials);
+  const [showGlobalCta, setShowGlobalCta] = useState(d.showGlobalCta);
+
+  const toggleFeatured = (id: string) => {
+    setFeaturedIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= ABOUT_FEATURED_MAX) {
+        toast.error(`เลือกได้สูงสุด ${ABOUT_FEATURED_MAX} รีวิว`);
+        return prev;
+      }
+      return [...prev, id];
+    });
+  };
 
   const handleSubmit = (formData: FormData) => {
+    formData.set("version", String(d.version));
+    formData.set("featuredTestimonialIdsJson", JSON.stringify(featuredIds));
+    formData.set("showCredentials", showCredentials ? "true" : "false");
+    formData.set("showTeam", showTeam ? "true" : "false");
+    formData.set("showStats", showStats ? "true" : "false");
+    formData.set("showTestimonials", showTestimonials ? "true" : "false");
+    formData.set("showGlobalCta", showGlobalCta ? "true" : "false");
     startTransition(async () => {
       const result = await updateAboutContent(formData);
       if (result.ok) {
         toast.success("บันทึกเนื้อหาหน้าเกี่ยวกับเราเรียบร้อย");
+        router.refresh();
+      } else if ("conflict" in result && result.conflict) {
+        toast.error("มีการแก้ไขจากคนอื่น — โหลดหน้าใหม่แล้วลองอีกครั้ง");
+        router.refresh();
       } else {
-        toast.error(result.error);
+        toast.error("error" in result ? result.error : "บันทึกไม่สำเร็จ");
       }
     });
   };
@@ -284,6 +337,61 @@ export function AboutClient({ data }: { data: AboutData | null }) {
             </div>
           }
         />
+
+        <div className="space-y-3 rounded-xl border border-border/70 bg-card p-4">
+          <h3 className="font-semibold">การแสดงส่วนบนหน้าเว็บ</h3>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={showCredentials} onChange={(e) => setShowCredentials(e.target.checked)} />
+            แสดงจุดน่าเชื่อถือ
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={showTeam} onChange={(e) => setShowTeam(e.target.checked)} />
+            แสดงทีมงาน
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={showStats} onChange={(e) => setShowStats(e.target.checked)} />
+            แสดงตัวเลขสถิติ
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={showTestimonials} onChange={(e) => setShowTestimonials(e.target.checked)} />
+            แสดงรีวิว
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={showGlobalCta} onChange={(e) => setShowGlobalCta(e.target.checked)} />
+            แสดง CTA รวม
+          </label>
+        </div>
+
+        <div className="space-y-3 rounded-xl border border-border/70 bg-card p-4">
+          <h3 className="font-semibold">รีวิวแนะนำ (สูงสุด {ABOUT_FEATURED_MAX})</h3>
+          <p className="text-xs text-muted-foreground">
+            ว่างไว้ = หน้าเว็บยังแสดงรีวิวที่เผยแพร่ทั้งหมดแบบเดิม จนกว่าจะเลือกชุดแนะนำ
+          </p>
+          <ul className="space-y-2">
+            {testimonials.map((item) => (
+              <li key={item.id}>
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={featuredIds.includes(item.id)}
+                    onChange={() => toggleFeatured(item.id)}
+                    disabled={!item.published && !featuredIds.includes(item.id)}
+                  />
+                  <span>
+                    {item.label}
+                    {!item.published && (
+                      <span className="ml-2 text-xs text-accent-foreground">ยังไม่เผยแพร่</span>
+                    )}
+                  </span>
+                </label>
+              </li>
+            ))}
+            {testimonials.length === 0 && (
+              <li className="text-sm text-muted-foreground">ยังไม่มีรีวิวในระบบ</li>
+            )}
+          </ul>
+        </div>
+
         <p className="text-xs text-muted-foreground">เว้นภาษาอังกฤษว่างได้ — หน้า /en จะแสดงข้อความภาษาไทยแทน</p>
         <Button type="submit" id="ab-submit" className="w-full" disabled={isPending}>
           {isPending ? "กำลังบันทึก..." : "บันทึกเนื้อหาหน้าเกี่ยวกับเรา"}

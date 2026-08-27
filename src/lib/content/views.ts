@@ -224,6 +224,7 @@ export function toPageSeoView(row: Row, locale: string): PageSeoView {
 
 export type AboutContentView = {
   id: string;
+  version: number;
   title: string | null;
   intro: string | null;
   credRegisteredTitle: string | null;
@@ -240,7 +241,54 @@ export type AboutContentView = {
   teamInstallDesc: string | null;
   teamSupportTitle: string | null;
   teamSupportDesc: string | null;
+  showCredentials: boolean;
+  showTeam: boolean;
+  showStats: boolean;
+  showTestimonials: boolean;
+  showGlobalCta: boolean;
+  testimonialsTitle: string | null;
+  testimonialsSubtitle: string | null;
+  featuredTestimonialIds: string[];
 };
+
+export function toAboutContentView(row: Row, locale: string): AboutContentView {
+  const loc = (field: string) => pickLocale(row, field, locale) || null;
+  const featured = Array.isArray(row.featuredTestimonials)
+    ? (row.featuredTestimonials as { testimonialId?: string; sortOrder?: number }[])
+        .slice()
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+        .map((f) => String(f.testimonialId))
+        .filter(Boolean)
+    : [];
+  return {
+    id: String(row.id),
+    version: Number(row.version ?? 1),
+    title: loc("title"),
+    intro: loc("intro"),
+    credRegisteredTitle: loc("credRegisteredTitle"),
+    credRegisteredDesc: loc("credRegisteredDesc"),
+    credEngineerTitle: loc("credEngineerTitle"),
+    credEngineerDesc: loc("credEngineerDesc"),
+    credExperienceTitle: loc("credExperienceTitle"),
+    credExperienceDesc: loc("credExperienceDesc"),
+    teamTitle: loc("teamTitle"),
+    teamDesc: loc("teamDesc"),
+    teamDesignTitle: loc("teamDesignTitle"),
+    teamDesignDesc: loc("teamDesignDesc"),
+    teamInstallTitle: loc("teamInstallTitle"),
+    teamInstallDesc: loc("teamInstallDesc"),
+    teamSupportTitle: loc("teamSupportTitle"),
+    teamSupportDesc: loc("teamSupportDesc"),
+    showCredentials: row.showCredentials !== false,
+    showTeam: row.showTeam !== false,
+    showStats: row.showStats !== false,
+    showTestimonials: row.showTestimonials !== false,
+    showGlobalCta: row.showGlobalCta !== false,
+    testimonialsTitle: loc("testimonialsTitle"),
+    testimonialsSubtitle: loc("testimonialsSubtitle"),
+    featuredTestimonialIds: featured,
+  };
+}
 
 // ─── Home Page Content (Home CMS slice H3) ─────────────────────────────────
 
@@ -342,28 +390,5 @@ export function toHomePageContentView(row: Row, locale: string): HomePageContent
     faqTitle: loc("faqTitle"),
     faqIntro: loc("faqIntro"),
     faqLineButtonLabel: loc("faqLineButtonLabel"),
-  };
-}
-
-export function toAboutContentView(row: Row, locale: string): AboutContentView {
-  const loc = (field: string) => pickLocale(row, field, locale) || null;
-  return {
-    id: String(row.id),
-    title: loc("title"),
-    intro: loc("intro"),
-    credRegisteredTitle: loc("credRegisteredTitle"),
-    credRegisteredDesc: loc("credRegisteredDesc"),
-    credEngineerTitle: loc("credEngineerTitle"),
-    credEngineerDesc: loc("credEngineerDesc"),
-    credExperienceTitle: loc("credExperienceTitle"),
-    credExperienceDesc: loc("credExperienceDesc"),
-    teamTitle: loc("teamTitle"),
-    teamDesc: loc("teamDesc"),
-    teamDesignTitle: loc("teamDesignTitle"),
-    teamDesignDesc: loc("teamDesignDesc"),
-    teamInstallTitle: loc("teamInstallTitle"),
-    teamInstallDesc: loc("teamInstallDesc"),
-    teamSupportTitle: loc("teamSupportTitle"),
-    teamSupportDesc: loc("teamSupportDesc"),
   };
 }
