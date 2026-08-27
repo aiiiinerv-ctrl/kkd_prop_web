@@ -41,21 +41,18 @@ reads `HomePageContent`; do not regress that path.
 
 - [x] Confirm Gate E evidence path under `docs/plans/assets/pages-cms-result/`
   (`s02-gate-d-e/manifest.md`)
-- [ ] Re-read data-model decision:
+- [x] Re-read data-model decision:
   [`pages-cms-data-model-migration-decision.md`](pages-cms-data-model-migration-decision.md)
-- [ ] Confirm production still has **no** `_prisma_migrations` ledger — additive
+- [x] Confirm production still has **no** `_prisma_migrations` ledger — additive
   SQL for the host must stay hand-applicable and idempotent
 - [x] List exact new models/tables from Sprint 3 scope — see #66 PLAN (Home
   models already live; remaining: PageSeo extensions, About/Services/Packages/
-  Portfolio/Calculator content, featured refs pending owner decision on
-  `HomeFeaturedPortfolioProject`, SiteSettings/AboutContent extensions)
-- [ ] Confirm backup model order + storage namespaces `public/seo/og/` and
+  Portfolio/Calculator content, AboutFeaturedTestimonial; Featured Portfolio deferred)
+- [x] Confirm backup model order + storage namespaces `public/seo/og/` and
   `public/pages/` will be covered by the shared backup engine
-- [ ] Decide whether the short-lived secret-gated backfill **HTTP** route is
-  still required (host still cannot run `tsx`) — reuse Gate C / Home H1 route
-  lessons; never leave the secret enabled after use
-- [x] Prepare evidence directory name `s03-additive-data/` (placeholder README
-  only until sprint executes)
+- [x] Decide whether the short-lived secret-gated backfill **HTTP** route is
+  still required — **yes** (`pages-cms-sprint3-backfill`); tear down in A1 window
+- [x] Prepare evidence directory name `s03-additive-data/` (local manifest + SQL)
 
 ## Known risks to re-state at kickoff
 
