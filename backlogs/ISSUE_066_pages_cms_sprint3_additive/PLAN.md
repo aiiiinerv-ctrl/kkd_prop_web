@@ -52,13 +52,13 @@
 | # | Work | Owner | Depends on | Parallel? | Status |
 |---:|---|---|---|---|---|
 | 1 | Owner lock A1–A3 | User | — | — | **done** |
-| 2 | Pre-flight checklist in `pages-cms-sprint3-prep.md` | `nextjs-dev` | 1 | ✅ | in progress |
-| 3 | Schema + local migrate + phpMyAdmin-safe additive SQL | `nextjs-dev` | 1 | — | pending |
-| 4 | Backup order / storage namespace coverage | `nextjs-dev` | 3 | — | pending |
-| 5 | Idempotent backfill + digests (2×) + gated HTTP route | `nextjs-dev` | 3 | — | pending |
+| 2 | Pre-flight checklist in `pages-cms-sprint3-prep.md` | `nextjs-dev` | 1 | ✅ | **done** |
+| 3 | Schema + local migrate + phpMyAdmin-safe additive SQL | `nextjs-dev` | 1 | — | **done** (local) |
+| 4 | Backup order / storage namespace coverage | `nextjs-dev` | 3 | — | **done** |
+| 5 | Idempotent backfill + digests (2×) + gated HTTP route | `nextjs-dev` | 3 | — | **done** (local digest `a52b7c00…4c4d`) |
 | 6 | Production DDL in A1 window | `hosting-deploy-specialist` | 3, A1 | — | pending |
 | 7 | Production gated backfill + teardown | `hosting-deploy-specialist` | 5, 6, A1 | — | pending |
-| 8 | Evidence `s03-additive-data/` + verify | `nextjs-dev` + specialist | 7 | — | pending |
+| 8 | Evidence `s03-additive-data/` + verify | `nextjs-dev` + specialist | 7 | — | local manifest written; prod pending |
 | 9 | Close #66; move PLAN → `done/` | User / agent | 8 | — | pending |
 
 ## Parallel lanes
