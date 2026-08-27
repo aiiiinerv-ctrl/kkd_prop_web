@@ -57,24 +57,72 @@ export async function backfillPagesCmsSprint3(
   const en = await loadLocale("en");
 
   let pageSeoUpdated = 0;
-  const pageSeoRows = await prisma.pageSeo.findMany({ orderBy: { key: "asc" } });
-  for (const row of pageSeoRows) {
-    await prisma.pageSeo.update({
-      where: { id: row.id },
-      data: {
-        robotsIndex: row.robotsIndex ?? true,
-        robotsFollow: row.robotsFollow ?? true,
-        version: row.version > 0 ? row.version : 1,
-        // og/canonical stay null until Properties editors set them — empty means
-        // same-locale SEO title/description / trusted self path.
-      },
-    });
+  const metaKeys = [
+    "home",
+    "about",
+    "services",
+    "packages",
+    "portfolio",
+    "booking",
+    "contact",
+    "calculator",
+    "testimonials",
+    "cookiePolicy",
+  ] as const;
+  for (const key of metaKeys) {
+    const titleKey = `${key}Title`;
+    const descKey = `${key}Desc`;
+    const existing = await prisma.pageSeo.findUnique({ where: { key } });
+    if (existing) {
+      await prisma.pageSeo.update({
+        where: { id: existing.id },
+        data: {
+          robotsIndex: existing.robotsIndex ?? true,
+          robotsFollow: existing.robotsFollow ?? true,
+          version: existing.version > 0 ? existing.version : 1,
+          titleTh: existing.titleTh ?? pick(th.meta, titleKey),
+          titleEn: existing.titleEn ?? pick(en.meta, titleKey),
+          descriptionTh: existing.descriptionTh ?? pick(th.meta, descKey),
+          descriptionEn: existing.descriptionEn ?? pick(en.meta, descKey),
+        },
+      });
+    } else {
+      await prisma.pageSeo.create({
+        data: {
+          id: createId(),
+          key,
+          titleTh: pick(th.meta, titleKey),
+          titleEn: pick(en.meta, titleKey),
+          descriptionTh: pick(th.meta, descKey),
+          descriptionEn: pick(en.meta, descKey),
+          robotsIndex: true,
+          robotsFollow: true,
+          version: 1,
+        },
+      });
+    }
     pageSeoUpdated += 1;
   }
 
-  const site = await prisma.siteSettings.findFirst({ orderBy: { id: "asc" } });
+  let site = await prisma.siteSettings.findFirst({ orderBy: { id: "asc" } });
   let siteSettingsUpdated = false;
-  if (site) {
+  if (!site) {
+    site = await prisma.siteSettings.create({
+      data: {
+        id: createId(),
+        ctaTitleTh: pick(th.home, "ctaTitle"),
+        ctaTitleEn: pick(en.home, "ctaTitle"),
+        ctaSubtitleTh: pick(th.home, "ctaSubtitle"),
+        ctaSubtitleEn: pick(en.home, "ctaSubtitle"),
+        ctaPrimaryLabelTh: pick(th.common, "requestQuote"),
+        ctaPrimaryLabelEn: pick(en.common, "requestQuote"),
+        ctaSecondaryLabelTh: pick(th.common, "bookSurvey"),
+        ctaSecondaryLabelEn: pick(en.common, "bookSurvey"),
+        ctaVersion: 1,
+      },
+    });
+    siteSettingsUpdated = true;
+  } else {
     await prisma.siteSettings.update({
       where: { id: site.id },
       data: {
@@ -92,12 +140,71 @@ export async function backfillPagesCmsSprint3(
     siteSettingsUpdated = true;
   }
 
-  const about = await prisma.aboutContent.findFirst({ orderBy: { id: "asc" } });
+  let about = await prisma.aboutContent.findFirst({ orderBy: { id: "asc" } });
   let aboutUpdated = false;
   let aboutFeaturedCreated = 0;
   let aboutId: string | null = about?.id ?? null;
 
-  if (about) {
+  if (!about) {
+    about = await prisma.aboutContent.create({
+      data: {
+        id: createId(),
+        key: "about",
+        titleTh: pick(th.about, "title"),
+        titleEn: pick(en.about, "title"),
+        introTh: pick(th.about, "intro"),
+        introEn: pick(en.about, "intro"),
+        credRegisteredTitleTh: pick(th.about, "credRegisteredTitle"),
+        credRegisteredTitleEn: pick(en.about, "credRegisteredTitle"),
+        credRegisteredDescTh: pick(th.about, "credRegisteredDesc"),
+        credRegisteredDescEn: pick(en.about, "credRegisteredDesc"),
+        credEngineerTitleTh: pick(th.about, "credEngineerTitle"),
+        credEngineerTitleEn: pick(en.about, "credEngineerTitle"),
+        credEngineerDescTh: pick(th.about, "credEngineerDesc"),
+        credEngineerDescEn: pick(en.about, "credEngineerDesc"),
+        credExperienceTitleTh: pick(th.about, "credExperienceTitle"),
+        credExperienceTitleEn: pick(en.about, "credExperienceTitle"),
+        credExperienceDescTh: pick(th.about, "credExperienceDesc"),
+        credExperienceDescEn: pick(en.about, "credExperienceDesc"),
+        teamTitleTh: pick(th.about, "teamTitle"),
+        teamTitleEn: pick(en.about, "teamTitle"),
+        teamDescTh: pick(th.about, "teamDesc"),
+        teamDescEn: pick(en.about, "teamDesc"),
+        teamDesignTitleTh: pick(th.about, "teamDesignTitle"),
+        teamDesignTitleEn: pick(en.about, "teamDesignTitle"),
+        teamDesignDescTh: pick(th.about, "teamDesignDesc"),
+        teamDesignDescEn: pick(en.about, "teamDesignDesc"),
+        teamInstallTitleTh: pick(th.about, "teamInstallTitle"),
+        teamInstallTitleEn: pick(en.about, "teamInstallTitle"),
+        teamInstallDescTh: pick(th.about, "teamInstallDesc"),
+        teamInstallDescEn: pick(en.about, "teamInstallDesc"),
+        teamSupportTitleTh: pick(th.about, "teamSupportTitle"),
+        teamSupportTitleEn: pick(en.about, "teamSupportTitle"),
+        teamSupportDescTh: pick(th.about, "teamSupportDesc"),
+        teamSupportDescEn: pick(en.about, "teamSupportDesc"),
+        showCredentials: true,
+        showTeam: true,
+        showStats: true,
+        showTestimonials: true,
+        showGlobalCta: true,
+        statsProjectsLabelTh: pick(th.home, "statsProjects"),
+        statsProjectsLabelEn: pick(en.home, "statsProjects"),
+        statsYearsLabelTh: pick(th.home, "statsYears"),
+        statsYearsLabelEn: pick(en.home, "statsYears"),
+        statsEngineersLabelTh: pick(th.home, "statsEngineers"),
+        statsEngineersLabelEn: pick(en.home, "statsEngineers"),
+        statsCustomersLabelTh: pick(th.home, "statsCustomers"),
+        statsCustomersLabelEn: pick(en.home, "statsCustomers"),
+        testimonialsTitleTh: pick(th.testimonials, "title"),
+        testimonialsTitleEn: pick(en.testimonials, "title"),
+        testimonialsSubtitleTh: pick(th.testimonials, "subtitle"),
+        testimonialsSubtitleEn: pick(en.testimonials, "subtitle"),
+        version: 1,
+      },
+    });
+    aboutUpdated = true;
+    aboutId = about.id;
+  } else {
     await prisma.aboutContent.update({
       where: { id: about.id },
       data: {
