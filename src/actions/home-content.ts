@@ -4,7 +4,7 @@ import { storePublicImage } from "@/lib/admin-content";
 import { auditedAggregate } from "@/lib/audit";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { PAGE_REGISTRY } from "@/lib/pages-registry";
+import { contentRevalidatePaths } from "@/lib/pages";
 import { storage } from "@/lib/storage";
 import {
   HOME_BOOLEAN_FIELDS,
@@ -41,7 +41,7 @@ const homeContentAggregate = auditedAggregate({
   model: (client) => client.homePageContent,
   // H3 cutover: registry `home.contentRollout` is "pages", so these
   // revalidations now actually change what the public site shows.
-  revalidate: [...PAGE_REGISTRY.home.publicPaths, PAGE_REGISTRY.home.adminContentPath],
+  revalidate: [...contentRevalidatePaths("home")],
 });
 
 /** Thrown (and caught) when a submitted FAQ id doesn't belong to this Home row — S14 (IDOR via foreign id). */

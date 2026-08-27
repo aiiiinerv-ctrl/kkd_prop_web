@@ -55,15 +55,15 @@
 
 | # | Work | Owner | Depends on | Parallel? | Status |
 |---:|---|---|---|---|---|
-| 1 | Inventory + extract `src/lib/pages/` registry (6 keys) | `nextjs-dev` | — | ✅ | pending |
-| 2 | Validations `page-content/` + Properties schemas | `nextjs-dev` | 1 | ✅ w/ 3 after 1 | pending |
-| 3 | Bound aggregate audit docs/helpers if needed; keep Home consumer green | `nextjs-dev` | 1 | ✅ | pending |
-| 4 | `src/actions/pages/` seam + Home adapter | `nextjs-dev` | 2, 3 | — | pending |
-| 5 | Shared admin shell components + `[page]` fail-closed route | `nextjs-dev` | 1 | ✅ w/ 2–3 | pending |
-| 6 | Wire Home UI onto shared shell without regressing fields | `nextjs-dev` | 4, 5 | — | pending |
-| 7 | Verify scripts + axe fixture pass; evidence `s04-pages-core/` | `nextjs-dev` | 6 | — | pending |
+| 1 | Inventory + extract `src/lib/pages/` registry (6 keys) | `nextjs-dev` | — | ✅ | **done** |
+| 2 | Validations `page-content/` + Properties schemas | `nextjs-dev` | 1 | ✅ w/ 3 after 1 | **done** |
+| 3 | Bound aggregate audit docs/helpers if needed; keep Home consumer green | `nextjs-dev` | 1 | ✅ | **done** (reused `auditedAggregate`; Home uses `contentRevalidatePaths`) |
+| 4 | `src/actions/pages/` seam + Home adapter | `nextjs-dev` | 2, 3 | — | **partial** — Properties seam fail-closed; Home still `home-content.ts` |
+| 5 | Shared admin shell components + `[page]` fail-closed route | `nextjs-dev` | 1 | ✅ w/ 2–3 | **done** (shell MVP; preview/unsaved deferred) |
+| 6 | Wire Home UI onto shared shell without regressing fields | `nextjs-dev` | 4, 5 | — | **done** (`PageShell`) |
+| 7 | Verify scripts + axe fixture pass; evidence `s04-pages-core/` | `nextjs-dev` | 6 | — | **partial** — model script green; axe + full e2e pending |
 | 8 | `audit-compliance-reviewer` on new/changed actions | reviewer | 4, 6 | — | pending |
-| 9 | `i18n-parity-checker` only if `messages/*` touched | checker | 6 | — | pending |
+| 9 | `i18n-parity-checker` only if `messages/*` touched | checker | 6 | — | skip (no messages) |
 | 10 | Close #67; PLAN → `done/`; INDEX | agent | 7–9 | — | pending |
 
 Executable breakdown: `docs/plans/pages-cms-sprint4-pages-core-tasks.md`

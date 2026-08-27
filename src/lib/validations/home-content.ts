@@ -1,9 +1,7 @@
 import { z } from "zod";
+import { optionalPageText, requiredPageText } from "@/lib/validations/page-content";
 
-const optionalText = z
-  .string()
-  .trim()
-  .transform((v) => v || null);
+const optionalText = optionalPageText;
 
 /**
  * Hero alt text is required in both locales (live-verify matrix C5) — unlike
@@ -11,7 +9,7 @@ const optionalText = z
  * accessibility purposes: a screen reader on `/en` must not read Thai alt
  * text just because the English column happened to be left blank.
  */
-const requiredAlt = z.string().trim().min(1, "ต้องกรอกข้อความ alt ของรูปภาพหลัก").max(200);
+const requiredAlt = requiredPageText("ต้องกรอกข้อความ alt ของรูปภาพหลัก", 200);
 
 /**
  * Explicit allow-list of `HomePageContent` scalar text columns editable from

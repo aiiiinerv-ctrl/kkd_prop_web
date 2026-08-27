@@ -14,7 +14,7 @@ import {
   getSiteSettings,
   resolveHomeHeroImage,
 } from "@/lib/content";
-import { PAGE_REGISTRY } from "@/lib/pages-registry";
+import { PAGE_REGISTRY } from "@/lib/pages";
 
 const FALLBACK_LINE_URL = "https://line.me/R/ti/p/@kkdsolar";
 const FALLBACK_FACEBOOK_URL = "https://facebook.com/kkdsolar";

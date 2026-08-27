@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { updateHomeContent } from "@/actions/home-content";
 import { updateContactSettings } from "@/actions/site-settings";
 import { BilingualTabs } from "@/components/admin/crud-page";
+import { PageShell } from "@/components/admin/pages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -374,23 +375,21 @@ export function HomeClient({
   };
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <PageShell
+      pageKey="home"
+      title="เนื้อหาหน้าแรก"
+      description="หน้าเว็บจริง (/th และ /en) อ่านข้อมูลจากที่นี่โดยตรง — บันทึกแล้วมีผลทันทีทั้งสองภาษา"
+    >
       <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <h1 className="text-xl font-bold">เนื้อหาหน้าแรก</h1>
-          <a
-            href="/th"
-            target="_blank"
-            rel="noopener"
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
-          >
-            เปิดหน้าจริง /th
-            <ExternalLink className="size-3.5" />
-          </a>
-          <p className="text-xs text-accent-foreground">
-            หน้าเว็บจริง (/th และ /en) อ่านข้อมูลจากที่นี่โดยตรง — บันทึกแล้วมีผลทันทีทั้งสองภาษา
-          </p>
-        </div>
+        <a
+          href="/th"
+          target="_blank"
+          rel="noopener"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+        >
+          เปิดหน้าจริง /th
+          <ExternalLink className="size-3.5" />
+        </a>
         <Button type="submit" form="home-content-form" disabled={isPending}>
           {isPending ? "กำลังบันทึก..." : "บันทึก"}
         </Button>
@@ -772,6 +771,6 @@ export function HomeClient({
           ข้อมูลติดต่อ (เบอร์โทร/LINE/Facebook) แก้ไขได้เฉพาะบทบาท ผู้ดูแลระบบ และ การตลาด — ติดต่อผู้ดูแลระบบหากต้องการเปลี่ยน
         </p>
       )}
-    </div>
+    </PageShell>
   );
 }
