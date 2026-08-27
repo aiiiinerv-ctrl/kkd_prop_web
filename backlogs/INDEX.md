@@ -17,6 +17,8 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 | GitHub | PLAN | Notes |
 |---|---|---|
+| [#63](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/63) | [`ISSUE_063_home_cms_h3_cutover`](ISSUE_063_home_cms_h3_cutover/PLAN.md) | H3 public cutover live 2026-08-27 — managed hero `/files/public/pages/home/hero/…` |
+| [#62](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/62) | [`ISSUE_062_home_cms_h2_admin`](ISSUE_062_home_cms_h2_admin/PLAN.md) | H2 deployed production 2026-08-27 |
 | [#61](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/61) | [`ISSUE_061_home_cms_h1_schema`](ISSUE_061_home_cms_h1_schema/PLAN.md) | H1 production rollout complete 2026-08-27 — DDL applied, redeployed, backfill verified idempotent (1 HomePageContent + 5 HomeFaqItem), teardown env vars removed and verified |
 | [#65](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/65) | [`ISSUE_065_pages_cms_gate_d_e`](done/ISSUE_065_pages_cms_gate_d_e/PLAN.md) | Gate D/E complete 2026-08-27 — 16/16 InnoDB, 11/11 FKs, orphans 0, teardown smoke green; #61 H1 unblocked |
 | [#51](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/51) | [`ISSUE_051_pages_cms_gate_b_c`](done/ISSUE_051_pages_cms_gate_b_c/PLAN.md) | Gate B/C complete 2026-08-27; Gate D/E followed on #65 |
