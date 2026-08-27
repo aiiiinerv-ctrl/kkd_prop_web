@@ -4,6 +4,7 @@ import { z } from "zod";
 import { linesToList, slugify, storePublicImage } from "@/lib/admin-content";
 import { auditedEntity } from "@/lib/audit";
 import { canPublishContent, requireRole } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { storage } from "@/lib/storage";
 import type { ActionResult } from "./users";
 
@@ -49,8 +50,11 @@ const packages = auditedEntity({
   model: (client) => client.package,
   snapshot: "full",
   revalidate: () => [
+    "/admin/pages/packages",
     "/admin/packages",
     ["/[locale]/packages", "page"],
+    ["/[locale]/packages/[slug]", "page"],
+    ["/[locale]/calculator", "page"],
     ["/[locale]", "page"],
   ],
 });
@@ -67,6 +71,11 @@ export async function createPackage(formData: FormData): Promise<ActionResult> {
   // EDITOR can't publish — every create lands as a draft regardless of what
   // the form sent, enforced here (not just hidden in the UI).
   const canPublish = canPublishContent(session.user.role);
+
+  // At most one popular package (S8-B). Cleared before create so the new row wins.
+  if (parsed.data.isPopular) {
+    await prisma.package.updateMany({ where: { isPopular: true }, data: { isPopular: false } });
+  }
 
   await packages.create({
     ...parsed.data,
@@ -97,6 +106,13 @@ export async function updatePackage(
   // entirely so the existing DB value wins over whatever the form sent.
   const { isPublished, ...rest } = parsed.data;
   const canPublish = canPublishContent(session.user.role);
+
+  if (parsed.data.isPopular) {
+    await prisma.package.updateMany({
+      where: { isPopular: true, NOT: { id } },
+      data: { isPopular: false },
+    });
+  }
 
   const result = await packages.update(id, {
     ...rest,

@@ -55,8 +55,8 @@ const ITEMS = [
     roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
   },
   {
-    href: "/admin/packages",
-    label: "แพ็กเกจ",
+    href: "/admin/pages/packages",
+    label: "แพ็กเกจ (Pages)",
     icon: Package,
     roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
   },

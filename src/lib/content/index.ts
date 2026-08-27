@@ -12,6 +12,7 @@ import {
   toProjectView,
   toServiceView,
   toServicesPageContentView,
+  toPackagesPageContentView,
   toSiteSettingsView,
   toSharedCtaView,
   toTestimonialView,
@@ -20,6 +21,7 @@ import {
   type HomeFaqItemView,
   type HomePageContentView,
   type PackageView,
+  type PackagesPageContentView,
   type PageSeoView,
   type ProjectView,
   type ServiceView,
@@ -207,6 +209,15 @@ export const getServicesPageContent = cache(
   }
 );
 
+/** Packages page chrome. Null → caller falls back to messages. */
+export const getPackagesPageContent = cache(
+  async (locale: string): Promise<PackagesPageContentView | null> => {
+    const row = await prisma.packagesPageContent.findUnique({ where: { key: "packages" } });
+    if (!row) return null;
+    return toPackagesPageContentView(row, locale);
+  }
+);
+
 /**
  * Home Page Content + its FAQ children, for the public reader
  * (`src/app/[locale]/home-content.tsx`). Returns null when no row exists —
@@ -257,9 +268,11 @@ export type {
   AboutContentView,
   ChannelView,
   PackageView,
+  PackagesPageContentView,
   PageSeoView,
   ProjectView,
   ServiceView,
+  ServicesPageContentView,
   SharedCtaView,
   SiteSettingsView,
   SocialLink,

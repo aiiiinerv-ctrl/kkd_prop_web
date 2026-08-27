@@ -317,6 +317,43 @@ export function toServicesPageContentView(row: Row, locale: string): ServicesPag
   };
 }
 
+export type PackagesPageContentView = {
+  id: string;
+  version: number;
+  title: string | null;
+  subtitle: string | null;
+  empty: string | null;
+  seasonalTitle: string | null;
+  seasonalSubtitle: string | null;
+  paybackTitle: string | null;
+  paybackOnGrid: string | null;
+  paybackHybrid: string | null;
+  paybackOffGrid: string | null;
+  showSeasonal: boolean;
+  showPayback: boolean;
+  showGlobalCta: boolean;
+};
+
+export function toPackagesPageContentView(row: Row, locale: string): PackagesPageContentView {
+  const loc = (field: string) => pickLocale(row, field, locale) || null;
+  return {
+    id: String(row.id),
+    version: Number(row.version ?? 1),
+    title: loc("title"),
+    subtitle: loc("subtitle"),
+    empty: loc("empty"),
+    seasonalTitle: loc("seasonalTitle"),
+    seasonalSubtitle: loc("seasonalSubtitle"),
+    paybackTitle: loc("paybackTitle"),
+    paybackOnGrid: loc("paybackOnGrid"),
+    paybackHybrid: loc("paybackHybrid"),
+    paybackOffGrid: loc("paybackOffGrid"),
+    showSeasonal: row.showSeasonal !== false,
+    showPayback: row.showPayback !== false,
+    showGlobalCta: row.showGlobalCta !== false,
+  };
+}
+
 // ─── Home Page Content (Home CMS slice H3) ─────────────────────────────────
 
 export type HomeFaqItemView = {

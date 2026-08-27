@@ -18,6 +18,7 @@ export type AuditEntityType =
   | "HomePageContent"
   | "Lead"
   | "Package"
+  | "PackagesPageContent"
   | "PageSeo"
   | "PaymentSettings"
   | "PortfolioProject"

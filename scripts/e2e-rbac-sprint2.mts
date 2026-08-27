@@ -520,6 +520,7 @@ async function main() {
       "/admin/content/about",
       "/admin/pages/about",
       "/admin/pages/services",
+      "/admin/pages/packages",
     ]) {
       await page.goto(`${BASE}${path}`);
       const blocked = page.url().endsWith("/admin");

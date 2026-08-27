@@ -303,17 +303,18 @@ const stamp = Date.now().toString(36);
 
 // --- Packages ---
 const packageName = `แพ็กเกจทดสอบ ${stamp}`;
-await page.goto("http://localhost:3000/admin/packages");
+await page.goto("http://localhost:3000/admin/pages/packages");
 await page.click("text=เพิ่มแพ็กเกจ");
-await page.locator('input[name="nameTh"]').waitFor({ timeout: 5000 });
-await page.fill('input[name="sizeKw"]', "7");
-await page.fill('input[name="priceThb"]', "222000");
-await page.fill('input[name="nameTh"]', packageName);
-await page.fill('input[name="suitableTh"]', "สำหรับสคริปต์ทดสอบ");
-await page.click('button:text-is("English")');
-await page.fill('input[name="nameEn"]', `E2E Package ${stamp}`);
-await page.fill('input[name="suitableEn"]', "For the e2e script");
-await page.click("text=บันทึก >> nth=-1");
+const pkgDialog = page.getByRole("dialog");
+await pkgDialog.locator('input[name="nameTh"]').waitFor({ timeout: 5000 });
+await pkgDialog.locator('input[name="sizeKw"]').fill("7");
+await pkgDialog.locator('input[name="priceThb"]').fill("222000");
+await pkgDialog.locator('input[name="nameTh"]').fill(packageName);
+await pkgDialog.locator('input[name="suitableTh"]').fill("สำหรับสคริปต์ทดสอบ");
+await pkgDialog.getByRole("tab", { name: "English" }).click();
+await pkgDialog.locator('input[name="nameEn"]').fill(`E2E Package ${stamp}`);
+await pkgDialog.locator('input[name="suitableEn"]').fill("For the e2e script");
+await pkgDialog.getByRole("button", { name: "บันทึก" }).click();
 await page.waitForSelector(`tr:has-text("${packageName}")`, { timeout: 10000 });
 
 const createdPackage = await prisma.package.findFirst({ where: { nameTh: packageName } });
@@ -325,12 +326,13 @@ console.log(
 );
 
 await page.click(`tr:has-text("${packageName}") button[aria-label="แก้ไข"]`);
-await page.locator('input[name="suitableTh"]').waitFor({ timeout: 5000 });
-await page.fill('input[name="suitableTh"]', "แก้ไขแล้วโดยสคริปต์");
-await page.click("text=บันทึก >> nth=-1");
+const editPkgDialog = page.getByRole("dialog");
+await editPkgDialog.locator('input[name="suitableTh"]').waitFor({ timeout: 5000 });
+await editPkgDialog.locator('input[name="suitableTh"]').fill("แก้ไขแล้วโดยสคริปต์");
+await editPkgDialog.getByRole("button", { name: "บันทึก" }).click();
 // The dialog closes only on success — a stale "saved" toast from the create
 // above would otherwise satisfy a text wait before the action had committed.
-await page.locator('input[name="suitableTh"]').waitFor({ state: "detached", timeout: 10000 });
+await editPkgDialog.locator('input[name="suitableTh"]').waitFor({ state: "detached", timeout: 10000 });
 const editedPackage = await prisma.package.findFirst({ where: { nameTh: packageName } });
 console.log(
   `PACKAGES: edited via dialog ${

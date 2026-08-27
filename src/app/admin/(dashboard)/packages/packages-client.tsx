@@ -27,14 +27,16 @@ export function PackagesClient({
   packages,
   canPublish,
   canDelete,
+  embedded = false,
 }: {
   packages: PackageRow[];
   canPublish: boolean;
   canDelete: boolean;
+  embedded?: boolean;
 }) {
   return (
     <CrudPage
-      title="แพ็กเกจ"
+      title={embedded ? "รายการแพ็กเกจ (Content Items)" : "แพ็กเกจ"}
       addLabel="เพิ่มแพ็กเกจ"
       dialogTitle={(editing) => (editing ? "แก้ไขแพ็กเกจ" : "เพิ่มแพ็กเกจใหม่")}
       rows={packages}

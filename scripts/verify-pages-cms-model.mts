@@ -51,17 +51,18 @@ check("isPageKey allowlist", () => {
   assert.equal(isPageKey(null), false);
 });
 
-check("rollout partition: home+about+services pages, others legacy", () => {
+check("rollout partition: home+about+services+packages pages, others legacy", () => {
   const { legacy, pages } = rolloutPartition();
-  assert.deepEqual([...pages].sort(), ["about", "home", "services"]);
-  assert.deepEqual(legacy.sort(), ["calculator", "packages", "portfolio"]);
+  assert.deepEqual([...pages].sort(), ["about", "home", "packages", "services"]);
+  assert.deepEqual(legacy.sort(), ["calculator", "portfolio"]);
 });
 
-check("home+about+services admin Content + Properties enabled", () => {
+check("home+about+services+packages admin Content + Properties enabled", () => {
   const enabled = adminEnabledPages().map((e) => e.key).sort();
-  assert.deepEqual(enabled, ["about", "home", "services"]);
+  assert.deepEqual(enabled, ["about", "home", "packages", "services"]);
   for (const key of PAGE_KEYS) {
-    const on = key === "home" || key === "about" || key === "services";
+    const on =
+      key === "home" || key === "about" || key === "services" || key === "packages";
     assert.equal(PAGE_REGISTRY[key].adminContentEnabled, on);
     assert.equal(PAGE_REGISTRY[key].propertiesAdminEnabled, on);
   }

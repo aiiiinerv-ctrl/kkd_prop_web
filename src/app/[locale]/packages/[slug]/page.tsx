@@ -6,7 +6,8 @@ import { SeasonalProductionTable } from "@/components/site/seasonal-production-t
 import { SectionHeading } from "@/components/site/section-heading";
 import { Link } from "@/i18n/navigation";
 import { bookingHref } from "@/lib/booking-links";
-import { getPackageBySlug } from "@/lib/content";
+import { getPackageBySlug, getPackagesPageContent } from "@/lib/content";
+import { PAGE_REGISTRY } from "@/lib/pages";
 import { pageMetadata } from "@/lib/seo";
 
 export const revalidate = 300;
@@ -17,9 +18,6 @@ export async function generateMetadata({
   params: Promise<{ locale: string; slug: string }>;
 }) {
   const { locale, slug } = await params;
-  // The package's own name and blurb, so every detail page doesn't ship the
-  // packages-list title. Same cached reader the page body uses, so this costs
-  // no extra query; falls back to the list metadata for an unknown slug.
   const pkg = await getPackageBySlug(slug, locale);
   return pageMetadata(
     locale,
@@ -39,12 +37,32 @@ export default async function PackageDetailPage({
   const t = await getTranslations("packages");
   const tCommon = await getTranslations("common");
 
-  const pkg = await getPackageBySlug(slug, locale);
+  const usePages = PAGE_REGISTRY.packages.contentRollout === "pages";
+  const [pkg, pageContent] = await Promise.all([
+    getPackageBySlug(slug, locale),
+    usePages ? getPackagesPageContent(locale) : Promise.resolve(null),
+  ]);
   if (!pkg) {
     notFound();
   }
 
+  const hasRow = Boolean(pageContent);
+  const pick = (db: string | null | undefined, key: Parameters<typeof t>[0]) => {
+    if (usePages && !hasRow) return t(key);
+    if (usePages) return db || "";
+    return db ?? t(key);
+  };
+
   const seasonal = pkg.seasonal;
+  const showSeasonal = pageContent?.showSeasonal !== false && Boolean(seasonal);
+  const showPayback = pageContent?.showPayback !== false;
+  const showGlobalCta = pageContent?.showGlobalCta !== false;
+
+  const seasonalSubtitle = (() => {
+    if (usePages && !hasRow) return t("seasonalSubtitle", { size: pkg.name });
+    if (usePages) return (pageContent?.seasonalSubtitle || "").replaceAll("{size}", pkg.name);
+    return t("seasonalSubtitle", { size: pkg.name });
+  })();
 
   return (
     <main>
@@ -69,9 +87,7 @@ export default async function PackageDetailPage({
               ฿{pkg.priceThb.toLocaleString()}
             </span>
 
-            <h3 className="mt-6 text-left text-lg font-bold text-primary">
-              {t("featuresTitle")}
-            </h3>
+            <h3 className="mt-6 text-left text-lg font-bold text-primary">{t("featuresTitle")}</h3>
             <ul className="mt-4 space-y-2.5 text-left text-sm">
               {pkg.features.map((f) => (
                 <li key={f} className="flex items-start gap-2">
@@ -89,39 +105,43 @@ export default async function PackageDetailPage({
             </Link>
           </div>
 
-          {seasonal && (
+          {showSeasonal && seasonal ? (
             <div className="rounded-xl border border-border/70 bg-card p-7 shadow-sm">
-              <h3 className="text-lg font-bold text-primary">{t("seasonalTitle")}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {t("seasonalSubtitle", { size: pkg.name })}
-              </p>
+              <h3 className="text-lg font-bold text-primary">
+                {pick(pageContent?.seasonalTitle, "seasonalTitle")}
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">{seasonalSubtitle}</p>
               <div className="mt-5">
                 <SeasonalProductionTable seasonal={seasonal} locale={locale} t={t} tCommon={tCommon} />
               </div>
             </div>
-          )}
+          ) : null}
 
-          <div className="rounded-xl border border-border/70 bg-card p-7 shadow-sm">
-            <h3 className="text-lg font-bold text-primary">{t("paybackTitle")}</h3>
-            <ul className="mt-4 space-y-2.5 text-sm">
-              <li className="flex items-start gap-2">
-                <Check className="mt-0.5 size-4 shrink-0 text-brand-orange" />
-                {t("paybackOnGrid")}
-              </li>
-              <li className="flex items-start gap-2">
-                <Check className="mt-0.5 size-4 shrink-0 text-brand-orange" />
-                {t("paybackHybrid")}
-              </li>
-              <li className="flex items-start gap-2">
-                <Check className="mt-0.5 size-4 shrink-0 text-brand-orange" />
-                {t("paybackOffGrid")}
-              </li>
-            </ul>
-          </div>
+          {showPayback ? (
+            <div className="rounded-xl border border-border/70 bg-card p-7 shadow-sm">
+              <h3 className="text-lg font-bold text-primary">
+                {pick(pageContent?.paybackTitle, "paybackTitle")}
+              </h3>
+              <ul className="mt-4 space-y-2.5 text-sm">
+                <li className="flex items-start gap-2">
+                  <Check className="mt-0.5 size-4 shrink-0 text-brand-orange" />
+                  {pick(pageContent?.paybackOnGrid, "paybackOnGrid")}
+                </li>
+                <li className="flex items-start gap-2">
+                  <Check className="mt-0.5 size-4 shrink-0 text-brand-orange" />
+                  {pick(pageContent?.paybackHybrid, "paybackHybrid")}
+                </li>
+                <li className="flex items-start gap-2">
+                  <Check className="mt-0.5 size-4 shrink-0 text-brand-orange" />
+                  {pick(pageContent?.paybackOffGrid, "paybackOffGrid")}
+                </li>
+              </ul>
+            </div>
+          ) : null}
         </div>
       </section>
 
-      <CtaBanner />
+      {showGlobalCta ? <CtaBanner /> : null}
     </main>
   );
 }
