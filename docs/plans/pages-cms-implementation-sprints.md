@@ -275,9 +275,16 @@ application remains the only reader/writer.
 
 **Depends on:** production InnoDB gate complete.
 
-**Prep (docs only, pre-unlock):** [`pages-cms-sprint3-prep.md`](pages-cms-sprint3-prep.md)
-— checklist before the first migration PR; do not implement until Gate B–E is
-green.
+**Status (2026-08-27):** Gate B–E **GREEN**. Dual-SoT execution:
+[#66](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/66) /
+`backlogs/ISSUE_066_pages_cms_sprint3_additive/PLAN.md` (`needs-info` until
+owner schedules DDL / backfill / cleanup). **Home carve-out:** `HomePageContent`
++ `HomeFaqItem` (+ managed hero / FAQ backfill) already shipped in Home pilot
+#61 — do not recreate; remaining models only. `HomeFeaturedPortfolioProject`
+still owner-deferred (#60) unless #66 decides otherwise.
+
+**Prep:** [`pages-cms-sprint3-prep.md`](pages-cms-sprint3-prep.md)
+— checklist before the first migration PR.
 
 ### Scope and files/surfaces
 
