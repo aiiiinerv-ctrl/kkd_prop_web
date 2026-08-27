@@ -1,12 +1,13 @@
 # Backlog Index
 
-Updated: 2026-08-27  
+Updated: 2026-08-27 (Sprint 3 #66 opened)  
 Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 ## Active
 
 | GitHub | PLAN | Notes |
 |---|---|---|
+| [#66](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/66) | [`ISSUE_066_pages_cms_sprint3_additive`](ISSUE_066_pages_cms_sprint3_additive/PLAN.md) | Pages CMS Sprint 3 — unlocked; `needs-info` until owner schedules DDL/backfill/cleanup |
 | [#38](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/38) | [`ISSUE_038_cookieyes_banner_locale_en`](ISSUE_038_cookieyes_banner_locale_en/PLAN.md) | CookieYes Free = one language — owner decision |
 | [#32](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/32) | [`ISSUE_032_lead_notifications_resend_line`](ISSUE_032_lead_notifications_resend_line/PLAN.md) | Blocked on Resend/LINE secrets |
 | [#30](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/30) | [`ISSUE_030_attribution_baseline_after_consent`](ISSUE_030_attribution_baseline_after_consent/PLAN.md) | Calendar-bound attribution baselines |
@@ -28,6 +29,6 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 Wayfinder maps and grilling that are open but not in the nearby queue, e.g. #1, #10, #21, #24, #25, #27, #36 — create `ISSUE_XXX_…/PLAN.md` when claimed or when labeled `ready-for-agent` / `ready-for-human`.
 
-Pages CMS Sprint 3–12 remain in [`docs/plans/pages-cms-implementation-sprints.md`](../docs/plans/pages-cms-implementation-sprints.md) until Sprint 2 (Gate B–E) is green. Closed slice ticket: [#50](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/50).
+Pages CMS Sprint 3 opened as [#66](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/66) after Gate B–E green. Sprint 4–12 remain in [`docs/plans/pages-cms-implementation-sprints.md`](../docs/plans/pages-cms-implementation-sprints.md) until #66 closes with evidence. Closed slice ticket: [#50](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/50).
 
-Sprint 3 prep (docs only): [`docs/plans/pages-cms-sprint3-prep.md`](../docs/plans/pages-cms-sprint3-prep.md).
+Sprint 3 prep (updated): [`docs/plans/pages-cms-sprint3-prep.md`](../docs/plans/pages-cms-sprint3-prep.md).

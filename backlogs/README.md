@@ -56,9 +56,9 @@ Do **not** use `stack/` / `inprogress/` three-way moves. Active plans stay under
 - `.war-room/` cross-tool protocol (not used in this repo)
 - Replacing `docs/plans/*.md` sprint plans — those remain the committed
   implementation plans; PLANs link to them
-- Pages CMS Sprint 3–12 implementation before Sprint 2 (InnoDB / Gate B–E) is
-  green — keep those in `docs/plans/pages-cms-implementation-sprints.md` until
-  unlocked
+- Pages CMS Sprint 4–12 implementation before Sprint 3 (#66) closes with
+  evidence — keep those in `docs/plans/pages-cms-implementation-sprints.md`
+  until unlocked; Sprint 3 dual-SoT is `ISSUE_066_pages_cms_sprint3_additive`
 
 ## Related
 
