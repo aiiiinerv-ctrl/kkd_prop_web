@@ -286,6 +286,17 @@ model SiteSettings {
   contactSubtitleEn   String?
   headerCtaLabelTh    String?
   headerCtaLabelEn    String?
+  // Shared Site Content — global CTA banner (issue #66 / Sprint 3). Destinations
+  // stay typed internal presets in code; no arbitrary URL columns.
+  ctaTitleTh          String?
+  ctaTitleEn          String?
+  ctaSubtitleTh       String?  @db.Text
+  ctaSubtitleEn       String?  @db.Text
+  ctaPrimaryLabelTh   String?
+  ctaPrimaryLabelEn   String?
+  ctaSecondaryLabelTh String?
+  ctaSecondaryLabelEn String?
+  ctaVersion          Int      @default(1)
   updatedAt           DateTime @updatedAt
 }
 
@@ -293,21 +304,33 @@ model SiteSettings {
 // `key` is constrained to META_KEYS at the zod level, not with a Prisma enum,
 // so production can never need an ALTER TABLE to extend it.
 model PageSeo {
-  id            String   @id @default(cuid())
-  key           String   @unique @db.VarChar(40)
-  titleTh       String?
-  titleEn       String?
-  descriptionTh String?  @db.Text
-  descriptionEn String?  @db.Text
-  ogImageKey    String?
-  updatedAt     DateTime @updatedAt
+  id                String   @id @default(cuid())
+  key               String   @unique @db.VarChar(40)
+  titleTh           String?
+  titleEn           String?
+  descriptionTh     String?  @db.Text
+  descriptionEn     String?  @db.Text
+  ogImageKey        String?
+  ogTitleTh         String?
+  ogTitleEn         String?
+  ogDescriptionTh   String?  @db.Text
+  ogDescriptionEn   String?  @db.Text
+  canonicalPathTh   String?
+  canonicalPathEn   String?
+  robotsIndex       Boolean  @default(true)
+  robotsFollow      Boolean  @default(true)
+  version           Int      @default(1)
+  updatedAt         DateTime @updatedAt
 }
 
 // Singleton — editable content for the about page (ADMIN|SALES|MARKETING|EDITOR).
 // Matches the 16 user-facing fields from messages.about (excludes numbersTitle
 // which belongs to StatsRow and must not be touched here).
+// Sprint 3 (#66): canonical `key`, section visibility, derived-stat labels,
+// testimonial chrome, global CTA visibility, version — PK preserved for audit.
 model AboutContent {
   id                    String   @id @default(cuid())
+  key                   String   @unique @default("about") @db.VarChar(40)
   titleTh               String?
   titleEn               String?
   introTh               String?  @db.Text
@@ -340,7 +363,27 @@ model AboutContent {
   teamSupportTitleEn    String?
   teamSupportDescTh     String?  @db.Text
   teamSupportDescEn     String?  @db.Text
+  showCredentials       Boolean  @default(true)
+  showTeam              Boolean  @default(true)
+  showStats             Boolean  @default(true)
+  showTestimonials      Boolean  @default(true)
+  showGlobalCta         Boolean  @default(true)
+  statsProjectsLabelTh  String?
+  statsProjectsLabelEn  String?
+  statsYearsLabelTh     String?
+  statsYearsLabelEn     String?
+  statsEngineersLabelTh String?
+  statsEngineersLabelEn String?
+  statsCustomersLabelTh String?
+  statsCustomersLabelEn String?
+  testimonialsTitleTh   String?
+  testimonialsTitleEn   String?
+  testimonialsSubtitleTh String? @db.Text
+  testimonialsSubtitleEn String? @db.Text
+  version               Int      @default(1)
   updatedAt             DateTime @updatedAt
+
+  featuredTestimonials AboutFeaturedTestimonial[]
 }
 
 // Singleton (issue #61 / Home CMS slice H1) — editable content for the home
@@ -465,6 +508,109 @@ model HomeFaqItem {
   @@unique([homePageContentId, sortOrder])
 }
 
+// Featured Reference — About → Testimonial (issue #66). Max 3 enforced in
+// aggregate actions later; DB enforces uniqueness + real FKs only.
+// HomeFeaturedPortfolioProject remains deferred (#60 / #66 A2).
+model AboutFeaturedTestimonial {
+  id             String       @id @default(cuid())
+  aboutContentId String
+  aboutContent   AboutContent @relation(fields: [aboutContentId], references: [id], onDelete: Cascade)
+  testimonialId  String
+  testimonial    Testimonial  @relation(fields: [testimonialId], references: [id], onDelete: Restrict)
+  sortOrder      Int
+
+  @@unique([aboutContentId, testimonialId])
+  @@unique([aboutContentId, sortOrder])
+}
+
+// Page Content singletons — Sprint 3 (#66). Public/admin still read legacy
+// sources until per-page cutover sprints. Canonical `key` per page.
+model ServicesPageContent {
+  id                   String   @id @default(cuid())
+  key                  String   @unique @default("services") @db.VarChar(40)
+  titleTh              String
+  titleEn              String
+  subtitleTh           String?  @db.Text
+  subtitleEn           String?  @db.Text
+  systemsTitleTh       String?
+  systemsTitleEn       String?
+  showSystems          Boolean  @default(true)
+  maintenanceTitleTh   String?
+  maintenanceTitleEn   String?
+  showMaintenance      Boolean  @default(true)
+  showGlobalCta        Boolean  @default(true)
+  version              Int      @default(1)
+  updatedAt            DateTime @updatedAt
+}
+
+model PackagesPageContent {
+  id                 String   @id @default(cuid())
+  key                String   @unique @default("packages") @db.VarChar(40)
+  titleTh            String
+  titleEn            String
+  subtitleTh         String?  @db.Text
+  subtitleEn         String?  @db.Text
+  emptyTh            String?  @db.Text
+  emptyEn            String?  @db.Text
+  seasonalTitleTh    String?
+  seasonalTitleEn    String?
+  seasonalSubtitleTh String?  @db.Text
+  seasonalSubtitleEn String?  @db.Text
+  showSeasonal       Boolean  @default(true)
+  paybackTitleTh     String?
+  paybackTitleEn     String?
+  paybackOnGridTh    String?  @db.Text
+  paybackOnGridEn    String?  @db.Text
+  paybackHybridTh    String?  @db.Text
+  paybackHybridEn    String?  @db.Text
+  paybackOffGridTh   String?  @db.Text
+  paybackOffGridEn   String?  @db.Text
+  showPayback        Boolean  @default(true)
+  showGlobalCta      Boolean  @default(true)
+  version            Int      @default(1)
+  updatedAt          DateTime @updatedAt
+}
+
+model PortfolioPageContent {
+  id                String   @id @default(cuid())
+  key               String   @unique @default("portfolio") @db.VarChar(40)
+  titleTh           String
+  titleEn           String
+  subtitleTh        String?  @db.Text
+  subtitleEn        String?  @db.Text
+  imageDisclaimerTh String?  @db.Text
+  imageDisclaimerEn String?  @db.Text
+  emptyTh           String?  @db.Text
+  emptyEn           String?  @db.Text
+  showGlobalCta     Boolean  @default(true)
+  version           Int      @default(1)
+  updatedAt         DateTime @updatedAt
+}
+
+model CalculatorPageContent {
+  id                 String   @id @default(cuid())
+  key                String   @unique @default("calculator") @db.VarChar(40)
+  eyebrowTh          String?
+  eyebrowEn          String?
+  titleTh            String
+  titleEn            String
+  subtitleTh         String?  @db.Text
+  subtitleEn         String?  @db.Text
+  panelTitleTh       String?
+  panelTitleEn       String?
+  panelIntroTh       String?  @db.Text
+  panelIntroEn       String?  @db.Text
+  packagesEyebrowTh  String?
+  packagesEyebrowEn  String?
+  packagesTitleTh    String?
+  packagesTitleEn    String?
+  packagesSubtitleTh String?  @db.Text
+  packagesSubtitleEn String?  @db.Text
+  showPackages       Boolean  @default(true)
+  version            Int      @default(1)
+  updatedAt          DateTime @updatedAt
+}
+
 // Singleton (mirrors BookingCapacitySetting) — admin-configurable payment
 // info shown on the public survey-booking form (bank transfer + PromptPay QR).
 model PaymentSettings {
@@ -548,6 +694,8 @@ model Testimonial {
   isPublished  Boolean           @default(false)
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
+
+  featuredOnAbout AboutFeaturedTestimonial[]
 
   @@index([isPublished, sortOrder])
 }
