@@ -56,9 +56,10 @@ Do **not** use `stack/` / `inprogress/` three-way moves. Active plans stay under
 - `.war-room/` cross-tool protocol (not used in this repo)
 - Replacing `docs/plans/*.md` sprint plans — those remain the committed
   implementation plans; PLANs link to them
-- Pages CMS Sprint 4–12 implementation before Sprint 3 (#66) closes with
-  evidence — keep those in `docs/plans/pages-cms-implementation-sprints.md`
-  until unlocked; Sprint 3 dual-SoT is `ISSUE_066_pages_cms_sprint3_additive`
+- Pages CMS Sprint 5–12 stay in `docs/plans/pages-cms-implementation-sprints.md`
+  until each sprint opens its dual-SoT issue; Sprint 3 done =
+  `done/ISSUE_066_pages_cms_sprint3_additive`; Sprint 4 active =
+  `ISSUE_067_pages_cms_sprint4_core`
 
 ## Related
 

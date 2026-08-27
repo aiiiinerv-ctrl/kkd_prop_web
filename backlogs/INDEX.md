@@ -1,12 +1,13 @@
 # Backlog Index
 
-Updated: 2026-08-28 (Sprint 3 #66 closed — production window complete)  
+Updated: 2026-08-28 (Sprint 4 #67 opened)  
 Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 ## Active
 
 | GitHub | PLAN | Notes |
 |---|---|---|
+| [#67](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/67) | [`ISSUE_067_pages_cms_sprint4_core`](ISSUE_067_pages_cms_sprint4_core/PLAN.md) | Pages CMS Sprint 4 — shared registry/shell; Home stays `pages`; no DDL |
 | [#38](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/38) | [`ISSUE_038_cookieyes_banner_locale_en`](ISSUE_038_cookieyes_banner_locale_en/PLAN.md) | CookieYes Free = one language — owner decision |
 | [#32](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/32) | [`ISSUE_032_lead_notifications_resend_line`](ISSUE_032_lead_notifications_resend_line/PLAN.md) | Blocked on Resend/LINE secrets |
 | [#30](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/30) | [`ISSUE_030_attribution_baseline_after_consent`](ISSUE_030_attribution_baseline_after_consent/PLAN.md) | Calendar-bound attribution baselines |
@@ -29,6 +30,7 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 Wayfinder maps and grilling that are open but not in the nearby queue, e.g. #1, #10, #21, #24, #25, #27, #36 — create `ISSUE_XXX_…/PLAN.md` when claimed or when labeled `ready-for-agent` / `ready-for-human`.
 
-Pages CMS Sprint 3 closed as [#66](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/66). Sprint 4–12 remain in [`docs/plans/pages-cms-implementation-sprints.md`](../docs/plans/pages-cms-implementation-sprints.md). Closed slice ticket: [#50](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/50).
+Pages CMS Sprint 3 closed as [#66](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/66). Sprint 4 dual-SoT: [#67](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/67). Sprint 5–12 remain in [`docs/plans/pages-cms-implementation-sprints.md`](../docs/plans/pages-cms-implementation-sprints.md). Closed slice ticket: [#50](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/50).
 
-Sprint 3 prep (historical): [`docs/plans/pages-cms-sprint3-prep.md`](../docs/plans/pages-cms-sprint3-prep.md).
+Sprint 3 prep (historical): [`docs/plans/pages-cms-sprint3-prep.md`](../docs/plans/pages-cms-sprint3-prep.md).  
+Sprint 4 tasks: [`docs/plans/pages-cms-sprint4-pages-core-tasks.md`](../docs/plans/pages-cms-sprint4-pages-core-tasks.md).
