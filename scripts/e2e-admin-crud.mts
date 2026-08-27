@@ -353,19 +353,20 @@ assertCheck(
 
 // --- Portfolio (the only one of the three whose create requires an upload) ---
 const projectTitle = `ผลงานทดสอบ ${stamp}`;
-await page.goto("http://localhost:3000/admin/portfolio");
+await page.goto("http://localhost:3000/admin/pages/portfolio");
 await page.click("text=เพิ่มผลงาน");
-await page.locator('input[name="titleTh"]').waitFor({ timeout: 5000 });
-await page.fill('input[name="titleTh"]', projectTitle);
-await page.fill('textarea[name="descriptionTh"]', "รายละเอียดผลงานทดสอบ");
-await page.click('button:text-is("English")');
-await page.fill('input[name="titleEn"]', `E2E Project ${stamp}`);
-await page.fill('textarea[name="descriptionEn"]', "E2E project description");
-await page.selectOption('select[name="category"]', "COMMERCIAL");
-await page.fill('input[name="province"]', "ระยอง");
-await page.fill('input[name="systemSizeKw"]', "25");
-await page.setInputFiles('input[name="images"]', uploadPath);
-await page.click("text=บันทึก >> nth=-1");
+const pfDialog = page.getByRole("dialog");
+await pfDialog.locator('input[name="titleTh"]').waitFor({ timeout: 5000 });
+await pfDialog.locator('input[name="titleTh"]').fill(projectTitle);
+await pfDialog.locator('textarea[name="descriptionTh"]').fill("รายละเอียดผลงานทดสอบ");
+await pfDialog.getByRole("tab", { name: "English" }).click();
+await pfDialog.locator('input[name="titleEn"]').fill(`E2E Project ${stamp}`);
+await pfDialog.locator('textarea[name="descriptionEn"]').fill("E2E project description");
+await pfDialog.locator('select[name="category"]').selectOption("COMMERCIAL");
+await pfDialog.locator('input[name="province"]').fill("ระยอง");
+await pfDialog.locator('input[name="systemSizeKw"]').fill("25");
+await pfDialog.locator('input[name="images"]').setInputFiles(uploadPath);
+await pfDialog.getByRole("button", { name: "บันทึก" }).click();
 await page.waitForSelector(`tr:has-text("${projectTitle}")`, { timeout: 15000 });
 
 const createdProject = await prisma.portfolioProject.findFirst({
@@ -381,10 +382,11 @@ console.log(
 );
 
 await page.click(`tr:has-text("${projectTitle}") button[aria-label="แก้ไข"]`);
-await page.locator('input[name="province"]').waitFor({ timeout: 5000 });
-await page.fill('input[name="province"]', "ชลบุรี");
-await page.click("text=บันทึก >> nth=-1");
-await page.locator('input[name="province"]').waitFor({ state: "detached", timeout: 10000 });
+const editPfDialog = page.getByRole("dialog");
+await editPfDialog.locator('input[name="province"]').waitFor({ timeout: 5000 });
+await editPfDialog.locator('input[name="province"]').fill("ชลบุรี");
+await editPfDialog.getByRole("button", { name: "บันทึก" }).click();
+await editPfDialog.locator('input[name="province"]').waitFor({ state: "detached", timeout: 10000 });
 console.log(
   `PORTFOLIO: edited via dialog ${
     (await prisma.portfolioProject.findFirst({ where: { titleTh: projectTitle } }))

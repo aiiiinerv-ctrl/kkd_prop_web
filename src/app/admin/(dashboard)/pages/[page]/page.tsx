@@ -21,7 +21,15 @@ export default async function AdminPagesDynamicPage({
   if (!entry.adminContentEnabled) notFound();
 
   // Dedicated `pages/<key>/` segments — avoid dual UI with dynamic route.
-  if (page === "home" || page === "about" || page === "services" || page === "packages") notFound();
+  if (
+    page === "home" ||
+    page === "about" ||
+    page === "services" ||
+    page === "packages" ||
+    page === "portfolio"
+  ) {
+    notFound();
+  }
 
   notFound();
 }

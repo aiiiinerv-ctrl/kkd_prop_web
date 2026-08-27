@@ -102,8 +102,14 @@ export async function updateHeaderFooterSettings(formData: FormData): Promise<Ac
 export async function updatePageSeo(key: string, formData: FormData): Promise<ActionResult> {
   await requireRole("ADMIN", "MARKETING");
 
-  // Sprint 5–8: Home/About/Services/Packages PageSeo ownership → Pages Properties.
-  if (key === "home" || key === "about" || key === "services" || key === "packages") {
+  // Sprint 5–9: page SEO moved to Pages Properties for registry pages in `pages`.
+  if (
+    key === "home" ||
+    key === "about" ||
+    key === "services" ||
+    key === "packages" ||
+    key === "portfolio"
+  ) {
     return {
       ok: false,
       error: "SEO หน้านี้ย้ายไปที่ Pages → แท็บ Properties แล้ว — กรุณารีเฟรชหน้านี้",

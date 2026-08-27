@@ -13,6 +13,7 @@ import {
   toServiceView,
   toServicesPageContentView,
   toPackagesPageContentView,
+  toPortfolioPageContentView,
   toSiteSettingsView,
   toSharedCtaView,
   toTestimonialView,
@@ -23,6 +24,7 @@ import {
   type PackageView,
   type PackagesPageContentView,
   type PageSeoView,
+  type PortfolioPageContentView,
   type ProjectView,
   type ServiceView,
   type ServicesPageContentView,
@@ -218,6 +220,15 @@ export const getPackagesPageContent = cache(
   }
 );
 
+/** Portfolio page chrome. Null → caller falls back to messages. */
+export const getPortfolioPageContent = cache(
+  async (locale: string): Promise<PortfolioPageContentView | null> => {
+    const row = await prisma.portfolioPageContent.findUnique({ where: { key: "portfolio" } });
+    if (!row) return null;
+    return toPortfolioPageContentView(row, locale);
+  }
+);
+
 /**
  * Home Page Content + its FAQ children, for the public reader
  * (`src/app/[locale]/home-content.tsx`). Returns null when no row exists —
@@ -270,6 +281,7 @@ export type {
   PackageView,
   PackagesPageContentView,
   PageSeoView,
+  PortfolioPageContentView,
   ProjectView,
   ServiceView,
   ServicesPageContentView,

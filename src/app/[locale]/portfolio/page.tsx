@@ -1,7 +1,8 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CtaBanner } from "@/components/site/cta-banner";
 import { SectionHeading } from "@/components/site/section-heading";
-import { getPublishedProjects } from "@/lib/content";
+import { getPortfolioPageContent, getPublishedProjects } from "@/lib/content";
+import { PAGE_REGISTRY } from "@/lib/pages";
 import { pageMetadata } from "@/lib/seo";
 import { PortfolioGrid } from "./portfolio-grid";
 
@@ -26,26 +27,42 @@ export default async function PortfolioPage({
   setRequestLocale(locale);
   const t = await getTranslations("portfolio");
 
-  const projects = await getPublishedProjects(locale);
+  const usePages = PAGE_REGISTRY.portfolio.contentRollout === "pages";
+  const [projects, pageContent] = await Promise.all([
+    getPublishedProjects(locale),
+    usePages ? getPortfolioPageContent(locale) : Promise.resolve(null),
+  ]);
+
+  const hasRow = Boolean(pageContent);
+  const pick = (db: string | null | undefined, key: Parameters<typeof t>[0]) => {
+    if (usePages && !hasRow) return t(key);
+    if (usePages) return db || "";
+    return db ?? t(key);
+  };
+
+  const showGlobalCta = pageContent?.showGlobalCta !== false;
 
   return (
     <main>
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
         <SectionHeading
-          title={t("title")}
-          subtitle={t("subtitle")}
-          caption={t("imageDisclaimer")}
+          title={pick(pageContent?.title, "title")}
+          subtitle={pick(pageContent?.subtitle, "subtitle")}
+          caption={pick(pageContent?.imageDisclaimer, "imageDisclaimer")}
           headingClassName="font-extrabold tracking-[-0.01em]"
           underline
         />
 
-        <PortfolioGrid
-          initialCategory={category ?? "all"}
-          projects={projects}
-        />
+        {projects.length === 0 ? (
+          <p className="py-16 text-center text-muted-foreground">
+            {pick(pageContent?.empty, "empty")}
+          </p>
+        ) : (
+          <PortfolioGrid initialCategory={category ?? "all"} projects={projects} />
+        )}
       </section>
 
-      <CtaBanner />
+      {showGlobalCta ? <CtaBanner /> : null}
     </main>
   );
 }

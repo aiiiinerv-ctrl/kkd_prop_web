@@ -61,8 +61,8 @@ const ITEMS = [
     roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
   },
   {
-    href: "/admin/portfolio",
-    label: "ผลงาน",
+    href: "/admin/pages/portfolio",
+    label: "ผลงาน (Pages)",
     icon: Images,
     roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
   },

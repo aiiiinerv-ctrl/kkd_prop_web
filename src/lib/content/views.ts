@@ -354,6 +354,29 @@ export function toPackagesPageContentView(row: Row, locale: string): PackagesPag
   };
 }
 
+export type PortfolioPageContentView = {
+  id: string;
+  version: number;
+  title: string | null;
+  subtitle: string | null;
+  imageDisclaimer: string | null;
+  empty: string | null;
+  showGlobalCta: boolean;
+};
+
+export function toPortfolioPageContentView(row: Row, locale: string): PortfolioPageContentView {
+  const loc = (field: string) => pickLocale(row, field, locale) || null;
+  return {
+    id: String(row.id),
+    version: Number(row.version ?? 1),
+    title: loc("title"),
+    subtitle: loc("subtitle"),
+    imageDisclaimer: loc("imageDisclaimer"),
+    empty: loc("empty"),
+    showGlobalCta: row.showGlobalCta !== false,
+  };
+}
+
 // ─── Home Page Content (Home CMS slice H3) ─────────────────────────────────
 
 export type HomeFaqItemView = {

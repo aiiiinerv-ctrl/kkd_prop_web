@@ -21,6 +21,7 @@ export type AuditEntityType =
   | "PackagesPageContent"
   | "PageSeo"
   | "PaymentSettings"
+  | "PortfolioPageContent"
   | "PortfolioProject"
   | "PromoChannel"
   | "PromoLandingPath"

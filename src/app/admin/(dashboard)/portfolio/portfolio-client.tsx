@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TableCell, TableHead } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { PortfolioImageReorder } from "./portfolio-image-reorder";
 
 type ProjectRow = {
   id: string;
@@ -38,14 +39,16 @@ export function PortfolioClient({
   projects,
   canPublish,
   canDelete,
+  embedded = false,
 }: {
   projects: ProjectRow[];
   canPublish: boolean;
   canDelete: boolean;
+  embedded?: boolean;
 }) {
   return (
     <CrudPage
-      title="ผลงานติดตั้ง"
+      title={embedded ? "รายการผลงาน (Content Items)" : "ผลงานติดตั้ง"}
       addLabel="เพิ่มผลงาน"
       dialogTitle={(editing) => (editing ? "แก้ไขผลงาน" : "เพิ่มผลงานใหม่")}
       rows={projects}
@@ -186,6 +189,10 @@ export function PortfolioClient({
               />
             </div>
           </div>
+
+          {editing && editing.imageKeys.length > 0 ? (
+            <PortfolioImageReorder initialKeys={editing.imageKeys} />
+          ) : null}
 
           {canPublish ? (
             <label className="flex items-center gap-2 text-sm">
