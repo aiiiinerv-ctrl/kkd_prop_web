@@ -7,8 +7,7 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 | GitHub | PLAN | Notes |
 |---|---|---|
-| [#64](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/64) | — | H4 live-verify pack — next (optional) |
-| [#52](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/52) | [`ISSUE_052_home_cms_slice_map`](ISSUE_052_home_cms_slice_map/PLAN.md) | Wayfinder map — Home CMS; H3 cutover live on production |
+| [#52](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/52) | [`ISSUE_052_home_cms_slice_map`](ISSUE_052_home_cms_slice_map/PLAN.md) | Wayfinder map — Home CMS H0–H4 complete; canary optional |
 | [#38](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/38) | [`ISSUE_038_cookieyes_banner_locale_en`](ISSUE_038_cookieyes_banner_locale_en/PLAN.md) | CookieYes Free = one language — owner decision |
 | [#32](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/32) | [`ISSUE_032_lead_notifications_resend_line`](ISSUE_032_lead_notifications_resend_line/PLAN.md) | Blocked on Resend/LINE secrets |
 | [#30](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/30) | [`ISSUE_030_attribution_baseline_after_consent`](ISSUE_030_attribution_baseline_after_consent/PLAN.md) | Calendar-bound attribution baselines |
@@ -17,6 +16,7 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 | GitHub | PLAN | Notes |
 |---|---|---|
+| [#64](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/64) | [`ISSUE_064_home_cms_h4_verify`](ISSUE_064_home_cms_h4_verify/PLAN.md) | H4 verify complete 2026-08-27 — read-only prod smoke; canary not run |
 | [#63](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/63) | [`ISSUE_063_home_cms_h3_cutover`](ISSUE_063_home_cms_h3_cutover/PLAN.md) | H3 public cutover live 2026-08-27 — managed hero `/files/public/pages/home/hero/…` |
 | [#62](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/62) | [`ISSUE_062_home_cms_h2_admin`](ISSUE_062_home_cms_h2_admin/PLAN.md) | H2 deployed production 2026-08-27 |
 | [#61](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/61) | [`ISSUE_061_home_cms_h1_schema`](ISSUE_061_home_cms_h1_schema/PLAN.md) | H1 production rollout complete 2026-08-27 — DDL applied, redeployed, backfill verified idempotent (1 HomePageContent + 5 HomeFaqItem), teardown env vars removed and verified |
