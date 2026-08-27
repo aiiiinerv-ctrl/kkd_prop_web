@@ -8,7 +8,7 @@
 |---|---|
 | GitHub | https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/62 |
 | Opened | 2026-08-27 |
-| Status | done — committed locally; not deployed |
+| Status | done — deployed to production 2026-08-27 |
 | Labels | `wayfinder:task` |
 | Type | wayfinder execution |
 
@@ -55,3 +55,9 @@
 **Scope decision:** hero image upload/replace (matrix C1–C5) deferred to H3 — not in Sprint H2's own DoD; `heroImageKey` stays untouched by this action.
 
 **Verification:** `npm run build` (✓ compiled + typechecked) + `eslint` clean on all changed files; full `e2e-admin.mts` + `e2e-admin-crud.mts` rerun with no regressions; ad hoc Playwright smoke covering: admin load, sidebar link, TH field save + persistence, audit row visible, stale-version conflict (two tabs), EDITOR content-yes/contact-no, MARKETING contact-yes, FINANCE denied, FAQ-visible-with-0-items rejected, unknown-FormData-key rejected, public `/th` unaffected. Home content DB row restored to backfill baseline afterward via `backfillHomeContent()` (idempotent).
+
+## Production deploy (2026-08-27, `hosting-deploy-specialist`)
+
+No schema migration (`git diff` against `prisma/` between the pre-H2 and H2 commits is empty — H2 only adds application code against tables already live from H1). Routine incremental redeploy: build → human FTP upload → extract → Passenger restart → smoke, all green. BUILD_ID `Tv8tmovl3W7F7EuH3cX8O` confirmed live via `/th`'s own RSC payload. No-cutover check held (`marketing/hero-solar.jpg` present, `pages/home/hero` absent, on both `/th` and `/en`). `/admin/pages/home` redirects to login (not a Next 404 shell) without a session, confirming the route shipped and is guarded. Full evidence: `docs/plans/assets/home-cms-h2/production-deploy-manifest.md`.
+
+Not checked from this seat: the admin Content UI's live click-through behind a real session (local e2e/Playwright coverage above already exercised this pre-deploy).
