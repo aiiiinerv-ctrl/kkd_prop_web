@@ -9,7 +9,7 @@
 |---|---|
 | GitHub | https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/52 |
 | Opened | 2026-08-27 |
-| Status (disk) | active — live triage status is GitHub labels |
+| Status (disk) | done — map closed 2026-08-27 after H0–H4 |
 | Triage labels | `wayfinder:map` |
 | Type | wayfinder |
 
