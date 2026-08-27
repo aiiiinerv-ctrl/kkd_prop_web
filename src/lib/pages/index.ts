@@ -12,6 +12,7 @@ export {
   contentRevalidatePaths,
   getPage,
   isPageKey,
+  propertiesRevalidatePaths,
   rolloutPartition,
 } from "./registry";
 

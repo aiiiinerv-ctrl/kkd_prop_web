@@ -343,12 +343,15 @@ export function HomeClient({
   canMutateContact,
   heroImageUrl,
   heroBlobMissing,
+  embedded = false,
 }: {
   home: HomeContentData;
   contact: ContactData | null;
   canMutateContact: boolean;
   heroImageUrl: string | null;
   heroBlobMissing: boolean;
+  /** When true, skip outer PageShell (parent tabs already provide chrome). */
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -374,12 +377,8 @@ export function HomeClient({
     });
   };
 
-  return (
-    <PageShell
-      pageKey="home"
-      title="เนื้อหาหน้าแรก"
-      description="หน้าเว็บจริง (/th และ /en) อ่านข้อมูลจากที่นี่โดยตรง — บันทึกแล้วมีผลทันทีทั้งสองภาษา"
-    >
+  const body = (
+    <>
       <div className="flex items-start justify-between">
         <a
           href="/th"
@@ -771,6 +770,20 @@ export function HomeClient({
           ข้อมูลติดต่อ (เบอร์โทร/LINE/Facebook) แก้ไขได้เฉพาะบทบาท ผู้ดูแลระบบ และ การตลาด — ติดต่อผู้ดูแลระบบหากต้องการเปลี่ยน
         </p>
       )}
+    </>
+  );
+
+  if (embedded) {
+    return <div className="space-y-6">{body}</div>;
+  }
+
+  return (
+    <PageShell
+      pageKey="home"
+      title="เนื้อหาหน้าแรก"
+      description="หน้าเว็บจริง (/th และ /en) อ่านข้อมูลจากที่นี่โดยตรง — บันทึกแล้วมีผลทันทีทั้งสองภาษา"
+    >
+      {body}
     </PageShell>
   );
 }

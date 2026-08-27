@@ -43,6 +43,11 @@ export type PageRegistryEntry = {
    * Content UI. Dormant keys fail closed via the dynamic `[page]` route.
    */
   adminContentEnabled: boolean;
+  /**
+   * Whether Pages Properties mutations may write for this key.
+   * Sprint 5 (#68): home only.
+   */
+  propertiesAdminEnabled: boolean;
   supportsContent: boolean;
   supportsProperties: boolean;
   contentRoles: readonly PageContentRole[];

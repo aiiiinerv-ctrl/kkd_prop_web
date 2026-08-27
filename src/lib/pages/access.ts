@@ -1,5 +1,7 @@
-import { requireRole, type Role } from "@/lib/auth";
-import { contentRevalidatePaths, getPage, isPageKey } from "./registry";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import type { Role } from "@/lib/auth";
+import { contentRevalidatePaths, getPage, isPageKey, propertiesRevalidatePaths } from "./registry";
 import type { PageKey } from "./types";
 
 export type PagesAccessError =
@@ -25,34 +27,51 @@ export async function requirePageContentAccess(
   if (!entry.adminContentEnabled || !entry.supportsContent) {
     return { ok: false, error: "not_found" };
   }
-  const session = await requireRole(...entry.contentRoles);
-  const role = session.user.role;
-  if (!(entry.contentRoles as readonly string[]).includes(role)) {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "forbidden" };
+
+  const user = await prisma.adminUser.findUnique({
+    where: { id: session.user.id },
+    select: { role: true, isActive: true },
+  });
+  if (!user?.isActive) return { ok: false, error: "forbidden" };
+  if (!(entry.contentRoles as readonly string[]).includes(user.role)) {
     return { ok: false, error: "forbidden" };
   }
-  return { ok: true, role };
+  return { ok: true, role: user.role as Role };
 }
 
 /**
- * Properties mutation gate — ADMIN/MARKETING only.
- * Fresh requireRole; per-page Properties UI lands in cutover sprints.
+ * Properties mutation gate — fresh DB role (not JWT alone) per
+ * pages-cms-properties-security-guardrails.md. Writes only when
+ * `propertiesAdminEnabled` (#68: home).
  */
 export async function requirePagePropertiesAccess(
   pageKey: PageKey,
 ): Promise<{ ok: true; role: Role } | PagesAccessError> {
   const entry = getPage(pageKey);
-  if (!entry.supportsProperties) {
+  if (!entry.supportsProperties || !entry.propertiesAdminEnabled) {
     return { ok: false, error: "not_found" };
   }
-  const session = await requireRole(...entry.propertiesRoles);
-  const role = session.user.role;
-  if (!(entry.propertiesRoles as readonly string[]).includes(role)) {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false, error: "forbidden" };
+
+  const user = await prisma.adminUser.findUnique({
+    where: { id: session.user.id },
+    select: { role: true, isActive: true },
+  });
+  if (!user?.isActive) return { ok: false, error: "forbidden" };
+  if (!(entry.propertiesRoles as readonly string[]).includes(user.role)) {
     return { ok: false, error: "forbidden" };
   }
-  return { ok: true, role };
+  return { ok: true, role: user.role as Role };
 }
 
 /** Trusted revalidation list for Content saves — never from FormData. */
 export function pageContentRevalidateTargets(pageKey: PageKey): readonly string[] {
   return contentRevalidatePaths(pageKey);
+}
+
+export function pagePropertiesRevalidateTargets(pageKey: PageKey): readonly string[] {
+  return propertiesRevalidatePaths(pageKey);
 }

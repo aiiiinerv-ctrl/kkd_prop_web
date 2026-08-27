@@ -17,6 +17,7 @@ export const PAGE_REGISTRY: Record<PageKey, PageRegistryEntry> = {
     publicPaths: ["/th", "/en"],
     contentRollout: "pages",
     adminContentEnabled: true,
+    propertiesAdminEnabled: true,
     supportsContent: true,
     supportsProperties: true,
     contentRoles: CONTENT_ROLES,
@@ -29,6 +30,7 @@ export const PAGE_REGISTRY: Record<PageKey, PageRegistryEntry> = {
     publicPaths: ["/th/about", "/en/about"],
     contentRollout: "legacy",
     adminContentEnabled: false,
+    propertiesAdminEnabled: false,
     supportsContent: true,
     supportsProperties: true,
     contentRoles: CONTENT_ROLES,
@@ -41,6 +43,7 @@ export const PAGE_REGISTRY: Record<PageKey, PageRegistryEntry> = {
     publicPaths: ["/th/services", "/en/services"],
     contentRollout: "legacy",
     adminContentEnabled: false,
+    propertiesAdminEnabled: false,
     supportsContent: true,
     supportsProperties: true,
     contentRoles: CONTENT_ROLES,
@@ -53,6 +56,7 @@ export const PAGE_REGISTRY: Record<PageKey, PageRegistryEntry> = {
     publicPaths: ["/th/packages", "/en/packages"],
     contentRollout: "legacy",
     adminContentEnabled: false,
+    propertiesAdminEnabled: false,
     supportsContent: true,
     supportsProperties: true,
     contentRoles: CONTENT_ROLES,
@@ -65,6 +69,7 @@ export const PAGE_REGISTRY: Record<PageKey, PageRegistryEntry> = {
     publicPaths: ["/th/portfolio", "/en/portfolio"],
     contentRollout: "legacy",
     adminContentEnabled: false,
+    propertiesAdminEnabled: false,
     supportsContent: true,
     supportsProperties: true,
     contentRoles: CONTENT_ROLES,
@@ -77,6 +82,7 @@ export const PAGE_REGISTRY: Record<PageKey, PageRegistryEntry> = {
     publicPaths: ["/th/calculator", "/en/calculator"],
     contentRollout: "legacy",
     adminContentEnabled: false,
+    propertiesAdminEnabled: false,
     supportsContent: true,
     supportsProperties: true,
     contentRoles: CONTENT_ROLES,
@@ -96,6 +102,12 @@ export function getPage(key: PageKey): PageRegistryEntry {
 export function contentRevalidatePaths(key: PageKey): readonly string[] {
   const entry = PAGE_REGISTRY[key];
   return [...entry.publicPaths, entry.adminContentPath];
+}
+
+/** Revalidation targets for a Page Properties save. */
+export function propertiesRevalidatePaths(key: PageKey): readonly string[] {
+  const entry = PAGE_REGISTRY[key];
+  return [...entry.publicPaths, entry.adminContentPath, "/admin/settings", "/sitemap.xml"];
 }
 
 /** Pages with a live admin Content surface (sidebar / deep-link safe). */

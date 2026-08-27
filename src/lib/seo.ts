@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { getPageSeo } from "@/lib/content";
+import { storage } from "@/lib/storage";
 
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -30,13 +31,8 @@ export type MetaKey = (typeof META_KEYS)[number];
  *
  * Resolution order (first non-empty value wins):
  *   1. `overrides` — caller-supplied (e.g. a package detail page)
- *   2. DB row in `PageSeo` — editable from /admin/settings
+ *   2. DB row in `PageSeo` — editable from Pages Properties (six keys) or Settings (legacy four)
  *   3. messages `meta.*` — static fallback so the site is never blank
- *
- * `overrides` lets a page whose content is per-entity (a package detail page,
- * say) supply its own title/description while keeping one place that decides
- * how canonical, hreflang and OpenGraph are assembled. Pages without an entity
- * omit it and get the strings from DB or messages, as appropriate.
  */
 export async function pageMetadata(
   locale: string,
@@ -46,7 +42,6 @@ export async function pageMetadata(
 ): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "meta" });
 
-  // DB row is the preferred source; messages is the guaranteed fallback.
   const dbSeo = overrides ? null : await getPageSeo(key, locale);
 
   const title =
@@ -59,11 +54,31 @@ export async function pageMetadata(
     (dbSeo?.description || null) ||
     t(`${key}Desc`);
 
+  const ogTitle = dbSeo?.ogTitle || title;
+  const ogDescription = dbSeo?.ogDescription || description;
+
+  const defaultCanonicalPath = `/${locale}${path}`;
+  const canonicalPath = dbSeo?.canonicalPath || defaultCanonicalPath;
+  const canonicalUrl = canonicalPath.startsWith("http")
+    ? canonicalPath
+    : `${SITE_URL}${canonicalPath.startsWith("/") ? "" : "/"}${canonicalPath}`;
+
+  const robotsIndex = dbSeo?.robotsIndex ?? true;
+  const robotsFollow = dbSeo?.robotsFollow ?? true;
+
+  const ogImages = dbSeo?.ogImageKey
+    ? [{ url: storage.publicUrl(dbSeo.ogImageKey) }]
+    : undefined;
+
   return {
     title,
     description,
+    robots: {
+      index: robotsIndex,
+      follow: robotsFollow,
+    },
     alternates: {
-      canonical: `${SITE_URL}/${locale}${path}`,
+      canonical: canonicalUrl,
       languages: {
         th: `${SITE_URL}/th${path}`,
         en: `${SITE_URL}/en${path}`,
@@ -71,11 +86,12 @@ export async function pageMetadata(
       },
     },
     openGraph: {
-      title,
-      description,
+      title: ogTitle,
+      description: ogDescription,
       locale: locale === "en" ? "en_US" : "th_TH",
       siteName: "KKD PROPERTY CO., LTD.",
       type: "website",
+      ...(ogImages ? { images: ogImages } : {}),
     },
   };
 }

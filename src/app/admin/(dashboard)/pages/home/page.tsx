@@ -1,21 +1,25 @@
 import { canManageContent, canManageSiteSettings, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { storage } from "@/lib/storage";
-import { HomeClient } from "./home-client";
+import { HomeAdminShell } from "./home-admin-shell";
 
 export default async function PagesHomeContentPage() {
   const session = await requireRole("ADMIN", "SALES", "MARKETING", "EDITOR");
   if (!canManageContent(session.user.role)) {
-    // requireRole already guards this path; extra check for TS completeness
     return null;
   }
 
-  const [home, siteSettings] = await Promise.all([
+  const canMutateProperties = canManageSiteSettings(session.user.role);
+
+  const [home, siteSettings, pageSeo] = await Promise.all([
     prisma.homePageContent.findUnique({
       where: { key: "home" },
       include: { faqItems: { orderBy: { sortOrder: "asc" } } },
     }),
     prisma.siteSettings.findFirst(),
+    canMutateProperties
+      ? prisma.pageSeo.findUnique({ where: { key: "home" } })
+      : Promise.resolve(null),
   ]);
 
   if (!home) {
@@ -29,17 +33,50 @@ export default async function PagesHomeContentPage() {
     );
   }
 
-  // Integrity check for the "hero: managed key" contract (matrix C4) — warn
-  // in admin rather than let the public page silently show the static
-  // fallback with no visible signal that the managed blob is gone.
   const heroBlobMissing = home.heroImageKey ? !(await storage.exists(home.heroImageKey)) : false;
 
   return (
-    <HomeClient
-      key={home.version}
+    <HomeAdminShell
+      key={`${home.version}-${pageSeo?.version ?? 0}-${siteSettings?.ctaVersion ?? 0}`}
       canMutateContact={canManageSiteSettings(session.user.role)}
+      canMutateProperties={canMutateProperties}
       heroImageUrl={home.heroImageKey ? storage.publicUrl(home.heroImageKey) : null}
       heroBlobMissing={heroBlobMissing}
+      pageSeo={
+        pageSeo
+          ? {
+              version: pageSeo.version,
+              titleTh: pageSeo.titleTh ?? "",
+              titleEn: pageSeo.titleEn ?? "",
+              descriptionTh: pageSeo.descriptionTh ?? "",
+              descriptionEn: pageSeo.descriptionEn ?? "",
+              ogTitleTh: pageSeo.ogTitleTh ?? "",
+              ogTitleEn: pageSeo.ogTitleEn ?? "",
+              ogDescriptionTh: pageSeo.ogDescriptionTh ?? "",
+              ogDescriptionEn: pageSeo.ogDescriptionEn ?? "",
+              canonicalPathTh: pageSeo.canonicalPathTh ?? "",
+              canonicalPathEn: pageSeo.canonicalPathEn ?? "",
+              robotsIndex: pageSeo.robotsIndex,
+              robotsFollow: pageSeo.robotsFollow,
+              ogImageUrl: pageSeo.ogImageKey ? storage.publicUrl(pageSeo.ogImageKey) : null,
+            }
+          : null
+      }
+      sharedCta={
+        siteSettings
+          ? {
+              ctaVersion: siteSettings.ctaVersion,
+              ctaTitleTh: siteSettings.ctaTitleTh ?? "",
+              ctaTitleEn: siteSettings.ctaTitleEn ?? "",
+              ctaSubtitleTh: siteSettings.ctaSubtitleTh ?? "",
+              ctaSubtitleEn: siteSettings.ctaSubtitleEn ?? "",
+              ctaPrimaryLabelTh: siteSettings.ctaPrimaryLabelTh ?? "",
+              ctaPrimaryLabelEn: siteSettings.ctaPrimaryLabelEn ?? "",
+              ctaSecondaryLabelTh: siteSettings.ctaSecondaryLabelTh ?? "",
+              ctaSecondaryLabelEn: siteSettings.ctaSecondaryLabelEn ?? "",
+            }
+          : null
+      }
       home={{
         version: home.version,
         heroKickerTh: home.heroKickerTh ?? "", heroKickerEn: home.heroKickerEn ?? "",

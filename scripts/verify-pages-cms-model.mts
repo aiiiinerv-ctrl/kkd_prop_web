@@ -61,12 +61,17 @@ check("rollout partition: home pages, others legacy", () => {
   }
 });
 
-check("only home admin Content enabled", () => {
+check("only home admin Content + Properties enabled", () => {
   const enabled = adminEnabledPages().map((e) => e.key);
   assert.deepEqual(enabled, ["home"]);
   for (const key of PAGE_KEYS) {
-    if (key === "home") assert.equal(PAGE_REGISTRY[key].adminContentEnabled, true);
-    else assert.equal(PAGE_REGISTRY[key].adminContentEnabled, false);
+    if (key === "home") {
+      assert.equal(PAGE_REGISTRY[key].adminContentEnabled, true);
+      assert.equal(PAGE_REGISTRY[key].propertiesAdminEnabled, true);
+    } else {
+      assert.equal(PAGE_REGISTRY[key].adminContentEnabled, false);
+      assert.equal(PAGE_REGISTRY[key].propertiesAdminEnabled, false);
+    }
   }
 });
 

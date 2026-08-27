@@ -672,20 +672,18 @@ console.log(
   `SITE SETTINGS: mutation recorded in AuditLog ${siteSettingsAudit ? "✓" : "✗ FAIL"}`
 );
 
-// --- CMS: SEO tab — edit home title, verify /th <title>, restore ---
-await page.goto("http://localhost:3000/admin/settings");
-await page.waitForSelector("text=ตั้งค่าระบบ", { timeout: 10000 });
-await page.click("#st-tab-seo");
-// All SEO page forms are kept-mounted by the TabsContent keepMounted default;
-// use the stable ID (seo-home-title-th) to avoid ambiguity across the 10 forms.
-const homeSeoTitleInput = page.locator("#seo-home-title-th");
+// --- CMS: Home Properties — edit home title via Pages, verify /th <title>, restore ---
+await page.goto("http://localhost:3000/admin/pages/home");
+await page.waitForSelector("text=หน้าแรก", { timeout: 10000 });
+await page.click("#home-tab-properties");
+const homeSeoTitleInput = page.locator("#home-prop-title-th");
 await homeSeoTitleInput.waitFor({ timeout: 5000 });
 const originalSeoTitle = await homeSeoTitleInput.inputValue();
 const testSeoTitle = `ทดสอบ SEO ${Date.now().toString(36)}`;
 
 await homeSeoTitleInput.fill(testSeoTitle);
-await page.click("#seo-home-submit");
-await page.waitForSelector("text=บันทึก SEO ของหน้า", { timeout: 10000 });
+await page.getByRole("button", { name: "บันทึก Properties" }).click();
+await page.waitForSelector("text=บันทึก Properties หน้าแรกแล้ว", { timeout: 10000 });
 console.log("PAGE SEO: home title updated ✓");
 
 const publicThSeoRes = await page.request.get("http://localhost:3000/th");
@@ -694,9 +692,15 @@ console.log(
   `PAGE SEO: updated title in /th <title> ${publicThSeoHtml.includes(testSeoTitle) ? "✓" : "✗ FAIL (may be cached)"}`
 );
 
-await homeSeoTitleInput.fill(originalSeoTitle);
-await page.click("#seo-home-submit");
-await page.waitForSelector("text=บันทึก SEO ของหน้า", { timeout: 10000 });
+// Full navigation after save — tabs remount on Content; reopen Properties.
+await page.goto("http://localhost:3000/admin/pages/home");
+await page.waitForSelector("#home-tab-properties", { timeout: 10000 });
+await page.click("#home-tab-properties");
+const homeSeoTitleInputRestore = page.locator("#home-prop-title-th");
+await homeSeoTitleInputRestore.waitFor({ state: "visible", timeout: 10000 });
+await homeSeoTitleInputRestore.fill(originalSeoTitle);
+await page.getByRole("button", { name: "บันทึก Properties" }).click();
+await page.waitForSelector("text=บันทึก Properties หน้าแรกแล้ว", { timeout: 10000 });
 console.log("PAGE SEO: home title restored ✓");
 
 const pageSeoAudit = await prisma.auditLog.findFirst({

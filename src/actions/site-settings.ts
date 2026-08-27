@@ -102,6 +102,14 @@ export async function updateHeaderFooterSettings(formData: FormData): Promise<Ac
 export async function updatePageSeo(key: string, formData: FormData): Promise<ActionResult> {
   await requireRole("ADMIN", "MARKETING");
 
+  // Sprint 5 (#68): Home PageSeo ownership moved to Pages Properties.
+  if (key === "home") {
+    return {
+      ok: false,
+      error: "SEO หน้าแรกย้ายไปที่ หน้าแรก (Pages) → แท็บ Properties แล้ว — กรุณารีเฟรชหน้านี้",
+    };
+  }
+
   const parsed = pageSeoSchema.safeParse({
     key,
     titleTh: formData.get("titleTh") ?? "",

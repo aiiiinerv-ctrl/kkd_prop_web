@@ -169,22 +169,56 @@ export function toSiteSettingsView(row: Row, locale: string): SiteSettingsView {
   };
 }
 
+export type SharedCtaView = {
+  title: string | null;
+  subtitle: string | null;
+  primaryLabel: string | null;
+  secondaryLabel: string | null;
+};
+
+export function toSharedCtaView(row: Row, locale: string): SharedCtaView {
+  const loc = (field: string) => pickLocale(row, field, locale) || null;
+  return {
+    title: loc("ctaTitle"),
+    subtitle: loc("ctaSubtitle"),
+    primaryLabel: loc("ctaPrimaryLabel"),
+    secondaryLabel: loc("ctaSecondaryLabel"),
+  };
+}
+
 export type PageSeoView = {
   id: string;
   key: string;
   title: string | null;
   description: string | null;
+  ogTitle: string | null;
+  ogDescription: string | null;
   ogImageKey: string | null;
+  canonicalPath: string | null;
+  robotsIndex: boolean;
+  robotsFollow: boolean;
 };
 
 export function toPageSeoView(row: Row, locale: string): PageSeoView {
   const loc = (field: string) => pickLocale(row, field, locale) || null;
+  const isEn = locale === "en";
   return {
     id: String(row.id),
     key: String(row.key),
     title: loc("title"),
     description: loc("description"),
+    ogTitle: loc("ogTitle"),
+    ogDescription: loc("ogDescription"),
     ogImageKey: row.ogImageKey ? String(row.ogImageKey) : null,
+    canonicalPath: isEn
+      ? row.canonicalPathEn
+        ? String(row.canonicalPathEn)
+        : null
+      : row.canonicalPathTh
+        ? String(row.canonicalPathTh)
+        : null,
+    robotsIndex: row.robotsIndex !== false,
+    robotsFollow: row.robotsFollow !== false,
   };
 }
 

@@ -12,6 +12,7 @@ import {
   toProjectView,
   toServiceView,
   toSiteSettingsView,
+  toSharedCtaView,
   toTestimonialView,
   type AboutContentView,
   type ChannelView,
@@ -21,6 +22,7 @@ import {
   type PageSeoView,
   type ProjectView,
   type ServiceView,
+  type SharedCtaView,
   type SiteSettingsView,
   type SocialLink,
   type TestimonialView,
@@ -153,6 +155,15 @@ export const getSiteSettings = cache(
   }
 );
 
+/** Shared CTA banner copy from SiteSettings (#68). Null → messages fallback. */
+export const getSharedCta = cache(
+  async (locale: string): Promise<SharedCtaView | null> => {
+    const row = await prisma.siteSettings.findFirst();
+    if (!row) return null;
+    return toSharedCtaView(row, locale);
+  }
+);
+
 /**
  * Per-page SEO data for one MetaKey.
  * Returns null when no row exists for that key.
@@ -230,6 +241,7 @@ export type {
   PageSeoView,
   ProjectView,
   ServiceView,
+  SharedCtaView,
   SiteSettingsView,
   SocialLink,
   TestimonialView,
