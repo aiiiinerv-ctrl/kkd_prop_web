@@ -8,7 +8,7 @@
 |---|---|
 | GitHub | https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/63 |
 | Opened | 2026-08-27 |
-| Status | done — committed; production cutover in progress |
+| Status | done — production cutover live 2026-08-27 |
 | Labels | `wayfinder:task` |
 | Type | wayfinder execution |
 
