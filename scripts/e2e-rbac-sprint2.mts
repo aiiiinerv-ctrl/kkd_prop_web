@@ -345,7 +345,7 @@ async function main() {
     // MARKETING gets full content management (publish + delete visible).
     await page.goto(`${BASE}/admin/services`);
     const mktCanAdd = (await page.getByText("เพิ่มบริการ").count()) > 0;
-    console.log(`MARKETING: /admin/services "add" button visible ${mktCanAdd ? "✓" : "✗ FAIL"}`);
+    console.log(`MARKETING: /admin/services → pages "add" visible ${mktCanAdd ? "✓" : "✗ FAIL"}`);
 
     // MARKETING can manage channels (create/edit) — the exec-only EDITOR
     // view is checked separately below.
@@ -519,6 +519,7 @@ async function main() {
       "/admin/settings",
       "/admin/content/about",
       "/admin/pages/about",
+      "/admin/pages/services",
     ]) {
       await page.goto(`${BASE}${path}`);
       const blocked = page.url().endsWith("/admin");

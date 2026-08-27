@@ -35,6 +35,7 @@ const services = auditedEntity({
   model: (client) => client.service,
   snapshot: "full",
   revalidate: () => [
+    "/admin/pages/services",
     "/admin/services",
     ["/[locale]/services", "page"],
     ["/[locale]", "page"],

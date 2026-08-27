@@ -11,6 +11,7 @@ import {
   toPageSeoView,
   toProjectView,
   toServiceView,
+  toServicesPageContentView,
   toSiteSettingsView,
   toSharedCtaView,
   toTestimonialView,
@@ -22,6 +23,7 @@ import {
   type PageSeoView,
   type ProjectView,
   type ServiceView,
+  type ServicesPageContentView,
   type SharedCtaView,
   type SiteSettingsView,
   type SocialLink,
@@ -193,6 +195,15 @@ export const getAboutContent = cache(
     });
     if (!row) return null;
     return toAboutContentView(row, locale);
+  }
+);
+
+/** Services page chrome (titles / visibility). Null → caller falls back to messages. */
+export const getServicesPageContent = cache(
+  async (locale: string): Promise<ServicesPageContentView | null> => {
+    const row = await prisma.servicesPageContent.findUnique({ where: { key: "services" } });
+    if (!row) return null;
+    return toServicesPageContentView(row, locale);
   }
 );
 

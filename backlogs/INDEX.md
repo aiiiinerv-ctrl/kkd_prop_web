@@ -1,6 +1,6 @@
 # Backlog Index
 
-Updated: 2026-08-28 (Sprint 6 #69 closed)  
+Updated: 2026-08-28 (Sprint 7 #70 closed)  
 Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 ## Active
@@ -15,6 +15,7 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 | GitHub | PLAN | Notes |
 |---|---|---|
+| [#70](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/70) | [`ISSUE_070_pages_cms_sprint7_services`](done/ISSUE_070_pages_cms_sprint7_services/PLAN.md) | Sprint 7 complete 2026-08-28 — Services Pages cutover |
 | [#69](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/69) | [`ISSUE_069_pages_cms_sprint6_about`](done/ISSUE_069_pages_cms_sprint6_about/PLAN.md) | Sprint 6 complete 2026-08-28 — About Pages cutover |
 | [#68](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/68) | [`ISSUE_068_pages_cms_sprint5_home_tracer`](done/ISSUE_068_pages_cms_sprint5_home_tracer/PLAN.md) | Sprint 5 complete 2026-08-28 — Home Properties + Shared CTA tracer |
 | [#67](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/67) | [`ISSUE_067_pages_cms_sprint4_core`](done/ISSUE_067_pages_cms_sprint4_core/PLAN.md) | Sprint 4 complete 2026-08-28 — registry/shell; dormant 404; e2e green |
@@ -32,9 +33,10 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 Wayfinder maps and grilling that are open but not in the nearby queue, e.g. #1, #10, #21, #24, #25, #27, #36 — create `ISSUE_XXX_…/PLAN.md` when claimed or when labeled `ready-for-agent` / `ready-for-human`.
 
-Pages CMS Sprint 3 closed as [#66](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/66). Sprint 4 closed as [#67](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/67). Sprint 5 closed as [#68](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/68). Sprint 6 closed as [#69](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/69). Sprint 7–12 remain in [`docs/plans/pages-cms-implementation-sprints.md`](../docs/plans/pages-cms-implementation-sprints.md). Closed slice ticket: [#50](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/50).
+Pages CMS Sprint 3 closed as [#66](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/66). Sprint 4 closed as [#67](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/67). Sprint 5 closed as [#68](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/68). Sprint 6 closed as [#69](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/69). Sprint 7 closed as [#70](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/70). Sprint 8–12 remain in [`docs/plans/pages-cms-implementation-sprints.md`](../docs/plans/pages-cms-implementation-sprints.md). Closed slice ticket: [#50](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/50).
 
 Sprint 3 prep (historical): [`docs/plans/pages-cms-sprint3-prep.md`](../docs/plans/pages-cms-sprint3-prep.md).  
 Sprint 4 tasks: [`docs/plans/pages-cms-sprint4-pages-core-tasks.md`](../docs/plans/pages-cms-sprint4-pages-core-tasks.md).  
 Sprint 5 tasks: [`docs/plans/pages-cms-sprint5-home-tracer-tasks.md`](../docs/plans/pages-cms-sprint5-home-tracer-tasks.md).  
-Sprint 6 tasks: [`docs/plans/pages-cms-sprint6-about-tasks.md`](../docs/plans/pages-cms-sprint6-about-tasks.md).
+Sprint 6 tasks: [`docs/plans/pages-cms-sprint6-about-tasks.md`](../docs/plans/pages-cms-sprint6-about-tasks.md).  
+Sprint 7 tasks: [`docs/plans/pages-cms-sprint7-services-tasks.md`](../docs/plans/pages-cms-sprint7-services-tasks.md).

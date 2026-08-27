@@ -4,7 +4,8 @@ import { CtaBanner } from "@/components/site/cta-banner";
 import { SectionHeading } from "@/components/site/section-heading";
 import { Link } from "@/i18n/navigation";
 import { bookingHref } from "@/lib/booking-links";
-import { getPublishedServices, type ServiceView } from "@/lib/content";
+import { getPublishedServices, getServicesPageContent, type ServiceView } from "@/lib/content";
+import { PAGE_REGISTRY } from "@/lib/pages";
 import { pageMetadata } from "@/lib/seo";
 
 export const revalidate = 300;
@@ -16,7 +17,6 @@ const SERVICE_ICONS: Record<string, LucideIcon> = {
   "panel-cleaning": SprayCan,
   "system-inspection": ShieldCheck,
 };
-
 
 export async function generateMetadata({
   params,
@@ -37,9 +37,25 @@ export default async function ServicesPage({
   const t = await getTranslations("services");
   const tCommon = await getTranslations("common");
 
-  const services = await getPublishedServices(locale);
+  const usePages = PAGE_REGISTRY.services.contentRollout === "pages";
+  const [services, pageContent] = await Promise.all([
+    getPublishedServices(locale),
+    usePages ? getServicesPageContent(locale) : Promise.resolve(null),
+  ]);
+
+  const hasRow = Boolean(pageContent);
+  const pick = (db: string | null | undefined, key: Parameters<typeof t>[0]) => {
+    if (usePages && !hasRow) return t(key);
+    if (usePages) return db || "";
+    return db ?? t(key);
+  };
+
   const systems = services.filter((s) => s.kind === "SYSTEM");
   const maintenance = services.filter((s) => s.kind === "MAINTENANCE");
+
+  const showSystems = (pageContent?.showSystems !== false) && systems.length > 0;
+  const showMaintenance = (pageContent?.showMaintenance !== false) && maintenance.length > 0;
+  const showGlobalCta = pageContent?.showGlobalCta !== false;
 
   const ServiceCard = ({ service }: { service: ServiceView }) => {
     const Icon = SERVICE_ICONS[service.slug] ?? Wrench;
@@ -51,13 +67,9 @@ export default async function ServicesPage({
           <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
             <Icon className="size-5" />
           </span>
-          <h3 className="text-lg font-bold text-primary">
-            {service.title}
-          </h3>
+          <h3 className="text-lg font-bold text-primary">{service.title}</h3>
         </div>
-        <p className="mt-3 flex-1 text-sm text-muted-foreground">
-          {service.description}
-        </p>
+        <p className="mt-3 flex-1 text-sm text-muted-foreground">{service.description}</p>
         <ul className="mt-4 space-y-2">
           {service.features.map((f) => (
             <li key={f} className="flex items-start gap-2 text-sm">
@@ -80,32 +92,42 @@ export default async function ServicesPage({
     <main>
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
         <SectionHeading
-          title={t("title")}
-          subtitle={t("subtitle")}
+          title={pick(pageContent?.title, "title")}
+          subtitle={pick(pageContent?.subtitle, "subtitle")}
           headingClassName="font-extrabold tracking-[-0.01em]"
           underline
         />
 
-        <h2 className="mb-6 text-xl font-extrabold tracking-[-0.01em] text-primary">
-          {t("systemsTitle")}
-        </h2>
-        <div className="grid gap-7 md:grid-cols-2">
-          {systems.map((s) => (
-            <ServiceCard key={s.id} service={s} />
-          ))}
-        </div>
+        {showSystems ? (
+          <>
+            <h2 className="mb-6 text-xl font-extrabold tracking-[-0.01em] text-primary">
+              {pick(pageContent?.systemsTitle, "systemsTitle")}
+            </h2>
+            <div className="grid gap-7 md:grid-cols-2">
+              {systems.map((s) => (
+                <ServiceCard key={s.id} service={s} />
+              ))}
+            </div>
+          </>
+        ) : null}
 
-        <h2 className="mt-14 mb-6 text-xl font-extrabold tracking-[-0.01em] text-primary">
-          {t("maintenanceTitle")}
-        </h2>
-        <div className="grid gap-7 md:grid-cols-2">
-          {maintenance.map((s) => (
-            <ServiceCard key={s.id} service={s} />
-          ))}
-        </div>
+        {showMaintenance ? (
+          <>
+            <h2
+              className={`${showSystems ? "mt-14" : ""} mb-6 text-xl font-extrabold tracking-[-0.01em] text-primary`}
+            >
+              {pick(pageContent?.maintenanceTitle, "maintenanceTitle")}
+            </h2>
+            <div className="grid gap-7 md:grid-cols-2">
+              {maintenance.map((s) => (
+                <ServiceCard key={s.id} service={s} />
+              ))}
+            </div>
+          </>
+        ) : null}
       </section>
 
-      <CtaBanner />
+      {showGlobalCta ? <CtaBanner /> : null}
     </main>
   );
 }

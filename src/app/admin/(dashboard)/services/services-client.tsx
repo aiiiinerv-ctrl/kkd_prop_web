@@ -28,14 +28,17 @@ export function ServicesClient({
   services,
   canPublish,
   canDelete,
+  embedded = false,
 }: {
   services: ServiceRow[];
   canPublish: boolean;
   canDelete: boolean;
+  /** When true, nest under Pages Content tab (no duplicate page chrome title). */
+  embedded?: boolean;
 }) {
   return (
     <CrudPage
-      title="บริการ"
+      title={embedded ? "รายการบริการ (Content Items)" : "บริการ"}
       addLabel="เพิ่มบริการ"
       dialogTitle={(editing) => (editing ? "แก้ไขบริการ" : "เพิ่มบริการใหม่")}
       rows={services}

@@ -154,16 +154,16 @@ console.log(
 );
 
 // --- Services: edit title, check public page reflects it ---
-await page.goto("http://localhost:3000/admin/services");
+await page.goto("http://localhost:3000/admin/pages/services");
 await page.waitForSelector("text=ระบบออนกริด", { timeout: 10000 });
 await page.click('button[aria-label="แก้ไข"] >> nth=0');
-const titleInput = page.locator('input[name="titleTh"]');
+const titleInput = page.getByRole("dialog").locator('input[name="titleTh"]');
 await titleInput.waitFor({ timeout: 5000 });
 // Unique suffix each run so the before/after audit snapshot always differs
 // (a fixed string would no-op on repeat runs and leave no field diff).
 const titleSuffix = `[แก้ไขทดสอบ ${Date.now().toString(36)}]`;
 await titleInput.fill(`ระบบออนกริด (On-Grid) ${titleSuffix}`);
-await page.click("text=บันทึก >> nth=-1");
+await page.getByRole("dialog").getByRole("button", { name: "บันทึก" }).click();
 await page.waitForSelector("text=บันทึกเรียบร้อย", { timeout: 10000 });
 console.log("SERVICES: edited via dialog ✓");
 
@@ -179,7 +179,7 @@ console.log(
 await page.click('button[aria-label="แก้ไข"] >> nth=0');
 await titleInput.waitFor({ timeout: 5000 });
 await titleInput.fill("ระบบออนกริด (On-Grid)");
-await page.click("text=บันทึก >> nth=-1");
+await page.getByRole("dialog").getByRole("button", { name: "บันทึก" }).click();
 await page.waitForSelector("text=บันทึกเรียบร้อย", { timeout: 10000 });
 console.log("SERVICES: title restored ✓");
 
@@ -190,15 +190,16 @@ console.log("SERVICES: title restored ✓");
 // deletes. ---
 const throwawayTitle = `บริการทดสอบ ${Date.now().toString(36)}`;
 await page.click("text=เพิ่มบริการ");
-await page.locator('input[name="titleTh"]').waitFor({ timeout: 5000 });
-await page.fill('input[name="titleTh"]', throwawayTitle);
-await page.fill('textarea[name="descriptionTh"]', "รายละเอียดทดสอบสำหรับสคริปต์ e2e");
+const createDialog = page.getByRole("dialog");
+await createDialog.locator('input[name="titleTh"]').waitFor({ timeout: 5000 });
+await createDialog.locator('input[name="titleTh"]').fill(throwawayTitle);
+await createDialog.locator('textarea[name="descriptionTh"]').fill("รายละเอียดทดสอบสำหรับสคริปต์ e2e");
 // The EN fields live in the other tab panel — kept mounted so they submit with
 // the form, but not visible until the tab is selected.
-await page.click('button:text-is("English")');
-await page.fill('input[name="titleEn"]', `E2E Throwaway Service ${Date.now().toString(36)}`);
-await page.fill('textarea[name="descriptionEn"]', "Throwaway description for the e2e script");
-await page.click("text=บันทึก >> nth=-1");
+await createDialog.getByRole("tab", { name: "English" }).click();
+await createDialog.locator('input[name="titleEn"]').fill(`E2E Throwaway Service ${Date.now().toString(36)}`);
+await createDialog.locator('textarea[name="descriptionEn"]').fill("Throwaway description for the e2e script");
+await createDialog.getByRole("button", { name: "บันทึก" }).click();
 // Wait for the row itself, not the toast: the previous step's toast is still
 // on screen and would match immediately, letting the DB read below race the
 // server action.

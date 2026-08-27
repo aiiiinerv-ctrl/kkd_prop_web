@@ -290,6 +290,33 @@ export function toAboutContentView(row: Row, locale: string): AboutContentView {
   };
 }
 
+export type ServicesPageContentView = {
+  id: string;
+  version: number;
+  title: string | null;
+  subtitle: string | null;
+  systemsTitle: string | null;
+  maintenanceTitle: string | null;
+  showSystems: boolean;
+  showMaintenance: boolean;
+  showGlobalCta: boolean;
+};
+
+export function toServicesPageContentView(row: Row, locale: string): ServicesPageContentView {
+  const loc = (field: string) => pickLocale(row, field, locale) || null;
+  return {
+    id: String(row.id),
+    version: Number(row.version ?? 1),
+    title: loc("title"),
+    subtitle: loc("subtitle"),
+    systemsTitle: loc("systemsTitle"),
+    maintenanceTitle: loc("maintenanceTitle"),
+    showSystems: row.showSystems !== false,
+    showMaintenance: row.showMaintenance !== false,
+    showGlobalCta: row.showGlobalCta !== false,
+  };
+}
+
 // ─── Home Page Content (Home CMS slice H3) ─────────────────────────────────
 
 export type HomeFaqItemView = {

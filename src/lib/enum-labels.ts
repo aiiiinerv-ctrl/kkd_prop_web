@@ -114,6 +114,7 @@ export const AUDIT_ENTITY_LABELS: Record<AuditEntityType, string> = {
   PromoChannel: "ช่องทางโปรโมท",
   PromoLandingPath: "หน้า Landing ของลิงก์โปรโมท",
   Service: "บริการ",
+  ServicesPageContent: "เนื้อหาหน้าบริการ",
   SiteSettings: "การตั้งค่าเว็บไซต์",
   SurveyBooking: "การนัดสำรวจ",
   Testimonial: "รีวิวลูกค้า",

@@ -24,6 +24,7 @@ export type AuditEntityType =
   | "PromoChannel"
   | "PromoLandingPath"
   | "Service"
+  | "ServicesPageContent"
   | "SiteSettings"
   | "SurveyBooking"
   | "Testimonial";
