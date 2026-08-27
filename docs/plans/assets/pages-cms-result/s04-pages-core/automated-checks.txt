@@ -1,0 +1,19 @@
+# Sprint 4 close — automated-checks
+
+```
+npx tsx scripts/verify-pages-cms-model.mts
+→ 9/9 PASS
+
+npm run build
+→ Compiled + TypeScript OK
+
+npx tsx scripts/e2e-admin.mts
+→ FAIL=0
+
+npx tsx scripts/e2e-admin-crud.mts
+→ FAIL=0
+
+Auth smoke (tmp script, not committed):
+→ /admin/pages/home 200 + PageShell
+→ dormant keys 404
+```
