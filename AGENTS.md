@@ -100,6 +100,7 @@ npx tsx scripts/backup-db.mts    # snapshot DB + private slips into backups/ (ru
 npx tsx scripts/restore-db.mts   # dry-run against the latest snapshot; add --confirm to actually restore (destructive)
 # before redeploying to production, always read docs/plans/kkd-shared-hosting-redeploy-runbook.md
 npx tsx scripts/smoke-test-production.mts  # verify production after deploy (4 standard checks + optional --check/--expect-text)
+npx tsx scripts/smoke-test-production-write.mts  # optional: submit one [TEST] quote lead on prod (delete in admin after)
 ```
 
 E2E scripts drive system Chrome (`channel: "chrome"`) — no Playwright browser download needed. They are idempotent against the persistent `prisma/dev.db`.

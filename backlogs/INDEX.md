@@ -1,12 +1,13 @@
 # Backlog Index
 
-Updated: 2026-08-28 (redeploy #75 deployed)  
+Updated: 2026-08-28 (Sprint 12 #76 prep)  
 Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 ## Active
 
 | GitHub | PLAN | Notes |
 |---|---|---|
+| [#76](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/76) | [`ISSUE_076_pages_cms_sprint12_cleanup`](ISSUE_076_pages_cms_sprint12_cleanup/PLAN.md) | Prep done — execution blocked until 2026-09-11 + owner OK |
 | [#38](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/38) | [`ISSUE_038_cookieyes_banner_locale_en`](ISSUE_038_cookieyes_banner_locale_en/PLAN.md) | CookieYes Free = one language — owner decision |
 | [#32](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/32) | [`ISSUE_032_lead_notifications_resend_line`](ISSUE_032_lead_notifications_resend_line/PLAN.md) | Blocked on Resend/LINE secrets |
 | [#30](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/30) | [`ISSUE_030_attribution_baseline_after_consent`](ISSUE_030_attribution_baseline_after_consent/PLAN.md) | Calendar-bound attribution baselines |
@@ -48,4 +49,5 @@ Sprint 7 tasks: [`docs/plans/pages-cms-sprint7-services-tasks.md`](../docs/plans
 Sprint 8 tasks: [`docs/plans/pages-cms-sprint8-packages-tasks.md`](../docs/plans/pages-cms-sprint8-packages-tasks.md).  
 Sprint 9 tasks: [`docs/plans/pages-cms-sprint9-portfolio-tasks.md`](../docs/plans/pages-cms-sprint9-portfolio-tasks.md).  
 Sprint 10 tasks: [`docs/plans/pages-cms-sprint10-calculator-tasks.md`](../docs/plans/pages-cms-sprint10-calculator-tasks.md).  
-Sprint 11 tasks: [`docs/plans/pages-cms-sprint11-release-tasks.md`](../docs/plans/pages-cms-sprint11-release-tasks.md).
+Sprint 11 tasks: [`docs/plans/pages-cms-sprint11-release-tasks.md`](../docs/plans/pages-cms-sprint11-release-tasks.md).  
+Sprint 12 tasks: [`docs/plans/pages-cms-sprint12-cleanup-tasks.md`](../docs/plans/pages-cms-sprint12-cleanup-tasks.md) — [#76](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/76).

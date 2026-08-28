@@ -5,22 +5,23 @@ Prod deploy: **live 2026-08-28** (#75) — observation continues until 2026-09-1
 
 ## Per-page rollout (all `contentRollout: pages`)
 
-| Page | Admin route | Legacy shim | Observation ends | Real save + audit | Prod canary |
+| Page | Admin route | Legacy shim | Observation ends | Prod smoke | Prod write canary |
 | --- | --- | --- | --- | --- | --- |
-| home | `/admin/pages/home` | — | 2026-09-11 | pending deploy | — |
-| about | `/admin/pages/about` | `/admin/content/about` → 307 | 2026-09-11 | pending deploy | — |
-| services | `/admin/pages/services` | `/admin/services` → 307 | 2026-09-11 | pending deploy | — |
-| packages | `/admin/pages/packages` | `/admin/packages` → 307 | 2026-09-11 | pending deploy | — |
-| portfolio | `/admin/pages/portfolio` | `/admin/portfolio` → 307 | 2026-09-11 | pending deploy | — |
-| calculator | `/admin/pages/calculator` | — (no prior editor) | 2026-09-11 | pending deploy | — |
+| home | `/admin/pages/home` | — | 2026-09-11 | 200 ✓ | optional |
+| about | `/admin/pages/about` | `/admin/content/about` → 307 | 2026-09-11 | 200 ✓ | optional |
+| services | `/admin/pages/services` | `/admin/services` → 307 | 2026-09-11 | 200 ✓ | optional |
+| packages | `/admin/pages/packages` | `/admin/packages` → 307 | 2026-09-11 | 200 ✓ | optional |
+| portfolio | `/admin/pages/portfolio` | `/admin/portfolio` → 307 | 2026-09-11 | 200 ✓ | optional |
+| calculator | `/admin/pages/calculator` | — | 2026-09-11 | 200 ✓ | optional |
 
 ## Gates before Sprint 12 cleanup
 
-- [ ] 14 calendar days elapsed per page (earliest: 2026-09-11)
+- [ ] 14 calendar days elapsed per page (earliest: **2026-09-11**)
 - [ ] Owner explicit cleanup approval (S12 owner checkpoint)
 - [ ] At least one audited save per page on production **or** approved local canary record
 - [ ] No open P1 integrity/audit/cache/accessibility findings
-- [ ] Prod read-only smoke green after deploy (#68–#74 bundle)
+- [x] Prod read-only smoke green after deploy (#75)
+- [x] Prod write-path canary green — booking quote `[TEST]` submit 2026-08-28 (`scripts/smoke-test-production-write.mts`)
 
 ## Retained until Sprint 12
 
@@ -31,4 +32,5 @@ Prod deploy: **live 2026-08-28** (#75) — observation continues until 2026-09-1
 ## Notes
 
 Local Sprint 11 evidence: `manifest.md` in this directory.  
+Write-path canary: `scripts/smoke-test-production-write.mts` — test lead phone `0897739487` (delete in admin).  
 Do **not** remove shims or fallbacks based on elapsed time alone.

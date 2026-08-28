@@ -24,7 +24,7 @@ Commit: `9472a2a` (includes Sprint 11 verify pipeline)
 
 ## Remaining (optional)
 
-- One public lead-form write test (`[TEST]` row) per runbook §5
+- ~~One public lead-form write test (`[TEST]` row) per runbook §5~~ **GREEN 2026-08-28** — `scripts/smoke-test-production-write.mts` (phone `0897739487`, delete in admin)
 - Admin visual check of `/admin/pages/*` tabs (session required; no committed screenshots)
 
 ## Artifact
@@ -60,6 +60,14 @@ npx tsx scripts/smoke-test-production.mts \
   --check /th/calculator --expect-text "คำนวณ" \
   --check /admin/pages/home --expect-text "login"
 ```
+
+7. **Write-path canary (optional, runbook §5):**
+
+```bash
+npx tsx scripts/smoke-test-production-write.mts
+```
+
+Submits one `[TEST]` quote lead; delete the row in admin afterwards.
 
 Warm each public route twice after restart (ISR). Admin checks need session — do not commit auth screenshots.
 
