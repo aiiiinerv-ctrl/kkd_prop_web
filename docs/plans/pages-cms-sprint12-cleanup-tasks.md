@@ -4,8 +4,7 @@
 
 ## Blocked until
 
-- 2026-09-11 (14-day observation)
-- Owner cleanup approval
+- 2026-09-11 (14-day observation) — owner OK **granted 2026-08-28**
 
 ## Prep (2026-08-28)
 

@@ -800,7 +800,7 @@ and explicit operational approval.
 
 **Status (2026-08-28):** **PREP ONLY** — [#76](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/76)
 / `backlogs/ISSUE_076_pages_cms_sprint12_cleanup/PLAN.md`. Inventory committed;
-execution blocked until 2026-09-11 + owner OK (S12-D).
+owner cleanup **approved 2026-08-28**; execution blocked until **2026-09-11** (S12-C).
 
 ### Scope and files/surfaces
 

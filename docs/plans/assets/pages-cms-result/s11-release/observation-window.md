@@ -17,7 +17,7 @@ Prod deploy: **live 2026-08-28** (#75) — observation continues until 2026-09-1
 ## Gates before Sprint 12 cleanup
 
 - [ ] 14 calendar days elapsed per page (earliest: **2026-09-11**)
-- [ ] Owner explicit cleanup approval (S12 owner checkpoint)
+- [x] Owner explicit cleanup approval (S12-D) — **granted 2026-08-28**
 - [ ] At least one audited save per page on production **or** approved local canary record
 - [ ] No open P1 integrity/audit/cache/accessibility findings
 - [x] Prod read-only smoke green after deploy (#75)
