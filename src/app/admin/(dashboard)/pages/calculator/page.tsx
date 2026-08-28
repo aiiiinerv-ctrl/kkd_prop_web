@@ -1,4 +1,5 @@
 import { canManageContent, canManageSiteSettings, requireRole } from "@/lib/auth";
+import { getPageBannerAdmin } from "@/lib/admin/page-banner-admin";
 import { CALCULATOR_DEFAULTS } from "@/lib/calculator";
 import { rowToCalculatorParams } from "@/lib/calculator-config";
 import { prisma } from "@/lib/db";
@@ -12,7 +13,7 @@ export default async function PagesCalculatorPage() {
   const canMutateProperties = canManageSiteSettings(session.user.role);
   const canManageConfig = session.user.role === "ADMIN";
 
-  const [pageRow, pageSeo, configRow] = await Promise.all([
+  const [pageRow, pageSeo, configRow, bannerData] = await Promise.all([
     prisma.calculatorPageContent.findUnique({ where: { key: "calculator" } }),
     canMutateProperties
       ? prisma.pageSeo.findUnique({ where: { key: "calculator" } })
@@ -20,6 +21,7 @@ export default async function PagesCalculatorPage() {
     canManageConfig
       ? prisma.calculatorConfig.findFirst()
       : Promise.resolve(null),
+    getPageBannerAdmin("calculator"),
   ]);
 
   const params = configRow
@@ -86,6 +88,7 @@ export default async function PagesCalculatorPage() {
             }
           : null
       }
+      bannerData={bannerData}
     />
   );
 }

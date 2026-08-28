@@ -10,6 +10,7 @@ import { RefConsentCapture } from "@/components/site/ref-consent-capture";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteHeader } from "@/components/site/site-header";
 import { getPublishedTestimonials, getSiteSettings } from "@/lib/content";
+import { getSiteLogoUrls } from "@/lib/content/page-banner";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
 
@@ -82,9 +83,10 @@ export default async function LocaleLayout({
   }
   setRequestLocale(locale);
 
-  const [testimonials, siteSettings] = await Promise.all([
+  const [testimonials, siteSettings, logoUrls] = await Promise.all([
     getPublishedTestimonials(locale),
     getSiteSettings(locale),
+    getSiteLogoUrls(),
   ]);
 
   return (
@@ -101,9 +103,10 @@ export default async function LocaleLayout({
           <SiteHeader
             showTestimonials={testimonials.length > 0}
             ctaLabel={siteSettings?.headerCtaLabel ?? null}
+            headerLogoUrl={logoUrls.header}
           />
           <div className="flex-1 flex flex-col pb-[76px] lg:pb-0">{children}</div>
-          <SiteFooter settings={siteSettings} />
+          <SiteFooter settings={siteSettings} footerLogoUrl={logoUrls.footer} />
           <MobileBookingBar />
         </NextIntlClientProvider>
       </body>

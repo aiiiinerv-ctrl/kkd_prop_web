@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { CtaBanner } from "@/components/site/cta-banner";
+import { PageBanner } from "@/components/site/page-banner";
 import { TestimonialsSection } from "@/components/site/testimonials-section";
 import { getPublishedTestimonials } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
@@ -34,6 +35,7 @@ export default async function TestimonialsPage({
 
   return (
     <main>
+      <PageBanner pageSlug="testimonials" />
       <TestimonialsSection />
       <CtaBanner />
     </main>

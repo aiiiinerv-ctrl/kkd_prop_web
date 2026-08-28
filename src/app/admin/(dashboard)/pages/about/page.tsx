@@ -1,4 +1,5 @@
 import { canManageContent, canManageSiteSettings, requireRole } from "@/lib/auth";
+import { getPageBannerAdmin } from "@/lib/admin/page-banner-admin";
 import { prisma } from "@/lib/db";
 import { storage } from "@/lib/storage";
 import { AboutAdminShell } from "./about-admin-shell";
@@ -9,7 +10,7 @@ export default async function PagesAboutPage() {
 
   const canMutateProperties = canManageSiteSettings(session.user.role);
 
-  const [row, pageSeo, testimonials] = await Promise.all([
+  const [row, pageSeo, testimonials, bannerData] = await Promise.all([
     prisma.aboutContent.findUnique({
       where: { key: "about" },
       include: {
@@ -23,6 +24,7 @@ export default async function PagesAboutPage() {
       orderBy: { sortOrder: "asc" },
       select: { id: true, customerName: true, isPublished: true },
     }),
+    getPageBannerAdmin("about"),
   ]);
 
   return (
@@ -121,6 +123,7 @@ export default async function PagesAboutPage() {
             }
           : null
       }
+      bannerData={bannerData}
     />
   );
 }

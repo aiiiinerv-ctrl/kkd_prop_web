@@ -1,5 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CtaBanner } from "@/components/site/cta-banner";
+import { PageBanner } from "@/components/site/page-banner";
 import { SectionHeading } from "@/components/site/section-heading";
 import { getPortfolioPageContent, getPublishedProjects } from "@/lib/content";
 import { PAGE_REGISTRY } from "@/lib/pages";
@@ -44,6 +45,7 @@ export default async function PortfolioPage({
 
   return (
     <main>
+      <PageBanner pageSlug="portfolio" />
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
         <SectionHeading
           title={pick(pageContent?.title, "title")}

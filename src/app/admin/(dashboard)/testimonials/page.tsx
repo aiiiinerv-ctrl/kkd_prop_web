@@ -1,11 +1,12 @@
 import { canDeleteContent, canPublishContent, requireRole } from "@/lib/auth";
+import { getPageBannerAdmin } from "@/lib/admin/page-banner-admin";
 import { prisma } from "@/lib/db";
 import { TestimonialsClient } from "./testimonials-client";
 
 export default async function AdminTestimonialsPage() {
   const session = await requireRole("ADMIN", "SALES", "MARKETING", "EDITOR");
 
-  const [testimonials, projects] = await Promise.all([
+  const [testimonials, projects, bannerData] = await Promise.all([
     prisma.testimonial.findMany({
       orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
       include: { project: true },
@@ -14,6 +15,7 @@ export default async function AdminTestimonialsPage() {
       where: { isPublished: true },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
     }),
+    getPageBannerAdmin("testimonials"),
   ]);
 
   return (
@@ -37,6 +39,7 @@ export default async function AdminTestimonialsPage() {
       }))}
       canPublish={canPublishContent(session.user.role)}
       canDelete={canDeleteContent(session.user.role)}
+      bannerData={bannerData}
     />
   );
 }

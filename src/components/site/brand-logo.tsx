@@ -4,20 +4,28 @@ import { cn } from "@/lib/utils";
 export function BrandLogo({
   className,
   isTheme3Family = false,
+  srcOverride,
 }: {
   className?: string;
   isTheme3Family?: boolean;
+  srcOverride?: string | null;
 }) {
+  const fallback = isTheme3Family ? "/brand/logo-ex.png" : "/brand/logo.png";
+  const src = srcOverride ?? fallback;
+  const width = isTheme3Family ? Math.round(381 * 1.15) : 381;
+  const height = isTheme3Family ? Math.round(297 * 1.15) : 297;
+
   return (
     <Image
-      src={isTheme3Family ? "/brand/logo-ex.png" : "/brand/logo.png"}
+      src={src}
       alt="KKD PROPERTY"
-      width={isTheme3Family ? Math.round(381 * 1.15) : 381}
-      height={isTheme3Family ? Math.round(297 * 1.15) : 297}
+      width={width}
+      height={height}
       priority
+      unoptimized={!!srcOverride}
       className={cn(
         "h-10 w-auto object-contain select-none",
-        isTheme3Family && "h-[46px]",
+        isTheme3Family && !srcOverride && "h-[46px]",
         className
       )}
     />

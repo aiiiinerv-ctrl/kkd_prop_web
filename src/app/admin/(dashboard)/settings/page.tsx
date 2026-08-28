@@ -1,4 +1,6 @@
 import { requireRole } from "@/lib/auth";
+import { getPageBannerAdmin } from "@/lib/admin/page-banner-admin";
+import { resolveSiteLogoUrls } from "@/lib/content/page-banner";
 import { prisma } from "@/lib/db";
 import { META_KEYS } from "@/lib/seo";
 import type { Role } from "@/lib/auth";
@@ -14,12 +16,19 @@ export default async function SettingsPage() {
     paymentSettings,
     siteSettings,
     pageSeoRows,
+    contactBannerData,
   ] = await Promise.all([
     isAdmin ? prisma.bookingCapacitySetting.findFirst() : null,
     isAdmin ? prisma.paymentSettings.findFirst() : null,
     prisma.siteSettings.findFirst(),
     prisma.pageSeo.findMany({ where: { key: { in: META_KEYS as unknown as string[] } } }),
+    getPageBannerAdmin("contact"),
   ]);
+
+  const logoUrls = await resolveSiteLogoUrls(
+    siteSettings?.headerLogoKey,
+    siteSettings?.footerLogoKey
+  );
 
   // Build a keyed map so the client doesn't have to search
   const pageSeoMap = Object.fromEntries(pageSeoRows.map((r) => [r.key, r]));
@@ -85,6 +94,9 @@ export default async function SettingsPage() {
           ];
         })
       )}
+      headerLogoUrl={logoUrls.header}
+      footerLogoUrl={logoUrls.footer}
+      contactBannerData={contactBannerData}
     />
   );
 }

@@ -1,5 +1,6 @@
 import { BatteryCharging, Check, ShieldCheck, SprayCan, Tent, Wrench, Zap, type LucideIcon } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { PageBanner } from "@/components/site/page-banner";
 import { CtaBanner } from "@/components/site/cta-banner";
 import { SectionHeading } from "@/components/site/section-heading";
 import { Link } from "@/i18n/navigation";
@@ -90,6 +91,7 @@ export default async function ServicesPage({
 
   return (
     <main>
+      <PageBanner pageSlug="services" />
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
         <SectionHeading
           title={pick(pageContent?.title, "title")}

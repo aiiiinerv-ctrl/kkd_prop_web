@@ -6,6 +6,7 @@ import {
   updateTestimonial,
 } from "@/actions/testimonials";
 import { BilingualTabs, CrudPage } from "@/components/admin/crud-page";
+import { PageBannerPanel, type PageBannerAdminData } from "@/components/admin/page-banner-panel";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,14 +36,18 @@ export function TestimonialsClient({
   projects,
   canPublish,
   canDelete,
+  bannerData,
 }: {
   testimonials: TestimonialRow[];
   projects: ProjectOption[];
   canPublish: boolean;
   canDelete: boolean;
+  bannerData: PageBannerAdminData;
 }) {
   return (
-    <CrudPage
+    <div className="max-w-3xl space-y-6">
+      <PageBannerPanel key={`testimonials-${bannerData.version}`} pageSlug="testimonials" data={bannerData} />
+      <CrudPage
       title="รีวิวลูกค้า"
       addLabel="เพิ่มรีวิว"
       dialogTitle={(editing) => (editing ? "แก้ไขรีวิว" : "เพิ่มรีวิวใหม่")}
@@ -164,5 +169,6 @@ export function TestimonialsClient({
         </>
       )}
     />
+    </div>
   );
 }

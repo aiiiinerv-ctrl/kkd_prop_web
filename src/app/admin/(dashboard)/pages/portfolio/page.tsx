@@ -5,6 +5,7 @@ import {
   canPublishContent,
   requireRole,
 } from "@/lib/auth";
+import { getPageBannerAdmin } from "@/lib/admin/page-banner-admin";
 import { prisma } from "@/lib/db";
 import { storage } from "@/lib/storage";
 import { PortfolioAdminShell } from "./portfolio-admin-shell";
@@ -15,7 +16,7 @@ export default async function PagesPortfolioPage() {
 
   const canMutateProperties = canManageSiteSettings(session.user.role);
 
-  const [pageRow, pageSeo, projects] = await Promise.all([
+  const [pageRow, pageSeo, projects, bannerData] = await Promise.all([
     prisma.portfolioPageContent.findUnique({ where: { key: "portfolio" } }),
     canMutateProperties
       ? prisma.pageSeo.findUnique({ where: { key: "portfolio" } })
@@ -23,6 +24,7 @@ export default async function PagesPortfolioPage() {
     prisma.portfolioProject.findMany({
       orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
     }),
+    getPageBannerAdmin("portfolio"),
   ]);
 
   return (
@@ -81,6 +83,7 @@ export default async function PagesPortfolioPage() {
       }))}
       canPublish={canPublishContent(session.user.role)}
       canDelete={canDeleteContent(session.user.role)}
+      bannerData={bannerData}
     />
   );
 }

@@ -10,7 +10,7 @@ import { resolveQuickContact, SITE_CONTACT_FALLBACKS } from "@/lib/site-contact"
 
 const FOOTER_SERVICE_LINKS = ["serviceOnGrid", "serviceHybrid", "serviceOffGrid", "serviceCleaning"] as const;
 
-type Props = { settings: SiteSettingsView | null };
+type Props = { settings: SiteSettingsView | null; footerLogoUrl?: string | null };
 
 type ContactLine = {
   key: string;
@@ -18,7 +18,7 @@ type ContactLine = {
   content: React.ReactNode;
 };
 
-export function SiteFooter({ settings }: Props) {
+export function SiteFooter({ settings, footerLogoUrl }: Props) {
   const t = useTranslations("footer");
   const tNav = useTranslations("nav");
   const year = new Date().getFullYear();
@@ -77,7 +77,7 @@ export function SiteFooter({ settings }: Props) {
     <footer id="site-footer" className="site-footer border-t border-border bg-muted/50">
       <div className="site-footer-main mx-auto grid max-w-7xl gap-10 px-4 py-14 text-center sm:px-6 sm:text-left md:grid-cols-2 lg:grid-cols-[2fr_1fr_1.5fr_1.5fr]">
         <div className="flex flex-col items-center sm:items-start">
-          <BrandLogo className="mb-4" />
+          <BrandLogo className="mb-4" srcOverride={footerLogoUrl} />
           <p className="text-sm leading-relaxed text-muted-foreground">
             {description ?? t("description")}
           </p>

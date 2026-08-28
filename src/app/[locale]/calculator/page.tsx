@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { PageBanner } from "@/components/site/page-banner";
 import { Reveal } from "@/components/site/reveal";
 import { Link } from "@/i18n/navigation";
 import { CalculatorClient } from "./calculator-client";
@@ -49,6 +50,7 @@ export default async function CalculatorPage({
 
   return (
     <main className="bg-background">
+      <PageBanner pageSlug="calculator" />
       <section className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6">
         <Reveal className="mx-auto mb-8 max-w-3xl text-center">
           <p className="text-sm font-bold text-accent-foreground">

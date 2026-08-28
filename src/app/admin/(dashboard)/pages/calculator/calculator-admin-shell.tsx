@@ -2,6 +2,8 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageShell } from "@/components/admin/pages";
+import { PageBannerTabContent, PageBannerTabTrigger } from "@/components/admin/page-banner-tabs";
+import type { PageBannerAdminData } from "@/components/admin/page-banner-panel";
 import { PagePropertiesPanel, type PageSeoFormData } from "../home/home-properties-panel";
 import {
   CalculatorConfigClient,
@@ -18,12 +20,14 @@ export function CalculatorAdminShell({
   pageSeo,
   pageContent,
   calculatorConfig,
+  bannerData,
 }: {
   canManageConfig: boolean;
   canMutateProperties: boolean;
   pageSeo: PageSeoFormData | null;
   pageContent: CalculatorPageFormData | null;
   calculatorConfig: CalculatorConfigFormData | null;
+  bannerData: PageBannerAdminData;
 }) {
   const content = <CalculatorPageContentClient data={pageContent} />;
   const configTab =
@@ -34,26 +38,28 @@ export function CalculatorAdminShell({
   if (!canMutateProperties || !pageSeo) {
     return (
       <PageShell pageKey="calculator" title="เครื่องคำนวณ (Pages)">
-        {configTab ? (
-          <Tabs defaultValue="content">
-            <TabsList>
-              <TabsTrigger value="content" id="calculator-tab-content">
-                เนื้อหา
-              </TabsTrigger>
+        <Tabs defaultValue="content">
+          <TabsList>
+            <TabsTrigger value="content" id="calculator-tab-content">
+              เนื้อหา
+            </TabsTrigger>
+            <PageBannerTabTrigger id="calculator-tab-banner" />
+            {configTab && (
               <TabsTrigger value="config" id="calculator-tab-config">
                 ตัวเลขการคำนวณ
               </TabsTrigger>
-            </TabsList>
-            <TabsContent value="content" className="pt-4">
-              {content}
-            </TabsContent>
+            )}
+          </TabsList>
+          <TabsContent value="content" className="pt-4">
+            {content}
+          </TabsContent>
+          <PageBannerTabContent pageSlug="calculator" data={bannerData} />
+          {configTab && (
             <TabsContent value="config" className="pt-4">
               {configTab}
             </TabsContent>
-          </Tabs>
-        ) : (
-          content
-        )}
+          )}
+        </Tabs>
       </PageShell>
     );
   }
@@ -62,13 +68,14 @@ export function CalculatorAdminShell({
     <PageShell
       pageKey="calculator"
       title="เครื่องคำนวณ (Pages)"
-      description="เนื้อหาหน้า · ตัวเลขการคำนวณ · Properties (SEO)"
+      description="เนื้อหาหน้า · แบนเนอร์ · ตัวเลขการคำนวณ · Properties (SEO)"
     >
       <Tabs defaultValue="content">
         <TabsList>
           <TabsTrigger value="content" id="calculator-tab-content">
             เนื้อหา
           </TabsTrigger>
+          <PageBannerTabTrigger id="calculator-tab-banner" />
           {configTab && (
             <TabsTrigger value="config" id="calculator-tab-config">
               ตัวเลขการคำนวณ
@@ -81,6 +88,7 @@ export function CalculatorAdminShell({
         <TabsContent value="content" className="pt-4">
           {content}
         </TabsContent>
+        <PageBannerTabContent pageSlug="calculator" data={bannerData} />
         {configTab && (
           <TabsContent value="config" className="pt-4">
             {configTab}

@@ -1,6 +1,7 @@
 import { Clock, Mail, MapPin, Phone } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CtaBanner } from "@/components/site/cta-banner";
+import { PageBanner } from "@/components/site/page-banner";
 import { SectionHeading } from "@/components/site/section-heading";
 import { SOCIAL_BRAND_ICON_MAP, SOCIAL_LINK_ORDER } from "@/components/site/social-brand-icons";
 import { getSiteSettings } from "@/lib/content";
@@ -105,6 +106,7 @@ export default async function ContactPage({
 
   return (
     <main>
+      <PageBanner pageSlug="contact" />
       <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
         <SectionHeading
           title={contactTitle}

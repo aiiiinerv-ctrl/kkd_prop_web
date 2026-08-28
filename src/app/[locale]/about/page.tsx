@@ -1,5 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CtaBanner } from "@/components/site/cta-banner";
+import { PageBanner } from "@/components/site/page-banner";
 import { Reveal } from "@/components/site/reveal";
 import { SectionHeading } from "@/components/site/section-heading";
 import { StatsRow } from "@/components/site/stats-row";
@@ -101,6 +102,7 @@ export default async function AboutPage({
 
   return (
     <main>
+      <PageBanner pageSlug="about" />
       <section className="bg-gradient-to-b from-[#fff5e6] to-background">
         <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
           <SectionHeading

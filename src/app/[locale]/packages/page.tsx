@@ -1,6 +1,7 @@
 import { Check } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CtaBanner } from "@/components/site/cta-banner";
+import { PageBanner } from "@/components/site/page-banner";
 import { SeasonalProductionTable } from "@/components/site/seasonal-production-table";
 import { SectionHeading } from "@/components/site/section-heading";
 import { Link } from "@/i18n/navigation";
@@ -58,6 +59,7 @@ export default async function PackagesPage({
 
   return (
     <main>
+      <PageBanner pageSlug="packages" />
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
         <SectionHeading
           title={pick(pageContent?.title, "title")}

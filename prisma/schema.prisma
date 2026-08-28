@@ -297,7 +297,33 @@ model SiteSettings {
   ctaSecondaryLabelTh String?
   ctaSecondaryLabelEn String?
   ctaVersion          Int      @default(1)
+  headerLogoKey       String?
+  footerLogoKey       String?
   updatedAt           DateTime @updatedAt
+}
+
+// Optional full-width page banner — one row per public menu page slug
+// (see BANNER_PAGE_SLUGS in src/lib/page-banners.ts). Home uses HomePageContent hero.
+model PageBanner {
+  id        String            @id @default(cuid())
+  pageSlug  String            @unique @db.VarChar(40)
+  mode      String            @default("OFF") @db.VarChar(10)
+  version   Int               @default(1)
+  updatedAt DateTime          @updatedAt
+  slides    PageBannerSlide[]
+}
+
+model PageBannerSlide {
+  id        String     @id @default(cuid())
+  bannerId  String
+  banner    PageBanner @relation(fields: [bannerId], references: [id], onDelete: Cascade)
+  sortOrder Int        @default(0)
+  imageKey  String
+  altTh     String
+  altEn     String
+  linkPath  String?    @db.VarChar(180)
+
+  @@index([bannerId, sortOrder])
 }
 
 // Per-page SEO data — one row per MetaKey (10 rows in seed).

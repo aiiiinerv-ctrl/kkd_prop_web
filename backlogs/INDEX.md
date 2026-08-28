@@ -1,12 +1,13 @@
 # Backlog Index
 
-Updated: 2026-08-28 (Calculator config map #102 planned)  
+Updated: 2026-08-28 (Page banners + branding map #107 charted)  
 Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 ## Active
 
 | GitHub | PLAN | Notes |
 |---|---|---|
+| [#107](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/107) | [`ISSUE_107_page_banners_branding_map`](ISSUE_107_page_banners_branding_map/PLAN.md) | Wayfinder — page banners + header/footer logo (planning only) |
 | [#102](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/102) | [`ISSUE_102_calculator_config_map`](ISSUE_102_calculator_config_map/PLAN.md) | Wayfinder — calculator admin config (planning complete 2026-08-28) |
 | [#77](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/77) | [`ISSUE_077_about_cms_enhancement_map`](ISSUE_077_about_cms_enhancement_map/PLAN.md) | Wayfinder — About credentials heading + editable icons |
 | [#76](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/76) | [`ISSUE_076_pages_cms_sprint12_cleanup`](ISSUE_076_pages_cms_sprint12_cleanup/PLAN.md) | Owner approved 2026-08-28 — execute blocked until 2026-09-11 |

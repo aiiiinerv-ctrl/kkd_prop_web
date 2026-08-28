@@ -20,7 +20,15 @@ const NAV_ITEMS = [
   { key: "contact", href: "/contact" },
 ] as const;
 
-export function SiteHeader({ showTestimonials, ctaLabel }: { showTestimonials: boolean; ctaLabel: string | null }) {
+export function SiteHeader({
+  showTestimonials,
+  ctaLabel,
+  headerLogoUrl,
+}: {
+  showTestimonials: boolean;
+  ctaLabel: string | null;
+  headerLogoUrl?: string | null;
+}) {
   const t = useTranslations("nav");
   const activePath = usePathname();
   const { mobileNavOpen, setMobileNavOpen } = useUiStore();
@@ -31,7 +39,7 @@ export function SiteHeader({ showTestimonials, ctaLabel }: { showTestimonials: b
     <header className="site-header sticky top-0 z-50 bg-background shadow-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <Link href="/" onClick={() => setMobileNavOpen(false)}>
-          <BrandLogo isTheme3Family />
+          <BrandLogo isTheme3Family srcOverride={headerLogoUrl} />
         </Link>
 
         <nav className="hidden items-center gap-6 lg:flex">

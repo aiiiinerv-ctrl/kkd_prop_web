@@ -1,4 +1,5 @@
 import { canDeleteContent, canManageContent, canManageSiteSettings, canPublishContent, requireRole } from "@/lib/auth";
+import { getPageBannerAdmin } from "@/lib/admin/page-banner-admin";
 import { prisma } from "@/lib/db";
 import { storage } from "@/lib/storage";
 import { ServicesAdminShell } from "./services-admin-shell";
@@ -9,12 +10,13 @@ export default async function PagesServicesPage() {
 
   const canMutateProperties = canManageSiteSettings(session.user.role);
 
-  const [pageRow, pageSeo, services] = await Promise.all([
+  const [pageRow, pageSeo, services, bannerData] = await Promise.all([
     prisma.servicesPageContent.findUnique({ where: { key: "services" } }),
     canMutateProperties
       ? prisma.pageSeo.findUnique({ where: { key: "services" } })
       : Promise.resolve(null),
     prisma.service.findMany({ orderBy: { sortOrder: "asc" } }),
+    getPageBannerAdmin("services"),
   ]);
 
   return (
@@ -74,6 +76,7 @@ export default async function PagesServicesPage() {
       }))}
       canPublish={canPublishContent(session.user.role)}
       canDelete={canDeleteContent(session.user.role)}
+      bannerData={bannerData}
     />
   );
 }

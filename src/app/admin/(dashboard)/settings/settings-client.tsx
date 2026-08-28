@@ -7,6 +7,7 @@ import { updatePaymentSettings } from "@/actions/payment-settings";
 import { previewPromptPayQr } from "@/actions/promptpay-preview";
 import { updateContactSettings, updateHeaderFooterSettings, updatePageSeo } from "@/actions/site-settings";
 import { BilingualTabs } from "@/components/admin/crud-page";
+import { PageBannerPanel, type PageBannerAdminData } from "@/components/admin/page-banner-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -410,18 +411,36 @@ function ContactTab({ siteSettings }: { siteSettings: SiteSettingsForm | null })
   );
 }
 
-function HeaderFooterTab({ siteSettings }: { siteSettings: SiteSettingsForm | null }) {
+function HeaderFooterTab({
+  siteSettings,
+  headerLogoUrl,
+  footerLogoUrl,
+}: {
+  siteSettings: SiteSettingsForm | null;
+  headerLogoUrl: string | null;
+  footerLogoUrl: string | null;
+}) {
   const [isPending, startTransition] = useTransition();
   const [ctaTh, setCtaTh] = useState(siteSettings?.headerCtaLabelTh ?? "");
   const [ctaEn, setCtaEn] = useState(siteSettings?.headerCtaLabelEn ?? "");
   const [footerDescTh, setFooterDescTh] = useState(siteSettings?.footerDescriptionTh ?? "");
   const [footerDescEn, setFooterDescEn] = useState(siteSettings?.footerDescriptionEn ?? "");
+  const [headerPreview, setHeaderPreview] = useState<string | null>(null);
+  const [footerPreview, setFooterPreview] = useState<string | null>(null);
+  const [removeHeaderLogo, setRemoveHeaderLogo] = useState(false);
+  const [removeFooterLogo, setRemoveFooterLogo] = useState(false);
 
   const handleSubmit = (formData: FormData) => {
+    if (removeHeaderLogo) formData.set("removeHeaderLogo", "1");
+    if (removeFooterLogo) formData.set("removeFooterLogo", "1");
     startTransition(async () => {
       const result = await updateHeaderFooterSettings(formData);
       if (result.ok) {
-        toast.success("บันทึกข้อความ Header / Footer เรียบร้อย");
+        toast.success("บันทึก Header / Footer เรียบร้อย");
+        setRemoveHeaderLogo(false);
+        setRemoveFooterLogo(false);
+        setHeaderPreview(null);
+        setFooterPreview(null);
       } else {
         toast.error(result.error);
       }
@@ -437,7 +456,94 @@ function HeaderFooterTab({ siteSettings }: { siteSettings: SiteSettingsForm | nu
   }
 
   return (
-    <form action={handleSubmit} className="space-y-4" noValidate>
+    <form action={handleSubmit} className="space-y-4" noValidate encType="multipart/form-data">
+      <div className="rounded-xl border border-border/70 bg-card p-6">
+        <h2 className="mb-1 font-semibold">โลโก้ Header และ Footer</h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          อัปโหลดโลโก้แยกกัน — ไม่อัปโหลดจะใช้โลโก้เริ่มต้นของเว็บ
+        </p>
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-3">
+            <p className="text-sm font-medium">โลโก้ Header</p>
+            <div className="flex h-16 items-center rounded-lg border border-border/70 bg-muted/30 px-4">
+              {headerPreview || (headerLogoUrl && !removeHeaderLogo) ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={headerPreview ?? headerLogoUrl ?? undefined}
+                  alt=""
+                  className="h-10 w-auto object-contain"
+                />
+              ) : (
+                <span className="text-xs text-muted-foreground">ใช้โลโก้เริ่มต้น</span>
+              )}
+            </div>
+            <Input
+              id="hf-header-logo"
+              name="headerLogo"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                setHeaderPreview(f ? URL.createObjectURL(f) : null);
+                setRemoveHeaderLogo(false);
+              }}
+            />
+            {headerLogoUrl && !removeHeaderLogo && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setRemoveHeaderLogo(true);
+                  setHeaderPreview(null);
+                }}
+              >
+                ลบโลโก้ Header (ใช้ค่าเริ่มต้น)
+              </Button>
+            )}
+          </div>
+          <div className="space-y-3">
+            <p className="text-sm font-medium">โลโก้ Footer</p>
+            <div className="flex h-16 items-center rounded-lg border border-border/70 bg-muted/30 px-4">
+              {footerPreview || (footerLogoUrl && !removeFooterLogo) ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={footerPreview ?? footerLogoUrl ?? undefined}
+                  alt=""
+                  className="h-10 w-auto object-contain"
+                />
+              ) : (
+                <span className="text-xs text-muted-foreground">ใช้โลโก้เริ่มต้น</span>
+              )}
+            </div>
+            <Input
+              id="hf-footer-logo"
+              name="footerLogo"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                setFooterPreview(f ? URL.createObjectURL(f) : null);
+                setRemoveFooterLogo(false);
+              }}
+            />
+            {footerLogoUrl && !removeFooterLogo && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setRemoveFooterLogo(true);
+                  setFooterPreview(null);
+                }}
+              >
+                ลบโลโก้ Footer (ใช้ค่าเริ่มต้น)
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="rounded-xl border border-border/70 bg-card p-6">
         <h2 className="mb-1 font-semibold">ข้อความบน Header และ Footer</h2>
         <p className="mb-4 text-sm text-muted-foreground">
@@ -515,12 +621,18 @@ export function SettingsClient({
   paymentSettings,
   siteSettings,
   pageSeoMap,
+  headerLogoUrl,
+  footerLogoUrl,
+  contactBannerData,
 }: {
   role: Role;
   setting: { maxPerDay: number; maxPerSlot: number } | null;
   paymentSettings: PaymentSettingsForm | null;
   siteSettings: SiteSettingsForm | null;
   pageSeoMap: Record<string, PageSeoEntry>;
+  headerLogoUrl: string | null;
+  footerLogoUrl: string | null;
+  contactBannerData: PageBannerAdminData;
 }) {
   const [isPending, startTransition] = useTransition();
   const [isPaymentPending, startPaymentTransition] = useTransition();
@@ -586,6 +698,9 @@ export function SettingsClient({
           </TabsTrigger>
           <TabsTrigger id="st-tab-headfoot" value="headfoot" className="shrink-0 px-3">
             Header / Footer
+          </TabsTrigger>
+          <TabsTrigger id="st-tab-banners" value="banners" className="shrink-0 px-3">
+            แบนเนอร์
           </TabsTrigger>
         </TabsList>
 
@@ -695,7 +810,15 @@ export function SettingsClient({
         </TabsContent>
 
         <TabsContent value="headfoot" className="space-y-5 pt-3">
-          <HeaderFooterTab siteSettings={siteSettings} />
+          <HeaderFooterTab
+            siteSettings={siteSettings}
+            headerLogoUrl={headerLogoUrl}
+            footerLogoUrl={footerLogoUrl}
+          />
+        </TabsContent>
+
+        <TabsContent value="banners" className="space-y-5 pt-3">
+          <PageBannerPanel key={`contact-${contactBannerData.version}`} pageSlug="contact" data={contactBannerData} />
         </TabsContent>
       </Tabs>
     </div>
