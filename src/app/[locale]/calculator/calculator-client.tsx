@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Link } from "@/i18n/navigation";
 import {
   calculateSavings,
@@ -32,6 +32,13 @@ export function CalculatorClient({
   const tCommon = useTranslations("common");
   const locale = useLocale();
   const { bill, setBill } = useCalculatorStore();
+
+  useEffect(() => {
+    const n = Number(bill);
+    if (!Number.isFinite(n)) return;
+    const clamped = Math.min(config.maxBill, Math.max(config.minBill, n));
+    if (clamped !== n) setBill(String(clamped));
+  }, [config.minBill, config.maxBill, bill, setBill]);
 
   const billValue = Number(bill);
   const displayedResult = useMemo(
