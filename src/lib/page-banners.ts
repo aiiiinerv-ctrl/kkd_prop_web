@@ -21,27 +21,25 @@ export type BannerMode = (typeof BANNER_MODES)[number];
 export const BANNER_SLIDE_MIN = 2;
 export const BANNER_SLIDE_MAX = 5;
 
-/** Internal link presets for banner slides — locale prefix added at render time. */
-export const BANNER_LINK_PRESETS: readonly { value: string; labelTh: string }[] = [
-  { value: "", labelTh: "ไม่มีลิงก์" },
-  { value: "/booking", labelTh: "สอบถาม/นัดสำรวจ" },
-  { value: "/packages", labelTh: "แพ็กเกจ" },
-  { value: "/services", labelTh: "บริการ" },
-  { value: "/about", labelTh: "เกี่ยวกับเรา" },
-  { value: "/portfolio", labelTh: "ผลงาน" },
-  { value: "/testimonials", labelTh: "รีวิวลูกค้า" },
-  { value: "/calculator", labelTh: "เครื่องคำนวณ" },
-  { value: "/contact", labelTh: "ติดต่อเรา" },
-];
-
-const BANNER_LINK_SET = new Set(BANNER_LINK_PRESETS.map((p) => p.value));
-
 export function isBannerPageSlug(value: string): value is BannerPageSlug {
   return (BANNER_PAGE_SLUGS as readonly string[]).includes(value);
 }
 
+/**
+ * Free-typed banner link (#116) — admin types the path/URL directly instead
+ * of picking from a fixed preset list. Still schema-gated server-side to
+ * block dangerous URL schemes (`javascript:`, `data:`, ...): empty, an
+ * internal relative path starting with "/", or an absolute http(s)/mailto/tel
+ * URL. Next's <Link> auto-prefixes the current locale onto a relative path.
+ */
 export function isBannerLinkPath(value: string): boolean {
-  return BANNER_LINK_SET.has(value);
+  if (value === "") return true;
+  if (value.startsWith("/")) return true;
+  return /^(https?:|mailto:|tel:)/i.test(value);
+}
+
+export function isExternalBannerLink(value: string): boolean {
+  return /^(https?:|mailto:|tel:)/i.test(value);
 }
 
 export function bannerPageLabel(slug: BannerPageSlug): string {

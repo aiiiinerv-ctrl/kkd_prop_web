@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "@/i18n/navigation";
 import type { PageBannerSlideView } from "@/lib/content/page-banner";
+import { isExternalBannerLink } from "@/lib/page-banners";
 import { cn } from "@/lib/utils";
 
 function BannerSlideImage({
@@ -28,6 +29,18 @@ function BannerSlideImage({
   );
 
   if (slide.linkPath) {
+    if (isExternalBannerLink(slide.linkPath)) {
+      const isHttp = /^https?:/i.test(slide.linkPath);
+      return (
+        <a
+          href={slide.linkPath}
+          className="relative block size-full"
+          {...(isHttp ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+        >
+          {img}
+        </a>
+      );
+    }
     return (
       <Link href={slide.linkPath} className="relative block size-full">
         {img}

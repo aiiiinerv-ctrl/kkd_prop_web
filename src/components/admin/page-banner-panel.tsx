@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  BANNER_LINK_PRESETS,
   BANNER_SLIDE_MAX,
   type BannerMode,
   type BannerPageSlug,
@@ -230,18 +229,15 @@ export function PageBannerPanel({
 
               <div className="space-y-1.5">
                 <Label htmlFor={`banner-link-${pageSlug}-${index}`}>ลิงก์เมื่อคลิก (ไม่บังคับ)</Label>
-                <select
+                <Input
                   id={`banner-link-${pageSlug}-${index}`}
                   value={slide.linkPath}
                   onChange={(e) => updateSlide(index, { linkPath: e.target.value })}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-                >
-                  {BANNER_LINK_PRESETS.map((p) => (
-                    <option key={p.value || "none"} value={p.value}>
-                      {p.labelTh}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="/packages หรือ https://..."
+                />
+                <p className="text-xs text-muted-foreground">
+                  เว้นว่าง = ไม่มีลิงก์ · ใส่ path ภายในเว็บ (เช่น /packages) หรือ URL เต็ม (https://…)
+                </p>
               </div>
 
               <BilingualTabs
