@@ -2,7 +2,7 @@
 
 Date: 2026-08-28  
 Wayfinder map: [Map: Contact settings — admin แก้ติดต่อ/โซเชี่ยล](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/88)  
-Status: **E1 complete 2026-08-28** — E2 optional (footer fallback, JSON-LD) not started
+Status: **Deployed production 2026-08-28** — no DDL; smoke ✓ (`/th/contact` Instagram, `/en/contact` Email)
 
 > ตาม owner rules: อย่าแก้โค้ดจน research + grilling + live-verify matrix ล็อกแล้ว
 
