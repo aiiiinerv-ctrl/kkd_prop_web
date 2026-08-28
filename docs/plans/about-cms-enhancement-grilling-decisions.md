@@ -49,6 +49,7 @@ Map: [#77](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/77)
 
 ## Next map steps
 
-1. [#84](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/84) — Prototype live web-view
-2. [#85](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/85) — Sprint plan sign-off
-3. [#86](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/86) — Commit implementation plan + verify matrix
+1. ~~[#84](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/84) — Prototype~~ → [`assets/about-cms-enhancement-prototype/`](assets/about-cms-enhancement-prototype/)
+2. ~~[#85](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/85)~~ → [`about-cms-enhancement-implementation-sprints.md`](about-cms-enhancement-implementation-sprints.md) (owner sign-off checkboxes)
+3. ~~[#86](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/86)~~ → [`about-cms-enhancement-live-verification-matrix.md`](about-cms-enhancement-live-verification-matrix.md)
+4. Close map #77 after owner signs #85 → open execution issue (E1–E4)

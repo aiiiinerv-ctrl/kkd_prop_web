@@ -25,6 +25,9 @@ Statuses below are **orientation only** (checked against closed issues /
 | [pages-cms-properties-security-guardrails.md](pages-cms-properties-security-guardrails.md) | RBAC / upload / validation |
 | [pages-cms-routing-cache-impact-analysis.md](pages-cms-routing-cache-impact-analysis.md) | Cache / revalidate impact |
 | [pages-cms-live-verification-matrix.md](pages-cms-live-verification-matrix.md) | Live evidence criteria |
+| [about-cms-enhancement-implementation-sprints.md](about-cms-enhancement-implementation-sprints.md) | About enhancement E1–E4 — map [#77](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/77) |
+| [about-cms-enhancement-live-verification-matrix.md](about-cms-enhancement-live-verification-matrix.md) | About enhancement live-verify |
+| [about-cms-enhancement-*-research.md](about-cms-enhancement-inventory-research.md) | About enhancement research pack #78–#81 |
 | [kkd-shared-hosting-redeploy-runbook.md](kkd-shared-hosting-redeploy-runbook.md) | **Required read** before every production redeploy |
 | [repo-hygiene-docs-system-tasks.md](repo-hygiene-docs-system-tasks.md) | Hygiene track (gitignore decision still owner HITL) |
 

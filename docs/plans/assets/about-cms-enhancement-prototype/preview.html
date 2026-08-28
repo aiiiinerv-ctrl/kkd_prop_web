@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>About CMS enhancement — prototype (#84)</title>
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+  <style>
+    :root {
+      --brand-orange: #e85d04;
+      --brand-gold: #f4a261;
+      --primary: #1e3a5f;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --card: #fff;
+      --bg: #f8fafc;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: #0f172a; }
+    header {
+      background: var(--primary); color: #fff; padding: 12px 20px;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+    }
+    header h1 { margin: 0; font-size: 1rem; font-weight: 600; }
+    header .badge { background: #fbbf24; color: #1e3a5f; font-size: 11px; padding: 2px 8px; border-radius: 999px; }
+    .layout { display: grid; grid-template-columns: 1fr 1fr; min-height: calc(100vh - 52px); }
+    @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
+    .panel { padding: 20px; overflow: auto; }
+    .admin { background: #fff; border-right: 1px solid var(--border); }
+    .preview-wrap { background: linear-gradient(180deg, #fff5e6 0%, var(--bg) 120px); }
+    h2 { font-size: 1.1rem; margin: 0 0 4px; }
+    .hint { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+    .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+    .tab {
+      padding: 6px 14px; border: 1px solid var(--border); background: #fff; border-radius: 6px;
+      cursor: pointer; font-size: 13px;
+    }
+    .tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .section { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .section h3 { font-size: 14px; font-weight: 700; margin: 0 0 8px; }
+    label { display: block; font-size: 12px; font-weight: 500; margin: 8px 0 4px; }
+    input, textarea, select {
+      width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;
+    }
+    textarea { min-height: 56px; resize: vertical; }
+    .card-row {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px;
+    }
+    @media (max-width: 700px) { .card-row { grid-template-columns: 1fr; } }
+    .mini-card {
+      border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: #fafafa;
+    }
+    .mini-card .slot { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .preview-locale { display: flex; gap: 6px; margin-bottom: 12px; }
+    .preview-section { background: rgba(241,245,249,.6); padding: 24px 16px; border-radius: 12px; }
+    .preview-heading { text-align: center; margin-bottom: 20px; }
+    .preview-heading h2 { font-size: 1.35rem; font-weight: 800; color: var(--primary); margin: 0; }
+    .preview-heading p { font-size: 14px; color: var(--muted); margin: 8px 0 0; max-width: 560px; margin-inline: auto; }
+    .pub-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 12px;
+      text-align: center; box-shadow: 0 1px 3px rgb(0 0 0 / 6%);
+    }
+    .icon-circle {
+      width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 12px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .icon-circle.cred { background: rgb(232 93 4 / 10%); color: var(--brand-orange); }
+    .pub-card h4 { margin: 0; font-size: 14px; font-weight: 700; color: var(--primary); }
+    .pub-card p { margin: 8px 0 0; font-size: 12px; color: var(--muted); line-height: 1.45; }
+    .hidden-band { font-size: 12px; color: var(--muted); font-style: italic; text-align: center; padding: 24px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>About CMS enhancement — prototype <span class="badge">#84 · ไม่ใช่ production</span></h1>
+    <span style="font-size:12px;opacity:.9">Lucide allowlist + credentials section heading (Standard scope)</span>
+  </header>
+
+  <div class="layout">
+    <div class="panel admin">
+      <h2>Admin — เนื้อหา (mock)</h2>
+      <p class="hint">แก้ฟิลด์แล้วดู preview ทางขวา · บันทึก/audit ยังไม่มี (execution รอบถัดไป)</p>
+
+      <div class="tabs" id="adminTabs">
+        <button type="button" class="tab active" data-locale="th">ภาษาไทย</button>
+        <button type="button" class="tab" data-locale="en">English</button>
+      </div>
+
+      <div class="section">
+        <h3>หัวข้อส่วน credentials (ใหม่)</h3>
+        <label>หัวข้อ section — ก่อน 3 กล่อง</label>
+        <input type="text" id="credSectionTitle" data-th="ทำไมลูกค้าไว้วางใจเรา" data-en="Why customers trust us" />
+        <label>คำอธิบาย section (optional)</label>
+        <textarea id="credSectionDesc" data-th="จดทะเบียนถูกต้อง ทีมวิศวกรมีใบอนุญาต และผลงานที่พิสูจน์แล้ว" data-en="Properly registered, licensed engineers, and proven track record"></textarea>
+      </div>
+
+      <div class="section">
+        <h3>กล่อง credentials (3) + ไอคอน</h3>
+        <div class="card-row" id="credFields"></div>
+      </div>
+
+      <div class="section">
+        <h3>ทีม (3) + ไอคอน</h3>
+        <div class="card-row" id="teamFields"></div>
+      </div>
+
+      <div class="section">
+        <h3>Standard scope — labels (form only)</h3>
+        <label>statsProjectsLabel</label>
+        <input type="text" value="โครงการที่ติดตั้งแล้ว" />
+        <label>testimonialsTitle</label>
+        <input type="text" value="เสียงจากลูกค้าจริง" />
+        <p class="hint">Stats/testimonials preview ไม่รวมใน mock นี้ — มีแค่ฟิลด์ admin</p>
+      </div>
+    </div>
+
+    <div class="panel preview-wrap">
+      <h2>Public preview</h2>
+      <div class="preview-locale">
+        <button type="button" class="tab active" data-plocale="th">/th/about</button>
+        <button type="button" class="tab" data-plocale="en">/en/about</button>
+      </div>
+      <div id="publicPreview"></div>
+    </div>
+  </div>
+
+  <script>
+    const ICONS = [
+      "Building2", "BadgeCheck", "Award", "PencilRuler", "Wrench", "Headset",
+      "Shield", "HardHat", "Sun", "Zap", "Users", "CheckCircle2"
+    ];
+    const DEFAULTS = {
+      cred: ["Building2", "BadgeCheck", "Award"],
+      team: ["PencilRuler", "Wrench", "Headset"]
+    };
+    const CRED_COPY = {
+      th: [
+        { t: "จดทะเบียนถูกต้องในประเทศไทย", d: "เลขทะเบียน DBD: 0105566007521" },
+        { t: "ทีมวิศวกรมีใบอนุญาต", d: "รับงานที่ต้องมีวิศวกรเซ็นรับรอง" },
+        { t: "ผลงานที่ผ่านมา", d: "ติดตั้งโซลาร์คุณภาพสูงทั้งบ้านและโรงงาน" }
+      ],
+      en: [
+        { t: "Registered in Thailand", d: "DBD registration verifiable" },
+        { t: "Licensed Engineering Team", d: "Certified engineer sign-off" },
+        { t: "Proven Track Record", d: "Quality solar for homes and factories" }
+      ]
+    };
+
+    let adminLocale = "th";
+    let previewLocale = "th";
+    const state = { icons: { cred: [...DEFAULTS.cred], team: [...DEFAULTS.team] } };
+
+    function iconSelect(id, group, idx) {
+      const sel = document.createElement("select");
+      sel.id = id;
+      ICONS.forEach((name) => {
+        const o = document.createElement("option");
+        o.value = name;
+        o.textContent = name;
+        if (name === state.icons[group][idx]) o.selected = true;
+        sel.appendChild(o);
+      });
+      sel.addEventListener("change", () => {
+        state.icons[group][idx] = sel.value;
+        renderPreview();
+      });
+      return sel;
+    }
+
+    function buildCards(containerId, group, labels) {
+      const el = document.getElementById(containerId);
+      labels.forEach((label, i) => {
+        const card = document.createElement("div");
+        card.className = "mini-card";
+        card.innerHTML = `<div class="slot">${label}</div>`;
+        card.appendChild(iconSelect(`${group}-${i}`, group, i));
+        el.appendChild(card);
+      });
+    }
+
+    buildCards("credFields", "cred", ["กล่อง 1", "กล่อง 2", "กล่อง 3"]);
+    buildCards("teamFields", "team", ["ทีม 1", "ทีม 2", "ทีม 3"]);
+
+    function getVal(id) {
+      const el = document.getElementById(id);
+      const raw = el.value.trim();
+      if (adminLocale === "en") return raw || el.dataset.th || "";
+      return raw || el.dataset[adminLocale] || "";
+    }
+
+    function syncLocaleInputs() {
+      ["credSectionTitle", "credSectionDesc"].forEach((id) => {
+        const el = document.getElementById(id);
+        el.value = el.dataset[adminLocale] || "";
+      });
+    }
+
+    function saveLocaleInputs() {
+      ["credSectionTitle", "credSectionDesc"].forEach((id) => {
+        const el = document.getElementById(id);
+        el.dataset[adminLocale] = el.value;
+      });
+    }
+
+    document.querySelectorAll("#adminTabs .tab").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        saveLocaleInputs();
+        adminLocale = btn.dataset.locale;
+        document.querySelectorAll("#adminTabs .tab").forEach((b) => b.classList.toggle("active", b === btn));
+        syncLocaleInputs();
+        renderPreview();
+      });
+    });
+
+    document.querySelectorAll(".preview-locale .tab").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        previewLocale = btn.dataset.plocale;
+        document.querySelectorAll(".preview-locale .tab").forEach((b) => b.classList.toggle("active", b === btn));
+        renderPreview();
+      });
+    });
+
+    ["credSectionTitle", "credSectionDesc"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", () => {
+        saveLocaleInputs();
+        renderPreview();
+      });
+    });
+
+    function renderIcon(name, size) {
+      const i = document.createElement("i");
+      i.setAttribute("data-lucide", name);
+      i.style.width = size + "px";
+      i.style.height = size + "px";
+      return i;
+    }
+
+    function renderPreview() {
+      const title = getVal("credSectionTitle");
+      const desc = getVal("credSectionDesc");
+      const copy = CRED_COPY[previewLocale] || CRED_COPY.th;
+      const root = document.getElementById("publicPreview");
+
+      let headingHtml = "";
+      if (title) {
+        headingHtml = `<div class="preview-heading"><h2>${escapeHtml(title)}</h2>${desc ? `<p>${escapeHtml(desc)}</p>` : ""}</div>`;
+      } else {
+        headingHtml = `<div class="hidden-band">(ไม่มีหัวข้อ section — แสดงเฉพาะ 3 กล่อง เหมือนวันนี้)</div>`;
+      }
+
+      const cards = copy.map((c, i) => {
+        const iconName = state.icons.cred[i] || DEFAULTS.cred[i];
+        return `<div class="pub-card"><div class="icon-circle cred" data-icon="${iconName}"></div><h4>${escapeHtml(c.t)}</h4><p>${escapeHtml(c.d)}</p></div>`;
+      }).join("");
+
+      root.innerHTML = `<div class="preview-section">${headingHtml}<div class="card-row">${cards}</div></div>`;
+
+      root.querySelectorAll("[data-icon]").forEach((node) => {
+        const name = node.getAttribute("data-icon");
+        node.appendChild(renderIcon(name, 28));
+      });
+      lucide.createIcons();
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+    }
+
+    syncLocaleInputs();
+    renderPreview();
+  </script>
+</body>
+</html>

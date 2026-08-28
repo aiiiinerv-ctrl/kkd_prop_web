@@ -8,7 +8,7 @@
 |---|---|
 | GitHub | https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/77 |
 | Opened | 2026-08-28 |
-| Status | **charting** — research + grilling done; frontier #84 (prototype) |
+| Status | **charting complete** — pending owner sign-off (#85) before execution |
 | Labels | `wayfinder:map`, `enhancement` |
 
 ## Goal
@@ -30,7 +30,7 @@ Chart the route to admin-editable About credentials heading + icons + text compl
 
 ## Ticket frontier
 
-See map body on #77. Research #78–#81 → grilling #82–#83 → prototype #84 → sign-off #85 → docs #86.
+Research #78–#81 ✓ · grilling #82–#83 ✓ · prototype #84 ✓ · plan #85 ✓ · matrix #86 ✓. **Frontier:** owner sign-off → execution issue.
 
 ## Proposed execution sprints (draft — lock at #85)
 
