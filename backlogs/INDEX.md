@@ -1,13 +1,12 @@
 # Backlog Index
 
-Updated: 2026-08-28 (Contact settings map #88)  
+Updated: 2026-08-28 (Contact settings #88 done)  
 Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 ## Active
 
 | GitHub | PLAN | Notes |
 |---|---|---|
-| [#88](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/88) | [`ISSUE_088_contact_settings_map`](ISSUE_088_contact_settings_map/PLAN.md) | Wayfinder — admin contact/social → contact page + footer |
 | [#77](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/77) | [`ISSUE_077_about_cms_enhancement_map`](ISSUE_077_about_cms_enhancement_map/PLAN.md) | Wayfinder — About credentials heading + editable icons |
 | [#76](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/76) | [`ISSUE_076_pages_cms_sprint12_cleanup`](ISSUE_076_pages_cms_sprint12_cleanup/PLAN.md) | Owner approved 2026-08-28 — execute blocked until 2026-09-11 |
 | [#38](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/38) | [`ISSUE_038_cookieyes_banner_locale_en`](ISSUE_038_cookieyes_banner_locale_en/PLAN.md) | CookieYes Free = one language — owner decision |
@@ -18,6 +17,7 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 | GitHub | PLAN | Notes |
 |---|---|---|
+| [#88](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/88) | [`ISSUE_088_contact_settings_map`](done/ISSUE_088_contact_settings_map/PLAN.md) | Contact settings E1–E2 deployed prod 2026-08-28 |
 | [#75](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/75) | [`ISSUE_075_prod_redeploy_pages_cms_bundle`](done/ISSUE_075_prod_redeploy_pages_cms_bundle/PLAN.md) | Prod redeploy complete 2026-08-28 — Pages CMS #68–#74 live |
 | [#74](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/74) | [`ISSUE_074_pages_cms_sprint11_release`](done/ISSUE_074_pages_cms_sprint11_release/PLAN.md) | Sprint 11 complete 2026-08-28 — release verify + observation window |
 | [#73](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/73) | [`ISSUE_073_pages_cms_sprint10_calculator`](done/ISSUE_073_pages_cms_sprint10_calculator/PLAN.md) | Sprint 10 complete 2026-08-28 — Calculator Pages cutover |

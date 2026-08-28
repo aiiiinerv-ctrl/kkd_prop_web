@@ -8,7 +8,7 @@
 |---|---|
 | GitHub | https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/88 |
 | Opened | 2026-08-28 |
-| Status (disk) | E1 complete 2026-08-28 — map closed |
+| Status (disk) | done — moved to `backlogs/done/` 2026-08-28 |
 | Triage labels | `wayfinder:map` |
 | Type | wayfinder / enhancement |
 
