@@ -6,7 +6,8 @@ import {
   isBannerLinkPath,
   isBannerPageSlug,
 } from "@/lib/page-banners";
-import { pageVersionSchema } from "@/lib/validations/page-content";
+/** 0 = no row yet (first save); existing rows use positive version from DB. */
+const pageBannerVersionSchema = z.coerce.number().int().min(0);
 
 const requiredAlt = z.string().trim().min(1, "กรุณากรอกข้อความ alt");
 
@@ -25,7 +26,7 @@ export const pageBannerSlideSchema = z.object({
 export const pageBannerFormSchema = z
   .object({
     pageSlug: z.string().refine(isBannerPageSlug, { message: "หน้าไม่ถูกต้อง" }),
-    expectedVersion: pageVersionSchema,
+    expectedVersion: pageBannerVersionSchema,
     mode: z.enum(BANNER_MODES),
     slides: z.array(pageBannerSlideSchema).max(BANNER_SLIDE_MAX),
   })

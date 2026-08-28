@@ -134,7 +134,14 @@ export async function updatePageBanner(formData: FormData): Promise<PageBannerAc
       include: { slides: true },
     });
 
-    if (existing && existing.version !== expectedVersion) {
+    if (existing) {
+      if (existing.version !== expectedVersion) {
+        for (const key of uploadedKeys) {
+          await storage.delete(key).catch(() => undefined);
+        }
+        return { ok: false, conflict: true };
+      }
+    } else if (expectedVersion !== 0) {
       for (const key of uploadedKeys) {
         await storage.delete(key).catch(() => undefined);
       }
