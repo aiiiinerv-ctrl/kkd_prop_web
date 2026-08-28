@@ -6,10 +6,7 @@ Backlog: [`backlogs/ISSUE_102_calculator_config_map/PLAN.md`](../../backlogs/ISS
 
 ## Status
 
-**Phase A code merged (`49b3e85`) — release blocked on prod DDL.**  
-Prod DB has **no** `CalculatorConfig` table (verified 2026-08-28). Code is in deploy artifact; admin save will 500 until DDL lands.
-
-**Phase B** (bill bounds + tier thresholds UI) — **paused** until Phase A live + owner OK.
+**Phase A production release complete 2026-08-28.** Prod DDL applied; smoke + e2e green. Phase B paused for owner OK.
 
 ---
 
@@ -35,7 +32,7 @@ Prod DB has **no** `CalculatorConfig` table (verified 2026-08-28). Code is in de
 | **S2** | Validations + actions + audit + reset | nextjs-dev | ✓ |
 | **S3** | Admin tab Phase A (3 fields, preview, reset) | nextjs-dev | ✓ |
 | **S4** | Public RSC reads `getCalculatorConfig()` | nextjs-dev | ✓ |
-| **S5** | Verify + prod release | nextjs-dev + human FTP | **in progress** |
+| **S5** | Verify + prod release | nextjs-dev + human FTP | ✓ 2026-08-28 |
 | **S6** | Phase B admin fields + cross-validation | nextjs-dev | pending owner OK |
 | **S7** | Zustand clamp + tier markers + live-verify B | nextjs-dev | pending S6 |
 

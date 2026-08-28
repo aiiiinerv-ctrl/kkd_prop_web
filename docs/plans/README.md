@@ -30,7 +30,7 @@ Statuses below are **orientation only** (checked against closed issues /
 | [about-cms-enhancement-*-research.md](about-cms-enhancement-inventory-research.md) | About enhancement research pack #78–#81 |
 | [contact-settings-enhancement-implementation-sprints.md](contact-settings-enhancement-implementation-sprints.md) | Contact/social CMS — map [#88](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/88) **DRAFT** |
 | [html-sitemap-sprints.md](html-sitemap-sprints.md) | HTML sitemap (Deestone-style) + admin config — map [#115](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/115) **deployed** |
-| [calculator-config-sprints.md](calculator-config-sprints.md) | Calculator admin config Phase A/B — map [#102](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/102) **S5 release lane** |
+| [calculator-config-sprints.md](calculator-config-sprints.md) | Calculator admin config Phase A/B — map [#102](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/102) **Phase A deployed** |
 | [kkd-shared-hosting-redeploy-runbook.md](kkd-shared-hosting-redeploy-runbook.md) | **Required read** before every production redeploy |
 | [repo-hygiene-docs-system-tasks.md](repo-hygiene-docs-system-tasks.md) | Hygiene track (gitignore decision still owner HITL) |
 

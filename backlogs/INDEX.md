@@ -1,6 +1,6 @@
 # Backlog Index
 
-Updated: 2026-08-28 (#102 calculator config S5 lane opened)  
+Updated: 2026-08-28 (#102 calculator Phase A deployed)  
 Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 ## Active

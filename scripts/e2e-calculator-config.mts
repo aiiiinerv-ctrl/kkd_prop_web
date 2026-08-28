@@ -27,8 +27,9 @@ await page.waitForURL("**/admin", { timeout: 15000 });
 pass("LOGIN");
 
 await page.goto("http://localhost:3000/admin/pages/calculator");
-await page.click('text=ตัวเลขการคำนวณ');
-await page.waitForSelector("#calc-price-kwh", { timeout: 10000 });
+await page.locator("#calculator-tab-config").click();
+await page.waitForSelector("#calculator-tab-config[data-active]", { timeout: 10000 });
+await page.waitForSelector("#calc-price-kwh", { state: "visible", timeout: 10000 });
 pass("CALC CONFIG: admin tab visible");
 
 const testPrice = 5.5;
@@ -61,8 +62,9 @@ await page.waitForFunction(
 pass("CALC CONFIG: public /th/calculator reflects new price");
 
 await page.goto("http://localhost:3000/admin/pages/calculator");
-await page.click('text=ตัวเลขการคำนวณ');
-await page.waitForSelector("#calc-price-kwh", { timeout: 10000 });
+await page.locator("#calculator-tab-config").click();
+await page.waitForSelector("#calculator-tab-config[data-active]", { timeout: 10000 });
+await page.waitForSelector("#calc-price-kwh", { state: "visible", timeout: 10000 });
 page.once("dialog", (d) => d.accept());
 await page.click('button:has-text("คืนค่าเริ่มต้น")');
 await page.waitForSelector("text=คืนค่าเริ่มต้นแล้ว", { timeout: 15000 });
