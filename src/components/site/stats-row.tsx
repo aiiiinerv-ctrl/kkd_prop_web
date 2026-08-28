@@ -14,6 +14,12 @@ type OverridableStatKey =
   | "statsYearsValue"
   | "statsEngineersValue";
 
+type OverridableLabelKey =
+  | "statsProjects"
+  | "statsYears"
+  | "statsEngineers"
+  | "statsCustomers";
+
 /**
  * Grid columns adapt to how many stats actually render — Tailwind classes
  * must be written out in full (not built with template strings) so the v4
@@ -28,6 +34,7 @@ const GRID_COLS_BY_COUNT: Record<number, string> = {
 
 export async function StatsRow({
   overrides,
+  labelOverrides,
 }: {
   /**
    * Real DB-derived numbers that replace the placeholder message-file value.
@@ -36,6 +43,8 @@ export async function StatsRow({
    * placeholder, so the page never shows a number that contradicts reality.
    */
   overrides?: Partial<Record<OverridableStatKey, string | null>>;
+  /** About page can override stat labels from AboutContent; falls back to home messages. */
+  labelOverrides?: Partial<Record<OverridableLabelKey, string | null>>;
 } = {}) {
   const t = await getTranslations("home");
 
@@ -57,7 +66,9 @@ export async function StatsRow({
             <p className="text-3xl font-extrabold tracking-[-0.01em] text-primary sm:text-4xl">
               {overrides?.[stat.valueKey as OverridableStatKey] ?? t(stat.valueKey)}
             </p>
-            <p className="mt-2 text-sm text-muted-foreground">{t(stat.labelKey)}</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {labelOverrides?.[stat.labelKey as OverridableLabelKey] ?? t(stat.labelKey)}
+            </p>
           </Reveal>
         ))}
       </div>

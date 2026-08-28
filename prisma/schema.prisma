@@ -347,6 +347,13 @@ model AboutContent {
   credExperienceTitleEn String?
   credExperienceDescTh  String?  @db.Text
   credExperienceDescEn  String?  @db.Text
+  credSectionTitleTh    String?
+  credSectionTitleEn    String?
+  credSectionDescTh     String?  @db.Text
+  credSectionDescEn     String?  @db.Text
+  credRegisteredIcon    String?  @db.VarChar(40)
+  credEngineerIcon      String?  @db.VarChar(40)
+  credExperienceIcon    String?  @db.VarChar(40)
   teamTitleTh           String?
   teamTitleEn           String?
   teamDescTh            String?  @db.Text
@@ -363,6 +370,9 @@ model AboutContent {
   teamSupportTitleEn    String?
   teamSupportDescTh     String?  @db.Text
   teamSupportDescEn     String?  @db.Text
+  teamDesignIcon        String?  @db.VarChar(40)
+  teamInstallIcon       String?  @db.VarChar(40)
+  teamSupportIcon       String?  @db.VarChar(40)
   showCredentials       Boolean  @default(true)
   showTeam              Boolean  @default(true)
   showStats             Boolean  @default(true)

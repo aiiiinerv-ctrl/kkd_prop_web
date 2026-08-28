@@ -727,6 +727,12 @@ const originalAboutTitleTh = await aboutTitleThInput.inputValue();
 const testAboutTitleTh = `ทดสอบ About TH ${Date.now().toString(36)}`;
 await aboutTitleThInput.fill(testAboutTitleTh);
 
+const credSectionThInput = page.locator("#ab-credSectionTitleTh");
+await credSectionThInput.waitFor({ timeout: 5000 });
+const originalCredSectionTitleTh = await credSectionThInput.inputValue();
+const testCredSectionTitleTh = `หัวข้อก่อนกล่อง ${Date.now().toString(36)}`;
+await credSectionThInput.fill(testCredSectionTitleTh);
+
 // Switch to EN tab to fill titleEn (keepMounted keeps it in DOM but it's hidden until tab is active).
 await page.getByRole("tab", { name: "English" }).first().click();
 const aboutTitleEnInput = page.locator("#ab-titleEn");
@@ -744,6 +750,9 @@ const publicThAboutHtml = await publicThAboutRes.text();
 console.log(
   `ABOUT CONTENT: updated TH title visible on /th/about ${publicThAboutHtml.includes(testAboutTitleTh) ? "✓" : "✗ FAIL"}`
 );
+console.log(
+  `ABOUT CONTENT: cred section heading visible on /th/about ${publicThAboutHtml.includes(testCredSectionTitleTh) ? "✓" : "✗ FAIL"}`
+);
 
 const publicEnAboutRes = await page.request.get("http://localhost:3000/en/about");
 const publicEnAboutHtml = await publicEnAboutRes.text();
@@ -756,6 +765,7 @@ await page.goto("http://localhost:3000/admin/pages/about");
 await page.waitForSelector("text=เกี่ยวกับเรา", { timeout: 10000 });
 await page.locator("#ab-titleTh").waitFor({ timeout: 5000 });
 await page.locator("#ab-titleTh").fill(originalAboutTitleTh);
+await page.locator("#ab-credSectionTitleTh").fill(originalCredSectionTitleTh);
 await page.getByRole("tab", { name: "English" }).first().click();
 await page.locator("#ab-titleEn").waitFor({ timeout: 5000 });
 await page.locator("#ab-titleEn").fill(originalAboutTitleEn);

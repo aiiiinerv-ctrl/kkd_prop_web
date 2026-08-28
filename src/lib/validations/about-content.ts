@@ -1,15 +1,27 @@
 import { z } from "zod";
-import { optionalPageText } from "@/lib/validations/page-content";
+import { ABOUT_LUCIDE_ICON_NAMES } from "@/lib/about/lucide-icons";
+import { optionalPageText, optionalPlainMetaText } from "@/lib/validations/page-content";
 
 export const ABOUT_FEATURED_MAX = 3;
 
 const optionalText = optionalPageText;
+const credSectionTitle = optionalPlainMetaText(120);
+const credSectionDesc = optionalPlainMetaText(500);
+
+const optionalAboutIcon = z.preprocess(
+  (v) => (typeof v === "string" && v.trim() === "" ? null : v),
+  z.enum(ABOUT_LUCIDE_ICON_NAMES).nullable(),
+);
 
 export const aboutContentSchema = z.object({
   titleTh: optionalText,
   titleEn: optionalText,
   introTh: optionalText,
   introEn: optionalText,
+  credSectionTitleTh: credSectionTitle,
+  credSectionTitleEn: credSectionTitle,
+  credSectionDescTh: credSectionDesc,
+  credSectionDescEn: credSectionDesc,
   credRegisteredTitleTh: optionalText,
   credRegisteredTitleEn: optionalText,
   credRegisteredDescTh: optionalText,
@@ -22,6 +34,12 @@ export const aboutContentSchema = z.object({
   credExperienceTitleEn: optionalText,
   credExperienceDescTh: optionalText,
   credExperienceDescEn: optionalText,
+  credRegisteredIcon: optionalAboutIcon,
+  credEngineerIcon: optionalAboutIcon,
+  credExperienceIcon: optionalAboutIcon,
+  teamDesignIcon: optionalAboutIcon,
+  teamInstallIcon: optionalAboutIcon,
+  teamSupportIcon: optionalAboutIcon,
   teamTitleTh: optionalText,
   teamTitleEn: optionalText,
   teamDescTh: optionalText,

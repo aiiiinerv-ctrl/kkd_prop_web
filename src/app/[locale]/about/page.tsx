@@ -1,10 +1,10 @@
-import { Award, BadgeCheck, Building2, Headset, PencilRuler, Wrench } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CtaBanner } from "@/components/site/cta-banner";
 import { Reveal } from "@/components/site/reveal";
 import { SectionHeading } from "@/components/site/section-heading";
 import { StatsRow } from "@/components/site/stats-row";
 import { TestimonialsSection } from "@/components/site/testimonials-section";
+import { resolveAboutLucideIcon } from "@/lib/about/lucide-icons";
 import { getAboutContent, getPublishedTestimonials, getSiteStats } from "@/lib/content";
 import { PAGE_REGISTRY } from "@/lib/pages";
 import { pageMetadata } from "@/lib/seo";
@@ -47,17 +47,17 @@ export default async function AboutPage({
 
   const CREDENTIALS = [
     {
-      icon: Building2,
+      icon: resolveAboutLucideIcon(c?.credRegisteredIcon, "credRegisteredIcon"),
       title: pick(c?.credRegisteredTitle, "credRegisteredTitle"),
       desc: pick(c?.credRegisteredDesc, "credRegisteredDesc"),
     },
     {
-      icon: BadgeCheck,
+      icon: resolveAboutLucideIcon(c?.credEngineerIcon, "credEngineerIcon"),
       title: pick(c?.credEngineerTitle, "credEngineerTitle"),
       desc: pick(c?.credEngineerDesc, "credEngineerDesc"),
     },
     {
-      icon: Award,
+      icon: resolveAboutLucideIcon(c?.credExperienceIcon, "credExperienceIcon"),
       title: pick(c?.credExperienceTitle, "credExperienceTitle"),
       desc: pick(c?.credExperienceDesc, "credExperienceDesc"),
     },
@@ -65,17 +65,17 @@ export default async function AboutPage({
 
   const TEAM = [
     {
-      icon: PencilRuler,
+      icon: resolveAboutLucideIcon(c?.teamDesignIcon, "teamDesignIcon"),
       title: pick(c?.teamDesignTitle, "teamDesignTitle"),
       desc: pick(c?.teamDesignDesc, "teamDesignDesc"),
     },
     {
-      icon: Wrench,
+      icon: resolveAboutLucideIcon(c?.teamInstallIcon, "teamInstallIcon"),
       title: pick(c?.teamInstallTitle, "teamInstallTitle"),
       desc: pick(c?.teamInstallDesc, "teamInstallDesc"),
     },
     {
-      icon: Headset,
+      icon: resolveAboutLucideIcon(c?.teamSupportIcon, "teamSupportIcon"),
       title: pick(c?.teamSupportTitle, "teamSupportTitle"),
       desc: pick(c?.teamSupportDesc, "teamSupportDesc"),
     },
@@ -86,6 +86,10 @@ export default async function AboutPage({
   const showStats = c?.showStats !== false;
   const showTestimonials = c?.showTestimonials !== false;
   const showGlobalCta = c?.showGlobalCta !== false;
+
+  const credSectionTitle =
+    usePages && !hasRow ? "" : c?.credSectionTitle || "";
+  const credSectionDesc = c?.credSectionDesc || undefined;
 
   const featuredIds = c?.featuredTestimonialIds ?? [];
   const testimonialsForAbout =
@@ -110,6 +114,13 @@ export default async function AboutPage({
       {showCredentials && (
         <section className="bg-muted/40">
           <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+            {credSectionTitle ? (
+              <SectionHeading
+                title={credSectionTitle}
+                subtitle={credSectionDesc}
+                headingClassName="font-extrabold tracking-[-0.01em]"
+              />
+            ) : null}
             <div className="grid gap-7 md:grid-cols-3">
               {CREDENTIALS.map((cred, i) => (
                 <Reveal key={`${cred.title}-${i}`} delay={i * 100}>
@@ -157,6 +168,12 @@ export default async function AboutPage({
             statsCustomersValue: closedLeadCount > 0 ? String(closedLeadCount) : null,
             statsYearsValue: null,
             statsEngineersValue: null,
+          }}
+          labelOverrides={{
+            statsProjects: c?.statsProjectsLabel || undefined,
+            statsYears: c?.statsYearsLabel || undefined,
+            statsEngineers: c?.statsEngineersLabel || undefined,
+            statsCustomers: c?.statsCustomersLabel || undefined,
           }}
         />
       )}

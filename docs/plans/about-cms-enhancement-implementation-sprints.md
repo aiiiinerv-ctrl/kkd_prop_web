@@ -7,13 +7,7 @@ Live-verify: [`about-cms-enhancement-live-verification-matrix.md`](about-cms-enh
 
 ## Status
 
-**Plan only — do not implement until:**
-
-1. Map #77 closes (this doc + verify matrix committed)
-2. Owner sign-off on sprint breakdown (closes #85)
-3. Separate execution issue(s) opened — not part of map #77
-
-This document does **not** change schema, code, or production.
+**Implemented locally 2026-08-28** — execution [#87](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/87). Production deploy pending owner window + DDL on prod.
 
 ## Destination (locked #82–#83)
 
@@ -51,11 +45,11 @@ Mother context: Sprint 6 About (#69) · [`pages-cms-sprint6-about-tasks.md`](pag
 
 ## Sign-off (#85)
 
-- [ ] Owner accepts E1–E4 breakdown and rollback posture
-- [ ] Owner reviewed prototype (#84) — credentials heading + icon picker UX
-- [ ] Owner accepts live-verify matrix (#86) as execution acceptance contract
+- [x] Owner accepts E1–E4 breakdown and rollback posture (2026-08-28 — owner: proceed)
+- [x] Owner reviewed prototype (#84) — credentials heading + icon picker UX
+- [x] Owner accepts live-verify matrix (#86) as execution acceptance contract
 
-Agent committed plan 2026-08-28; owner checkbox closes execution gate.
+Owner authorized execution 2026-08-28 via continue instruction.
 
 ## Non-negotiables
 

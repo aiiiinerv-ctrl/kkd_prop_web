@@ -233,6 +233,14 @@ export type AboutContentView = {
   credEngineerDesc: string | null;
   credExperienceTitle: string | null;
   credExperienceDesc: string | null;
+  credSectionTitle: string | null;
+  credSectionDesc: string | null;
+  credRegisteredIcon: string | null;
+  credEngineerIcon: string | null;
+  credExperienceIcon: string | null;
+  teamDesignIcon: string | null;
+  teamInstallIcon: string | null;
+  teamSupportIcon: string | null;
   teamTitle: string | null;
   teamDesc: string | null;
   teamDesignTitle: string | null;
@@ -246,6 +254,10 @@ export type AboutContentView = {
   showStats: boolean;
   showTestimonials: boolean;
   showGlobalCta: boolean;
+  statsProjectsLabel: string | null;
+  statsYearsLabel: string | null;
+  statsEngineersLabel: string | null;
+  statsCustomersLabel: string | null;
   testimonialsTitle: string | null;
   testimonialsSubtitle: string | null;
   featuredTestimonialIds: string[];
@@ -271,6 +283,14 @@ export function toAboutContentView(row: Row, locale: string): AboutContentView {
     credEngineerDesc: loc("credEngineerDesc"),
     credExperienceTitle: loc("credExperienceTitle"),
     credExperienceDesc: loc("credExperienceDesc"),
+    credSectionTitle: loc("credSectionTitle"),
+    credSectionDesc: loc("credSectionDesc"),
+    credRegisteredIcon: row.credRegisteredIcon ? String(row.credRegisteredIcon) : null,
+    credEngineerIcon: row.credEngineerIcon ? String(row.credEngineerIcon) : null,
+    credExperienceIcon: row.credExperienceIcon ? String(row.credExperienceIcon) : null,
+    teamDesignIcon: row.teamDesignIcon ? String(row.teamDesignIcon) : null,
+    teamInstallIcon: row.teamInstallIcon ? String(row.teamInstallIcon) : null,
+    teamSupportIcon: row.teamSupportIcon ? String(row.teamSupportIcon) : null,
     teamTitle: loc("teamTitle"),
     teamDesc: loc("teamDesc"),
     teamDesignTitle: loc("teamDesignTitle"),
@@ -284,6 +304,10 @@ export function toAboutContentView(row: Row, locale: string): AboutContentView {
     showStats: row.showStats !== false,
     showTestimonials: row.showTestimonials !== false,
     showGlobalCta: row.showGlobalCta !== false,
+    statsProjectsLabel: loc("statsProjectsLabel"),
+    statsYearsLabel: loc("statsYearsLabel"),
+    statsEngineersLabel: loc("statsEngineersLabel"),
+    statsCustomersLabel: loc("statsCustomersLabel"),
     testimonialsTitle: loc("testimonialsTitle"),
     testimonialsSubtitle: loc("testimonialsSubtitle"),
     featuredTestimonialIds: featured,

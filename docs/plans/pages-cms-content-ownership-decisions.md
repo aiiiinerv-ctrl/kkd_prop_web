@@ -103,13 +103,14 @@ CTA destinations use typed internal-route presets. Page Content does not accept 
 Required Page Content:
 
 - intro title and introduction;
-- three credential title/description pairs; icons and count stay template-owned;
+- optional credentials section title/description before the three credential cards;
+- three credential title/description pairs; **icons selectable from a fixed Lucide allowlist** (defaults match legacy template);
 - team section title/description;
-- three team-discipline title/description pairs; icons and count stay template-owned.
+- three team-discipline title/description pairs; **icons selectable from the same allowlist**.
 
 Optional fixed sections:
 
-1. **Credentials** — uses the three fixed cards above.
+1. **Credentials** — section heading (optional) + three fixed cards above.
 2. **Team** — uses the three fixed team disciplines above.
 3. **Stats**
    - editable localized labels;

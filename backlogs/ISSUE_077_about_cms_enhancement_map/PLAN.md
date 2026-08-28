@@ -8,7 +8,7 @@
 |---|---|
 | GitHub | https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/77 |
 | Opened | 2026-08-28 |
-| Status | **charting complete** — pending owner sign-off (#85) before execution |
+| Status | **closed** — execution [#87](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/87) |
 | Labels | `wayfinder:map`, `enhancement` |
 
 ## Goal

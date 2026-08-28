@@ -5,6 +5,11 @@ import { useState, useTransition } from "react";
 import { ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { updateAboutContent } from "@/actions/about-content";
+import {
+  ABOUT_ICON_SLOT_DEFAULTS,
+  ABOUT_LUCIDE_ICON_NAMES,
+  type AboutIconSlot,
+} from "@/lib/about/lucide-icons";
 import { ABOUT_FEATURED_MAX } from "@/lib/validations/about-content";
 import { BilingualTabs } from "@/components/admin/crud-page";
 import { Button } from "@/components/ui/button";
@@ -22,6 +27,10 @@ type AboutData = {
   credEngineerDescTh: string; credEngineerDescEn: string;
   credExperienceTitleTh: string; credExperienceTitleEn: string;
   credExperienceDescTh: string; credExperienceDescEn: string;
+  credSectionTitleTh: string; credSectionTitleEn: string;
+  credSectionDescTh: string; credSectionDescEn: string;
+  credRegisteredIcon: string; credEngineerIcon: string; credExperienceIcon: string;
+  teamDesignIcon: string; teamInstallIcon: string; teamSupportIcon: string;
   teamTitleTh: string; teamTitleEn: string;
   teamDescTh: string; teamDescEn: string;
   teamDesignTitleTh: string; teamDesignTitleEn: string;
@@ -30,6 +39,12 @@ type AboutData = {
   teamInstallDescTh: string; teamInstallDescEn: string;
   teamSupportTitleTh: string; teamSupportTitleEn: string;
   teamSupportDescTh: string; teamSupportDescEn: string;
+  statsProjectsLabelTh: string; statsProjectsLabelEn: string;
+  statsYearsLabelTh: string; statsYearsLabelEn: string;
+  statsEngineersLabelTh: string; statsEngineersLabelEn: string;
+  statsCustomersLabelTh: string; statsCustomersLabelEn: string;
+  testimonialsTitleTh: string; testimonialsTitleEn: string;
+  testimonialsSubtitleTh: string; testimonialsSubtitleEn: string;
   showCredentials: boolean;
   showTeam: boolean;
   showStats: boolean;
@@ -40,16 +55,81 @@ type AboutData = {
 
 type TestimonialOption = { id: string; label: string; published: boolean };
 
+const inputCls = "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm";
+
+const ICON_SLOT_LABELS: Record<AboutIconSlot, { th: string; en: string }> = {
+  credRegisteredIcon: {
+    th: "กล่อง 1 · จดทะเบียนบริษัท",
+    en: "Box 1 · Company registration",
+  },
+  credEngineerIcon: {
+    th: "กล่อง 2 · วิศวกรมีใบอนุญาต",
+    en: "Box 2 · Licensed engineers",
+  },
+  credExperienceIcon: {
+    th: "กล่อง 3 · ประสบการณ์และผลงาน",
+    en: "Box 3 · Track record",
+  },
+  teamDesignIcon: {
+    th: "การ์ดทีม 1 · ออกแบบและวิศวกรรม",
+    en: "Team card 1 · Design & engineering",
+  },
+  teamInstallIcon: {
+    th: "การ์ดทีม 2 · ติดตั้งหน้างาน",
+    en: "Team card 2 · On-site installation",
+  },
+  teamSupportIcon: {
+    th: "การ์ดทีม 3 · บริการหลังการขาย",
+    en: "Team card 3 · After-sales support",
+  },
+};
+
+const ICON_SLOTS: AboutIconSlot[] = [
+  "credRegisteredIcon",
+  "credEngineerIcon",
+  "credExperienceIcon",
+  "teamDesignIcon",
+  "teamInstallIcon",
+  "teamSupportIcon",
+];
+
+function IconSelect({ slot, value }: { slot: AboutIconSlot; value: string }) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={`ab-icon-${slot}`}>{ICON_SLOT_LABELS[slot].th}</Label>
+      <select id={`ab-icon-${slot}`} name={slot} defaultValue={value} className={inputCls}>
+        <option value="">
+          ค่าเริ่มต้น ({ABOUT_ICON_SLOT_DEFAULTS[slot]})
+        </option>
+        {ABOUT_LUCIDE_ICON_NAMES.map((iconName) => (
+          <option key={iconName} value={iconName}>
+            {iconName}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 const EMPTY: AboutData = {
   version: 1,
   titleTh: "", titleEn: "", introTh: "", introEn: "",
   credRegisteredTitleTh: "", credRegisteredTitleEn: "", credRegisteredDescTh: "", credRegisteredDescEn: "",
   credEngineerTitleTh: "", credEngineerTitleEn: "", credEngineerDescTh: "", credEngineerDescEn: "",
   credExperienceTitleTh: "", credExperienceTitleEn: "", credExperienceDescTh: "", credExperienceDescEn: "",
+  credSectionTitleTh: "", credSectionTitleEn: "", credSectionDescTh: "", credSectionDescEn: "",
+  credRegisteredIcon: "", credEngineerIcon: "", credExperienceIcon: "",
+  teamDesignIcon: "", teamInstallIcon: "", teamSupportIcon: "",
   teamTitleTh: "", teamTitleEn: "", teamDescTh: "", teamDescEn: "",
   teamDesignTitleTh: "", teamDesignTitleEn: "", teamDesignDescTh: "", teamDesignDescEn: "",
   teamInstallTitleTh: "", teamInstallTitleEn: "", teamInstallDescTh: "", teamInstallDescEn: "",
   teamSupportTitleTh: "", teamSupportTitleEn: "", teamSupportDescTh: "", teamSupportDescEn: "",
+  statsProjectsLabelTh: "", statsProjectsLabelEn: "",
+  statsYearsLabelTh: "", statsYearsLabelEn: "",
+  statsEngineersLabelTh: "", statsEngineersLabelEn: "",
+  statsCustomersLabelTh: "", statsCustomersLabelEn: "",
+  testimonialsTitleTh: "", testimonialsTitleEn: "",
+  testimonialsSubtitleTh: "", testimonialsSubtitleEn: "",
   showCredentials: true,
   showTeam: true,
   showStats: true,
@@ -159,11 +239,25 @@ export function AboutClient({
               </div>
 
               <h3 className="text-base font-bold text-foreground border-b border-border/70 pb-1.5">
+                หัวข้อก่อนกล่องจดทะเบียน (ไม่บังคับ)
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                แสดงเหนือ 3 กล่องจุดน่าเชื่อถือ — ว่างไว้ได้ หน้าเว็บจะแสดงเฉพาะ 3 กล่องเหมือนเดิม
+              </p>
+              <div className="space-y-1.5">
+                <Label htmlFor="ab-credSectionTitleTh">หัวข้อ section</Label>
+                <Input id="ab-credSectionTitleTh" name="credSectionTitleTh" defaultValue={d.credSectionTitleTh} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ab-credSectionDescTh">คำอธิบาย section</Label>
+                <Textarea id="ab-credSectionDescTh" name="credSectionDescTh" rows={2} defaultValue={d.credSectionDescTh} />
+              </div>
+
+              <h3 className="text-base font-bold text-foreground border-b border-border/70 pb-1.5">
                 จุดที่ทำให้ลูกค้าเชื่อถือ (3 กล่อง)
               </h3>
               <p className="text-xs text-muted-foreground">
-                3 กล่องถัดจากส่วนหัว เรียงซ้าย→ขวาบนจอคอม (บนมือถือเรียงบนลงล่าง) ไอคอนของแต่ละกล่องกำหนดไว้ในโค้ดตามตำแหน่ง
-                แก้จากหน้านี้ไม่ได้ — ถ้าย้ายข้อความข้ามกล่อง ไอคอนจะไม่ตรงความหมาย
+                3 กล่องถัดจากส่วนหัว เรียงซ้าย→ขวาบนจอคอม (บนมือถือเรียงบนลงล่าง) เลือกไอคอนได้ในส่วน &quot;ไอคอนการ์ด&quot; ด้านล่าง
               </p>
               <div className="space-y-1.5">
                 <Label htmlFor="ab-credRegisteredTitleTh">กล่อง 1 · จดทะเบียนบริษัท (ซ้าย, ไอคอนรูปตึก) — หัวข้อ</Label>
@@ -196,7 +290,7 @@ export function AboutClient({
               <h3 className="text-base font-bold text-foreground border-b border-border/70 pb-1.5">ทีมงาน</h3>
               <p className="text-xs text-muted-foreground">
                 หัวข้อส่วน + การ์ด 3 ใบถัดจากกล่องความน่าเชื่อถือ เรียงซ้าย→ขวาบนจอคอม (บนมือถือเรียงบนลงล่าง)
-                ไอคอนของการ์ดกำหนดไว้ในโค้ดตามตำแหน่งเช่นเดียวกัน
+                เลือกไอคอนการ์ดได้ในส่วน &quot;ไอคอนการ์ด&quot; ด้านล่าง
               </p>
               <div className="space-y-1.5">
                 <Label htmlFor="ab-teamTitleTh">หัวข้อส่วนทีมงาน — บรรทัดใหญ่เหนือการ์ด 3 ใบ</Label>
@@ -234,6 +328,37 @@ export function AboutClient({
                   คำอธิบายทั้ง 3 การ์ดควรยาวใกล้เคียงกัน 1–2 บรรทัด
                 </p>
               </div>
+
+              <h3 className="text-base font-bold text-foreground border-b border-border/70 pb-1.5">ตัวเลขสถิติ</h3>
+              <p className="text-xs text-muted-foreground">
+                ป้ายชื่อ 4 ช่อง — ตัวเลขดึงจากระบบอัตโนมัติ ว่างไว้ใช้ข้อความเริ่มต้น
+              </p>
+              <div className="space-y-1.5">
+                <Label htmlFor="ab-statsProjectsLabelTh">ป้าย · โครงการ</Label>
+                <Input id="ab-statsProjectsLabelTh" name="statsProjectsLabelTh" defaultValue={d.statsProjectsLabelTh} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ab-statsYearsLabelTh">ป้าย · ปีประสบการณ์</Label>
+                <Input id="ab-statsYearsLabelTh" name="statsYearsLabelTh" defaultValue={d.statsYearsLabelTh} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ab-statsEngineersLabelTh">ป้าย · วิศวกร</Label>
+                <Input id="ab-statsEngineersLabelTh" name="statsEngineersLabelTh" defaultValue={d.statsEngineersLabelTh} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ab-statsCustomersLabelTh">ป้าย · ลูกค้า</Label>
+                <Input id="ab-statsCustomersLabelTh" name="statsCustomersLabelTh" defaultValue={d.statsCustomersLabelTh} />
+              </div>
+
+              <h3 className="text-base font-bold text-foreground border-b border-border/70 pb-1.5">ส่วนรีวิว</h3>
+              <div className="space-y-1.5">
+                <Label htmlFor="ab-testimonialsTitleTh">หัวข้อรีวิว</Label>
+                <Input id="ab-testimonialsTitleTh" name="testimonialsTitleTh" defaultValue={d.testimonialsTitleTh} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ab-testimonialsSubtitleTh">คำอธิบายใต้หัวข้อรีวิว</Label>
+                <Textarea id="ab-testimonialsSubtitleTh" name="testimonialsSubtitleTh" rows={2} defaultValue={d.testimonialsSubtitleTh} />
+              </div>
             </div>
           }
           en={
@@ -259,11 +384,26 @@ export function AboutClient({
               </div>
 
               <h3 className="text-base font-bold text-foreground border-b border-border/70 pb-1.5">
+                Heading before registration boxes (optional)
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Shown above the three credential boxes. Leave blank to show boxes only (same as today).
+              </p>
+              <div className="space-y-1.5">
+                <Label htmlFor="ab-credSectionTitleEn">Section heading</Label>
+                <Input id="ab-credSectionTitleEn" name="credSectionTitleEn" defaultValue={d.credSectionTitleEn} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ab-credSectionDescEn">Section description</Label>
+                <Textarea id="ab-credSectionDescEn" name="credSectionDescEn" rows={2} defaultValue={d.credSectionDescEn} />
+              </div>
+
+              <h3 className="text-base font-bold text-foreground border-b border-border/70 pb-1.5">
                 Trust credentials (3 boxes)
               </h3>
               <p className="text-xs text-muted-foreground">
-                Three boxes below the header, left→right on desktop (stacked on mobile). Each box&apos;s icon is fixed
-                in code by position and cannot be changed here — moving text between boxes will mismatch the icons.
+                Three boxes below the header, left→right on desktop (stacked on mobile). Pick icons in the
+                &quot;Card icons&quot; section below.
               </p>
               <div className="space-y-1.5">
                 <Label htmlFor="ab-credRegisteredTitleEn">Box 1 · Company registration (left, building icon) — heading</Label>
@@ -296,7 +436,7 @@ export function AboutClient({
               <h3 className="text-base font-bold text-foreground border-b border-border/70 pb-1.5">Team</h3>
               <p className="text-xs text-muted-foreground">
                 Section heading plus three cards below the credential boxes, left→right on desktop (stacked on
-                mobile). Card icons are likewise fixed in code by position.
+                mobile). Pick card icons in the &quot;Card icons&quot; section below.
               </p>
               <div className="space-y-1.5">
                 <Label htmlFor="ab-teamTitleEn">Team section heading — the big line above the three cards</Label>
@@ -334,9 +474,52 @@ export function AboutClient({
                   Keep all three card descriptions a similar 1–2 lines.
                 </p>
               </div>
+
+              <h3 className="text-base font-bold text-foreground border-b border-border/70 pb-1.5">Stats labels</h3>
+              <p className="text-xs text-muted-foreground">
+                Four label fields — values come from the system automatically. Blank uses default copy.
+              </p>
+              <div className="space-y-1.5">
+                <Label htmlFor="ab-statsProjectsLabelEn">Label · Projects</Label>
+                <Input id="ab-statsProjectsLabelEn" name="statsProjectsLabelEn" defaultValue={d.statsProjectsLabelEn} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ab-statsYearsLabelEn">Label · Years</Label>
+                <Input id="ab-statsYearsLabelEn" name="statsYearsLabelEn" defaultValue={d.statsYearsLabelEn} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ab-statsEngineersLabelEn">Label · Engineers</Label>
+                <Input id="ab-statsEngineersLabelEn" name="statsEngineersLabelEn" defaultValue={d.statsEngineersLabelEn} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ab-statsCustomersLabelEn">Label · Customers</Label>
+                <Input id="ab-statsCustomersLabelEn" name="statsCustomersLabelEn" defaultValue={d.statsCustomersLabelEn} />
+              </div>
+
+              <h3 className="text-base font-bold text-foreground border-b border-border/70 pb-1.5">Testimonials</h3>
+              <div className="space-y-1.5">
+                <Label htmlFor="ab-testimonialsTitleEn">Testimonials heading</Label>
+                <Input id="ab-testimonialsTitleEn" name="testimonialsTitleEn" defaultValue={d.testimonialsTitleEn} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ab-testimonialsSubtitleEn">Testimonials subtitle</Label>
+                <Textarea id="ab-testimonialsSubtitleEn" name="testimonialsSubtitleEn" rows={2} defaultValue={d.testimonialsSubtitleEn} />
+              </div>
             </div>
           }
         />
+
+        <div className="space-y-3 rounded-xl border border-border/70 bg-card p-4">
+          <h3 className="font-semibold">ไอคอนการ์ด (Lucide)</h3>
+          <p className="text-xs text-muted-foreground">
+            เลือกไอคอนต่อช่อง — ค่าเริ่มต้นตรงกับหน้าเว็บปัจจุบัน ไม่เลือก = ใช้ค่าเริ่มต้น
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {ICON_SLOTS.map((slot) => (
+              <IconSelect key={slot} slot={slot} value={d[slot]} />
+            ))}
+          </div>
+        </div>
 
         <div className="space-y-3 rounded-xl border border-border/70 bg-card p-4">
           <h3 className="font-semibold">การแสดงส่วนบนหน้าเว็บ</h3>
