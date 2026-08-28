@@ -200,10 +200,10 @@ export function BookingDetailClient({
             </DialogContent>
           </Dialog>
 
-          {canMutate && booking.paymentStatus === "PENDING_REVIEW" && (
+          {canMutate && (
             <>
               <Button
-                disabled={isPending}
+                disabled={isPending || booking.paymentStatus === "VERIFIED"}
                 onClick={() =>
                   run(() => updatePaymentStatus(booking.id, "VERIFIED"), "ยืนยันสลิปแล้ว")
                 }
@@ -212,7 +212,7 @@ export function BookingDetailClient({
               </Button>
               <Button
                 variant="destructive"
-                disabled={isPending}
+                disabled={isPending || booking.paymentStatus === "REJECTED"}
                 onClick={() =>
                   run(() => updatePaymentStatus(booking.id, "REJECTED"), "ปฏิเสธสลิปแล้ว")
                 }
