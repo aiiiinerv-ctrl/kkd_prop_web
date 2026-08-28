@@ -108,7 +108,8 @@ export async function updatePageSeo(key: string, formData: FormData): Promise<Ac
     key === "about" ||
     key === "services" ||
     key === "packages" ||
-    key === "portfolio"
+    key === "portfolio" ||
+    key === "calculator"
   ) {
     return {
       ok: false,

@@ -26,7 +26,8 @@ export default async function AdminPagesDynamicPage({
     page === "about" ||
     page === "services" ||
     page === "packages" ||
-    page === "portfolio"
+    page === "portfolio" ||
+    page === "calculator"
   ) {
     notFound();
   }

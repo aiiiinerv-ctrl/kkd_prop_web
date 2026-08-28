@@ -771,6 +771,58 @@ console.log(
   `ABOUT CONTENT: mutation recorded in AuditLog ${aboutAudit ? "✓" : "✗ FAIL"}`
 );
 
+// --- CMS: Calculator content — edit TH title, verify public, restore ---
+await page.goto("http://localhost:3000/admin/pages/calculator");
+await page.waitForSelector("text=เครื่องคำนวณ", { timeout: 10000 });
+
+const calcTitleThInput = page.locator("#calc-titleTh");
+await calcTitleThInput.waitFor({ timeout: 5000 });
+const originalCalcTitleTh = await calcTitleThInput.inputValue();
+const testCalcTitleTh = `ทดสอบ Calc TH ${Date.now().toString(36)}`;
+await calcTitleThInput.fill(testCalcTitleTh);
+
+await page.getByRole("tab", { name: "English" }).first().click();
+const calcTitleEnInput = page.locator("#calc-titleEn");
+await calcTitleEnInput.waitFor({ timeout: 5000 });
+const originalCalcTitleEn = await calcTitleEnInput.inputValue();
+const testCalcTitleEn = `E2E Calc EN ${Date.now().toString(36)}`;
+await calcTitleEnInput.fill(testCalcTitleEn);
+
+await page.click("#calc-page-submit-top");
+await page.waitForSelector("text=บันทึกเนื้อหาหน้าเครื่องคำนวณแล้ว", { timeout: 10000 });
+console.log("CALCULATOR CONTENT: TH + EN titles updated ✓");
+
+const publicThCalcRes = await page.request.get("http://localhost:3000/th/calculator");
+const publicThCalcHtml = await publicThCalcRes.text();
+console.log(
+  `CALCULATOR CONTENT: updated TH title visible on /th/calculator ${publicThCalcHtml.includes(testCalcTitleTh) ? "✓" : "✗ FAIL"}`
+);
+
+const publicEnCalcRes = await page.request.get("http://localhost:3000/en/calculator");
+const publicEnCalcHtml = await publicEnCalcRes.text();
+console.log(
+  `CALCULATOR CONTENT: updated EN title visible on /en/calculator ${publicEnCalcHtml.includes(testCalcTitleEn) ? "✓" : "✗ FAIL"}`
+);
+
+await page.goto("http://localhost:3000/admin/pages/calculator");
+await page.waitForSelector("text=เครื่องคำนวณ", { timeout: 10000 });
+await page.locator("#calc-titleTh").waitFor({ timeout: 5000 });
+await page.locator("#calc-titleTh").fill(originalCalcTitleTh);
+await page.getByRole("tab", { name: "English" }).first().click();
+await page.locator("#calc-titleEn").waitFor({ timeout: 5000 });
+await page.locator("#calc-titleEn").fill(originalCalcTitleEn);
+await page.click("#calc-page-submit-top");
+await page.waitForSelector("text=บันทึกเนื้อหาหน้าเครื่องคำนวณแล้ว", { timeout: 10000 });
+console.log("CALCULATOR CONTENT: titles restored ✓");
+
+const calcAudit = await prisma.auditLog.findFirst({
+  where: { entityType: "CalculatorPageContent", action: "UPDATE" },
+  orderBy: { createdAt: "desc" },
+});
+console.log(
+  `CALCULATOR CONTENT: mutation recorded in AuditLog ${calcAudit ? "✓" : "✗ FAIL"}`
+);
+
 // --- Audit: entries with diff ---
 await page.goto("http://localhost:3000/admin/audit");
 await page.waitForSelector("text=ประวัติการแก้ไข", { timeout: 10000 });

@@ -1,6 +1,6 @@
 # Backlog Index
 
-Updated: 2026-08-28 (Sprint 9 #72 closed)  
+Updated: 2026-08-28 (Sprint 10 #73 closed)  
 Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 ## Active
@@ -15,6 +15,7 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 | GitHub | PLAN | Notes |
 |---|---|---|
+| [#73](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/73) | [`ISSUE_073_pages_cms_sprint10_calculator`](done/ISSUE_073_pages_cms_sprint10_calculator/PLAN.md) | Sprint 10 complete 2026-08-28 — Calculator Pages cutover |
 | [#72](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/72) | [`ISSUE_072_pages_cms_sprint9_portfolio`](done/ISSUE_072_pages_cms_sprint9_portfolio/PLAN.md) | Sprint 9 complete 2026-08-28 — Portfolio Pages cutover |
 | [#71](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/71) | [`ISSUE_071_pages_cms_sprint8_packages`](done/ISSUE_071_pages_cms_sprint8_packages/PLAN.md) | Sprint 8 complete 2026-08-28 — Packages Pages cutover |
 | [#70](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/70) | [`ISSUE_070_pages_cms_sprint7_services`](done/ISSUE_070_pages_cms_sprint7_services/PLAN.md) | Sprint 7 complete 2026-08-28 — Services Pages cutover |
@@ -35,7 +36,7 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 Wayfinder maps and grilling that are open but not in the nearby queue, e.g. #1, #10, #21, #24, #25, #27, #36 — create `ISSUE_XXX_…/PLAN.md` when claimed or when labeled `ready-for-agent` / `ready-for-human`.
 
-Pages CMS Sprint 3 closed as [#66](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/66). Sprint 4 closed as [#67](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/67). Sprint 5 closed as [#68](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/68). Sprint 6 closed as [#69](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/69). Sprint 7 closed as [#70](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/70). Sprint 8 closed as [#71](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/71). Sprint 9 closed as [#72](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/72). Sprint 10–12 remain in [`docs/plans/pages-cms-implementation-sprints.md`](../docs/plans/pages-cms-implementation-sprints.md). Closed slice ticket: [#50](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/50).
+Pages CMS Sprint 3 closed as [#66](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/66). Sprint 4 closed as [#67](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/67). Sprint 5 closed as [#68](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/68). Sprint 6 closed as [#69](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/69). Sprint 7 closed as [#70](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/70). Sprint 8 closed as [#71](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/71). Sprint 9 closed as [#72](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/72). Sprint 10 closed as [#73](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/73). Sprint 11–12 remain in [`docs/plans/pages-cms-implementation-sprints.md`](../docs/plans/pages-cms-implementation-sprints.md). Closed slice ticket: [#50](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/50).
 
 Sprint 3 prep (historical): [`docs/plans/pages-cms-sprint3-prep.md`](../docs/plans/pages-cms-sprint3-prep.md).  
 Sprint 4 tasks: [`docs/plans/pages-cms-sprint4-pages-core-tasks.md`](../docs/plans/pages-cms-sprint4-pages-core-tasks.md).  
@@ -43,4 +44,5 @@ Sprint 5 tasks: [`docs/plans/pages-cms-sprint5-home-tracer-tasks.md`](../docs/pl
 Sprint 6 tasks: [`docs/plans/pages-cms-sprint6-about-tasks.md`](../docs/plans/pages-cms-sprint6-about-tasks.md).  
 Sprint 7 tasks: [`docs/plans/pages-cms-sprint7-services-tasks.md`](../docs/plans/pages-cms-sprint7-services-tasks.md).  
 Sprint 8 tasks: [`docs/plans/pages-cms-sprint8-packages-tasks.md`](../docs/plans/pages-cms-sprint8-packages-tasks.md).  
-Sprint 9 tasks: [`docs/plans/pages-cms-sprint9-portfolio-tasks.md`](../docs/plans/pages-cms-sprint9-portfolio-tasks.md).
+Sprint 9 tasks: [`docs/plans/pages-cms-sprint9-portfolio-tasks.md`](../docs/plans/pages-cms-sprint9-portfolio-tasks.md).  
+Sprint 10 tasks: [`docs/plans/pages-cms-sprint10-calculator-tasks.md`](../docs/plans/pages-cms-sprint10-calculator-tasks.md).

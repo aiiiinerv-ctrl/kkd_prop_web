@@ -377,6 +377,37 @@ export function toPortfolioPageContentView(row: Row, locale: string): PortfolioP
   };
 }
 
+export type CalculatorPageContentView = {
+  id: string;
+  version: number;
+  eyebrow: string | null;
+  title: string | null;
+  subtitle: string | null;
+  panelTitle: string | null;
+  panelIntro: string | null;
+  packagesEyebrow: string | null;
+  packagesTitle: string | null;
+  packagesSubtitle: string | null;
+  showPackages: boolean;
+};
+
+export function toCalculatorPageContentView(row: Row, locale: string): CalculatorPageContentView {
+  const loc = (field: string) => pickLocale(row, field, locale) || null;
+  return {
+    id: String(row.id),
+    version: Number(row.version ?? 1),
+    eyebrow: loc("eyebrow"),
+    title: loc("title"),
+    subtitle: loc("subtitle"),
+    panelTitle: loc("panelTitle"),
+    panelIntro: loc("panelIntro"),
+    packagesEyebrow: loc("packagesEyebrow"),
+    packagesTitle: loc("packagesTitle"),
+    packagesSubtitle: loc("packagesSubtitle"),
+    showPackages: row.showPackages !== false,
+  };
+}
+
 // ─── Home Page Content (Home CMS slice H3) ─────────────────────────────────
 
 export type HomeFaqItemView = {

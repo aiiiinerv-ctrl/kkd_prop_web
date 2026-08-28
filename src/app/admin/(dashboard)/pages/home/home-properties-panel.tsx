@@ -36,7 +36,7 @@ export function PagePropertiesPanel({
   pageSeo,
   title = "Properties",
 }: {
-  pageKey: "home" | "about" | "services" | "packages" | "portfolio";
+  pageKey: "home" | "about" | "services" | "packages" | "portfolio" | "calculator";
   pageSeo: PageSeoFormData;
   title?: string;
 }) {

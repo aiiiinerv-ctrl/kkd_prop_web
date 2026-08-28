@@ -21,7 +21,15 @@ function billToPercent(bill: number) {
   return ((bill - MIN_BILL) / (MAX_BILL - MIN_BILL)) * 100;
 }
 
-export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
+export function CalculatorClient({
+  packages,
+  panelTitle,
+  panelIntro,
+}: {
+  packages: CalcPackage[];
+  panelTitle?: string | null;
+  panelIntro?: string | null;
+}) {
   const t = useTranslations("calculator");
   const tCommon = useTranslations("common");
   const locale = useLocale();
@@ -37,12 +45,15 @@ export function CalculatorClient({ packages }: { packages: CalcPackage[] }) {
     ? billValue.toLocaleString(locale)
     : "0";
 
+  const resolvedPanelTitle = panelTitle ?? t("panelTitle");
+  const resolvedPanelIntro = panelIntro ?? t("panelIntro");
+
   return (
     <div className="mx-auto max-w-[1140px] overflow-hidden rounded-[18px] border border-border bg-card text-left shadow-[0_18px_55px_rgba(13,71,161,0.08)]">
       <div className="grid lg:grid-cols-[1.08fr_0.92fr]">
         <div className="bg-muted p-8 sm:p-10 lg:p-[30px]">
-          <h2 className="text-2xl font-bold text-primary">{t("panelTitle")}</h2>
-          <p className="mt-3 text-sm text-muted-foreground">{t("panelIntro")}</p>
+          <h2 className="text-2xl font-bold text-primary">{resolvedPanelTitle}</h2>
+          <p className="mt-3 text-sm text-muted-foreground">{resolvedPanelIntro}</p>
 
           <label className="mt-7 block text-sm font-bold text-foreground" htmlFor="monthly-bill">
             {t("billLabel")}

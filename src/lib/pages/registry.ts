@@ -4,11 +4,7 @@ import { PAGE_KEYS } from "./types";
 const CONTENT_ROLES = ["ADMIN", "SALES", "MARKETING", "EDITOR"] as const;
 const PROPERTIES_ROLES = ["ADMIN", "MARKETING"] as const;
 
-/**
- * Code-owned six-page registry. Home pilot cutover left
- * `contentRollout: "pages"`; other keys stay `legacy` until their sprint.
- * Only `home` has `adminContentEnabled` today (#67 / Sprint 4).
- */
+/** Code-owned six-page registry — all keys in `pages` partition after Sprint 10 (#73). */
 export const PAGE_REGISTRY: Record<PageKey, PageRegistryEntry> = {
   home: {
     key: "home",
@@ -80,9 +76,9 @@ export const PAGE_REGISTRY: Record<PageKey, PageRegistryEntry> = {
     labelTh: "คำนวณโซลาร์",
     adminContentPath: "/admin/pages/calculator",
     publicPaths: ["/th/calculator", "/en/calculator"],
-    contentRollout: "legacy",
-    adminContentEnabled: false,
-    propertiesAdminEnabled: false,
+    contentRollout: "pages",
+    adminContentEnabled: true,
+    propertiesAdminEnabled: true,
     supportsContent: true,
     supportsProperties: true,
     contentRoles: CONTENT_ROLES,

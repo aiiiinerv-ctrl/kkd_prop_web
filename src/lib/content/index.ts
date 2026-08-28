@@ -14,6 +14,7 @@ import {
   toServicesPageContentView,
   toPackagesPageContentView,
   toPortfolioPageContentView,
+  toCalculatorPageContentView,
   toSiteSettingsView,
   toSharedCtaView,
   toTestimonialView,
@@ -25,6 +26,7 @@ import {
   type PackagesPageContentView,
   type PageSeoView,
   type PortfolioPageContentView,
+  type CalculatorPageContentView,
   type ProjectView,
   type ServiceView,
   type ServicesPageContentView,
@@ -229,6 +231,15 @@ export const getPortfolioPageContent = cache(
   }
 );
 
+/** Calculator page chrome. Null → caller falls back to messages. */
+export const getCalculatorPageContent = cache(
+  async (locale: string): Promise<CalculatorPageContentView | null> => {
+    const row = await prisma.calculatorPageContent.findUnique({ where: { key: "calculator" } });
+    if (!row) return null;
+    return toCalculatorPageContentView(row, locale);
+  }
+);
+
 /**
  * Home Page Content + its FAQ children, for the public reader
  * (`src/app/[locale]/home-content.tsx`). Returns null when no row exists —
@@ -282,6 +293,7 @@ export type {
   PackagesPageContentView,
   PageSeoView,
   PortfolioPageContentView,
+  CalculatorPageContentView,
   ProjectView,
   ServiceView,
   ServicesPageContentView,

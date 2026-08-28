@@ -54,10 +54,9 @@ type PageSeoEntry = {
 
 // Labels for each META_KEY — hardcoded per ADR 0001 (admin is Thai-only, no message keys)
 const SEO_PAGES: { key: MetaKey; label: string; path: string }[] = [
-  // home/about/services/packages/portfolio → Pages Properties (#68–#72)
+// home/about/services/packages/portfolio/calculator → Pages Properties (#68–#73)
   { key: "booking", label: "สอบถาม/นัดสำรวจ", path: "/booking" },
   { key: "contact", label: "ติดต่อเรา", path: "/contact" },
-  { key: "calculator", label: "เครื่องคำนวณ", path: "/calculator" },
   { key: "testimonials", label: "รีวิวลูกค้า", path: "/testimonials" },
   { key: "cookiePolicy", label: "นโยบายคุกกี้", path: "/cookie-policy" },
 ];

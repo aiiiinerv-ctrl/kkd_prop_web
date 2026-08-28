@@ -3,6 +3,7 @@
 import {
   CalendarCheck,
   ClipboardList,
+  Calculator,
   FileBarChart,
   FileText,
   Home,
@@ -64,6 +65,12 @@ const ITEMS = [
     href: "/admin/pages/portfolio",
     label: "ผลงาน (Pages)",
     icon: Images,
+    roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
+  },
+  {
+    href: "/admin/pages/calculator",
+    label: "เครื่องคำนวณ (Pages)",
+    icon: Calculator,
     roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
   },
   {
