@@ -1,6 +1,6 @@
 # Pages CMS Sprint 12 — Cleanup inventory
 
-Date: 2026-08-28 · **Do not execute until 2026-09-11 + owner approval**
+Date: 2026-08-28 · **Do not execute until 2026-09-11** (owner cleanup OK granted 2026-08-28)
 
 ## Legacy admin 307 shims (remove route files)
 
@@ -11,7 +11,7 @@ Date: 2026-08-28 · **Do not execute until 2026-09-11 + owner approval**
 | `/admin/packages` | `/admin/pages/packages` | `src/app/admin/(dashboard)/packages/page.tsx` |
 | `/admin/portfolio` | `/admin/pages/portfolio` | `src/app/admin/(dashboard)/portfolio/page.tsx` |
 
-**Approved final behavior for removed routes:** TBD at execution (404 vs permanent redirect to canonical — default proposal: **404** after bookmark check).
+**Approved final behavior for removed routes:** **404** after bookmark check (owner default; confirm at execute if bookmarks still hit legacy URLs).
 
 ## Registry / public readers (simplify)
 

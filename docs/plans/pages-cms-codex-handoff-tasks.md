@@ -1,5 +1,23 @@
 # Pages CMS — Codex hand-off continuation tasks
 
+> **SUPERSEDED (2026-08-28):** Historical hand-off from 2026-08-25. Gates B–E and Sprints 3–11 are **complete**; prod #75 live. Active: Sprint 12 [#76](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/76) — owner OK 2026-08-28; execute earliest **2026-09-11**. Current status table added below; archived task list kept for audit.
+
+## Current status (2026-08-28)
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Sprint 1 — engine readiness | Complete | `s01-engine-readiness/manifest.md` |
+| Sprint 2 — production InnoDB | Complete | #65 |
+| Sprints 3–11 | Complete | #66–#74 |
+| Prod redeploy | Live | #75 |
+| Sprint 12 | Prep + owner OK; execute 2026-09-11+ | #76 |
+| Local verify | GREEN 2026-08-28 | `verify-pages-cms-all.mts` |
+
+---
+
+## Archived hand-off (2026-08-25 — do not execute)
+
+
 Date: 2026-08-25 (hand-off เกิดขึ้นเพราะ Codex ชน usage limit ระหว่างเตรียม Sprint 2)
 
 อ้างอิง:
