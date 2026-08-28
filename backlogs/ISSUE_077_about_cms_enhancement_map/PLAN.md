@@ -8,7 +8,7 @@
 |---|---|
 | GitHub | https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/77 |
 | Opened | 2026-08-28 |
-| Status | **charting** — frontier #78–#81 |
+| Status | **charting** — #78 done; frontier #79–#81 |
 | Labels | `wayfinder:map`, `enhancement` |
 
 ## Goal
@@ -19,14 +19,14 @@ Chart the route to admin-editable About credentials heading + icons + text compl
 
 > ในระบบหลังบ้าน หน้าเกี่ยวกับเรา ให้สามารถเปลี่ยนข้อความต่างๆและไอคอนได้เอง เพิ่มให้กรอกข้อความก่อน Card จดทะเบียนในไทย
 
-## Known gap (pre-research)
+## Known gap (confirmed #78)
 
-| Area | Today | Likely gap |
+| Area | Today | Gap |
 | --- | --- | --- |
-| Credential card text | Editable in `/admin/pages/about` | Partially met |
-| Credential section heading | **None** on public page | **New fields** (title/subtitle before card 1) |
-| Icons (6 cards) | Hardcoded Lucide in `about/page.tsx` | **Not admin-editable** |
-| Stats/testimonials labels | In schema, not in admin UI | TBD scope (#83) |
+| Credential card text | Editable | **Met** |
+| Credential **section** heading before cards | Not rendered | **New fields** needed |
+| Icons (6 cards) | Hardcoded Lucide | **By design** — conflicts ownership doc; needs #82 |
+| Stats/testimonials labels | Schema only | Admin UI + public wiring incomplete |
 
 ## Ticket frontier
 
