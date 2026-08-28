@@ -8,15 +8,14 @@ import { CHANNEL_TYPES, zodEnum } from "@/lib/enums";
 import {
   CHANNEL_DEFAULT_LANDING_PATH,
   CHANNEL_SUB_TYPE_CODES,
-  CHANNEL_UTM_CAMPAIGNS,
   isPromoLandingPath,
 } from "@/lib/channel-taxonomy";
 import { prisma } from "@/lib/db";
 import type { ActionResult } from "./users";
 
 // Empty-string form values collapse to null — a channel created before this
-// column existed (or one an admin hasn't classified yet) has no subType/
-// utmCampaign, and that must stay a valid, non-blocking state (default #10,
+// column existed (or one an admin hasn't classified yet) has no subType, and
+// that must stay a valid, non-blocking state (default #10,
 // sa-channel-taxonomy-utm-tasks.md — old refCodes are never auto-migrated).
 const optionalCode = (allowed: readonly string[], message: string) =>
   z.preprocess(
@@ -57,7 +56,6 @@ const channelSchema = z.object({
   type: zodEnum(CHANNEL_TYPES),
   subType: optionalCode(CHANNEL_SUB_TYPE_CODES, "รหัสประเภทช่องทางย่อยไม่ถูกต้อง"),
   landingPath: landingPathSchema,
-  utmCampaign: optionalCode(CHANNEL_UTM_CAMPAIGNS, "utm_campaign ไม่ถูกต้อง"),
   isActive: z.coerce.boolean(),
   sortOrder: z.coerce.number().int().min(0).max(999).default(0),
 });
@@ -96,7 +94,6 @@ function parseChannel(formData: FormData) {
     type: formData.get("type"),
     subType: formData.get("subType"),
     landingPath: formData.get("landingPath") || CHANNEL_DEFAULT_LANDING_PATH,
-    utmCampaign: formData.get("utmCampaign"),
     isActive: formData.get("isActive") === "on",
     sortOrder: formData.get("sortOrder") || 0,
   });

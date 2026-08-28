@@ -372,7 +372,7 @@ async function runProduction() {
     await pace(admin);
     results.push({
       section: "admin",
-      title: "ช่องทางโปรโมท — จัดหมวดหมู่ช่องทาง สร้างลิงก์พร้อม UTM อัตโนมัติ",
+      title: "ช่องทางโปรโมท — จัดหมวดหมู่ช่องทาง สร้างลิงก์โปรโมทแบบ ?ref=",
       env: "production",
       screenshot: shotFile,
       checks: [{ label: "หน้าโหลดสำเร็จ (HTTP 200)", pass: res?.status() === 200 }],

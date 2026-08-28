@@ -6,7 +6,6 @@ import { CHANNEL_TYPE_LABELS } from "@/lib/enum-labels";
 import {
   CHANNEL_DEFAULT_LANDING_PATH,
   CHANNEL_SUB_TYPES,
-  CHANNEL_UTM_CAMPAIGNS,
   PROMO_LANDING_PATH_OPTIONS,
   PROMO_LANDING_PATHS,
   subTypeOf,
@@ -58,7 +57,6 @@ type ChannelRow = {
   type: ChannelType;
   subType: string | null;
   landingPath: string;
-  utmCampaign: string | null;
   refCode: string;
   isActive: boolean;
   sortOrder: number;
@@ -78,7 +76,7 @@ function formatDate(iso: string) {
 /**
  * The domain+protocol prefix is identical on every promo link and eats most
  * of the truncated width, hiding the part that actually differs
- * (landingPath / ?ref= / utm params). Show only that part; the full URL
+ * (landingPath / ?ref=). Show only that part; the full URL
  * stays available via the `title` attribute and the copy button.
  */
 function stripSiteUrl(url: string, siteUrl: string) {
@@ -356,8 +354,6 @@ export function ChannelsClient({
                 siteUrl,
                 refCode: c.refCode,
                 landingPath: c.landingPath,
-                subType: c.subType,
-                utmCampaign: c.utmCampaign,
               });
               const promoLinkDisplay = stripSiteUrl(promoLink, siteUrl);
               return (
@@ -534,21 +530,6 @@ export function ChannelsClient({
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label>utm_campaign</Label>
-              <select
-                name="utmCampaign"
-                defaultValue={editing?.utmCampaign ?? ""}
-                className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/50"
-              >
-                <option value="">- ไม่ระบุ -</option>
-                {CHANNEL_UTM_CAMPAIGNS.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
               <Label>ลำดับการแสดง</Label>
               <Input
                 name="sortOrder"
@@ -622,8 +603,6 @@ export function ChannelsClient({
                         siteUrl,
                         refCode: e.refCode,
                         landingPath: execDialogChannel.landingPath,
-                        subType: execDialogChannel.subType,
-                        utmCampaign: execDialogChannel.utmCampaign,
                       });
                       const execPromoLinkDisplay = stripSiteUrl(
                         execPromoLink,
@@ -634,10 +613,8 @@ export function ChannelsClient({
                         <TableCell className="font-medium">{e.name}</TableCell>
                         <TableCell>{e.phone}</TableCell>
                         <TableCell>
-                          {/* Inherits landingPath/subType/utmCampaign from the
-                              parent channel — an executive isn't classified on
-                              their own, they carry the channel's campaign
-                              metadata with their own refCode swapped in. */}
+                          {/* Inherits landingPath from the parent channel —
+                              an executive uses their own refCode in the link. */}
                           <div className="flex items-center gap-1.5">
                             <Badge variant="outline">{e.refCode}</Badge>
                             <span

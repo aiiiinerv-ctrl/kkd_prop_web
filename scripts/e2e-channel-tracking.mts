@@ -15,6 +15,7 @@ import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { chromium } from "playwright";
 
 import { PrismaClient } from "../src/generated/prisma/client.js";
+import { buildPromoLink } from "../src/lib/promo-link.js";
 
 const prisma = new PrismaClient({
   adapter: new PrismaMariaDb(process.env.DATABASE_URL!),
@@ -430,16 +431,28 @@ async function referrerValueAfterHydration(
   await context.close();
 }
 
-// --- Case 12: a promo link built by buildPromoLink() (Sprint 2) carries utm_*
-// params alongside ?ref= and points at a non-root landing page — confirm the
-// extra params don't confuse proxy.ts's ref capture and that next-intl's
-// locale middleware doesn't drop the query string on its way to /th/packages. ---
+// --- Case 12: promo links from buildPromoLink() are ref-only; external
+// `utm_*` params on a landing URL still don't break ref capture. ---
 {
+  const promoUrl = buildPromoLink({
+    siteUrl: "http://localhost:3000",
+    refCode: facebookExecutive.refCode,
+    landingPath: "/th/packages",
+  });
+  const promoRefOnly =
+    promoUrl ===
+    `http://localhost:3000/th/packages?ref=${encodeURIComponent(facebookExecutive.refCode)}`;
+  console.log(
+    `CHANNEL TRACKING: buildPromoLink() emits ref-only URL ${
+      promoRefOnly ? "✓" : `✗ FAIL (${promoUrl})`
+    }`
+  );
+
   const context = await consentedContext();
   const page = await context.newPage();
 
   await page.goto(
-    `http://localhost:3000/th/packages?ref=${facebookExecutive.refCode}&utm_source=facebook&utm_medium=social&utm_campaign=package_info&utm_content=${facebookExecutive.refCode}`
+    `${promoUrl}&utm_source=facebook&utm_medium=social&utm_campaign=package_info&utm_content=${facebookExecutive.refCode}`
   );
   const refCookie = (await context.cookies()).find((c) => c.name === "kkd_ref");
   console.log(

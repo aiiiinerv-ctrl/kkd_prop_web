@@ -123,8 +123,8 @@ model PromoChannel {
   // PROMO_LANDING_PATH_OPTIONS in src/lib/channel-taxonomy.ts and are
   // validated server-side via isPromoLandingPath() before writes.
   landingPath String             @default("/th/packages")
-  // utm_campaign for this channel's promo link — one of CHANNEL_UTM_CAMPAIGNS,
-  // nullable because it has no meaningful default until an admin picks one.
+  // Legacy per-channel utm_campaign — no longer set from admin UI; column kept
+  // for existing rows. Promo links are ref-only (see src/lib/promo-link.ts).
   utmCampaign String?            @db.VarChar(60)
   refCode     String             @unique
   isActive    Boolean            @default(true)

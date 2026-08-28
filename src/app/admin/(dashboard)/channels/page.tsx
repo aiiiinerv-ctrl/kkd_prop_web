@@ -51,7 +51,6 @@ export default async function AdminChannelsPage() {
         type: c.type,
         subType: c.subType,
         landingPath: c.landingPath,
-        utmCampaign: c.utmCampaign,
         refCode: c.refCode,
         isActive: c.isActive,
         sortOrder: c.sortOrder,

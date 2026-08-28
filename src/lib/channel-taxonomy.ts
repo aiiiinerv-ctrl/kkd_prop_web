@@ -98,8 +98,3 @@ export const PROMO_LANDING_PATHS: readonly string[] =
 export function isPromoLandingPath(path: string): boolean {
   return PROMO_LANDING_PATHS.includes(path);
 }
-
-/** utm_campaign is a closed choice per the SA sheet, not free text. */
-export const CHANNEL_UTM_CAMPAIGNS = ["package_info", "always_on"] as const;
-
-export type ChannelUtmCampaign = (typeof CHANNEL_UTM_CAMPAIGNS)[number];
