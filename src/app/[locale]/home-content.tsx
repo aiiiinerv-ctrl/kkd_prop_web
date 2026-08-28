@@ -14,11 +14,9 @@ import {
   getSiteSettings,
   resolveHomeHeroImage,
 } from "@/lib/content";
+import { resolveQuickContact } from "@/lib/site-contact";
 import { PAGE_REGISTRY } from "@/lib/pages";
 
-const FALLBACK_LINE_URL = "https://line.me/R/ti/p/@kkdsolar";
-const FALLBACK_FACEBOOK_URL = "https://facebook.com/kkdsolar";
-const FALLBACK_PHONE = "0824731567";
 const MESSAGE_FAQ_KEYS = ["q1", "q2", "q3", "q4", "q5"] as const;
 
 /**
@@ -90,9 +88,7 @@ export async function HomeContent({
     PAGE_REGISTRY.home.contentRollout === "pages" ? getHomePageContent(locale) : Promise.resolve(null),
   ]);
 
-  const phone = siteSettings?.phone ?? FALLBACK_PHONE;
-  const lineUrl = siteSettings?.socialLinks.find((s) => s.key === "line")?.url ?? FALLBACK_LINE_URL;
-  const facebookUrl = siteSettings?.facebookUrl ?? FALLBACK_FACEBOOK_URL;
+  const { phone, lineUrl, facebookUrl } = resolveQuickContact(siteSettings);
 
   const view: HomeViewModel = homeRow
     ? {
@@ -237,31 +233,37 @@ export async function HomeContent({
             <span className="text-xs font-semibold text-muted-foreground">
               {view.quickContactLabel}
             </span>
-            <a
-              href={`tel:${phone.replace(/[-\s]/g, "")}`}
-              aria-label={tContact("phone")}
-              className="flex size-9 items-center justify-center rounded-full border border-border/70 bg-card text-primary transition-colors hover:border-brand-orange hover:text-brand-orange"
-            >
-              <Phone className="size-4" />
-            </a>
-            <a
-              href={lineUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={tContact("line")}
-              className="flex size-9 items-center justify-center rounded-full border border-border/70 bg-card text-primary transition-colors hover:border-brand-orange hover:text-brand-orange"
-            >
-              <MessageCircle className="size-4" />
-            </a>
-            <a
-              href={facebookUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={tContact("facebook")}
-              className="flex size-9 items-center justify-center rounded-full border border-border/70 bg-card text-primary transition-colors hover:border-brand-orange hover:text-brand-orange"
-            >
-              <IconFacebook className="size-4" />
-            </a>
+            {phone && (
+              <a
+                href={`tel:${phone.replace(/[-\s]/g, "")}`}
+                aria-label={tContact("phone")}
+                className="flex size-9 items-center justify-center rounded-full border border-border/70 bg-card text-primary transition-colors hover:border-brand-orange hover:text-brand-orange"
+              >
+                <Phone className="size-4" />
+              </a>
+            )}
+            {lineUrl && (
+              <a
+                href={lineUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={tContact("line")}
+                className="flex size-9 items-center justify-center rounded-full border border-border/70 bg-card text-primary transition-colors hover:border-brand-orange hover:text-brand-orange"
+              >
+                <MessageCircle className="size-4" />
+              </a>
+            )}
+            {facebookUrl && (
+              <a
+                href={facebookUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={tContact("facebook")}
+                className="flex size-9 items-center justify-center rounded-full border border-border/70 bg-card text-primary transition-colors hover:border-brand-orange hover:text-brand-orange"
+              >
+                <IconFacebook className="size-4" />
+              </a>
+            )}
           </Reveal>
           <div className="theme6-feature-row">
             <div>
@@ -360,7 +362,7 @@ export async function HomeContent({
         </section>
       )}
 
-      {view.showFaq && (
+      {view.showFaq && lineUrl && (
         <FaqSection
           badge={view.faqBadge}
           title={view.faqTitle}

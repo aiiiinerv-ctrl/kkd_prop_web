@@ -171,8 +171,8 @@ export function BookingForms({
   channels: Channel[];
   bankInfo: BankInfo;
   promptpayQrDataUrl: string | null;
-  phone: string;
-  lineUrl: string;
+  phone: string | null;
+  lineUrl: string | null;
 }) {
   const t = useTranslations("booking");
   // URL is the single source of truth for the active tab (#13 decision 1):
@@ -213,14 +213,16 @@ export function BookingForms({
         <p className="mt-2 text-muted-foreground">
           {success === "quote" ? t("successQuoteDesc") : t("successSurveyDesc")}
         </p>
-        <a
-          href={lineUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-6 inline-block rounded-full bg-[#06c755] px-6 py-2.5 text-sm font-semibold text-white"
-        >
-          LINE @kkdsolar
-        </a>
+        {lineUrl && (
+          <a
+            href={lineUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-6 inline-block rounded-full bg-[#06c755] px-6 py-2.5 text-sm font-semibold text-white"
+          >
+            LINE @kkdsolar
+          </a>
+        )}
       </div>
     );
   }
@@ -588,7 +590,7 @@ function QuoteForm({
   initialSourceChannelId: string;
   initialReferrerName: string;
   onSuccess: () => void;
-  phone: string;
+  phone: string | null;
 }) {
   const t = useTranslations("booking");
   const locale = useLocale();
@@ -690,10 +692,15 @@ function QuoteForm({
       <NotesField register={baseApi.register} t={t} />
       {serverError && <p className={errorCls}>{t("errorGeneric")}</p>}
       <p className="text-center text-xs text-muted-foreground">
-        {t("reassurance")}{" "}
-        <a href={`tel:${phone.replace(/[-\s]/g, "")}`} className="font-semibold text-primary hover:underline">
-          {t("callUs")}
-        </a>
+        {t("reassurance")}
+        {phone ? (
+          <>
+            {" "}
+            <a href={`tel:${phone.replace(/[-\s]/g, "")}`} className="font-semibold text-primary hover:underline">
+              {t("callUs")}
+            </a>
+          </>
+        ) : null}
       </p>
       <button
         type="submit"
@@ -729,7 +736,7 @@ function SurveyForm({
   onSuccess: () => void;
   bankInfo: BankInfo;
   promptpayQrDataUrl: string | null;
-  phone: string;
+  phone: string | null;
 }) {
   const t = useTranslations("booking");
   const locale = useLocale();
@@ -1039,10 +1046,15 @@ function SurveyForm({
       {serverError && <p className={errorCls}>{t("errorGeneric")}</p>}
       {dateFullError && <p className={errorCls}>{t("dateFull")}</p>}
       <p className="text-center text-xs text-muted-foreground">
-        {t("reassurance")}{" "}
-        <a href={`tel:${phone.replace(/[-\s]/g, "")}`} className="font-semibold text-primary hover:underline">
-          {t("callUs")}
-        </a>
+        {t("reassurance")}
+        {phone ? (
+          <>
+            {" "}
+            <a href={`tel:${phone.replace(/[-\s]/g, "")}`} className="font-semibold text-primary hover:underline">
+              {t("callUs")}
+            </a>
+          </>
+        ) : null}
       </p>
       <button
         type="submit"

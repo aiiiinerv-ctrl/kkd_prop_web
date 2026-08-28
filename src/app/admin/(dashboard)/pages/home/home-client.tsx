@@ -299,7 +299,11 @@ function ContactSection({ contact }: { contact: ContactData }) {
     <div className="rounded-xl border border-border/70 bg-card p-6">
       <h2 className="mb-1 font-semibold">ข้อมูลติดต่อ (ใช้ในไอคอนโทร/LINE/Facebook บนหน้าแรก)</h2>
       <p className="mb-4 text-sm text-accent-foreground">
-        ข้อมูลชุดนี้เป็นชุดเดียวกับ “ตั้งค่าระบบ → ติดต่อ &amp; Social” — แก้ที่นี่จะเปลี่ยนทั้งเว็บ ไม่ใช่แค่หน้าแรก
+        ข้อมูลชุดนี้เป็นชุดเดียวกับ{" "}
+        <a href="/admin/settings" className="font-medium text-brand-orange underline-offset-2 hover:underline">
+          ตั้งค่าระบบ → ติดต่อ &amp; Social
+        </a>{" "}
+        — แก้ที่นี่เปลี่ยนทั้งเว็บ (เบอร์/LINE/Facebook บนหน้าแรก) หรือแก้ครบทุกช่องที่ลิงก์ด้านบน
       </p>
       <form action={handleSubmit} className="space-y-4" noValidate>
         {/* Fields Home doesn't surface for editing — carried through unchanged so this save never blanks them. */}

@@ -658,6 +658,12 @@ await page.click("#c-contact-submit");
 await page.waitForSelector("text=บันทึกข้อมูลติดต่อเรียบร้อย", { timeout: 10000 });
 console.log("SITE SETTINGS: contact phone updated ✓");
 
+const publicContactRes = await page.request.get("http://localhost:3000/th/contact");
+const publicContactHtml = await publicContactRes.text();
+console.log(
+  `SITE SETTINGS: new phone visible on /th/contact ${publicContactHtml.includes(testPhone) ? "✓" : "✗ FAIL"}`
+);
+
 const publicThFooterRes = await page.request.get("http://localhost:3000/th");
 const publicThFooterHtml = await publicThFooterRes.text();
 console.log(

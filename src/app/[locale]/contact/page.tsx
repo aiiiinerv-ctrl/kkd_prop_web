@@ -1,10 +1,27 @@
-import { Clock, MapPin, MessageCircle, Phone } from "lucide-react";
+import { Clock, Mail, MapPin, Phone } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CtaBanner } from "@/components/site/cta-banner";
-import { IconFacebook } from "@/components/site/icon-facebook";
 import { SectionHeading } from "@/components/site/section-heading";
+import { SOCIAL_BRAND_ICON_MAP, SOCIAL_LINK_ORDER } from "@/components/site/social-brand-icons";
 import { getSiteSettings } from "@/lib/content";
+import { pickSiteContactValue } from "@/lib/site-contact";
 import { pageMetadata } from "@/lib/seo";
+
+type ContactCard = {
+  key: string;
+  icon: React.ComponentType<React.SVGAttributes<SVGSVGElement>>;
+  label: string;
+  value: string;
+  href?: string;
+};
+
+const SOCIAL_MESSAGE_KEYS = {
+  line: { label: "line", value: "lineValue" },
+  facebook: { label: "facebook", value: "facebookValue" },
+  instagram: { label: "instagram", value: "instagramValue" },
+  tiktok: { label: "tiktok", value: "tiktokValue" },
+  youtube: { label: "youtube", value: "youtubeValue" },
+} as const;
 
 export async function generateMetadata({
   params,
@@ -25,29 +42,66 @@ export default async function ContactPage({
   const t = await getTranslations("contact");
 
   const settings = await getSiteSettings(locale);
+  const hasRow = settings !== null;
 
-  // Values from DB take precedence; fall back to messages so the page is
-  // never blank on a fresh deployment before seed data is in the DB.
-  const phone = settings?.phone ?? t("phoneValue");
-  // Social links: null/empty means the operator cleared them → do not render.
-  const lineUrl = settings?.socialLinks.find((s) => s.key === "line")?.url ?? null;
-  const facebookUrl = settings?.facebookUrl ?? null;
-  const address = settings?.address ?? t("addressValue");
-  const hours = settings?.hours ?? t("hoursValue");
+  const pickText = (
+    dbValue: string | null | undefined,
+    fallbackKey: "addressValue" | "phoneValue" | "hoursValue"
+  ) => pickSiteContactValue(dbValue, hasRow, t(fallbackKey));
+
+  const address = pickText(settings?.address, "addressValue");
+  const phone = pickText(settings?.phone, "phoneValue");
+  const email = pickSiteContactValue(settings?.email, hasRow, t("emailValue"));
+  const hours = pickText(settings?.hours, "hoursValue");
   const contactTitle = settings?.contactTitle ?? t("title");
   const contactSubtitle = settings?.contactSubtitle ?? t("subtitle");
 
-  // Build only the items that have a value; social items without a URL are omitted.
-  type Item = { icon: React.ComponentType<React.SVGAttributes<SVGSVGElement>>; label: string; value: string; href?: string };
-  const ITEMS: Item[] = [
-    { icon: MapPin, label: t("address"), value: address },
-    { icon: Phone, label: t("phone"), value: phone, href: `tel:${phone.replace(/[-\s]/g, "")}` },
-    ...(lineUrl ? [{ icon: MessageCircle, label: t("line"), value: t("lineValue"), href: lineUrl } as Item] : []),
-    ...(facebookUrl ? [{ icon: IconFacebook, label: t("facebook"), value: t("facebookValue"), href: facebookUrl } as Item] : []),
-    { icon: Clock, label: t("hours"), value: hours },
-  ];
+  const socialUrlByKey = new Map(settings?.socialLinks.map((s) => [s.key, s.url]) ?? []);
 
-  const mapQuery = encodeURIComponent(settings?.mapQuery ?? address);
+  const items: ContactCard[] = [];
+
+  if (address) {
+    items.push({ key: "address", icon: MapPin, label: t("address"), value: address });
+  }
+  if (phone) {
+    items.push({
+      key: "phone",
+      icon: Phone,
+      label: t("phone"),
+      value: phone,
+      href: `tel:${phone.replace(/[-\s]/g, "")}`,
+    });
+  }
+  if (email) {
+    items.push({
+      key: "email",
+      icon: Mail,
+      label: t("email"),
+      value: email,
+      href: `mailto:${email}`,
+    });
+  }
+
+  for (const socialKey of SOCIAL_LINK_ORDER) {
+    const url = socialUrlByKey.get(socialKey);
+    if (!url) continue;
+    const msg = SOCIAL_MESSAGE_KEYS[socialKey];
+    const Icon = SOCIAL_BRAND_ICON_MAP[socialKey];
+    if (!Icon) continue;
+    items.push({
+      key: socialKey,
+      icon: Icon,
+      label: t(msg.label),
+      value: t(msg.value),
+      href: url,
+    });
+  }
+
+  if (hours) {
+    items.push({ key: "hours", icon: Clock, label: t("hours"), value: hours });
+  }
+
+  const mapQuery = encodeURIComponent(settings?.mapQuery ?? address ?? t("addressValue"));
 
   return (
     <main>
@@ -59,9 +113,9 @@ export default async function ContactPage({
         />
 
         <div className="grid gap-6 sm:grid-cols-2">
-          {ITEMS.map((item) => (
+          {items.map((item) => (
             <div
-              key={item.label}
+              key={item.key}
               className="flex items-start gap-4 rounded-xl border border-border/70 bg-card p-6 shadow-sm transition-all hover:-translate-y-1.5 hover:shadow-lg"
             >
               <item.icon className="mt-0.5 size-6 shrink-0 text-brand-orange" />

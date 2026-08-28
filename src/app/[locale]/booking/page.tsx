@@ -11,6 +11,7 @@ import {
 } from "@/lib/content";
 import { generatePromptPayQrDataUrl } from "@/lib/promptpay";
 import { resolveRefAttribution, resolveRefReferrerName } from "@/lib/ref-attribution";
+import { resolveQuickContact } from "@/lib/site-contact";
 import { BookingForms } from "./booking-forms";
 import { pageMetadata } from "@/lib/seo";
 
@@ -86,6 +87,8 @@ export default async function BookingPage({
     ? SERVICE_SLUG_TO_INTERESTED_SYSTEM[serviceRow.slug]
     : undefined;
 
+  const siteContact = resolveQuickContact(siteSettings);
+
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6">
       <SectionHeading
@@ -111,8 +114,8 @@ export default async function BookingPage({
             bankAccountName: paymentSettings?.bankAccountName ?? "",
           }}
           promptpayQrDataUrl={promptpayQrDataUrl}
-          phone={siteSettings?.phone ?? "0824731567"}
-          lineUrl={siteSettings?.socialLinks.find((s) => s.key === "line")?.url ?? "https://line.me/R/ti/p/@kkdsolar"}
+          phone={siteContact.phone}
+          lineUrl={siteContact.lineUrl}
         />
       </Suspense>
     </main>
