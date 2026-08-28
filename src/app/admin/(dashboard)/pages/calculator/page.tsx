@@ -1,4 +1,6 @@
 import { canManageContent, canManageSiteSettings, requireRole } from "@/lib/auth";
+import { CALCULATOR_DEFAULTS } from "@/lib/calculator";
+import { rowToCalculatorParams } from "@/lib/calculator-config";
 import { prisma } from "@/lib/db";
 import { storage } from "@/lib/storage";
 import { CalculatorAdminShell } from "./calculator-admin-shell";
@@ -8,17 +10,26 @@ export default async function PagesCalculatorPage() {
   if (!canManageContent(session.user.role)) return null;
 
   const canMutateProperties = canManageSiteSettings(session.user.role);
+  const canManageConfig = session.user.role === "ADMIN";
 
-  const [pageRow, pageSeo] = await Promise.all([
+  const [pageRow, pageSeo, configRow] = await Promise.all([
     prisma.calculatorPageContent.findUnique({ where: { key: "calculator" } }),
     canMutateProperties
       ? prisma.pageSeo.findUnique({ where: { key: "calculator" } })
       : Promise.resolve(null),
+    canManageConfig
+      ? prisma.calculatorConfig.findFirst()
+      : Promise.resolve(null),
   ]);
+
+  const params = configRow
+    ? rowToCalculatorParams(configRow)
+    : CALCULATOR_DEFAULTS;
 
   return (
     <CalculatorAdminShell
-      key={`${pageRow?.version ?? 0}-${pageSeo?.version ?? 0}`}
+      key={`${pageRow?.version ?? 0}-${pageSeo?.version ?? 0}-${configRow?.version ?? 0}`}
+      canManageConfig={canManageConfig}
       canMutateProperties={canMutateProperties}
       pageSeo={
         pageSeo
@@ -61,6 +72,17 @@ export default async function PagesCalculatorPage() {
               packagesSubtitleTh: pageRow.packagesSubtitleTh ?? "",
               packagesSubtitleEn: pageRow.packagesSubtitleEn ?? "",
               showPackages: pageRow.showPackages,
+            }
+          : null
+      }
+      calculatorConfig={
+        canManageConfig
+          ? {
+              version: configRow?.version ?? 1,
+              sunHoursPerDay: params.sunHoursPerDay,
+              pricePerKwhThb: params.pricePerKwhThb,
+              annualSavingMonthsMultiplier: params.annualSavingMonthsMultiplier,
+              params,
             }
           : null
       }

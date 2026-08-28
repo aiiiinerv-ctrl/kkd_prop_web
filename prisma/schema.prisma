@@ -621,6 +621,23 @@ model CalculatorPageContent {
   updatedAt          DateTime @updatedAt
 }
 
+// Singleton — admin-tunable calculator parameters (Phase A: sun hours, price/kWh,
+// annual multiplier; Phase B will expose bill bounds and tier thresholds in UI).
+model CalculatorConfig {
+  id                           String   @id @default(cuid())
+  sunHoursPerDay               Float    @default(5)
+  daysPerMonth                 Int      @default(30)
+  pricePerKwhThb               Float    @default(4.5)
+  annualSavingMonthsMultiplier Int      @default(10)
+  minBill                      Int      @default(500)
+  maxBill                      Int      @default(8000)
+  stepBill                     Int      @default(100)
+  billThreshold3To5Kw          Int      @default(3000)
+  billThreshold5To10Kw          Int      @default(6000)
+  version                      Int      @default(1)
+  updatedAt                    DateTime @updatedAt
+}
+
 // Singleton (mirrors BookingCapacitySetting) — admin-configurable payment
 // info shown on the public survey-booking form (bank transfer + PromptPay QR).
 model PaymentSettings {

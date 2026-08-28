@@ -8,6 +8,7 @@ export const APPLICATION_TABLE_CONTRACTS = [
   { table: "SurveyBooking", delegate: "surveyBooking" },
   { table: "BookingCapacitySetting", delegate: "bookingCapacitySetting" },
   { table: "PaymentSettings", delegate: "paymentSettings" },
+  { table: "CalculatorConfig", delegate: "calculatorConfig" },
   { table: "SiteSettings", delegate: "siteSettings" },
   { table: "PageSeo", delegate: "pageSeo" },
   { table: "AboutContent", delegate: "aboutContent" },

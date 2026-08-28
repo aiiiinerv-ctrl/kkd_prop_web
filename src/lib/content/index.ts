@@ -1,4 +1,6 @@
 import { cache } from "react";
+import { CALCULATOR_DEFAULTS, type CalculatorParams } from "@/lib/calculator";
+import { rowToCalculatorParams } from "@/lib/calculator-config";
 import { prisma } from "@/lib/db";
 import { CLOSED_LEAD_STATUSES } from "@/lib/reports/aggregate";
 import { storage } from "@/lib/storage";
@@ -239,6 +241,13 @@ export const getCalculatorPageContent = cache(
     return toCalculatorPageContentView(row, locale);
   }
 );
+
+/** Active calculator parameters for public rendering. Falls back to Excel defaults. */
+export const getCalculatorConfig = cache(async (): Promise<CalculatorParams> => {
+  const row = await prisma.calculatorConfig.findFirst();
+  if (!row) return CALCULATOR_DEFAULTS;
+  return rowToCalculatorParams(row);
+});
 
 /**
  * Home Page Content + its FAQ children, for the public reader

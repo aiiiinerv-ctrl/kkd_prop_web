@@ -4,31 +4,29 @@ import { useLocale, useTranslations } from "next-intl";
 import { useMemo } from "react";
 import { Link } from "@/i18n/navigation";
 import {
-  BILL_THRESHOLD_3KW_TO_5KW,
-  BILL_THRESHOLD_5KW_TO_10KW,
-  MAX_BILL,
-  MIN_BILL,
-  STEP_BILL,
   calculateSavings,
   type CalcPackage,
+  type CalculatorParams,
 } from "@/lib/calculator";
 import { bookingHref } from "@/lib/booking-links";
 import { cn } from "@/lib/utils";
 import { useCalculatorStore } from "@/store/use-calculator-store";
 
 /** Where a bill sits along the slider track, as a percentage. */
-function billToPercent(bill: number) {
-  return ((bill - MIN_BILL) / (MAX_BILL - MIN_BILL)) * 100;
+function billToPercent(bill: number, minBill: number, maxBill: number) {
+  return ((bill - minBill) / (maxBill - minBill)) * 100;
 }
 
 export function CalculatorClient({
   packages,
   panelTitle,
   panelIntro,
+  config,
 }: {
   packages: CalcPackage[];
   panelTitle?: string | null;
   panelIntro?: string | null;
+  config: CalculatorParams;
 }) {
   const t = useTranslations("calculator");
   const tCommon = useTranslations("common");
@@ -37,8 +35,8 @@ export function CalculatorClient({
 
   const billValue = Number(bill);
   const displayedResult = useMemo(
-    () => calculateSavings(bill, packages),
-    [bill, packages]
+    () => calculateSavings(bill, packages, config),
+    [bill, packages, config]
   );
 
   const formattedBill = Number.isFinite(billValue)
@@ -64,9 +62,9 @@ export function CalculatorClient({
               id="monthly-bill"
               type="number"
               inputMode="numeric"
-              min={MIN_BILL}
-              max={MAX_BILL}
-              step={STEP_BILL}
+              min={config.minBill}
+              max={config.maxBill}
+              step={config.stepBill}
               value={bill}
               onChange={(e) => setBill(e.target.value)}
               placeholder={t("billPlaceholder")}
@@ -81,21 +79,25 @@ export function CalculatorClient({
             <input
               type="range"
               aria-label={t("billLabel")}
-              min={MIN_BILL}
-              max={MAX_BILL}
-              step={STEP_BILL}
-              value={Number.isFinite(billValue) ? billValue : MIN_BILL}
+              min={config.minBill}
+              max={config.maxBill}
+              step={config.stepBill}
+              value={Number.isFinite(billValue) ? billValue : config.minBill}
               onChange={(e) => setBill(e.target.value)}
               className="relative z-10 w-full accent-primary"
             />
             <div className="pointer-events-none absolute inset-x-0 top-1/2 h-3 -translate-y-1/2">
               <div
                 className="absolute top-0 h-3 w-px bg-primary/40"
-                style={{ left: `${billToPercent(BILL_THRESHOLD_3KW_TO_5KW)}%` }}
+                style={{
+                  left: `${billToPercent(config.billThreshold3To5Kw, config.minBill, config.maxBill)}%`,
+                }}
               />
               <div
                 className="absolute top-0 h-3 w-px bg-primary/40"
-                style={{ left: `${billToPercent(BILL_THRESHOLD_5KW_TO_10KW)}%` }}
+                style={{
+                  left: `${billToPercent(config.billThreshold5To10Kw, config.minBill, config.maxBill)}%`,
+                }}
               />
             </div>
           </div>
@@ -105,7 +107,13 @@ export function CalculatorClient({
                 "absolute -translate-x-1/2",
                 displayedResult?.systemKey === "system3kw" && "font-bold text-primary"
               )}
-              style={{ left: `${billToPercent((MIN_BILL + BILL_THRESHOLD_3KW_TO_5KW) / 2)}%` }}
+              style={{
+                left: `${billToPercent(
+                  (config.minBill + config.billThreshold3To5Kw) / 2,
+                  config.minBill,
+                  config.maxBill
+                )}%`,
+              }}
             >
               {t("tierZone3kw")}
             </span>
@@ -116,7 +124,9 @@ export function CalculatorClient({
               )}
               style={{
                 left: `${billToPercent(
-                  (BILL_THRESHOLD_3KW_TO_5KW + BILL_THRESHOLD_5KW_TO_10KW) / 2
+                  (config.billThreshold3To5Kw + config.billThreshold5To10Kw) / 2,
+                  config.minBill,
+                  config.maxBill
                 )}%`,
               }}
             >
@@ -127,7 +137,13 @@ export function CalculatorClient({
                 "absolute -translate-x-1/2",
                 displayedResult?.systemKey === "system10kw" && "font-bold text-primary"
               )}
-              style={{ left: `${billToPercent((BILL_THRESHOLD_5KW_TO_10KW + MAX_BILL) / 2)}%` }}
+              style={{
+                left: `${billToPercent(
+                  (config.billThreshold5To10Kw + config.maxBill) / 2,
+                  config.minBill,
+                  config.maxBill
+                )}%`,
+              }}
             >
               {t("tierZone10kw")}
             </span>

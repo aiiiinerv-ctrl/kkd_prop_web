@@ -4,25 +4,56 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageShell } from "@/components/admin/pages";
 import { PagePropertiesPanel, type PageSeoFormData } from "../home/home-properties-panel";
 import {
+  CalculatorConfigClient,
+  type CalculatorConfigFormData,
+} from "./calculator-config-client";
+import {
   CalculatorPageContentClient,
   type CalculatorPageFormData,
 } from "./calculator-page-content-client";
 
 export function CalculatorAdminShell({
+  canManageConfig,
   canMutateProperties,
   pageSeo,
   pageContent,
+  calculatorConfig,
 }: {
+  canManageConfig: boolean;
   canMutateProperties: boolean;
   pageSeo: PageSeoFormData | null;
   pageContent: CalculatorPageFormData | null;
+  calculatorConfig: CalculatorConfigFormData | null;
 }) {
   const content = <CalculatorPageContentClient data={pageContent} />;
+  const configTab =
+    canManageConfig && calculatorConfig ? (
+      <CalculatorConfigClient data={calculatorConfig} />
+    ) : null;
 
   if (!canMutateProperties || !pageSeo) {
     return (
       <PageShell pageKey="calculator" title="เครื่องคำนวณ (Pages)">
-        {content}
+        {configTab ? (
+          <Tabs defaultValue="content">
+            <TabsList>
+              <TabsTrigger value="content" id="calculator-tab-content">
+                เนื้อหา
+              </TabsTrigger>
+              <TabsTrigger value="config" id="calculator-tab-config">
+                ตัวเลขการคำนวณ
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="content" className="pt-4">
+              {content}
+            </TabsContent>
+            <TabsContent value="config" className="pt-4">
+              {configTab}
+            </TabsContent>
+          </Tabs>
+        ) : (
+          content
+        )}
       </PageShell>
     );
   }
@@ -31,13 +62,18 @@ export function CalculatorAdminShell({
     <PageShell
       pageKey="calculator"
       title="เครื่องคำนวณ (Pages)"
-      description="เนื้อหาหน้า · Properties (SEO)"
+      description="เนื้อหาหน้า · ตัวเลขการคำนวณ · Properties (SEO)"
     >
       <Tabs defaultValue="content">
         <TabsList>
           <TabsTrigger value="content" id="calculator-tab-content">
             เนื้อหา
           </TabsTrigger>
+          {configTab && (
+            <TabsTrigger value="config" id="calculator-tab-config">
+              ตัวเลขการคำนวณ
+            </TabsTrigger>
+          )}
           <TabsTrigger value="properties" id="calculator-tab-properties">
             Properties
           </TabsTrigger>
@@ -45,6 +81,11 @@ export function CalculatorAdminShell({
         <TabsContent value="content" className="pt-4">
           {content}
         </TabsContent>
+        {configTab && (
+          <TabsContent value="config" className="pt-4">
+            {configTab}
+          </TabsContent>
+        )}
         <TabsContent value="properties" className="pt-4">
           <PagePropertiesPanel
             key={pageSeo.version}

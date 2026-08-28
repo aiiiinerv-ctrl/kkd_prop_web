@@ -300,6 +300,25 @@ async function seedPaymentSettings() {
   console.log("Payment settings: ready");
 }
 
+async function seedCalculatorConfig() {
+  const existing = await prisma.calculatorConfig.findFirst();
+  if (existing) return;
+  await prisma.calculatorConfig.create({
+    data: {
+      sunHoursPerDay: 5,
+      daysPerMonth: 30,
+      pricePerKwhThb: 4.5,
+      annualSavingMonthsMultiplier: 10,
+      minBill: 500,
+      maxBill: 8000,
+      stepBill: 100,
+      billThreshold3To5Kw: 3000,
+      billThreshold5To10Kw: 6000,
+    },
+  });
+  console.log("Calculator config: ready");
+}
+
 async function seedServices() {
   const services = [
     {
@@ -815,6 +834,7 @@ async function main() {
   await seedTestRoleAccounts();
   await seedBookingCapacitySetting();
   await seedPaymentSettings();
+  await seedCalculatorConfig();
   await seedSiteSettings();
   await seedPageSeo();
   await seedAboutContent();

@@ -5,6 +5,7 @@
 import {
   BILL_THRESHOLD_3KW_TO_5KW,
   BILL_THRESHOLD_5KW_TO_10KW,
+  CALCULATOR_DEFAULTS,
   MAX_BILL,
   MIN_BILL,
   STEP_BILL,
@@ -13,6 +14,8 @@ import {
   calculateTheoreticalMonthlySavingThb,
   recommendSystemSizeKw,
 } from "../src/lib/calculator";
+
+const defaults = CALCULATOR_DEFAULTS;
 
 let failed = false;
 
@@ -28,20 +31,20 @@ function assert(label: string, ok: boolean) {
 }
 
 console.log("=== theoretical monthly/annual saving vs. Excel rows ===");
-assertEqual("monthlySaving(3kW)", calculateTheoreticalMonthlySavingThb(3), 2025);
-assertEqual("monthlySaving(5kW)", calculateTheoreticalMonthlySavingThb(5), 3375);
-assertEqual("monthlySaving(10kW)", calculateTheoreticalMonthlySavingThb(10), 6750);
-assertEqual("annualSaving(3kW)", calculateTheoreticalAnnualSavingThb(3), 20250);
-assertEqual("annualSaving(5kW)", calculateTheoreticalAnnualSavingThb(5), 33750);
-assertEqual("annualSaving(10kW)", calculateTheoreticalAnnualSavingThb(10), 67500);
+assertEqual("monthlySaving(3kW)", calculateTheoreticalMonthlySavingThb(3, defaults), 2025);
+assertEqual("monthlySaving(5kW)", calculateTheoreticalMonthlySavingThb(5, defaults), 3375);
+assertEqual("monthlySaving(10kW)", calculateTheoreticalMonthlySavingThb(10, defaults), 6750);
+assertEqual("annualSaving(3kW)", calculateTheoreticalAnnualSavingThb(3, defaults), 20250);
+assertEqual("annualSaving(5kW)", calculateTheoreticalAnnualSavingThb(5, defaults), 33750);
+assertEqual("annualSaving(10kW)", calculateTheoreticalAnnualSavingThb(10, defaults), 67500);
 
 console.log("\n=== bill-bracket recommendation ===");
-assertEqual("recommend(2999)", recommendSystemSizeKw(2999), 3);
-assertEqual("recommend(3000)", recommendSystemSizeKw(BILL_THRESHOLD_3KW_TO_5KW), 5);
-assertEqual("recommend(5999)", recommendSystemSizeKw(5999), 5);
-assertEqual("recommend(6000)", recommendSystemSizeKw(BILL_THRESHOLD_5KW_TO_10KW), 10);
-assertEqual("recommend(500, below 3kW floor)", recommendSystemSizeKw(500), 3);
-assertEqual("recommend(50000)", recommendSystemSizeKw(50000), 10);
+assertEqual("recommend(2999)", recommendSystemSizeKw(2999, defaults), 3);
+assertEqual("recommend(3000)", recommendSystemSizeKw(BILL_THRESHOLD_3KW_TO_5KW, defaults), 5);
+assertEqual("recommend(5999)", recommendSystemSizeKw(5999, defaults), 5);
+assertEqual("recommend(6000)", recommendSystemSizeKw(BILL_THRESHOLD_5KW_TO_10KW, defaults), 10);
+assertEqual("recommend(500, below 3kW floor)", recommendSystemSizeKw(500, defaults), 3);
+assertEqual("recommend(50000)", recommendSystemSizeKw(50000, defaults), 10);
 
 console.log("\n=== calculateSavings: capping + payback against real package prices ===");
 const packages = [
@@ -50,7 +53,7 @@ const packages = [
   { sizeKw: 10, priceThb: 285000 },
 ];
 
-const uncappedCase = calculateSavings("10000", packages)!; // bill well above 10kW's theoretical saving
+const uncappedCase = calculateSavings("10000", packages, defaults)!;
 assertEqual("uncapped(10000).systemKey", uncappedCase.systemKey, "system10kw");
 assertEqual("uncapped(10000).monthlySaving", uncappedCase.monthlySaving, 6750);
 assertEqual(
@@ -59,7 +62,7 @@ assertEqual(
   Number((285000 / (6750 * 10)).toFixed(4)),
 );
 
-const cappedCase = calculateSavings("2000", packages)!; // bill below 3kW's own theoretical saving (2025)
+const cappedCase = calculateSavings("2000", packages, defaults)!;
 assertEqual("capped(2000).monthlySaving", cappedCase.monthlySaving, 2000);
 assertEqual(
   "capped(2000).paybackYears",
@@ -67,7 +70,7 @@ assertEqual(
   Number((99000 / (2000 * 10)).toFixed(4)),
 );
 
-const noPackageCase = calculateSavings("3500", [])!; // no packages passed → payback is null
+const noPackageCase = calculateSavings("3500", [], defaults)!;
 assertEqual("noPackage(3500).paybackYears", noPackageCase.paybackYears, null);
 
 console.log("\n=== afterBill: the figure the customer actually reads ===");
@@ -75,9 +78,9 @@ console.log("\n=== afterBill: the figure the customer actually reads ===");
 // here now, next to the cap that is the reason it can't go negative.
 assertEqual("uncapped(10000).afterBill", uncappedCase.afterBill, 10000 - 6750);
 assertEqual("capped(2000).afterBill is zero, not negative", cappedCase.afterBill, 0);
-assertEqual("mid-range(3500).afterBill", calculateSavings("3500", packages)!.afterBill, 3500 - 3375);
+assertEqual("mid-range(3500).afterBill", calculateSavings("3500", packages, defaults)!.afterBill, 3500 - 3375);
 for (const bill of [MIN_BILL, 1000, 2999, 3000, 5999, 6000, MAX_BILL]) {
-  const result = calculateSavings(String(bill), packages)!;
+  const result = calculateSavings(String(bill), packages, defaults)!;
   assert(
     `afterBill(${bill}) is between 0 and the bill`,
     result.afterBill >= 0 && result.afterBill <= bill
@@ -86,9 +89,9 @@ for (const bill of [MIN_BILL, 1000, 2999, 3000, 5999, 6000, MAX_BILL]) {
 
 console.log("\n=== unusable input yields no result rather than a wrong one ===");
 for (const input of ["", "   ", "abc", "0", "-500", "NaN"]) {
-  assert(`calculateSavings(${JSON.stringify(input)}) === null`, calculateSavings(input, packages) === null);
+  assert(`calculateSavings(${JSON.stringify(input)}) === null`, calculateSavings(input, packages, defaults) === null);
 }
-assert('calculateSavings("3500") is not null', calculateSavings("3500", packages) !== null);
+assert('calculateSavings("3500") is not null', calculateSavings("3500", packages, defaults) !== null);
 
 console.log("\n=== slider range and tier thresholds agree ===");
 // The tier markers are positioned as a percentage of [MIN_BILL, MAX_BILL]; a

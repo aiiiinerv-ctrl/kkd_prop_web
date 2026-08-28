@@ -3,57 +3,74 @@
 // are a separate sheet in that file and are intentionally not implemented here — the
 // calculator UI has no battery-size input and no Hybrid packages exist in the catalog.
 
-// Peak sun hours per day — constant across every row of the On-Grid sheet.
-export const SUN_HOURS_PER_DAY = 5;
+export type CalculatorParams = {
+  sunHoursPerDay: number;
+  daysPerMonth: number;
+  pricePerKwhThb: number;
+  annualSavingMonthsMultiplier: number;
+  minBill: number;
+  maxBill: number;
+  stepBill: number;
+  billThreshold3To5Kw: number;
+  billThreshold5To10Kw: number;
+};
 
-// Days per month used for monthly production — constant across every row.
-export const DAYS_PER_MONTH = 30;
+/** Excel / On-Grid sheet defaults — also used to seed `CalculatorConfig`. */
+export const CALCULATOR_DEFAULTS = {
+  sunHoursPerDay: 5,
+  daysPerMonth: 30,
+  pricePerKwhThb: 4.5,
+  annualSavingMonthsMultiplier: 10,
+  minBill: 500,
+  maxBill: 8000,
+  stepBill: 100,
+  billThreshold3To5Kw: 3000,
+  billThreshold5To10Kw: 6000,
+} satisfies CalculatorParams;
 
-// Electricity price per kWh unit — constant across every row for the 3/5/10kW sizes
-// this calculator recommends (a higher rate appears only on much larger, out-of-scope
-// rows in the sheet).
-export const PRICE_PER_KWH_THB = 4.5;
+// Legacy named exports — verify-calculator.mts and tier-marker tests use these.
+export const SUN_HOURS_PER_DAY = CALCULATOR_DEFAULTS.sunHoursPerDay;
+export const DAYS_PER_MONTH = CALCULATOR_DEFAULTS.daysPerMonth;
+export const PRICE_PER_KWH_THB = CALCULATOR_DEFAULTS.pricePerKwhThb;
+export const ANNUAL_SAVING_MONTHS_MULTIPLIER =
+  CALCULATOR_DEFAULTS.annualSavingMonthsMultiplier;
+export const MIN_BILL = CALCULATOR_DEFAULTS.minBill;
+export const MAX_BILL = CALCULATOR_DEFAULTS.maxBill;
+export const STEP_BILL = CALCULATOR_DEFAULTS.stepBill;
+export const BILL_THRESHOLD_3KW_TO_5KW = CALCULATOR_DEFAULTS.billThreshold3To5Kw;
+export const BILL_THRESHOLD_5KW_TO_10KW = CALCULATOR_DEFAULTS.billThreshold5To10Kw;
 
-// Annual saving = monthly saving x 10, not calendar 12 — this is the sheet's own
-// convention (confirmed with the business: no further reasoning beyond "that's the
-// number we use"), presumably a conservative buffer for lower-output months.
-export const ANNUAL_SAVING_MONTHS_MULTIPLIER = 10;
-
-// The bill range the calculator answers for: the slider's ends, and the bounds
-// the number input accepts. Both tier thresholds must sit strictly inside this
-// range or the tier markers render off the track — asserted in
-// scripts/verify-calculator.mts.
-export const MIN_BILL = 500;
-export const MAX_BILL = 8000;
-export const STEP_BILL = 100;
-
-// Theoretical monthly saving if the system's full production offset electricity
-// otherwise bought at PRICE_PER_KWH_THB. Not capped to any particular bill —
-// calculateSavings() below applies the cap against the customer's actual bill.
-export function calculateTheoreticalMonthlySavingThb(sizeKw: number): number {
-  const dailyProductionKwh = sizeKw * SUN_HOURS_PER_DAY;
-  const monthlyProductionKwh = dailyProductionKwh * DAYS_PER_MONTH;
-  return monthlyProductionKwh * PRICE_PER_KWH_THB;
+export function resolveCalculatorParams(
+  partial?: Partial<CalculatorParams> | null
+): CalculatorParams {
+  return { ...CALCULATOR_DEFAULTS, ...partial };
 }
 
-export function calculateTheoreticalAnnualSavingThb(sizeKw: number): number {
-  return calculateTheoreticalMonthlySavingThb(sizeKw) * ANNUAL_SAVING_MONTHS_MULTIPLIER;
+export function calculateTheoreticalMonthlySavingThb(
+  sizeKw: number,
+  params: CalculatorParams = CALCULATOR_DEFAULTS
+): number {
+  const dailyProductionKwh = sizeKw * params.sunHoursPerDay;
+  const monthlyProductionKwh = dailyProductionKwh * params.daysPerMonth;
+  return monthlyProductionKwh * params.pricePerKwhThb;
 }
 
-// Bill-bracket boundaries for recommending a system size, derived from the sheet's own
-// "ค่าไฟประมาณ" (estimated bill) range per row. The sheet's 3kW row (2,000-3,000) and
-// 5kW row (3,000-4,000) meet exactly at 3,000 — no gap there. But only 3kW/5kW/10kW are
-// real sellable packages, and the sheet's 5kW row (up to 4,000) and 10kW row (from
-// 8,000) leave a gap with no package in it; BILL_THRESHOLD_5KW_TO_10KW fills that gap
-// with its midpoint since no package exists to anchor a better boundary.
-export const BILL_THRESHOLD_3KW_TO_5KW = 3000;
-export const BILL_THRESHOLD_5KW_TO_10KW = 6000;
+export function calculateTheoreticalAnnualSavingThb(
+  sizeKw: number,
+  params: CalculatorParams = CALCULATOR_DEFAULTS
+): number {
+  return (
+    calculateTheoreticalMonthlySavingThb(sizeKw, params) *
+    params.annualSavingMonthsMultiplier
+  );
+}
 
-// Below the 3kW row's own floor (2,000), there is still no cheaper package to
-// recommend, so every bill under BILL_THRESHOLD_3KW_TO_5KW maps to 3kW.
-export function recommendSystemSizeKw(bill: number): 3 | 5 | 10 {
-  if (bill < BILL_THRESHOLD_3KW_TO_5KW) return 3;
-  if (bill < BILL_THRESHOLD_5KW_TO_10KW) return 5;
+export function recommendSystemSizeKw(
+  bill: number,
+  params: CalculatorParams = CALCULATOR_DEFAULTS
+): 3 | 5 | 10 {
+  if (bill < params.billThreshold3To5Kw) return 3;
+  if (bill < params.billThreshold5To10Kw) return 5;
   return 10;
 }
 
@@ -85,26 +102,23 @@ const SYSTEM_KEY_BY_SIZE_KW: Record<number, CalcResult["systemKey"]> = {
  */
 export function calculateSavings(
   billInput: string,
-  packages: CalcPackage[] = []
+  packages: CalcPackage[] = [],
+  params: CalculatorParams = CALCULATOR_DEFAULTS
 ): CalcResult | null {
   const bill = Number(billInput);
   if (billInput.trim() === "" || !Number.isFinite(bill) || bill <= 0) return null;
 
-  const sizeKw = recommendSystemSizeKw(bill);
+  const sizeKw = recommendSystemSizeKw(bill, params);
 
-  // Cap the displayed saving at the customer's actual bill — a system whose
-  // theoretical production exceeds what they currently pay shouldn't show a
-  // "saving" larger than the bill itself. afterBill is the same fact from the
-  // other side, which is why the two live together: the cap is what keeps it
-  // from going negative.
-  const theoreticalMonthlySaving = calculateTheoreticalMonthlySavingThb(sizeKw);
+  const theoreticalMonthlySaving = calculateTheoreticalMonthlySavingThb(sizeKw, params);
   const monthlySaving = Math.min(theoreticalMonthlySaving, bill);
   const afterBill = bill - monthlySaving;
 
   const matchedPackage = packages.find((pkg) => pkg.sizeKw === sizeKw);
   const paybackYears =
     matchedPackage && monthlySaving > 0
-      ? matchedPackage.priceThb / (monthlySaving * ANNUAL_SAVING_MONTHS_MULTIPLIER)
+      ? matchedPackage.priceThb /
+        (monthlySaving * params.annualSavingMonthsMultiplier)
       : null;
 
   return {

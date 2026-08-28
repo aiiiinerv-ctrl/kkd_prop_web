@@ -19,6 +19,7 @@ export type AuditEntityType =
   | "Lead"
   | "Package"
   | "CalculatorPageContent"
+  | "CalculatorConfig"
   | "PackagesPageContent"
   | "PageSeo"
   | "PaymentSettings"

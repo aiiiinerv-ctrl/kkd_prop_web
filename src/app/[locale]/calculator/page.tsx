@@ -4,7 +4,7 @@ import { Reveal } from "@/components/site/reveal";
 import { Link } from "@/i18n/navigation";
 import { CalculatorClient } from "./calculator-client";
 import { bookingHref } from "@/lib/booking-links";
-import { getCalculatorPageContent, getPublishedPackages } from "@/lib/content";
+import { getCalculatorConfig, getCalculatorPageContent, getPublishedPackages } from "@/lib/content";
 import { PAGE_REGISTRY } from "@/lib/pages";
 import { pageMetadata } from "@/lib/seo";
 import { cn } from "@/lib/utils";
@@ -31,9 +31,10 @@ export default async function CalculatorPage({
   const tCommon = await getTranslations("common");
 
   const usePages = PAGE_REGISTRY.calculator.contentRollout === "pages";
-  const [packages, pageContent] = await Promise.all([
+  const [packages, pageContent, calculatorConfig] = await Promise.all([
     getPublishedPackages(locale),
     usePages ? getCalculatorPageContent(locale) : Promise.resolve(null),
+    getCalculatorConfig(),
   ]);
 
   const hasRow = Boolean(pageContent);
@@ -65,6 +66,7 @@ export default async function CalculatorPage({
           packages={packages}
           panelTitle={usePages && hasRow ? pageContent?.panelTitle : undefined}
           panelIntro={usePages && hasRow ? pageContent?.panelIntro : undefined}
+          config={calculatorConfig}
         />
       </section>
 

@@ -84,7 +84,7 @@ export function CalculatorPageContentClient({ data }: { data: CalculatorPageForm
         <div>
           <h2 className="text-lg font-semibold">เนื้อหาหน้าเครื่องคำนวณ</h2>
           <p className="text-sm text-muted-foreground">
-            Hero / แผงคำนวณ / ส่วนแพ็กเกจ — สูตรและตัวเลขยังอยู่ในโค้ด
+            Hero / แผงคำนวณ / ส่วนแพ็กเกจ — ตัวเลขสูตรอยู่แท็บ &quot;ตัวเลขการคำนวณ&quot; (ADMIN)
           </p>
         </div>
         <a
