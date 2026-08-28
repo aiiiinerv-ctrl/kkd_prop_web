@@ -40,6 +40,8 @@ console.log("=== 1/5: pure assertion scripts (no server needed) ===");
 run("npx", ["tsx", "scripts/verify-lead-intake.mts"]);
 run("npx", ["tsx", "scripts/verify-content.mts"]);
 run("npx", ["tsx", "scripts/verify-enums.mts"]);
+run("npx", ["tsx", "scripts/verify-pages-cms-model.mts"]);
+run("npx", ["tsx", "scripts/verify-calculator.mts"]);
 
 console.log("\n=== 2/5: build ===");
 run("npm", ["run", "build"]);
@@ -59,6 +61,8 @@ const suites = [
   "scripts/e2e-admin.mts",
   "scripts/e2e-admin-crud.mts",
   "scripts/e2e-channel-tracking.mts",
+  "scripts/e2e-pages-cms.mts",
+  "scripts/e2e-rbac-sprint2.mts",
 ];
 
 let failed = false;

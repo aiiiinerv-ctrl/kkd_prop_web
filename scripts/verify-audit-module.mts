@@ -9,6 +9,7 @@ import "dotenv/config";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient } from "../src/generated/prisma/client.js";
 import type { AuditEntityType } from "../src/lib/audit";
+import { AUDIT_ENTITY_LABELS } from "../src/lib/enum-labels.js";
 
 const prisma = new PrismaClient({
   adapter: new PrismaMariaDb(process.env.DATABASE_URL!),
@@ -21,25 +22,7 @@ function assert(label: string, ok: boolean, detail = "") {
   if (!ok) failed = true;
 }
 
-// Mirrors the AuditEntityType union — kept as a value here so the check can
-// run at runtime; the `satisfies` ties it back to the type.
-const KNOWN_ENTITY_TYPES = [
-  "AboutContent",
-  "AdminUser",
-  "BookingCapacitySetting",
-  "ChannelExecutive",
-  "Lead",
-  "Package",
-  "PageSeo",
-  "PaymentSettings",
-  "PortfolioProject",
-  "PromoChannel",
-  "PromoLandingPath",
-  "Service",
-  "SiteSettings",
-  "SurveyBooking",
-  "Testimonial",
-] as const satisfies readonly AuditEntityType[];
+const KNOWN_ENTITY_TYPES = Object.keys(AUDIT_ENTITY_LABELS) as AuditEntityType[];
 
 const logs = await prisma.auditLog.findMany({ orderBy: { createdAt: "desc" } });
 console.log(`=== AuditLog rows inspected: ${logs.length} ===`);
