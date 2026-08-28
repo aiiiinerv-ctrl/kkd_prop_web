@@ -21,7 +21,8 @@ Owner cleanup approval **granted 2026-08-28**. Shims stay until observation ends
 | Owner cleanup approval | **GRANTED** 2026-08-28 (S12-D) |
 | Prod write-path canary | GREEN 2026-08-28 (`smoke-test-production-write.mts`; test lead phone `0897739487` — delete in admin) |
 | No P1 findings | none known |
-| Local verify baseline | GREEN 2026-08-28 (`verify-pages-cms-all.mts`) |
+| Local verify baseline | GREEN 2026-08-28 (`verify-pages-cms-all` + `e2e-admin-crud`) |
+| Execute runbook | `docs/plans/pages-cms-sprint12-execute-runbook.md` |
 
 ## Next execute date
 

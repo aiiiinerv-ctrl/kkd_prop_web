@@ -50,4 +50,5 @@ Sprint 8 tasks: [`docs/plans/pages-cms-sprint8-packages-tasks.md`](../docs/plans
 Sprint 9 tasks: [`docs/plans/pages-cms-sprint9-portfolio-tasks.md`](../docs/plans/pages-cms-sprint9-portfolio-tasks.md).  
 Sprint 10 tasks: [`docs/plans/pages-cms-sprint10-calculator-tasks.md`](../docs/plans/pages-cms-sprint10-calculator-tasks.md).  
 Sprint 11 tasks: [`docs/plans/pages-cms-sprint11-release-tasks.md`](../docs/plans/pages-cms-sprint11-release-tasks.md).  
-Sprint 12 tasks: [`docs/plans/pages-cms-sprint12-cleanup-tasks.md`](../docs/plans/pages-cms-sprint12-cleanup-tasks.md) — [#76](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/76).
+Sprint 12 tasks: [`docs/plans/pages-cms-sprint12-cleanup-tasks.md`](../docs/plans/pages-cms-sprint12-cleanup-tasks.md) — [#76](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/76).  
+Sprint 12 execute runbook: [`docs/plans/pages-cms-sprint12-execute-runbook.md`](../docs/plans/pages-cms-sprint12-execute-runbook.md).

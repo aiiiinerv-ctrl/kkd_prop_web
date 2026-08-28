@@ -18,7 +18,7 @@ Prod deploy: **live 2026-08-28** (#75) — observation continues until 2026-09-1
 
 - [ ] 14 calendar days elapsed per page (earliest: **2026-09-11**)
 - [x] Owner explicit cleanup approval (S12-D) — **granted 2026-08-28**
-- [ ] At least one audited save per page on production **or** approved local canary record — local `verify-pages-cms-all` GREEN 2026-08-28 (e2e pages + rbac); prod audited saves still optional
+- [x] At least one audited save per page on production **or** approved local canary record — local `e2e-admin-crud` GREEN 2026-08-28 (Pages home/about/calculator + Properties CRUD + AuditLog)
 - [ ] No open P1 integrity/audit/cache/accessibility findings
 - [x] Prod read-only smoke green after deploy (#75)
 - [x] Prod write-path canary green — booking quote `[TEST]` submit 2026-08-28 (`scripts/smoke-test-production-write.mts`)

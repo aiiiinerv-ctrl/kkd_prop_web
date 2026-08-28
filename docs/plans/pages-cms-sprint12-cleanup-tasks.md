@@ -10,6 +10,8 @@
 
 1. ~~cleanup inventory~~ done  
 2. ~~observation tracker updated~~ done  
+3. ~~execute runbook~~ `pages-cms-sprint12-execute-runbook.md`  
+4. ~~local canary~~ `verify-pages-cms-all` + `e2e-admin-crud` GREEN 2026-08-28  
 
 ## Execution (later)
 
