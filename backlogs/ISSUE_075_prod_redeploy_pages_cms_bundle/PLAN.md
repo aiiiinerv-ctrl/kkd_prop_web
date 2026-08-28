@@ -8,7 +8,7 @@
 |---|---|
 | GitHub | https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/75 |
 | Opened | 2026-08-28 |
-| Status | **artifact ready** — blocked on human FTP |
+| Status | **deployed** 2026-08-28 |
 | Labels | `enhancement`, `ready-for-human` |
 
 ## Goal
@@ -21,8 +21,8 @@ Deploy Pages CMS bundle (#68–#74) to production with read-only smoke.
 |---:|---|---|
 | 1 | Linux deploy build | done |
 | 2 | Redeploy manifest | done |
-| 3 | Human FTP upload | pending |
-| 4 | Extract + restart + smoke | pending |
+| 3 | Human FTP upload | done |
+| 4 | Extract + restart + smoke | done |
 
 Evidence: `docs/plans/assets/pages-cms-result/s11-redeploy/`
 

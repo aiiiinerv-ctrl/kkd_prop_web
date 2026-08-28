@@ -4,15 +4,28 @@ Date: 2026-08-28 Asia/Bangkok
 Issue: https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/75  
 Commit: `9472a2a` (includes Sprint 11 verify pipeline)
 
-## Status: ARTIFACT READY — human FTP required
+## Status: DEPLOYED 2026-08-28
 
 | Step | Status |
 | --- | --- |
 | Local Linux deploy build | GREEN (`deploy/dist.zip`) |
-| Sprint 11 local verify | GREEN (prior session) |
-| Human FTP upload | **PENDING** |
-| Panel extract + restart | PENDING |
-| Prod smoke | PENDING |
+| Human FTP upload | GREEN (28,261,343 bytes, 226 transfer) |
+| Panel extract | GREEN (`File Extracted`) |
+| Passenger restart | GREEN (HTTP 302) |
+| Prod smoke + route warm | GREEN (see below) |
+
+## Post-deploy verify (2026-08-28)
+
+- Standard smoke: homepage 200, admin 307, private file 401 ✓
+- Pages markers: `/th/calculator` (คำนวณ), `/th/packages` (แพ็กเกจ) ✓
+- Unauth `/admin/pages/home` → login ✓
+- API `/api/admin/leads` → 401 (not 500) ✓
+- Public routes warmed 2×: 18/20 → 200; `/th|en/testimonials` → 404 (no published testimonials — expected)
+
+## Remaining (optional)
+
+- One public lead-form write test (`[TEST]` row) per runbook §5
+- Admin visual check of `/admin/pages/*` tabs (session required; no committed screenshots)
 
 ## Artifact
 

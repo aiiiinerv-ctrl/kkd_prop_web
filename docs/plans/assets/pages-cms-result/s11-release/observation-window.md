@@ -1,7 +1,7 @@
 # Pages CMS — 14-day compatibility observation window
 
 Started: **2026-08-28** (Asia/Bangkok) — Sprint 11 local verification green  
-Prod deploy: **deferred** until owner OK (S11-C)
+Prod deploy: **live 2026-08-28** (#75) — observation continues until 2026-09-11
 
 ## Per-page rollout (all `contentRollout: pages`)
 
