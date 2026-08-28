@@ -385,7 +385,14 @@
     "testimonialsTitle": "Customer Testimonials | KKD PROPERTY",
     "testimonialsDesc": "Read what real customers say about their solar installation experience with KKD PROPERTY.",
     "cookiePolicyTitle": "Cookie Policy | KKD PROPERTY",
-    "cookiePolicyDesc": "Every cookie the KKD PROPERTY website stores, what each one is for, how long it lasts, and how to change your consent."
+    "cookiePolicyDesc": "Every cookie the KKD PROPERTY website stores, what each one is for, how long it lasts, and how to change your consent.",
+    "sitemapTitle": "Site Map | KKD PROPERTY",
+    "sitemapDesc": "KKD PROPERTY site map — links to all main pages, services, packages, and contact channels."
+  },
+  "sitemap": {
+    "title": "Site Map",
+    "subtitle": "Links to every main page on the KKD PROPERTY website",
+    "empty": "No sections are visible on the site map yet"
   },
   "cookiePolicy": {
     "title": "Cookie Policy",

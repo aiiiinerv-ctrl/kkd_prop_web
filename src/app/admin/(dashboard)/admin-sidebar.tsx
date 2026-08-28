@@ -10,6 +10,7 @@ import {
   Images,
   LayoutDashboard,
   LayoutTemplate,
+  Map,
   Megaphone,
   MessageSquareQuote,
   Package,
@@ -177,7 +178,19 @@ export function AdminSidebar({ role }: { role: Role }) {
           );
         })}
       </nav>
-      <div className="border-t border-border p-3">
+      <div className="border-t border-border p-3 space-y-0.5">
+        <Link
+          href="/admin/sitemap"
+          className={cn(
+            "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+            pathname.startsWith("/admin/sitemap")
+              ? "bg-primary/8 text-primary"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+        >
+          <Map className="size-4" />
+          แผนผังเว็บไซต์
+        </Link>
         <Link
           href="/th"
           className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"

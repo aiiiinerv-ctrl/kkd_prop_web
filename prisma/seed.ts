@@ -761,6 +761,15 @@ async function seedPageSeo() {
       descriptionEn:
         "Every cookie the KKD PROPERTY website stores, what each one is for, how long it lasts, and how to change your consent.",
     },
+    {
+      key: "sitemap",
+      titleTh: "แผนผังเว็บไซต์ | KKD PROPERTY",
+      titleEn: "Site Map | KKD PROPERTY",
+      descriptionTh:
+        "แผนผังเว็บไซต์ KKD PROPERTY — ลิงก์ไปยังทุกหน้าหลัก บริการ แพ็กเกจ และช่องทางติดต่อ",
+      descriptionEn:
+        "KKD PROPERTY site map — links to all main pages, services, packages, and contact channels.",
+    },
   ];
 
   for (const page of pages) {

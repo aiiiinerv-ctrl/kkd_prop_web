@@ -22,6 +22,7 @@ export const META_KEYS = [
   "calculator",
   "testimonials",
   "cookiePolicy",
+  "sitemap",
 ] as const;
 
 export type MetaKey = (typeof META_KEYS)[number];

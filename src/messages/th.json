@@ -385,7 +385,14 @@
     "testimonialsTitle": "รีวิวจากลูกค้า | KKD PROPERTY",
     "testimonialsDesc": "อ่านความคิดเห็นจริงจากลูกค้าที่ใช้บริการติดตั้งโซลาร์เซลล์กับ KKD PROPERTY",
     "cookiePolicyTitle": "นโยบายคุกกี้ | KKD PROPERTY",
-    "cookiePolicyDesc": "รายการคุกกี้ทั้งหมดที่เว็บไซต์ KKD PROPERTY จัดเก็บ วัตถุประสงค์ ระยะเวลา และวิธีเปลี่ยนความยินยอมของคุณ"
+    "cookiePolicyDesc": "รายการคุกกี้ทั้งหมดที่เว็บไซต์ KKD PROPERTY จัดเก็บ วัตถุประสงค์ ระยะเวลา และวิธีเปลี่ยนความยินยอมของคุณ",
+    "sitemapTitle": "แผนผังเว็บไซต์ | KKD PROPERTY",
+    "sitemapDesc": "แผนผังเว็บไซต์ KKD PROPERTY — ลิงก์ไปยังทุกหน้าหลัก บริการ แพ็กเกจ และช่องทางติดต่อ"
+  },
+  "sitemap": {
+    "title": "แผนผังเว็บไซต์",
+    "subtitle": "ลิงก์ไปยังทุกหน้าหลักของเว็บไซต์ KKD PROPERTY",
+    "empty": "ยังไม่มีหมวดที่แสดงในแผนผังเว็บไซต์"
   },
   "cookiePolicy": {
     "title": "นโยบายคุกกี้",

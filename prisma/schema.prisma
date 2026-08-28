@@ -299,6 +299,7 @@ model SiteSettings {
   ctaVersion          Int      @default(1)
   headerLogoKey       String?
   footerLogoKey       String?
+  sitemapConfigJson   Json?
   updatedAt           DateTime @updatedAt
 }
 

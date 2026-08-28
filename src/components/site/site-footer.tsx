@@ -158,9 +158,9 @@ export function SiteFooter({ settings, footerLogoUrl }: Props) {
             <Link href="/cookie-policy" className="transition-colors hover:text-white">
               {t("cookiePolicy")}
             </Link>
-            <a href="/sitemap.xml" className="transition-colors hover:text-white">
+            <Link href="/sitemap" className="transition-colors hover:text-white">
               {t("siteMap")}
-            </a>
+            </Link>
           </div>
           <div>{t("copyright", { year })}</div>
         </div>

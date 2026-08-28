@@ -6,7 +6,7 @@ Reference: [Deestone Sitemap.aspx](https://www.deestone.com/Sitemap.aspx)
 
 ## Status
 
-**Planning locked — owner approved defaults 2026-08-28.** S0 live-verify before S1 code.
+**S1–S5 implemented 2026-08-28.** Pending: S6 production deploy + design-business-reviewer pass.
 
 ---
 
