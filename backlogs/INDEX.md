@@ -1,12 +1,13 @@
 # Backlog Index
 
-Updated: 2026-08-28 (Sprint 11 #74 closed)  
+Updated: 2026-08-28 (redeploy #75 artifact ready)  
 Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 ## Active
 
 | GitHub | PLAN | Notes |
 |---|---|---|
+| [#75](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/75) | [`ISSUE_075_prod_redeploy_pages_cms_bundle`](ISSUE_075_prod_redeploy_pages_cms_bundle/PLAN.md) | Prod redeploy #68–#74 — artifact ready, human FTP pending |
 | [#38](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/38) | [`ISSUE_038_cookieyes_banner_locale_en`](ISSUE_038_cookieyes_banner_locale_en/PLAN.md) | CookieYes Free = one language — owner decision |
 | [#32](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/32) | [`ISSUE_032_lead_notifications_resend_line`](ISSUE_032_lead_notifications_resend_line/PLAN.md) | Blocked on Resend/LINE secrets |
 | [#30](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/30) | [`ISSUE_030_attribution_baseline_after_consent`](ISSUE_030_attribution_baseline_after_consent/PLAN.md) | Calendar-bound attribution baselines |
