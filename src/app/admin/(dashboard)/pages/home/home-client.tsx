@@ -1,12 +1,12 @@
 "use client";
 
-import { AlertTriangle, ExternalLink, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { AlertTriangle, ExternalLink, Plus, ChevronDown, ChevronUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { updateHomeContent } from "@/actions/home-content";
 import { updateContactSettings } from "@/actions/site-settings";
-import { BilingualTabs } from "@/components/admin/crud-page";
+import { BilingualTabs, DeleteConfirm } from "@/components/admin/crud-page";
 import { PageShell } from "@/components/admin/pages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -136,15 +136,11 @@ function FaqEditor({
               >
                 <ChevronDown className="size-4" />
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                className="p-1.5"
-                aria-label="ลบ"
-                onClick={() => remove(index)}
-              >
-                <Trash2 className="size-4 text-destructive" />
-              </Button>
+              <DeleteConfirm
+                title="ลบคำถามนี้?"
+                description="รายการนี้จะถูกลบออกจากฟอร์ม — มีผลจริงเมื่อกดบันทึก"
+                onConfirm={() => remove(index)}
+              />
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">

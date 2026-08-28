@@ -205,8 +205,9 @@ export function DeleteConfirm({
   return (
     <AlertDialog>
       <AlertDialogTrigger
+        disabled={disabled}
         render={
-          <Button variant="ghost" className="p-2" aria-label="ลบ">
+          <Button variant="ghost" className="p-2" aria-label="ลบ" disabled={disabled}>
             <Trash2 className="size-4 text-destructive" />
           </Button>
         }
