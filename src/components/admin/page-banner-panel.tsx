@@ -116,7 +116,14 @@ export function PageBannerPanel({
   };
 
   const removeSlide = (index: number) => {
-    setSlides((prev) => prev.filter((_, i) => i !== index));
+    setSlides((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      if (mode === "SLIDES" && next.length < BANNER_SLIDE_MIN) {
+        setMode("FIXED");
+        return next.slice(0, 1);
+      }
+      return next;
+    });
   };
 
   const moveSlide = (index: number, direction: -1 | 1) => {
@@ -248,8 +255,11 @@ export function PageBannerPanel({
                   {mode === "SLIDES" && (
                     <DeleteConfirm
                       title="ลบสไลด์นี้?"
-                      description="สไลด์นี้จะถูกลบออกจากฟอร์ม — มีผลจริงเมื่อกดบันทึกแบนเนอร์"
-                      disabled={slides.length <= BANNER_SLIDE_MIN}
+                      description={
+                        slides.length <= BANNER_SLIDE_MIN
+                          ? "เหลือ 1 สไลด์ — ระบบจะเปลี่ยนรูปแบบเป็น \"รูปเดียว (Fixed)\" ให้อัตโนมัติ มีผลจริงเมื่อกดบันทึกแบนเนอร์"
+                          : "สไลด์นี้จะถูกลบออกจากฟอร์ม — มีผลจริงเมื่อกดบันทึกแบนเนอร์"
+                      }
                       onConfirm={() => removeSlide(index)}
                     />
                   )}
@@ -259,12 +269,6 @@ export function PageBannerPanel({
               {!slide.isActive && (
                 <p className="text-xs text-muted-foreground">
                   สไลด์นี้จะไม่แสดงบนหน้าเว็บจริงจนกว่าจะกดแสดงอีกครั้ง — ข้อมูลยังอยู่ครบ
-                </p>
-              )}
-
-              {mode === "SLIDES" && slides.length <= BANNER_SLIDE_MIN && (
-                <p className="text-xs text-muted-foreground">
-                  สไลด์ต้องมีอย่างน้อย 2 รูป — ถ้าต้องการรูปเดียว เปลี่ยนรูปแบบเป็น &quot;รูปเดียว (Fixed)&quot;
                 </p>
               )}
 
