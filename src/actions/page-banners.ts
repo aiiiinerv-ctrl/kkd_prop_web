@@ -30,6 +30,7 @@ type BannerSnapshot = {
     altTh: string;
     altEn: string;
     linkPath: string | null;
+    isActive: boolean;
   }>;
 };
 
@@ -50,6 +51,7 @@ async function loadSnapshot(bannerId: string): Promise<BannerSnapshot | null> {
       altTh: s.altTh,
       altEn: s.altEn,
       linkPath: s.linkPath,
+      isActive: s.isActive,
     })),
   };
 }
@@ -98,6 +100,7 @@ export async function updatePageBanner(formData: FormData): Promise<PageBannerAc
       altEn: string;
       linkPath: string | null;
       imageKey: string;
+      isActive: boolean;
     }> = [];
 
     for (let i = 0; i < slides.length; i++) {
@@ -126,6 +129,7 @@ export async function updatePageBanner(formData: FormData): Promise<PageBannerAc
         altEn: slide.altEn,
         linkPath: slide.linkPath || null,
         imageKey,
+        isActive: slide.isActive,
       });
     }
 
@@ -175,6 +179,7 @@ export async function updatePageBanner(formData: FormData): Promise<PageBannerAc
             altTh: s.altTh,
             altEn: s.altEn,
             linkPath: s.linkPath,
+            isActive: s.isActive,
           })),
         });
       }

@@ -1,16 +1,17 @@
 "use client";
 
-import { AlertTriangle, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp, Eye, EyeOff, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { updatePageBanner } from "@/actions/page-banners";
-import { BilingualTabs } from "@/components/admin/crud-page";
+import { BilingualTabs, DeleteConfirm } from "@/components/admin/crud-page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   BANNER_SLIDE_MAX,
+  BANNER_SLIDE_MIN,
   type BannerMode,
   type BannerPageSlug,
   bannerPageLabel,
@@ -29,6 +30,7 @@ type SlideDraft = {
   blobMissing: boolean;
   preview: string | null;
   file: File | null;
+  isActive: boolean;
 };
 
 const MODE_OPTIONS: { value: BannerMode; label: string }[] = [
@@ -47,6 +49,7 @@ function emptySlide(): SlideDraft {
     blobMissing: false,
     preview: null,
     file: null,
+    isActive: true,
   };
 }
 
@@ -62,6 +65,7 @@ function toDrafts(data: PageBannerAdminData): SlideDraft[] {
     blobMissing: s.blobMissing,
     preview: null,
     file: null,
+    isActive: s.isActive,
   }));
 }
 
@@ -115,6 +119,16 @@ export function PageBannerPanel({
     setSlides((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const moveSlide = (index: number, direction: -1 | 1) => {
+    setSlides((prev) => {
+      const target = index + direction;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[target]] = [next[target]!, next[index]!];
+      return next;
+    });
+  };
+
   const handleSubmit = () => {
     startTransition(async () => {
       const formData = new FormData();
@@ -127,6 +141,7 @@ export function PageBannerPanel({
         altEn: s.altEn,
         linkPath: s.linkPath,
         imageKey: s.imageKey,
+        isActive: s.isActive,
       }));
       formData.set("slidesJson", JSON.stringify(payload));
 
@@ -174,23 +189,84 @@ export function PageBannerPanel({
       {mode !== "OFF" && (
         <div className="space-y-6">
           {slides.map((slide, index) => (
-            <div key={slide.key} className="space-y-3 rounded-lg border border-border/60 p-4">
+            <div
+              key={slide.key}
+              className={`space-y-3 rounded-lg border p-4 ${
+                slide.isActive ? "border-border/60" : "border-dashed border-border/60 opacity-60"
+              }`}
+            >
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">
+                <p className="flex items-center gap-2 text-sm font-medium">
                   {mode === "FIXED" ? "รูปแบนเนอร์" : `สไลด์ ${index + 1}`}
+                  {!slide.isActive && (
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">
+                      ซ่อนอยู่
+                    </span>
+                  )}
                 </p>
-                {mode === "SLIDES" && slides.length > 2 && (
+                <div className="flex items-center gap-1">
+                  {mode === "SLIDES" && (
+                    <>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="p-1.5"
+                        aria-label="เลื่อนขึ้น"
+                        disabled={index === 0}
+                        onClick={() => moveSlide(index, -1)}
+                      >
+                        <ChevronUp className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="p-1.5"
+                        aria-label="เลื่อนลง"
+                        disabled={index === slides.length - 1}
+                        onClick={() => moveSlide(index, 1)}
+                      >
+                        <ChevronDown className="size-4" />
+                      </Button>
+                    </>
+                  )}
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => removeSlide(index)}
-                    aria-label="ลบสไลด์"
+                    className="p-1.5"
+                    aria-label={slide.isActive ? "ซ่อนสไลด์นี้" : "แสดงสไลด์นี้"}
+                    onClick={() => updateSlide(index, { isActive: !slide.isActive })}
                   >
-                    <Trash2 className="size-4" />
+                    {slide.isActive ? (
+                      <Eye className="size-4" />
+                    ) : (
+                      <EyeOff className="size-4 text-muted-foreground" />
+                    )}
                   </Button>
-                )}
+                  {mode === "SLIDES" && (
+                    <DeleteConfirm
+                      title="ลบสไลด์นี้?"
+                      description="สไลด์นี้จะถูกลบออกจากฟอร์ม — มีผลจริงเมื่อกดบันทึกแบนเนอร์"
+                      disabled={slides.length <= BANNER_SLIDE_MIN}
+                      onConfirm={() => removeSlide(index)}
+                    />
+                  )}
+                </div>
               </div>
+
+              {!slide.isActive && (
+                <p className="text-xs text-muted-foreground">
+                  สไลด์นี้จะไม่แสดงบนหน้าเว็บจริงจนกว่าจะกดแสดงอีกครั้ง — ข้อมูลยังอยู่ครบ
+                </p>
+              )}
+
+              {mode === "SLIDES" && slides.length <= BANNER_SLIDE_MIN && (
+                <p className="text-xs text-muted-foreground">
+                  สไลด์ต้องมีอย่างน้อย 2 รูป — ถ้าต้องการรูปเดียว เปลี่ยนรูปแบบเป็น &quot;รูปเดียว (Fixed)&quot;
+                </p>
+              )}
 
               {slide.blobMissing && !slide.preview && (
                 <p className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">

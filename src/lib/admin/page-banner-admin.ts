@@ -13,6 +13,7 @@ export type PageBannerAdminData = {
     imageKey: string;
     imageUrl: string | null;
     blobMissing: boolean;
+    isActive: boolean;
   }>;
 };
 
@@ -34,6 +35,7 @@ export async function getPageBannerAdmin(pageSlug: BannerPageSlug): Promise<Page
         ? storage.publicUrl(s.imageKey)
         : null,
       blobMissing: !(await storage.exists(s.imageKey)),
+      isActive: s.isActive,
     }))
   );
 

@@ -21,6 +21,8 @@ export const pageBannerSlideSchema = z.object({
     .refine((v) => isBannerLinkPath(v), { message: "ลิงก์ไม่ถูกต้อง" }),
   /** Existing storage key — omitted when a new file is uploaded for this index. */
   imageKey: z.string().trim().optional(),
+  /** Hide from the public site without deleting the row (#117). */
+  isActive: z.coerce.boolean().default(true),
 });
 
 export const pageBannerFormSchema = z

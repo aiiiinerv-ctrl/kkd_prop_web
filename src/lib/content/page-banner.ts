@@ -31,6 +31,7 @@ export async function getPageBanner(
 
   const slides: PageBannerSlideView[] = [];
   for (const slide of row.slides) {
+    if (!slide.isActive) continue;
     if (!(await storage.exists(slide.imageKey))) continue;
     slides.push({
       imageUrl: storage.publicUrl(slide.imageKey),

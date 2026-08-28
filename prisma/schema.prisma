@@ -323,6 +323,8 @@ model PageBannerSlide {
   altTh     String
   altEn     String
   linkPath  String?    @db.VarChar(180)
+  // Hide from the public site without deleting the row (#117).
+  isActive  Boolean    @default(true)
 
   @@index([bannerId, sortOrder])
 }
