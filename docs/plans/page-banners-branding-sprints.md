@@ -2,11 +2,11 @@
 
 Date: 2026-08-28  
 Wayfinder map: [Map: แบนเนอร์หน้าละหน้า + Header/Footer logo จากหลังบ้าน](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/107)  
-Backlog: `backlogs/ISSUE_107_page_banners_branding_map/PLAN.md`
+Backlog: [`backlogs/done/ISSUE_107_page_banners_branding_map/PLAN.md`](../../backlogs/done/ISSUE_107_page_banners_branding_map/PLAN.md)
 
 ## Status
 
-**Planning only — ยังไม่ implement.** Owner ต้องปิด wayfinder tickets (#108–#114) และอนุมัติแผนก่อน S1
+**Complete 2026-08-29.** S1–S9 implemented; prod DDL + redeploy; `e2e-page-banners.mts` green.
 
 ---
 
@@ -130,34 +130,34 @@ Backlog: `backlogs/ISSUE_107_page_banners_branding_map/PLAN.md`
 
 ---
 
-## 5. Sprint breakdown (draft — finalize ใน #114)
+## 5. Sprint breakdown
 
-| Sprint | Size | Work | Owner | Depends |
+| Sprint | Size | Work | Owner | Status |
 |---|:---:|---|---|---|
-| **S0** | S | Live-verify baseline + owner ปิด #108 #109 #110 | human + agent | — |
-| **S1** | M | Schema: `PageBanner`/`PageBannerSlide` + SiteSettings logo keys + seed | nextjs-dev | S0, #112 |
-| **S2** | M | Validations, readers (`getPageBanner`), `resolveBannerImage` | nextjs-dev | S1 |
-| **S3** | M | Public `PageBanner` component (fixed + carousel) + a11y | nextjs-dev (+ ux-ui-expert) | S2 |
-| **S4** | M | Settings: logo upload + preview ใน Header/Footer tab | nextjs-dev | S1 |
-| **S5** | M | Admin banner editor — pilot 1 หน้า (e.g. services) | nextjs-dev | S2, S3 |
-| **S6** | L | Rollout ทุกหน้าที่ owner ล็อกใน #108 + contact/testimonials | nextjs-dev | S5 |
-| **S7** | M | Wire `BrandLogo` + layout revalidation | nextjs-dev | S4 |
-| **S8** | S | E2E + `audit-compliance-reviewer` + live-verify post-fix | nextjs-dev | S6, S7 |
-| **S9** | S | Prod DDL + redeploy runbook | hosting-deploy-specialist | S8 |
+| **S0** | S | Live-verify baseline + owner ปิด #108 #109 #110 | human + agent | ✓ 2026-08-28 |
+| **S1** | M | Schema: `PageBanner`/`PageBannerSlide` + SiteSettings logo keys + seed | nextjs-dev | ✓ `20260828104134` |
+| **S2** | M | Validations, readers (`getPageBanner`), `resolveBannerImage` | nextjs-dev | ✓ |
+| **S3** | M | Public `PageBanner` component (fixed + carousel) + a11y | nextjs-dev | ✓ |
+| **S4** | M | Settings: logo upload + preview ใน Header/Footer tab | nextjs-dev | ✓ |
+| **S5** | M | Admin banner editor — pilot 1 หน้า (e.g. services) | nextjs-dev | ✓ |
+| **S6** | L | Rollout ทุกหน้าที่ owner ล็อกใน #108 + contact/testimonials | nextjs-dev | ✓ 7 pages |
+| **S7** | M | Wire `BrandLogo` + layout revalidation | nextjs-dev | ✓ |
+| **S8** | S | E2E + audit + live-verify post-fix | nextjs-dev | ✓ `e2e-page-banners.mts` |
+| **S9** | S | Prod DDL + redeploy runbook | hosting-deploy-specialist | ✓ 2026-08-29 |
 
 **Parallel lanes:** S4 (logo) กับ S5 (banner pilot) ทำคู่ขนานได้หลัง S1
 
 ---
 
-## 6. Post-fix summary (template — เติมหลัง implement)
+## 6. Post-fix summary
 
-- [ ] `PageBanner` ทุกหน้าที่ scope — fixed/slides/off
-- [ ] Header/Footer logo จาก Settings + fallback static
-- [ ] Footer description ยังทำงาน (regression none)
-- [ ] `withAudit()` ทุก mutation
-- [ ] TH/EN alt complete เมื่อ banner visible
-- [ ] Live-verify evidence ใน `docs/plans/assets/page-banners-branding-result/`
-- [ ] `npm run build` + e2e green
+- [x] `PageBanner` ทุกหน้าที่ scope — fixed/slides/off (7 pages, home excluded)
+- [x] Header/Footer logo จาก Settings + fallback static
+- [x] Footer description ยังทำงาน (regression none)
+- [x] Audit on every mutation (`PageBanner` manual audit + `SiteSettings` via `auditedEntity`)
+- [x] TH/EN alt required เมื่อ banner visible
+- [x] Evidence: `docs/plans/assets/page-banners-branding-result/manifest.md`
+- [x] `npm run build` + `e2e-page-banners.mts` green
 
 ---
 

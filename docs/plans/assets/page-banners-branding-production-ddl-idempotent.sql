@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS `PageBannerSlide` (
     `altTh` VARCHAR(191) NOT NULL,
     `altEn` VARCHAR(191) NOT NULL,
     `linkPath` VARCHAR(180) NULL,
+    `isActive` BOOLEAN NOT NULL DEFAULT true,
     INDEX `PageBannerSlide_bannerId_sortOrder_idx`(`bannerId`, `sortOrder`),
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -36,3 +37,7 @@ ALTER TABLE `PageBannerSlide`
   ADD CONSTRAINT `PageBannerSlide_bannerId_fkey`
   FOREIGN KEY (`bannerId`) REFERENCES `PageBanner`(`id`)
   ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Slide visibility toggle (#117) — safe on existing prod tables
+ALTER TABLE `PageBannerSlide`
+  ADD COLUMN IF NOT EXISTS `isActive` BOOLEAN NOT NULL DEFAULT true;

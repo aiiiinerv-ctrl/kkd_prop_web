@@ -62,6 +62,7 @@ const suites = [
   "scripts/e2e-admin-crud.mts",
   "scripts/e2e-channel-tracking.mts",
   "scripts/e2e-pages-cms.mts",
+  "scripts/e2e-page-banners.mts",
   "scripts/e2e-rbac-sprint2.mts",
 ];
 
