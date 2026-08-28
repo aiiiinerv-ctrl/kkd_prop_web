@@ -1,13 +1,12 @@
 # Backlog Index
 
-Updated: 2026-08-28 (HTML sitemap #115 charted)  
+Updated: 2026-08-28 (HTML sitemap #115 deployed)  
 Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 ## Active
 
 | GitHub | PLAN | Notes |
 |---|---|---|
-| [#115](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/115) | [`ISSUE_115_html_sitemap`](ISSUE_115_html_sitemap/PLAN.md) | HTML sitemap + admin config — defaults locked, S0 mockup next |
 | [#107](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/107) | [`ISSUE_107_page_banners_branding_map`](ISSUE_107_page_banners_branding_map/PLAN.md) | Wayfinder — page banners + header/footer logo (planning only) |
 | [#102](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/102) | [`ISSUE_102_calculator_config_map`](ISSUE_102_calculator_config_map/PLAN.md) | Wayfinder — calculator admin config (planning complete 2026-08-28) |
 | [#77](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/77) | [`ISSUE_077_about_cms_enhancement_map`](ISSUE_077_about_cms_enhancement_map/PLAN.md) | Wayfinder — About credentials heading + editable icons |
@@ -20,6 +19,7 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 | GitHub | PLAN | Notes |
 |---|---|---|
+| [#115](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/115) | [`ISSUE_115_html_sitemap`](done/ISSUE_115_html_sitemap/PLAN.md) | HTML sitemap deployed prod 2026-08-28 |
 | [#88](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/88) | [`ISSUE_088_contact_settings_map`](done/ISSUE_088_contact_settings_map/PLAN.md) | Contact settings E1–E2 deployed prod 2026-08-28 |
 | [#75](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/75) | [`ISSUE_075_prod_redeploy_pages_cms_bundle`](done/ISSUE_075_prod_redeploy_pages_cms_bundle/PLAN.md) | Prod redeploy complete 2026-08-28 — Pages CMS #68–#74 live |
 | [#74](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/74) | [`ISSUE_074_pages_cms_sprint11_release`](done/ISSUE_074_pages_cms_sprint11_release/PLAN.md) | Sprint 11 complete 2026-08-28 — release verify + observation window |

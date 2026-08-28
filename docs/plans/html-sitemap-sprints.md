@@ -6,7 +6,7 @@ Reference: [Deestone Sitemap.aspx](https://www.deestone.com/Sitemap.aspx)
 
 ## Status
 
-**S1–S5 implemented 2026-08-28.** Pending: S6 production deploy + design-business-reviewer pass.
+**S6 production deploy complete 2026-08-28.** Live at `/th/sitemap`, `/en/sitemap`; footer → HTML; `/sitemap.xml` unchanged.
 
 ---
 
