@@ -8,7 +8,7 @@
 |---|---|
 | GitHub | https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/102 |
 | Opened | 2026-08-28 |
-| Status (disk) | active — **Phase A implemented 2026-08-28**; Phase B pending |
+| Status (disk) | active — **Phase A code merged** (`49b3e85`); **S5 prod DDL + live-verify pending** |
 | Type | wayfinder map |
 
 ## Goal
@@ -94,8 +94,10 @@
 - [x] Public `/th|en/calculator` reads config via `getCalculatorConfig()`
 - [x] `withAudit()` on save and reset
 - [x] `npm run build` ✓ · `verify-calculator.mts` ✓
+- [ ] Prod DDL applied + verified (`CalculatorConfig` table on prod)
+- [ ] `e2e-calculator-config.mts` committed + run green
+- [ ] Live-verify prod: admin save + public `/th/calculator`
 - [ ] Phase B: bill bounds + tier thresholds in admin UI
-- [ ] Production DDL via phpMyAdmin before deploy
 
 ## Definition of Done
 
