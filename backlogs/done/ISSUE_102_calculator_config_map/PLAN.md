@@ -8,7 +8,7 @@
 |---|---|
 | GitHub | https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/102 |
 | Opened | 2026-08-28 |
-| Status (disk) | done — **Phase A live prod 2026-08-28**; Phase B paused |
+| Status (disk) | done — **Phase A + B live prod 2026-08-28** |
 | Type | wayfinder map |
 
 ## Goal
@@ -97,8 +97,11 @@
 - [x] Prod DDL applied + verified (`CalculatorConfig` InnoDB on prod)
 - [x] `e2e-calculator-config.mts` green (local)
 - [x] Prod smoke: `/th|en/calculator` 200
+- [x] Prod DDL applied + verified (`CalculatorConfig` InnoDB on prod)
+- [x] `e2e-calculator-config.mts` green (local)
+- [x] Prod smoke: `/th|en/calculator` 200
 - [ ] Live-verify prod admin save (human login prod)
-- [ ] Phase B: bill bounds + tier thresholds in admin UI
+- [x] Phase B: bill bounds + tier thresholds in admin UI — deployed prod 2026-08-28
 
 ## Definition of Done
 

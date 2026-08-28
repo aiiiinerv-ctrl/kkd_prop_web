@@ -6,7 +6,7 @@ Backlog: [`backlogs/ISSUE_102_calculator_config_map/PLAN.md`](../../backlogs/ISS
 
 ## Status
 
-**Phase A + B code complete 2026-08-28.** Phase B adds bill bounds + tier thresholds in admin UI. Prod deploy pending upload.
+**Phase A + B complete 2026-08-28.** Phase B (bill bounds + tier thresholds in admin UI) deployed to prod; smoke ✓.
 
 ---
 
@@ -34,7 +34,7 @@ Backlog: [`backlogs/ISSUE_102_calculator_config_map/PLAN.md`](../../backlogs/ISS
 | **S4** | Public RSC reads `getCalculatorConfig()` | nextjs-dev | ✓ |
 | **S5** | Verify + prod release | nextjs-dev + human FTP | ✓ 2026-08-28 |
 | **S6** | Phase B admin fields + cross-validation | nextjs-dev | ✓ 2026-08-28 |
-| **S7** | Zustand clamp + e2e + prod deploy | nextjs-dev | pending upload |
+| **S7** | Zustand clamp + e2e + prod deploy | nextjs-dev + human FTP | ✓ 2026-08-28 |
 
 ---
 
@@ -77,9 +77,10 @@ npx tsx scripts/smoke-test-production.mts --check /th/calculator --expect-text "
 
 ---
 
-## Phase B preview (not started)
+## S7 — Phase B production release (done)
 
-- Expose `minBill`, `maxBill`, `stepBill`, `billThreshold3To5Kw`, `billThreshold5To10Kw` in admin
-- Cross-field zod: `minBill < threshold3 < threshold5 <= maxBill`
-- Admin slider preview + Zustand bill clamp on public client
-- Owner gate required before S6
+1. **No DDL** — Phase B columns already in `CalculatorConfig` from Phase A
+2. **Deploy** — `deploy/dist.zip` uploaded + extracted on prod
+3. **Restart** — Passenger `tmp/restart.txt`
+4. **ISR warm** — `/th/calculator`, `/en/calculator`
+5. **Smoke** — prod calculator 200; slider bounds `min=500 max=8000 step=100` (defaults)

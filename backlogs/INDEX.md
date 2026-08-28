@@ -1,6 +1,6 @@
 # Backlog Index
 
-Updated: 2026-08-28 (#102 calculator Phase A deployed)  
+Updated: 2026-08-28 (#102 calculator Phase A + B deployed)  
 Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 ## Active
@@ -18,7 +18,7 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 | GitHub | PLAN | Notes |
 |---|---|---|
-| [#102](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/102) | [`ISSUE_102_calculator_config_map`](done/ISSUE_102_calculator_config_map/PLAN.md) | Calculator config Phase A live prod 2026-08-28 |
+| [#102](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/102) | [`ISSUE_102_calculator_config_map`](done/ISSUE_102_calculator_config_map/PLAN.md) | Calculator config Phase A + B live prod 2026-08-28 |
 | [#115](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/115) | [`ISSUE_115_html_sitemap`](done/ISSUE_115_html_sitemap/PLAN.md) | HTML sitemap deployed prod 2026-08-28 |
 | [#88](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/88) | [`ISSUE_088_contact_settings_map`](done/ISSUE_088_contact_settings_map/PLAN.md) | Contact settings E1–E2 deployed prod 2026-08-28 |
 | [#75](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/75) | [`ISSUE_075_prod_redeploy_pages_cms_bundle`](done/ISSUE_075_prod_redeploy_pages_cms_bundle/PLAN.md) | Prod redeploy complete 2026-08-28 — Pages CMS #68–#74 live |
