@@ -10,10 +10,15 @@ Pages root for Home, About, Services, Packages, Portfolio, and Calculator. It
 orders the approved ownership, interaction, security, data, migration, cache,
 and verification decisions into small reviewable sprints.
 
-Implementation has **not** started. This document does not change source code,
+**Status (2026-08-28):** Sprints 3–11 **COMPLETE** on production (#66–#75).
+Sprint 12 prep open ([#76](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/76))
+— execution blocked until **2026-09-11** + owner cleanup approval. Observation
+window: `docs/plans/assets/pages-cms-result/s11-release/observation-window.md`.
+
+This document does not change source code,
 Prisma schema, data, storage, dependencies, production configuration, or the
-deployed site. It is the required committed plan that must exist before those
-changes begin.
+deployed site by itself. It is the required committed plan that must exist before
+those changes begin.
 
 The existing before-state is frozen in
 [`pages-cms-current-state-inventory.md`](pages-cms-current-state-inventory.md)
@@ -718,6 +723,11 @@ compatibility window; do not remove compatibility yet.
 
 **Depends on:** all six page sprints green.
 
+**Status (2026-08-28):** **COMPLETE** — [#74](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/74).
+Prod redeploy [#75](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/75) live;
+observation until 2026-09-11. Evidence:
+`docs/plans/assets/pages-cms-result/s11-release/manifest.md`.
+
 ### Scope and files/surfaces
 
 - Finish `scripts/verify-pages-cms-all.mts` integration into
@@ -787,6 +797,10 @@ the page remains in observation; cleanup does not become eligible.
 and explicit operational approval.
 
 **Depends on:** Sprint 11 plus all per-page observation gates green.
+
+**Status (2026-08-28):** **PREP ONLY** — [#76](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/76)
+/ `backlogs/ISSUE_076_pages_cms_sprint12_cleanup/PLAN.md`. Inventory committed;
+execution blocked until 2026-09-11 + owner OK (S12-D).
 
 ### Scope and files/surfaces
 
