@@ -7,7 +7,7 @@ Live-verify: [`about-cms-enhancement-live-verification-matrix.md`](about-cms-enh
 
 ## Status
 
-**Implemented locally 2026-08-28** — execution [#87](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/87). Production deploy pending owner window + DDL on prod.
+**Deployed production 2026-08-28** — DDL verified in phpMyAdmin, `dist.zip` uploaded, extracted, Passenger restarted, smoke ✓.
 
 ## Destination (locked #82–#83)
 
