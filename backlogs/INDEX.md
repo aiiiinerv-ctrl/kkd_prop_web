@@ -8,7 +8,6 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 | GitHub | PLAN | Notes |
 |---|---|---|
 | [#107](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/107) | [`ISSUE_107_page_banners_branding_map`](ISSUE_107_page_banners_branding_map/PLAN.md) | Wayfinder — page banners + header/footer logo (planning only) |
-| [#102](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/102) | [`ISSUE_102_calculator_config_map`](ISSUE_102_calculator_config_map/PLAN.md) | Phase A merged — **S5 prod DDL + live-verify** |
 | [#77](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/77) | [`ISSUE_077_about_cms_enhancement_map`](ISSUE_077_about_cms_enhancement_map/PLAN.md) | Wayfinder — About credentials heading + editable icons |
 | [#76](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/76) | [`ISSUE_076_pages_cms_sprint12_cleanup`](ISSUE_076_pages_cms_sprint12_cleanup/PLAN.md) | Owner approved 2026-08-28 — execute blocked until 2026-09-11 |
 | [#38](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/38) | [`ISSUE_038_cookieyes_banner_locale_en`](ISSUE_038_cookieyes_banner_locale_en/PLAN.md) | CookieYes Free = one language — owner decision |
@@ -19,6 +18,7 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 | GitHub | PLAN | Notes |
 |---|---|---|
+| [#102](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/102) | [`ISSUE_102_calculator_config_map`](done/ISSUE_102_calculator_config_map/PLAN.md) | Calculator config Phase A live prod 2026-08-28 |
 | [#115](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/115) | [`ISSUE_115_html_sitemap`](done/ISSUE_115_html_sitemap/PLAN.md) | HTML sitemap deployed prod 2026-08-28 |
 | [#88](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/88) | [`ISSUE_088_contact_settings_map`](done/ISSUE_088_contact_settings_map/PLAN.md) | Contact settings E1–E2 deployed prod 2026-08-28 |
 | [#75](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/75) | [`ISSUE_075_prod_redeploy_pages_cms_bundle`](done/ISSUE_075_prod_redeploy_pages_cms_bundle/PLAN.md) | Prod redeploy complete 2026-08-28 — Pages CMS #68–#74 live |
