@@ -15,7 +15,7 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 | GitHub | PLAN | Notes |
 |---|---|---|
-| [#75](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/75) | [`ISSUE_075_prod_redeploy_pages_cms_bundle`](ISSUE_075_prod_redeploy_pages_cms_bundle/PLAN.md) | Prod redeploy complete 2026-08-28 — Pages CMS #68–#74 live |
+| [#75](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/75) | [`ISSUE_075_prod_redeploy_pages_cms_bundle`](done/ISSUE_075_prod_redeploy_pages_cms_bundle/PLAN.md) | Prod redeploy complete 2026-08-28 — Pages CMS #68–#74 live |
 | [#74](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/74) | [`ISSUE_074_pages_cms_sprint11_release`](done/ISSUE_074_pages_cms_sprint11_release/PLAN.md) | Sprint 11 complete 2026-08-28 — release verify + observation window |
 | [#73](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/73) | [`ISSUE_073_pages_cms_sprint10_calculator`](done/ISSUE_073_pages_cms_sprint10_calculator/PLAN.md) | Sprint 10 complete 2026-08-28 — Calculator Pages cutover |
 | [#72](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/72) | [`ISSUE_072_pages_cms_sprint9_portfolio`](done/ISSUE_072_pages_cms_sprint9_portfolio/PLAN.md) | Sprint 9 complete 2026-08-28 — Portfolio Pages cutover |
