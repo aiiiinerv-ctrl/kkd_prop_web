@@ -6,7 +6,7 @@ Backlog: [`backlogs/ISSUE_102_calculator_config_map/PLAN.md`](../../backlogs/ISS
 
 ## Status
 
-**Phase A production release complete 2026-08-28.** Prod DDL applied; smoke + e2e green. Phase B paused for owner OK.
+**Phase A + B code complete 2026-08-28.** Phase B adds bill bounds + tier thresholds in admin UI. Prod deploy pending upload.
 
 ---
 
@@ -33,8 +33,8 @@ Backlog: [`backlogs/ISSUE_102_calculator_config_map/PLAN.md`](../../backlogs/ISS
 | **S3** | Admin tab Phase A (3 fields, preview, reset) | nextjs-dev | ✓ |
 | **S4** | Public RSC reads `getCalculatorConfig()` | nextjs-dev | ✓ |
 | **S5** | Verify + prod release | nextjs-dev + human FTP | ✓ 2026-08-28 |
-| **S6** | Phase B admin fields + cross-validation | nextjs-dev | pending owner OK |
-| **S7** | Zustand clamp + tier markers + live-verify B | nextjs-dev | pending S6 |
+| **S6** | Phase B admin fields + cross-validation | nextjs-dev | ✓ 2026-08-28 |
+| **S7** | Zustand clamp + e2e + prod deploy | nextjs-dev | pending upload |
 
 ---
 
