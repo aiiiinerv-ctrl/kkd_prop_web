@@ -20,8 +20,6 @@ const LEGACY_ADMIN_REDIRECTS: { from: string; expectPath: string }[] = [
   { from: "/admin/portfolio", expectPath: "/admin/pages/portfolio" },
 ];
 
-const SETTINGS_SEO_KEYS = ["booking", "contact", "testimonials", "cookiePolicy"] as const;
-const MOVED_SEO_KEYS = ["home", "about", "services", "packages", "portfolio", "calculator"] as const;
 
 let failed = 0;
 
@@ -113,24 +111,12 @@ async function main() {
     else fail(`ADMIN /admin/pages/${key}`, `url ${page.url()}`);
   }
 
-  // --- Settings SEO partition: exactly four tabs ---
+  // --- Settings SEO tab removed entirely (admin no longer edits page SEO here) ---
   await page.goto(`${BASE}/admin/settings`);
   await page.waitForSelector("text=ตั้งค่าระบบ", { timeout: 10000 });
-  await page.click("#st-tab-seo");
-  await page.waitForSelector("#seo-tab-booking", { timeout: 10000 });
-  let tabCount = 0;
-  for (const key of SETTINGS_SEO_KEYS) {
-    const count = await page.locator(`#seo-tab-${key}`).count();
-    if (count === 1) tabCount += 1;
-  }
-  if (tabCount === 4) pass("SETTINGS SEO four tabs");
-  else fail("SETTINGS SEO four tabs", `found ${tabCount}`);
-
-  for (const key of MOVED_SEO_KEYS) {
-    const count = await page.locator(`#seo-tab-${key}`).count();
-    if (count === 0) pass(`SETTINGS no seo-tab-${key}`);
-    else fail(`SETTINGS no seo-tab-${key}`, "still present");
-  }
+  const seoTabCount = await page.locator("#st-tab-seo").count();
+  if (seoTabCount === 0) pass("SETTINGS no SEO / Meta tab");
+  else fail("SETTINGS no SEO / Meta tab", "still present");
 
   await page.close();
   await browser.close();

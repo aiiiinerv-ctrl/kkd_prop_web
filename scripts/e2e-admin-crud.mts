@@ -645,10 +645,9 @@ await page.click("#p-payment-submit");
 await page.waitForSelector("text=บันทึกข้อมูลการชำระเงินเรียบร้อย", { timeout: 10000 });
 console.log("PAYMENT SETTINGS: restored ✓");
 
-// --- CMS: Contact settings tab — edit phone, verify public footer, restore ---
-await page.goto("http://localhost:3000/admin/settings");
-await page.waitForSelector("text=ตั้งค่าระบบ", { timeout: 10000 });
-await page.click("#st-tab-contact");
+// --- CMS: Contact page menu (content tab) — edit phone, verify public footer, restore ---
+await page.goto("http://localhost:3000/admin/pages/contact");
+await page.waitForSelector("text=ติดต่อเรา (Pages)", { timeout: 10000 });
 await page.locator("#c-phone").waitFor({ timeout: 5000 });
 const originalPhone = await page.locator("#c-phone").inputValue();
 const testPhone = "0811223344";

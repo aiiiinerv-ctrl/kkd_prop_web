@@ -14,6 +14,7 @@ import {
   Megaphone,
   MessageSquareQuote,
   Package,
+  Phone,
   ScrollText,
   Settings,
   Users,
@@ -91,6 +92,13 @@ const ITEMS = [
     href: "/admin/pages/home",
     label: "หน้าแรก (Pages)",
     icon: LayoutTemplate,
+    roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
+  },
+  {
+    // Bespoke shell (not in PAGE_REGISTRY) — content lives in SiteSettings singleton
+    href: "/admin/pages/contact",
+    label: "ติดต่อเรา (Pages)",
+    icon: Phone,
     roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
   },
   {

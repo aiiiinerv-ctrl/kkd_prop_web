@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { META_KEYS } from "@/lib/seo";
 
 const optionalUrl = z
   .string()
@@ -46,12 +45,4 @@ export const headerFooterSettingsSchema = z.object({
   headerCtaLabelEn: optionalText,
   footerDescriptionTh: optionalText,
   footerDescriptionEn: optionalText,
-});
-
-export const pageSeoSchema = z.object({
-  key: z.enum(META_KEYS),
-  titleTh: optionalText,
-  titleEn: optionalText,
-  descriptionTh: optionalText,
-  descriptionEn: optionalText,
 });
