@@ -175,6 +175,20 @@ export const getSharedCta = cache(
 );
 
 /**
+ * Raw header/body tracking script blobs from SiteSettings (#116). Not part
+ * of SiteSettingsView — these are locale-independent raw HTML, not a
+ * per-locale display projection, so they get their own narrow reader.
+ */
+export const getSiteAnalyticsScripts = cache(
+  async (): Promise<{ headerScript: string | null; bodyScript: string | null }> => {
+    const row = await prisma.siteSettings.findFirst({
+      select: { headerScript: true, bodyScript: true },
+    });
+    return { headerScript: row?.headerScript ?? null, bodyScript: row?.bodyScript ?? null };
+  }
+);
+
+/**
  * Per-page SEO data for one MetaKey.
  * Returns null when no row exists for that key.
  */

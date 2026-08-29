@@ -9,7 +9,7 @@ import { MobileBookingBar } from "@/components/site/mobile-booking-bar";
 import { RefConsentCapture } from "@/components/site/ref-consent-capture";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteHeader } from "@/components/site/site-header";
-import { getPublishedTestimonials, getSiteSettings } from "@/lib/content";
+import { getPublishedTestimonials, getSiteAnalyticsScripts, getSiteSettings } from "@/lib/content";
 import { getSiteLogoUrls } from "@/lib/content/page-banner";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
@@ -83,10 +83,11 @@ export default async function LocaleLayout({
   }
   setRequestLocale(locale);
 
-  const [testimonials, siteSettings, logoUrls] = await Promise.all([
+  const [testimonials, siteSettings, logoUrls, analyticsScripts] = await Promise.all([
     getPublishedTestimonials(locale),
     getSiteSettings(locale),
     getSiteLogoUrls(),
+    getSiteAnalyticsScripts(),
   ]);
 
   return (
@@ -95,7 +96,20 @@ export default async function LocaleLayout({
       className={`${notoSans.variable} ${notoSansThai.variable} h-full antialiased [--font-sans:var(--font-noto-sans),var(--font-noto-sans-thai),sans-serif]`}
       suppressHydrationWarning
     >
+      {analyticsScripts.headerScript ? (
+        // The admin pastes whole <script>…</script> tags (decision #3), so this
+        // must inject them as literal head children, not nested inside another
+        // <script> element — a browser's HTML parser treats a nested "<script>"
+        // string as inert text of the outer script, so it would never execute.
+        <head dangerouslySetInnerHTML={{ __html: analyticsScripts.headerScript }} />
+      ) : null}
       <body className="site-shell min-h-full flex flex-col">
+        {analyticsScripts.bodyScript ? (
+          // Same reasoning as the header script above — wrap in a plain element,
+          // not a <script> tag, so any <script> tags pasted by the admin parse
+          // and execute as real DOM children instead of inert nested text.
+          <div dangerouslySetInnerHTML={{ __html: analyticsScripts.bodyScript }} />
+        ) : null}
         <CookieYesScript />
         <RefConsentCapture />
         <LocalBusinessJsonLd settings={siteSettings} />

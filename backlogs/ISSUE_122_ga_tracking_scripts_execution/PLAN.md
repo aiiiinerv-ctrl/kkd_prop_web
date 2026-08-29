@@ -33,7 +33,7 @@ Ship the admin-editable Google Analytics / Tracking Scripts config: `/admin/sett
 |---:|---|---|---|---|---|
 | 1 | E1 — schema + action | `nextjs-dev` | — | — | done |
 | 2 | E2 — admin UI tab | `nextjs-dev` | 1 | — | done |
-| 3 | E3 — public injection | `nextjs-dev` | 1 | can run parallel with 2 | pending |
+| 3 | E3 — public injection | `nextjs-dev` | 1 | can run parallel with 2 | done |
 | 4 | E4 — verify (build/e2e/live-verify) | `nextjs-dev` | 2, 3 | — | pending |
 | 5 | Independent review (audit gate) | `audit-compliance-reviewer` | 4 | — | pending |
 | 6 | Owner accept + close GitHub + move folder to `backlogs/done/` | User | 5 | — | pending |
