@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { updateBookingCapacitySetting } from "@/actions/bookings";
 import { updatePaymentSettings } from "@/actions/payment-settings";
 import { previewPromptPayQr } from "@/actions/promptpay-preview";
-import { updateHeaderFooterSettings } from "@/actions/site-settings";
+import { updateAnalyticsSettings, updateHeaderFooterSettings } from "@/actions/site-settings";
 import { BilingualTabs } from "@/components/admin/crud-page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,144 @@ type SiteSettingsForm = {
   headerCtaLabelEn: string;
   footerDescriptionTh: string;
   footerDescriptionEn: string;
+  headerScript: string;
+  bodyScript: string;
 };
+
+const ANALYTICS_MAX_LEN = 10000;
+const ANALYTICS_EXAMPLE = `<script async data-cookieyes="cookieyes-analytics" src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"></script>
+<script data-cookieyes="cookieyes-analytics">
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXX');
+</script>`;
+
+function hasMissingCookieyesAttr(value: string): boolean {
+  if (!value.trim()) return false;
+  const hasScriptTag = /<script\b/i.test(value);
+  const hasAttr = /data-cookieyes\s*=/i.test(value);
+  return hasScriptTag && !hasAttr;
+}
+
+function AnalyticsScriptField({
+  id,
+  name,
+  label,
+  value,
+  onChange,
+}: {
+  id: string;
+  name: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const missing = hasMissingCookieyesAttr(value);
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <Label htmlFor={id}>{label}</Label>
+        <CharCounter value={value} max={ANALYTICS_MAX_LEN} />
+      </div>
+      <Textarea
+        id={id}
+        name={name}
+        rows={8}
+        className="font-mono text-xs"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      {missing && (
+        <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs text-amber-800">
+          ⚠ ไม่พบ data-cookieyes ใน &lt;script&gt; ที่วาง — CookieYes จะไม่รอ consent ก่อนรันโค้ดนี้
+        </p>
+      )}
+    </div>
+  );
+}
+
+function AnalyticsTab({ siteSettings }: { siteSettings: SiteSettingsForm | null }) {
+  const [isPending, startTransition] = useTransition();
+  const [headerScript, setHeaderScript] = useState(siteSettings?.headerScript ?? "");
+  const [bodyScript, setBodyScript] = useState(siteSettings?.bodyScript ?? "");
+  const [showExample, setShowExample] = useState(false);
+
+  const handleSubmit = (formData: FormData) => {
+    startTransition(async () => {
+      const result = await updateAnalyticsSettings(formData);
+      if (result.ok) {
+        toast.success("บันทึก Google Analytics เรียบร้อย");
+      } else {
+        toast.error(result.error);
+      }
+    });
+  };
+
+  return (
+    <div className="rounded-xl border border-border/70 bg-card p-6">
+      <h2 className="mb-1 font-semibold">Google Analytics / Tracking Scripts</h2>
+      <p className="mb-4 text-sm text-muted-foreground">
+        วางโค้ด script ที่ต้องการแทรกในทุกหน้าเว็บสาธารณะ (ไม่รวมหลังบ้าน)
+      </p>
+
+      <div className="mb-4 rounded-lg border border-brand-orange/40 bg-accent px-4 py-3 text-sm text-accent-foreground">
+        <p className="font-medium">ก่อนวาง script โปรดตรวจสอบ 2 เรื่อง:</p>
+        <ul className="mt-1 list-disc space-y-0.5 pl-5">
+          <li>
+            ให้ทุก &lt;script&gt; ที่วางมี attribute{" "}
+            <code className="rounded bg-muted px-1">data-cookieyes=&quot;cookieyes-analytics&quot;</code>{" "}
+            ไม่งั้น CookieYes จะไม่รอ consent ก่อนรัน
+          </li>
+          <li>โค้ดในช่อง Body tag area จะถูกแทรกทันทีหลัง &lt;body&gt; เปิด (ตำแหน่งเดียวกับที่ Google Tag Manager แนะนำ)</li>
+        </ul>
+      </div>
+
+      <ol className="mb-4 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
+        <li>
+          เตรียมโค้ด script ให้มี attribute{" "}
+          <code className="rounded bg-muted px-1">data-cookieyes=&quot;cookieyes-analytics&quot;</code>{" "}
+          ในทุก &lt;script&gt; tag
+        </li>
+        <li>วางโค้ดที่จะแทรกใน &lt;head&gt; ลงช่อง Header tag area และโค้ดที่จะแทรกหลัง &lt;body&gt; เปิด ลงช่อง Body tag area</li>
+        <li>กดบันทึก</li>
+      </ol>
+
+      <button
+        type="button"
+        onClick={() => setShowExample((s) => !s)}
+        className="mb-4 text-xs font-medium text-primary underline underline-offset-2"
+      >
+        {showExample ? "ซ่อนตัวอย่างโค้ด" : "ดูตัวอย่างโค้ด"}
+      </button>
+      {showExample && (
+        <pre className="mb-4 overflow-x-auto rounded-lg border border-border/70 bg-muted/30 p-3 text-[11px] leading-relaxed">
+          {ANALYTICS_EXAMPLE}
+        </pre>
+      )}
+
+      <form action={handleSubmit} className="space-y-5" noValidate>
+        <AnalyticsScriptField
+          id="ga-header"
+          name="headerScript"
+          label="Header tag area"
+          value={headerScript}
+          onChange={setHeaderScript}
+        />
+        <AnalyticsScriptField
+          id="ga-body"
+          name="bodyScript"
+          label="Body tag area"
+          value={bodyScript}
+          onChange={setBodyScript}
+        />
+        <Button id="ga-submit" type="submit" disabled={isPending}>
+          {isPending ? "กำลังบันทึก..." : "บันทึก Google Analytics"}
+        </Button>
+      </form>
+    </div>
+  );
+}
 
 function CharCounter({ value, max }: { value: string; max: number }) {
   const over = value.length > max;
@@ -315,6 +452,11 @@ export function SettingsClient({
           <TabsTrigger id="st-tab-headfoot" value="headfoot" className="shrink-0 px-3">
             Header / Footer
           </TabsTrigger>
+          {showCapacity && (
+            <TabsTrigger id="st-tab-analytics" value="analytics" className="shrink-0 px-3">
+              Google Analytics
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {showCapacity && (
@@ -421,6 +563,12 @@ export function SettingsClient({
             footerLogoUrl={footerLogoUrl}
           />
         </TabsContent>
+
+        {showCapacity && (
+          <TabsContent value="analytics" className="space-y-5 pt-3">
+            <AnalyticsTab siteSettings={siteSettings} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

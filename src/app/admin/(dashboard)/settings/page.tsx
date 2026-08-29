@@ -48,6 +48,8 @@ export default async function SettingsPage() {
               headerCtaLabelEn: siteSettings.headerCtaLabelEn ?? "",
               footerDescriptionTh: siteSettings.footerDescriptionTh ?? "",
               footerDescriptionEn: siteSettings.footerDescriptionEn ?? "",
+              headerScript: siteSettings.headerScript ?? "",
+              bodyScript: siteSettings.bodyScript ?? "",
             }
           : null
       }
