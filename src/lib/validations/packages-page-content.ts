@@ -22,4 +22,8 @@ export const packagesPageContentSchema = z.object({
   paybackHybridEn: text,
   paybackOffGridTh: text,
   paybackOffGridEn: text,
+  seasonalBaselineSummer: z.coerce.number().positive().max(1000),
+  seasonalBaselineEarlyRainy: z.coerce.number().positive().max(1000),
+  seasonalBaselineRainy: z.coerce.number().positive().max(1000),
+  seasonalBaselineWinter: z.coerce.number().positive().max(1000),
 });

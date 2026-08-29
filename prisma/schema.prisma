@@ -600,6 +600,10 @@ model PackagesPageContent {
   seasonalSubtitleTh String?  @db.Text
   seasonalSubtitleEn String?  @db.Text
   showSeasonal       Boolean  @default(true)
+  seasonalBaselineSummer     Float @default(20)
+  seasonalBaselineEarlyRainy Float @default(16.5)
+  seasonalBaselineRainy      Float @default(13)
+  seasonalBaselineWinter     Float @default(16)
   paybackTitleTh     String?
   paybackTitleEn     String?
   paybackOnGridTh    String?  @db.Text

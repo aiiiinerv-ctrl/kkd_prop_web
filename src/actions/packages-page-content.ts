@@ -4,6 +4,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { auditedAggregate } from "@/lib/audit";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { seasonalProduction, type SeasonalBaseline } from "@/lib/packages-seasonal";
 import { contentRevalidatePaths } from "@/lib/pages";
 import { packagesPageContentSchema } from "@/lib/validations/packages-page-content";
 import type { ActionResult } from "./users";
@@ -53,6 +54,21 @@ const FORM_ALIASES: Record<(typeof TEXT_FIELDS)[number], string> = {
 
 const BOOL_FIELDS = ["showSeasonal", "showPayback", "showGlobalCta"] as const;
 
+const BASELINE_FIELDS = [
+  "seasonalBaselineSummer",
+  "seasonalBaselineEarlyRainy",
+  "seasonalBaselineRainy",
+  "seasonalBaselineWinter",
+] as const;
+
+/** Prefixed form names, same reasoning as `FORM_ALIASES` above. */
+const BASELINE_FORM_ALIASES: Record<(typeof BASELINE_FIELDS)[number], string> = {
+  seasonalBaselineSummer: "pkgSeasonalBaselineSummer",
+  seasonalBaselineEarlyRainy: "pkgSeasonalBaselineEarlyRainy",
+  seasonalBaselineRainy: "pkgSeasonalBaselineRainy",
+  seasonalBaselineWinter: "pkgSeasonalBaselineWinter",
+};
+
 function parseBool(raw: FormDataEntryValue | null, fallback: boolean): boolean {
   if (raw === null || raw === undefined || raw === "") return fallback;
   if (typeof raw !== "string") return fallback;
@@ -73,9 +89,10 @@ export async function updatePackagesPageContent(
 ): Promise<ActionResult | { ok: false; conflict: true }> {
   await requireRole("ADMIN", "SALES", "MARKETING", "EDITOR");
 
-  const raw = Object.fromEntries(
-    TEXT_FIELDS.map((k) => [k, formData.get(FORM_ALIASES[k]) ?? ""]),
-  );
+  const raw = Object.fromEntries([
+    ...TEXT_FIELDS.map((k) => [k, formData.get(FORM_ALIASES[k]) ?? ""]),
+    ...BASELINE_FIELDS.map((k) => [k, formData.get(BASELINE_FORM_ALIASES[k]) ?? ""]),
+  ]);
   const parsed = packagesPageContentSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "ข้อมูลไม่ถูกต้อง" };
 
@@ -92,11 +109,24 @@ export async function updatePackagesPageContent(
   ) as Record<(typeof BOOL_FIELDS)[number], boolean>;
 
   const d = parsed.data;
+
+  const baselineChanged =
+    d.seasonalBaselineSummer !== existing.seasonalBaselineSummer ||
+    d.seasonalBaselineEarlyRainy !== existing.seasonalBaselineEarlyRainy ||
+    d.seasonalBaselineRainy !== existing.seasonalBaselineRainy ||
+    d.seasonalBaselineWinter !== existing.seasonalBaselineWinter;
+  const newBaseline: SeasonalBaseline = {
+    summer: d.seasonalBaselineSummer,
+    earlyRainy: d.seasonalBaselineEarlyRainy,
+    rainy: d.seasonalBaselineRainy,
+    winter: d.seasonalBaselineWinter,
+  };
   const aggregate = auditedAggregate({
     entityType: "PackagesPageContent",
     model: (client) => client.packagesPageContent,
     revalidate: [
       ...contentRevalidatePaths("packages"),
+      ["/[locale]/packages/[slug]", "page"],
       "/th/calculator",
       "/en/calculator",
     ],
@@ -128,9 +158,29 @@ export async function updatePackagesPageContent(
           paybackHybridEn: nullIfEmpty(d.paybackHybridEn),
           paybackOffGridTh: nullIfEmpty(d.paybackOffGridTh),
           paybackOffGridEn: nullIfEmpty(d.paybackOffGridEn),
+          seasonalBaselineSummer: d.seasonalBaselineSummer,
+          seasonalBaselineEarlyRainy: d.seasonalBaselineEarlyRainy,
+          seasonalBaselineRainy: d.seasonalBaselineRainy,
+          seasonalBaselineWinter: d.seasonalBaselineWinter,
           ...bools,
         },
       });
+
+      // The baseline changed — `Package.seasonalProduction` is baked in at
+      // package save time, not computed live at render time, so every
+      // existing package's stored JSON is now stale and must be rewritten
+      // here (not just whichever package an admin next re-saves).
+      if (baselineChanged) {
+        const allPackages = await tx.package.findMany({ select: { id: true, sizeKw: true } });
+        await Promise.all(
+          allPackages.map((pkg) =>
+            tx.package.update({
+              where: { id: pkg.id },
+              data: { seasonalProduction: seasonalProduction(pkg.sizeKw, newBaseline) },
+            }),
+          ),
+        );
+      }
     },
     snapshotAfter: (tx) => snapshot(tx, existing.id),
   });

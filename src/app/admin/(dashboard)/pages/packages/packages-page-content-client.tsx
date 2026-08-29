@@ -31,6 +31,10 @@ export type PackagesPageFormData = {
   paybackHybridEn: string;
   paybackOffGridTh: string;
   paybackOffGridEn: string;
+  seasonalBaselineSummer: number;
+  seasonalBaselineEarlyRainy: number;
+  seasonalBaselineRainy: number;
+  seasonalBaselineWinter: number;
   showSeasonal: boolean;
   showPayback: boolean;
   showGlobalCta: boolean;
@@ -56,6 +60,10 @@ const empty: PackagesPageFormData = {
   paybackHybridEn: "",
   paybackOffGridTh: "",
   paybackOffGridEn: "",
+  seasonalBaselineSummer: 20,
+  seasonalBaselineEarlyRainy: 16.5,
+  seasonalBaselineRainy: 13,
+  seasonalBaselineWinter: 16,
   showSeasonal: true,
   showPayback: true,
   showGlobalCta: true,
@@ -208,6 +216,112 @@ export function PackagesPageContentClient({ data }: { data: PackagesPageFormData
           </>
         }
       />
+
+      <fieldset className="space-y-3 rounded-lg border border-border p-4">
+        <legend className="px-1 text-sm font-semibold">ค่าอ้างอิงตาราง Seasonal (หน่วย/วัน ที่ 5kW)</legend>
+        <p className="text-xs text-muted-foreground">
+          ตัวเลขจริงในตารางจะคำนวณตามขนาดระบบของแต่ละแพ็กเกจ โดยสเกลจากค่าอ้างอิงนี้
+        </p>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="pkg-seasonalBaselineSummer">ฤดูร้อน</Label>
+            <Input
+              id="pkg-seasonalBaselineSummer"
+              name="pkgSeasonalBaselineSummer"
+              type="number"
+              step="0.1"
+              min="0"
+              defaultValue={d.seasonalBaselineSummer}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="pkg-seasonalBaselineEarlyRainy">ฝนต้นฤดู</Label>
+            <Input
+              id="pkg-seasonalBaselineEarlyRainy"
+              name="pkgSeasonalBaselineEarlyRainy"
+              type="number"
+              step="0.1"
+              min="0"
+              defaultValue={d.seasonalBaselineEarlyRainy}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="pkg-seasonalBaselineRainy">ฤดูฝน</Label>
+            <Input
+              id="pkg-seasonalBaselineRainy"
+              name="pkgSeasonalBaselineRainy"
+              type="number"
+              step="0.1"
+              min="0"
+              defaultValue={d.seasonalBaselineRainy}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="pkg-seasonalBaselineWinter">ฤดูหนาว</Label>
+            <Input
+              id="pkg-seasonalBaselineWinter"
+              name="pkgSeasonalBaselineWinter"
+              type="number"
+              step="0.1"
+              min="0"
+              defaultValue={d.seasonalBaselineWinter}
+            />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset className="space-y-3 rounded-lg border border-border p-4">
+        <legend className="px-1 text-sm font-semibold">ค่าอ้างอิงที่ 5kW (หน่วย/วัน)</legend>
+        <p className="text-sm text-muted-foreground">
+          ตัวเลขฐานที่ใช้คำนวณตาราง Seasonal ของทุกแพ็กเกจ (ปรับตามขนาด kW จริงของแต่ละแพ็กเกจโดยอัตโนมัติ)
+        </p>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="pkg-seasonalBaselineSummer">ฤดูร้อน (มี.ค.-พ.ค.)</Label>
+            <Input
+              id="pkg-seasonalBaselineSummer"
+              name="pkgSeasonalBaselineSummer"
+              type="number"
+              step="0.1"
+              min="0"
+              defaultValue={d.seasonalBaselineSummer}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="pkg-seasonalBaselineEarlyRainy">ต้นฝน (มิ.ย.-ก.ค.)</Label>
+            <Input
+              id="pkg-seasonalBaselineEarlyRainy"
+              name="pkgSeasonalBaselineEarlyRainy"
+              type="number"
+              step="0.1"
+              min="0"
+              defaultValue={d.seasonalBaselineEarlyRainy}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="pkg-seasonalBaselineRainy">ฤดูฝน (ส.ค.-ต.ค.)</Label>
+            <Input
+              id="pkg-seasonalBaselineRainy"
+              name="pkgSeasonalBaselineRainy"
+              type="number"
+              step="0.1"
+              min="0"
+              defaultValue={d.seasonalBaselineRainy}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="pkg-seasonalBaselineWinter">ฤดูหนาว (พ.ย.-ก.พ.)</Label>
+            <Input
+              id="pkg-seasonalBaselineWinter"
+              name="pkgSeasonalBaselineWinter"
+              type="number"
+              step="0.1"
+              min="0"
+              defaultValue={d.seasonalBaselineWinter}
+            />
+          </div>
+        </div>
+      </fieldset>
 
       <fieldset className="space-y-3 rounded-lg border border-border p-4">
         <legend className="px-1 text-sm font-semibold">การแสดงผล</legend>

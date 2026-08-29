@@ -5,6 +5,7 @@ import { linesToList, slugify, storePublicImage } from "@/lib/admin-content";
 import { auditedEntity } from "@/lib/audit";
 import { canPublishContent, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { seasonalProduction, type SeasonalBaseline } from "@/lib/packages-seasonal";
 import { storage } from "@/lib/storage";
 import type { ActionResult } from "./users";
 
@@ -20,14 +21,13 @@ const packageSchema = z.object({
   isPublished: z.coerce.boolean(),
 });
 
-// Average daily production by season, scaled from real 5KW measurements.
-function seasonalProduction(sizeKw: number) {
-  const scale = sizeKw / 5;
+async function getSeasonalBaseline(): Promise<SeasonalBaseline> {
+  const content = await prisma.packagesPageContent.findUnique({ where: { key: "packages" } });
   return {
-    summer: { monthsTh: "มี.ค. - พ.ค.", monthsEn: "Mar - May", unitsPerDay: Math.round(20 * scale) },
-    earlyRainy: { monthsTh: "มิ.ย. - ก.ค.", monthsEn: "Jun - Jul", unitsPerDay: Math.round(16.5 * scale) },
-    rainy: { monthsTh: "ส.ค. - ต.ค.", monthsEn: "Aug - Oct", unitsPerDay: Math.round(13 * scale) },
-    winter: { monthsTh: "พ.ย. - ก.พ.", monthsEn: "Nov - Feb", unitsPerDay: Math.round(16 * scale) },
+    summer: content?.seasonalBaselineSummer ?? 20,
+    earlyRainy: content?.seasonalBaselineEarlyRainy ?? 16.5,
+    rainy: content?.seasonalBaselineRainy ?? 13,
+    winter: content?.seasonalBaselineWinter ?? 16,
   };
 }
 
@@ -77,13 +77,15 @@ export async function createPackage(formData: FormData): Promise<ActionResult> {
     await prisma.package.updateMany({ where: { isPopular: true }, data: { isPopular: false } });
   }
 
+  const baseline = await getSeasonalBaseline();
+
   await packages.create({
     ...parsed.data,
     isPublished: canPublish ? parsed.data.isPublished : false,
     slug: slugify(parsed.data.nameEn),
     featuresTh: linesToList(formData.get("featuresTh")),
     featuresEn: linesToList(formData.get("featuresEn")),
-    seasonalProduction: seasonalProduction(parsed.data.sizeKw),
+    seasonalProduction: seasonalProduction(parsed.data.sizeKw, baseline),
     imageKey: image.key,
   });
 
@@ -114,12 +116,14 @@ export async function updatePackage(
     });
   }
 
+  const baseline = await getSeasonalBaseline();
+
   const result = await packages.update(id, {
     ...rest,
     ...(canPublish ? { isPublished } : {}),
     featuresTh: linesToList(formData.get("featuresTh")),
     featuresEn: linesToList(formData.get("featuresEn")),
-    seasonalProduction: seasonalProduction(parsed.data.sizeKw),
+    seasonalProduction: seasonalProduction(parsed.data.sizeKw, baseline),
     ...(image.key ? { imageKey: image.key } : {}),
   });
   if (!result) return { ok: false, error: "ไม่พบแพ็กเกจ" };
