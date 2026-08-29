@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { updateSitemapSettings, previewSitemapTree } from "@/actions/sitemap-settings";
-import { PageSitemap } from "@/components/site/page-sitemap";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +14,42 @@ import type { SitemapConfig, SitemapConfigSection, SitemapGroup } from "@/lib/si
 import { SECTION_META } from "@/lib/sitemap/types";
 
 const SECTION_LABELS_TH: Record<SitemapConfigSection["id"], string> = DEFAULT_NAV_LABELS.th;
+
+/**
+ * Admin preview only. Deliberately plain <a> tags, not next-intl's Link —
+ * this renders inside src/app/admin/layout.tsx, a separate root layout with
+ * no NextIntlClientProvider, so the locale-aware Link throws. Preview is
+ * fixed to /th (admin UI is Thai-only), matching localePrefix: "always".
+ */
+function SitemapPreview({ groups }: { groups: SitemapGroup[] }) {
+  if (groups.length === 0) {
+    return <p className="text-center text-sm text-muted-foreground">ไม่มีหมวดที่เปิดใช้งาน</p>;
+  }
+  return (
+    <div className="grid gap-10 sm:grid-cols-2">
+      {groups.map((group) => (
+        <div key={group.id} className="min-w-0">
+          <h3 className="mb-3 text-base font-bold text-primary">
+            <a href={`/th${group.href}`} className="transition-colors hover:text-brand-orange">
+              {group.label}
+            </a>
+          </h3>
+          {group.children.length > 0 && (
+            <ul className="space-y-2 border-l-2 border-brand-orange/30 pl-4 text-sm text-muted-foreground">
+              {group.children.map((child, index) => (
+                <li key={`${group.id}-${index}`}>
+                  <a href={`/th${child.href}`} className="transition-colors hover:text-brand-orange">
+                    {child.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 type Props = {
   initialConfig: SitemapConfig;
@@ -213,7 +248,7 @@ export function SitemapAdminClient({ initialConfig, initialPreviewGroups, canMut
         <div className="rounded-xl border border-border bg-muted/30 p-5">
           <h2 className="mb-4 text-sm font-semibold">ตัวอย่าง (ภาษาไทย)</h2>
           {previewGroups ? (
-            <PageSitemap groups={previewGroups} />
+            <SitemapPreview groups={previewGroups} />
           ) : (
             <p className="text-sm text-muted-foreground">
               กด「อัปเดตตัวอย่าง」เพื่อดูแผนผังตามการตั้งค่าปัจจุบัน
