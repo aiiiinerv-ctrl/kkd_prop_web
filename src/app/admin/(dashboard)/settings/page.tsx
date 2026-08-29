@@ -48,8 +48,12 @@ export default async function SettingsPage() {
               headerCtaLabelEn: siteSettings.headerCtaLabelEn ?? "",
               footerDescriptionTh: siteSettings.footerDescriptionTh ?? "",
               footerDescriptionEn: siteSettings.footerDescriptionEn ?? "",
-              headerScript: siteSettings.headerScript ?? "",
-              bodyScript: siteSettings.bodyScript ?? "",
+              // ADMIN only (raw script injection surface) — withheld from
+              // MARKETING sessions' RSC payload, not just hidden client-side,
+              // matching the isAdmin-gated fetch pattern above for
+              // bookingCapacity/paymentSettings.
+              headerScript: isAdmin ? (siteSettings.headerScript ?? "") : "",
+              bodyScript: isAdmin ? (siteSettings.bodyScript ?? "") : "",
             }
           : null
       }
