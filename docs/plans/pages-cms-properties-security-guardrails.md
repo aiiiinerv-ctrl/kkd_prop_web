@@ -53,7 +53,7 @@ Every Properties read route and mutation must fail closed on the server. Hiding 
 
 Before every Properties mutation, the server must re-read the actor by session user ID and verify that the account still exists, is active, and currently holds `ADMIN` or `MARKETING`. A stale JWT role alone is insufficient for this high-impact surface. The implementation may harden the shared authorization seam, but must not duplicate role logic in individual page actions.
 
-The page identifier is an enum of exactly `home | about | services | packages | portfolio | calculator`. The server maps it to the one trusted record and public routes; the client never chooses a database row ID or revalidation target.
+The page identifier is an enum of exactly `home | about | services | packages | portfolio | calculator | contact`. The server maps it to the one trusted record and public routes; the client never chooses a database row ID or revalidation target.
 
 ## Server validation contract
 

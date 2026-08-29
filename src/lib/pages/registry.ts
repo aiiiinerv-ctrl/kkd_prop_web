@@ -4,7 +4,11 @@ import { PAGE_KEYS } from "./types";
 const CONTENT_ROLES = ["ADMIN", "SALES", "MARKETING", "EDITOR"] as const;
 const PROPERTIES_ROLES = ["ADMIN", "MARKETING"] as const;
 
-/** Code-owned six-page registry — all keys in `pages` partition after Sprint 10 (#73). */
+/**
+ * Code-owned page registry: six pages support Content (`pages` partition
+ * after Sprint 10 / #73); Properties additionally covers `contact`
+ * (properties-only — Content stays on the bespoke ContactContentClient UI).
+ */
 export const PAGE_REGISTRY: Record<PageKey, PageRegistryEntry> = {
   home: {
     key: "home",
@@ -82,6 +86,19 @@ export const PAGE_REGISTRY: Record<PageKey, PageRegistryEntry> = {
     supportsContent: true,
     supportsProperties: true,
     contentRoles: CONTENT_ROLES,
+    propertiesRoles: PROPERTIES_ROLES,
+  },
+  contact: {
+    key: "contact",
+    labelTh: "ติดต่อเรา",
+    adminContentPath: "",
+    publicPaths: ["/th/contact", "/en/contact"],
+    contentRollout: "legacy",
+    adminContentEnabled: false,
+    propertiesAdminEnabled: true,
+    supportsContent: false,
+    supportsProperties: true,
+    contentRoles: [],
     propertiesRoles: PROPERTIES_ROLES,
   },
 };

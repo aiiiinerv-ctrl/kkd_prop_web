@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import type { PageKey } from "@/lib/pages/types";
 
 export type PageSeoFormData = {
   version: number;
@@ -36,7 +37,7 @@ export function PagePropertiesPanel({
   pageSeo,
   title = "Properties",
 }: {
-  pageKey: "home" | "about" | "services" | "packages" | "portfolio" | "calculator";
+  pageKey: PageKey;
   pageSeo: PageSeoFormData;
   title?: string;
 }) {

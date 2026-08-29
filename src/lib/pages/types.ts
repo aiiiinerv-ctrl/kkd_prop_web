@@ -14,6 +14,7 @@ export const PAGE_KEYS = [
   "packages",
   "portfolio",
   "calculator",
+  "contact",
 ] as const;
 
 export type PageKey = (typeof PAGE_KEYS)[number];
@@ -45,7 +46,8 @@ export type PageRegistryEntry = {
   adminContentEnabled: boolean;
   /**
    * Whether Pages Properties mutations may write for this key.
-   * Sprint 5 (#68): home only.
+   * Six keys support Content; Properties additionally covers `contact`
+   * (properties-only — its Content stays on the bespoke ContactContentClient UI).
    */
   propertiesAdminEnabled: boolean;
   supportsContent: boolean;
