@@ -7,7 +7,6 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 | GitHub | PLAN | Notes |
 |---|---|---|
-| [#77](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/77) | [`ISSUE_077_about_cms_enhancement_map`](ISSUE_077_about_cms_enhancement_map/PLAN.md) | Wayfinder — About credentials heading + editable icons |
 | [#76](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/76) | [`ISSUE_076_pages_cms_sprint12_cleanup`](ISSUE_076_pages_cms_sprint12_cleanup/PLAN.md) | Owner approved 2026-08-28 — execute blocked until 2026-09-11 |
 | [#38](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/38) | [`ISSUE_038_cookieyes_banner_locale_en`](ISSUE_038_cookieyes_banner_locale_en/PLAN.md) | CookieYes Free = one language — owner decision |
 | [#32](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/32) | [`ISSUE_032_lead_notifications_resend_line`](ISSUE_032_lead_notifications_resend_line/PLAN.md) | Blocked on Resend/LINE secrets |
@@ -17,6 +16,8 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 | GitHub | PLAN | Notes |
 |---|---|---|
+| [#87](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/87) | [`ISSUE_087_about_cms_enhancement_execution`](done/ISSUE_087_about_cms_enhancement_execution/PLAN.md) | About CMS enhancement (credentials heading, icons, labels) shipped prod 2026-08-28; PLAN backfilled 2026-08-29 |
+| [#77](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/77) | [`ISSUE_077_about_cms_enhancement_map`](done/ISSUE_077_about_cms_enhancement_map/PLAN.md) | Wayfinder map closed 2026-08-28 — execution moved to #87 |
 | [#122](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/122) | [`ISSUE_122_ga_tracking_scripts_execution`](done/ISSUE_122_ga_tracking_scripts_execution/PLAN.md) | GA/tracking scripts feature live prod 2026-08-29 — consent-gating gap traced to CookieYes GDPR-only account config, filed separately as #123 |
 | [#116](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/116) | [`ISSUE_116_ga_tracking_scripts_map`](done/ISSUE_116_ga_tracking_scripts_map/PLAN.md) | Wayfinder map closed 2026-08-29 — all 5 tickets resolved, sprint plan signed off, execution moved to #122 |
 | [#107](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/107) | [`ISSUE_107_page_banners_branding_map`](done/ISSUE_107_page_banners_branding_map/PLAN.md) | Page banners + header/footer logos live prod 2026-08-29 |
