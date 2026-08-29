@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { updateBookingCapacitySetting } from "@/actions/bookings";
 import { updatePaymentSettings } from "@/actions/payment-settings";
@@ -13,6 +14,266 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import type { Role } from "@/lib/auth";
+
+// ── PROTOTYPE — wayfinder #121, throwaway, do not ship ──────────────────
+// Three variants of the new "Google Analytics / Tracking Scripts" tab.
+// Switch via ?variant=A|B|C. No real save — stubbed with a toast only.
+const HEADER_HELP =
+  'ให้ทุก <script> ที่วางมี attribute data-cookieyes="cookieyes-analytics" ไม่งั้น CookieYes จะไม่รอ consent ก่อนรัน';
+const BODY_HELP =
+  "โค้ดที่วางในนี้จะถูกแทรกทันทีหลัง <body> เปิด (ตำแหน่งเดียวกับที่ Google Tag Manager แนะนำ)";
+const MAX_LEN = 10000;
+
+function PrototypeSwitcher({ current }: { current: string }) {
+  const router = useRouter();
+  const variants = ["A", "B", "C"] as const;
+  const labels = {
+    A: "A — Two-column",
+    B: "B — Stacked cards + banner",
+    C: "C — Guided checklist",
+  };
+  const go = (v: string) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("variant", v);
+    router.replace(url.pathname + url.search);
+  };
+  const idx = variants.indexOf(current as (typeof variants)[number]);
+  return (
+    <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border-2 border-brand-orange bg-black px-4 py-2 text-white shadow-lg">
+      <button
+        type="button"
+        onClick={() => go(variants[(idx - 1 + variants.length) % variants.length])}
+        className="px-1 text-lg"
+      >
+        ←
+      </button>
+      <span className="text-xs font-semibold">{labels[current as keyof typeof labels] ?? current}</span>
+      <button
+        type="button"
+        onClick={() => go(variants[(idx + 1) % variants.length])}
+        className="px-1 text-lg"
+      >
+        →
+      </button>
+    </div>
+  );
+}
+
+function stubSave(label: string) {
+  toast.info(`[PROTOTYPE] ${label} — ยังไม่บันทึกจริง`);
+}
+
+// Variant A — dense two-column layout, minimal chrome, shared help footer.
+function AnalyticsTabVariantA() {
+  const [header, setHeader] = useState("");
+  const [body, setBody] = useState("");
+  return (
+    <div className="rounded-xl border border-border/70 bg-card p-6">
+      <h2 className="mb-1 font-semibold">Google Analytics / Tracking Scripts</h2>
+      <p className="mb-4 text-sm text-muted-foreground">
+        วางโค้ด script ที่ต้องการแทรกในทุกหน้าเว็บสาธารณะ (ไม่รวมหลังบ้าน)
+      </p>
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="ga-header">Header tag area</Label>
+            <CharCounter value={header} max={MAX_LEN} />
+          </div>
+          <Textarea
+            id="ga-header"
+            rows={10}
+            className="font-mono text-xs"
+            value={header}
+            onChange={(e) => setHeader(e.target.value)}
+            placeholder={`<script async data-cookieyes="cookieyes-analytics" src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"></script>`}
+          />
+          <p className="text-xs text-muted-foreground">{HEADER_HELP}</p>
+        </div>
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="ga-body">Body tag area</Label>
+            <CharCounter value={body} max={MAX_LEN} />
+          </div>
+          <Textarea
+            id="ga-body"
+            rows={10}
+            className="font-mono text-xs"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder={`<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXXX" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>`}
+          />
+          <p className="text-xs text-muted-foreground">{BODY_HELP}</p>
+        </div>
+      </div>
+      <Button className="mt-4" onClick={() => stubSave("บันทึก Tracking Scripts")}>
+        บันทึก
+      </Button>
+    </div>
+  );
+}
+
+// Variant B — stacked full-width cards (matches HeaderFooterTab's own layout
+// rhythm most closely) with one shared warning banner up top instead of
+// repeating the consent/placement explanation per field.
+function AnalyticsTabVariantB() {
+  const [header, setHeader] = useState("");
+  const [body, setBody] = useState("");
+  return (
+    <div className="space-y-5">
+      <div className="rounded-lg border border-brand-orange/40 bg-accent px-4 py-3 text-sm text-accent-foreground">
+        <p className="font-medium">ก่อนวาง script โปรดตรวจสอบ 2 เรื่อง:</p>
+        <ul className="mt-1 list-disc space-y-0.5 pl-5">
+          <li>{HEADER_HELP}</li>
+          <li>{BODY_HELP}</li>
+        </ul>
+      </div>
+      <div className="rounded-xl border border-border/70 bg-card p-6">
+        <h2 className="mb-1 font-semibold">Header tag area</h2>
+        <p className="mb-4 text-sm text-muted-foreground">แทรกใน &lt;head&gt; ของทุกหน้าเว็บสาธารณะ</p>
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="ga-b-header">โค้ด</Label>
+            <CharCounter value={header} max={MAX_LEN} />
+          </div>
+          <Textarea
+            id="ga-b-header"
+            rows={8}
+            className="font-mono text-xs"
+            value={header}
+            onChange={(e) => setHeader(e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="rounded-xl border border-border/70 bg-card p-6">
+        <h2 className="mb-1 font-semibold">Body tag area</h2>
+        <p className="mb-4 text-sm text-muted-foreground">แทรกทันทีหลัง &lt;body&gt; เปิด ของทุกหน้าเว็บสาธารณะ</p>
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="ga-b-body">โค้ด</Label>
+            <CharCounter value={body} max={MAX_LEN} />
+          </div>
+          <Textarea
+            id="ga-b-body"
+            rows={8}
+            className="font-mono text-xs"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+          />
+        </div>
+      </div>
+      <Button onClick={() => stubSave("บันทึก Tracking Scripts")}>บันทึก</Button>
+    </div>
+  );
+}
+
+// Variant C — guided/checklist style: numbered steps, a copy-paste example
+// with the required attribute already in it, and a live client-side hint
+// that flags when a pasted <script> tag is missing data-cookieyes.
+function checkMissingAttr(value: string): boolean {
+  if (!value.trim()) return false;
+  const hasScriptTag = /<script\b/i.test(value);
+  const hasAttr = /data-cookieyes\s*=/i.test(value);
+  return hasScriptTag && !hasAttr;
+}
+
+function ScriptField({
+  id,
+  label,
+  value,
+  onChange,
+  placement,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placement: string;
+}) {
+  const missing = checkMissingAttr(value);
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <Label htmlFor={id}>{label}</Label>
+        <CharCounter value={value} max={MAX_LEN} />
+      </div>
+      <Textarea
+        id={id}
+        rows={8}
+        className="font-mono text-xs"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      <p className="text-xs text-muted-foreground">{placement}</p>
+      {missing && (
+        <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs text-amber-800">
+          ⚠ ไม่พบ data-cookieyes ใน &lt;script&gt; ที่วาง — CookieYes จะไม่รอ consent ก่อนรันโค้ดนี้
+        </p>
+      )}
+    </div>
+  );
+}
+
+function AnalyticsTabVariantC() {
+  const [header, setHeader] = useState("");
+  const [body, setBody] = useState("");
+  const [showExample, setShowExample] = useState(false);
+  const example = `<script async data-cookieyes="cookieyes-analytics" src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"></script>\n<script data-cookieyes="cookieyes-analytics">\n  window.dataLayer = window.dataLayer || [];\n  function gtag(){dataLayer.push(arguments);}\n  gtag('js', new Date());\n  gtag('config', 'G-XXXXXXX');\n</script>`;
+  return (
+    <div className="rounded-xl border border-border/70 bg-card p-6">
+      <h2 className="mb-1 font-semibold">Google Analytics / Tracking Scripts</h2>
+      <ol className="mb-4 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
+        <li>เตรียมโค้ด script ให้มี attribute <code className="rounded bg-muted px-1">data-cookieyes=&quot;cookieyes-analytics&quot;</code> ในทุก &lt;script&gt; tag</li>
+        <li>วางโค้ดที่จะแทรกใน &lt;head&gt; ลงช่อง Header และโค้ดที่จะแทรกหลัง &lt;body&gt; เปิด ลงช่อง Body</li>
+        <li>กดบันทึก</li>
+      </ol>
+      <button
+        type="button"
+        onClick={() => setShowExample((s) => !s)}
+        className="mb-4 text-xs font-medium text-primary underline underline-offset-2"
+      >
+        {showExample ? "ซ่อนตัวอย่างโค้ด" : "ดูตัวอย่างโค้ด (Google Analytics)"}
+      </button>
+      {showExample && (
+        <pre className="mb-4 overflow-x-auto rounded-lg border border-border/70 bg-muted/30 p-3 text-[11px] leading-relaxed">
+          {example}
+        </pre>
+      )}
+      <div className="space-y-5">
+        <ScriptField
+          id="ga-c-header"
+          label="Header tag area"
+          value={header}
+          onChange={setHeader}
+          placement="แทรกใน <head> ของทุกหน้าเว็บสาธารณะ"
+        />
+        <ScriptField
+          id="ga-c-body"
+          label="Body tag area"
+          value={body}
+          onChange={setBody}
+          placement="แทรกทันทีหลัง <body> เปิด ของทุกหน้าเว็บสาธารณะ"
+        />
+      </div>
+      <Button className="mt-4" onClick={() => stubSave("บันทึก Tracking Scripts")}>
+        บันทึก
+      </Button>
+    </div>
+  );
+}
+
+function AnalyticsTabPrototype() {
+  const searchParams = useSearchParams();
+  const variant = searchParams.get("variant") ?? "A";
+  return (
+    <>
+      {variant === "A" && <AnalyticsTabVariantA />}
+      {variant === "B" && <AnalyticsTabVariantB />}
+      {variant === "C" && <AnalyticsTabVariantC />}
+      <PrototypeSwitcher current={variant} />
+    </>
+  );
+}
+// ── end prototype ─────────────────────────────────────────────────────
 
 type PaymentSettingsForm = {
   promptpayId: string;
@@ -315,6 +576,11 @@ export function SettingsClient({
           <TabsTrigger id="st-tab-headfoot" value="headfoot" className="shrink-0 px-3">
             Header / Footer
           </TabsTrigger>
+          {showCapacity && (
+            <TabsTrigger id="st-tab-analytics" value="analytics" className="shrink-0 px-3">
+              Google Analytics
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {showCapacity && (
@@ -421,6 +687,12 @@ export function SettingsClient({
             footerLogoUrl={footerLogoUrl}
           />
         </TabsContent>
+
+        {showCapacity && (
+          <TabsContent value="analytics" className="space-y-5 pt-3">
+            <AnalyticsTabPrototype />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
