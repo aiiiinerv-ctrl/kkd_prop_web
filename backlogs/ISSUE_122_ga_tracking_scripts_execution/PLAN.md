@@ -35,7 +35,7 @@ Ship the admin-editable Google Analytics / Tracking Scripts config: `/admin/sett
 | 2 | E2 — admin UI tab | `nextjs-dev` | 1 | — | done |
 | 3 | E3 — public injection | `nextjs-dev` | 1 | can run parallel with 2 | done |
 | 4 | E4 — verify (build/e2e/live-verify) | `nextjs-dev` | 2, 3 | — | done — structural verify clean; consent-gating behavior has a known gap, see §3–4 below |
-| 5 | Independent review (audit gate) | `audit-compliance-reviewer` | 4 | — | pending |
+| 5 | Independent review (audit gate) | `audit-compliance-reviewer` | 4 | — | done — 1 moderate finding fixed, 1 informational accepted, 3 clean |
 | 6.5 | **Follow-up (new)**: re-run pre/post-consent check against real `kkdproperty.co.th` production domain | User / `nextjs-dev` | production deploy | — | pending |
 | 6 | Owner accept + close GitHub + move folder to `backlogs/done/` | User | 5, 6.5 | — | pending |
 
@@ -43,8 +43,8 @@ Ship the admin-editable Google Analytics / Tracking Scripts config: `/admin/sett
 
 - [x] Behavior matches Goal — structurally (injection/placement/attribute); consent-gating behavior is production-only-verifiable, see gap below
 - [x] Verify skill evidence attached (build + e2e; live-verify pre/post-consent structurally confirmed, behaviorally **not yet** confirmed — CookieYes domain-binding makes this untestable on `localhost`, needs a production check, see task 6.5)
-- [ ] No secrets in PLAN, INDEX, or GitHub comments
-- [ ] `audit-compliance-reviewer` finds no gaps
+- [x] No secrets in PLAN, INDEX, or GitHub comments
+- [x] `audit-compliance-reviewer` finds no gaps — 1 moderate finding, fixed (commit `ca1b921`); 1 informational, accepted as inherent to the locked no-sanitization decision (see §5 below)
 - [ ] GitHub issue #122 commented with outcome and closed
 - [ ] This folder moved to `backlogs/done/` when closed
 - [ ] `backlogs/INDEX.md` updated (link + one-line status)
@@ -75,3 +75,10 @@ Ship the admin-editable Google Analytics / Tracking Scripts config: `/admin/sett
 
 - Residual risk: raw script injection is a site-wide code-execution surface; mitigated by ADMIN-only access + audit trail (locked decisions #3, #4).
 - **Known gap (must be closed before calling ticket #117 done)**: consent-gating behavior (pre-consent held / post-consent fires) is unverified on `localhost` due to a probable CookieYes domain-matching issue and could only be confirmed structurally here. Follow-up: after next production deploy, run the same pre-consent-fresh-session check (clear cookies for `kkdproperty.co.th`, load the page, check console before touching the CookieYes banner) directly against production.
+
+### 5) Independent review (E5, `audit-compliance-reviewer`)
+
+- **Finding 1 (moderate, fixed — commit `ca1b921`)**: `src/app/admin/(dashboard)/settings/page.tsx` gates `bookingCapacity`/`paymentSettings` behind `isAdmin` before fetching, but `siteSettings.headerScript`/`bodyScript` were being serialized into `SettingsClient`'s props for any `ADMIN|MARKETING` session even though the write path is ADMIN-only and the tab is only hidden client-side — a MARKETING session could read the raw script content from the RSC payload. Fixed by withholding both fields at the serialization boundary unless `isAdmin`, matching the established pattern.
+- **Finding 2 (informational, accepted)**: the audit log's `snapshot: "full"` on the shared `siteSettings` `auditedEntity` means an admin who mistakenly pastes something sensitive (e.g. a vendor snippet embedding a write-scoped key) into the script fields would have it land verbatim in `AuditLog`. This is inherent to the locked "no content sanitization" decision (#3 in `docs/plans/ga-tracking-scripts-implementation-sprints.md`) and not fixable without contradicting that decision — accepted as a residual risk of admin error, not a code defect.
+- **Findings 3–5 (no violation)**: auth-guard ordering and audit transaction correct; no alternate write path bypasses ADMIN gating for these two columns (checked every `prisma.siteSettings` write site in the repo); public-render side (`getSiteAnalyticsScripts()`, `[locale]/layout.tsx`) correctly no-ops on empty fields and stays confined to the public site.
+- **Follow-up verification (done, not a code issue)**: the reviewer also flagged a *possible* duplicate-`<head>`/metadata-clobbering risk from combining `export const metadata` with a manually-rendered `<head>` element in the same root layout — worth a direct check given Next 16's App Router differences. Verified directly (dev server, real DB value, curl + parse): single `<head>` tag, `<title>` renders correctly, injected header script appears as the first child. Not a bug — no action needed.
