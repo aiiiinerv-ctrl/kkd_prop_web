@@ -1,12 +1,13 @@
 # Backlog Index
 
-Updated: 2026-08-29 (#107 page banners + logos deployed)  
+Updated: 2026-08-29 (#116 GA tracking scripts map closed, execution #122 opened)  
 Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 ## Active
 
 | GitHub | PLAN | Notes |
 |---|---|---|
+| [#122](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/122) | [`ISSUE_122_ga_tracking_scripts_execution`](ISSUE_122_ga_tracking_scripts_execution/PLAN.md) | Execution of wayfinder map #116 — sprint plan: `docs/plans/ga-tracking-scripts-implementation-sprints.md` (E1–E4) |
 | [#77](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/77) | [`ISSUE_077_about_cms_enhancement_map`](ISSUE_077_about_cms_enhancement_map/PLAN.md) | Wayfinder — About credentials heading + editable icons |
 | [#76](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/76) | [`ISSUE_076_pages_cms_sprint12_cleanup`](ISSUE_076_pages_cms_sprint12_cleanup/PLAN.md) | Owner approved 2026-08-28 — execute blocked until 2026-09-11 |
 | [#38](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/38) | [`ISSUE_038_cookieyes_banner_locale_en`](ISSUE_038_cookieyes_banner_locale_en/PLAN.md) | CookieYes Free = one language — owner decision |
@@ -17,6 +18,7 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 | GitHub | PLAN | Notes |
 |---|---|---|
+| [#116](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/116) | [`ISSUE_116_ga_tracking_scripts_map`](done/ISSUE_116_ga_tracking_scripts_map/PLAN.md) | Wayfinder map closed 2026-08-29 — all 5 tickets resolved, sprint plan signed off, execution moved to #122 |
 | [#107](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/107) | [`ISSUE_107_page_banners_branding_map`](done/ISSUE_107_page_banners_branding_map/PLAN.md) | Page banners + header/footer logos live prod 2026-08-29 |
 | [#102](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/102) | [`ISSUE_102_calculator_config_map`](done/ISSUE_102_calculator_config_map/PLAN.md) | Calculator config Phase A + B live prod 2026-08-28 |
 | [#115](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/115) | [`ISSUE_115_html_sitemap`](done/ISSUE_115_html_sitemap/PLAN.md) | HTML sitemap deployed prod 2026-08-28 |
