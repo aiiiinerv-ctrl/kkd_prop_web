@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { storage } from "@/lib/storage";
 import {
+  analyticsSettingsSchema,
   contactSettingsSchema,
   headerFooterSettingsSchema,
 } from "@/lib/validations/site-settings";
@@ -155,5 +156,33 @@ export async function updateHeaderFooterSettings(formData: FormData): Promise<Ac
     for (const key of uploadedKeys) await storage.delete(key).catch(() => undefined);
     return { ok: false, error: "บันทึกไม่สำเร็จ" };
   }
+}
+
+/**
+ * Updates Google Analytics / tracking script columns (header/body tag areas).
+ * ADMIN only — raw HTML/script injection is site-wide code-execution surface,
+ * so this is intentionally more restrictive than the MARKETING-eligible
+ * settings tabs above (locked decision, see
+ * docs/plans/ga-tracking-scripts-implementation-sprints.md).
+ */
+export async function updateAnalyticsSettings(formData: FormData): Promise<ActionResult> {
+  await requireRole("ADMIN");
+
+  const raw = Object.fromEntries(
+    ["headerScript", "bodyScript"].map((k) => [k, formData.get(k) ?? ""])
+  );
+
+  const parsed = analyticsSettingsSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" };
+  }
+
+  const id = await getOrFailSiteSettingsId();
+  if (!id) return { ok: false, error: "ไม่พบการตั้งค่า" };
+
+  const updated = await siteSettings.update(id, parsed.data);
+  if (!updated) return { ok: false, error: "ไม่พบการตั้งค่า" };
+
+  return { ok: true };
 }
 

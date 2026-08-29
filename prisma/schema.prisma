@@ -300,6 +300,10 @@ model SiteSettings {
   headerLogoKey       String?
   footerLogoKey       String?
   sitemapConfigJson   Json?
+  // Google Analytics / tracking scripts (issue #116/#120) — raw admin-pasted
+  // snippets injected into public [locale] layout <head> / <body> start.
+  headerScript        String?  @db.Text
+  bodyScript          String?  @db.Text
   updatedAt           DateTime @updatedAt
 }
 

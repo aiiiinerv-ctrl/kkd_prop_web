@@ -46,3 +46,20 @@ export const headerFooterSettingsSchema = z.object({
   footerDescriptionTh: optionalText,
   footerDescriptionEn: optionalText,
 });
+
+const optionalScript = z
+  .string()
+  .trim()
+  .max(10000, "ต้องมีความยาวไม่เกิน 10,000 ตัวอักษร")
+  .transform((v) => v || null);
+
+/**
+ * Google Analytics / tracking scripts tab (#116) — raw HTML/script paste,
+ * ADMIN only. No content sanitization or shape validation (locked decision
+ * #3 in docs/plans/ga-tracking-scripts-implementation-sprints.md): only a
+ * length guard.
+ */
+export const analyticsSettingsSchema = z.object({
+  headerScript: optionalScript,
+  bodyScript: optionalScript,
+});
