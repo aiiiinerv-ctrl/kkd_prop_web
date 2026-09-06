@@ -2,6 +2,8 @@
 
 Wayfinder ticket: [#134](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/134), map [#132](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/132).
 
+**Status: findings addressed, feature deployed to production 2026-09-07.** Both follow-ups this research flagged (`bannerRevalidatePaths()` home fix, new E2E coverage) were implemented in S1/S4 — see `docs/plans/home-hero-toggle-implementation-sprints.md`.
+
 ## 1. SEO / OG image
 
 `pageMetadata()` (`src/lib/seo.ts`) resolves `openGraph.images` from `PageSeo.ogImageKey` — a field the admin edits separately under Pages Properties, completely independent of the hero image or banner slides. **Switching `heroMode` has zero effect on OG image or any other SEO metadata.** No action needed here.

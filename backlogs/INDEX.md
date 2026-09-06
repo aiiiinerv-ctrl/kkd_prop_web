@@ -1,6 +1,6 @@
 # Backlog Index
 
-Updated: 2026-08-29 (#122 GA tracking scripts deployed to production, closed)  
+Updated: 2026-09-07 (#132 Home hero toggle deployed to production, closed)  
 Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 ## Active
@@ -16,6 +16,7 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 | GitHub | PLAN | Notes |
 |---|---|---|
+| [#132](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/132) | [`ISSUE_132_home_hero_toggle_map`](done/ISSUE_132_home_hero_toggle_map/PLAN.md) | Home hero toggle (Hero classic ↔ slide Banner reusing PageBanner) live prod 2026-09-07 |
 | [#87](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/87) | [`ISSUE_087_about_cms_enhancement_execution`](done/ISSUE_087_about_cms_enhancement_execution/PLAN.md) | About CMS enhancement (credentials heading, icons, labels) shipped prod 2026-08-28; PLAN backfilled 2026-08-29 |
 | [#77](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/77) | [`ISSUE_077_about_cms_enhancement_map`](done/ISSUE_077_about_cms_enhancement_map/PLAN.md) | Wayfinder map closed 2026-08-28 — execution moved to #87 |
 | [#122](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/122) | [`ISSUE_122_ga_tracking_scripts_execution`](done/ISSUE_122_ga_tracking_scripts_execution/PLAN.md) | GA/tracking scripts feature live prod 2026-08-29 — consent-gating gap traced to CookieYes GDPR-only account config, filed separately as #123 |

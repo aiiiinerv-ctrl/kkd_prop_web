@@ -6,7 +6,7 @@ Map: [Map: Home hero — เลือกได้ระหว่าง hero bann
 
 ## Status
 
-**Plan only — do not implement until [#137 owner sign-off](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/137) closes.** This document does not change schema, code, or production.
+**Deployed to production 2026-09-07.** S1–S4 all executed and closed (#138–#141), commit `dec6518` on `main`, DDL applied and verified in production, redeploy verified green (smoke test + marker checks). See `backlogs/done/ISSUE_132_home_hero_toggle_map/PLAN.md` for the full evidence log.
 
 ## Destination (locked)
 

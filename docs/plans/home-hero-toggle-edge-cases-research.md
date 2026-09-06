@@ -2,6 +2,8 @@
 
 Wayfinder ticket: [#135](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/135), map [#132](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/132).
 
+**Status: findings addressed, feature deployed to production 2026-09-07.** The fallback-to-Hero fail-safe (item 1) and the `OFF`-for-home server guard (item 7) were both implemented and live-verified in S1/S3 — see `docs/plans/home-hero-toggle-implementation-sprints.md`.
+
 ## 1. BANNER mode selected but no slides ever saved — real gap found
 
 `pageBannerFormSchema`'s `superRefine` already blocks saving an invalid slide count (FIXED needs exactly 1, SLIDES needs 2–5), so the **banner form itself** can never be saved empty.
