@@ -12,6 +12,17 @@ const optionalText = optionalPageText;
 const requiredAlt = requiredPageText("ต้องกรอกข้อความ alt ของรูปภาพหลัก", 200);
 
 /**
+ * heroMode toggle (issue #138 / S1) — mirrors the Prisma `HomeHeroMode` enum
+ * (HERO | BANNER). No admin UI submits this field yet (that's S2), so an
+ * absent/empty FormData value must fall back to the current default "HERO"
+ * rather than fail validation.
+ */
+const heroModeSchema = z.preprocess(
+  (v) => (v === "" || v == null ? "HERO" : v),
+  z.enum(["HERO", "BANNER"])
+);
+
+/**
  * Explicit allow-list of `HomePageContent` scalar text columns editable from
  * `/admin/pages/home` (hero copy, proof panel, feature labels, Latest Works
  * heading/metrics, Services CTA copy, FAQ chrome). Kept as its own array
@@ -28,6 +39,7 @@ const requiredAlt = requiredPageText("ต้องกรอกข้อควา
  * `id`, `version`, `updatedAt`.
  */
 export const HOME_CONTENT_FIELDS = [
+  "heroMode",
   "heroKickerTh", "heroKickerEn",
   "heroTitleWhiteTh", "heroTitleWhiteEn",
   "heroTitleGoldTh", "heroTitleGoldEn",
@@ -67,6 +79,7 @@ export const HOME_CONTENT_FIELDS = [
 export const HOME_BOOLEAN_FIELDS = ["showLatestWorks", "showServicesCta", "showFaq"] as const;
 
 export const homeContentFieldsSchema = z.object({
+  heroMode: heroModeSchema,
   heroKickerTh: optionalText, heroKickerEn: optionalText,
   heroTitleWhiteTh: optionalText, heroTitleWhiteEn: optionalText,
   heroTitleGoldTh: optionalText, heroTitleGoldEn: optionalText,

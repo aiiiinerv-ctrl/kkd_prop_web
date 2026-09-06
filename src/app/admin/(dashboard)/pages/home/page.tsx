@@ -1,4 +1,5 @@
 import { canManageContent, canManageSiteSettings, requireRole } from "@/lib/auth";
+import { getPageBannerAdmin } from "@/lib/admin/page-banner-admin";
 import { prisma } from "@/lib/db";
 import { storage } from "@/lib/storage";
 import { HomeAdminShell } from "./home-admin-shell";
@@ -11,7 +12,7 @@ export default async function PagesHomeContentPage() {
 
   const canMutateProperties = canManageSiteSettings(session.user.role);
 
-  const [home, siteSettings, pageSeo] = await Promise.all([
+  const [home, siteSettings, pageSeo, bannerData] = await Promise.all([
     prisma.homePageContent.findUnique({
       where: { key: "home" },
       include: { faqItems: { orderBy: { sortOrder: "asc" } } },
@@ -20,6 +21,7 @@ export default async function PagesHomeContentPage() {
     canMutateProperties
       ? prisma.pageSeo.findUnique({ where: { key: "home" } })
       : Promise.resolve(null),
+    getPageBannerAdmin("home"),
   ]);
 
   if (!home) {
@@ -37,11 +39,21 @@ export default async function PagesHomeContentPage() {
 
   return (
     <HomeAdminShell
+      // Home hero toggle bug (S4 verification, issue #141): bannerData.version
+      // was previously in this key. A PageBanner-only save (via the
+      // independent "บันทึกแบนเนอร์" button) bumps bannerData.version and
+      // triggers router.refresh(); including it here forced the *entire*
+      // shell — including HomeClient's local heroMode toggle state — to
+      // remount and reset to the still-unsaved DB value, silently discarding
+      // an in-progress Hero->Banner switch. PageBannerPanel already remounts
+      // itself off `bannerData.version` (see its own key in home-client.tsx),
+      // so the outer shell doesn't need it too.
       key={`${home.version}-${pageSeo?.version ?? 0}-${siteSettings?.ctaVersion ?? 0}`}
       canMutateContact={canManageSiteSettings(session.user.role)}
       canMutateProperties={canMutateProperties}
       heroImageUrl={home.heroImageKey ? storage.publicUrl(home.heroImageKey) : null}
       heroBlobMissing={heroBlobMissing}
+      bannerData={bannerData}
       pageSeo={
         pageSeo
           ? {
@@ -79,6 +91,7 @@ export default async function PagesHomeContentPage() {
       }
       home={{
         version: home.version,
+        heroMode: home.heroMode,
         heroKickerTh: home.heroKickerTh ?? "", heroKickerEn: home.heroKickerEn ?? "",
         heroTitleWhiteTh: home.heroTitleWhiteTh ?? "", heroTitleWhiteEn: home.heroTitleWhiteEn ?? "",
         heroTitleGoldTh: home.heroTitleGoldTh ?? "", heroTitleGoldEn: home.heroTitleGoldEn ?? "",

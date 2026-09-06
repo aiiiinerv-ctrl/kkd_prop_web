@@ -81,6 +81,16 @@ enum AuditAction {
   LOGIN
 }
 
+// Home hero toggle (issue #138 / S1) — HERO is the classic split-layout hero
+// (HomePageContent fields below); BANNER reuses the PageBanner/PageBannerSlide
+// system (see BANNER_PAGE_SLUGS in src/lib/page-banners.ts, which now includes
+// "home"). Public render branching lands in a later sprint (S2/S3) — this
+// column is additive only, defaults to HERO, and nothing reads it yet.
+enum HomeHeroMode {
+  HERO
+  BANNER
+}
+
 model AdminUser {
   id           String     @id @default(cuid())
   email        String     @unique
@@ -447,6 +457,9 @@ model HomePageContent {
   key String @unique @default("home") @db.VarChar(40)
 
   // Hero
+  // heroMode toggles between the classic Hero below and the PageBanner
+  // system's "home" slug entry (issue #138 / S1 — schema groundwork only).
+  heroMode             HomeHeroMode @default(HERO)
   heroKickerTh        String?
   heroKickerEn        String?
   heroTitleWhiteTh    String?

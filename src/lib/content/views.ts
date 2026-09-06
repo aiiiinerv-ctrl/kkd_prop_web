@@ -451,6 +451,7 @@ export function toHomeFaqItemView(row: Row, locale: string): HomeFaqItemView {
 export type HomePageContentView = {
   id: string;
   version: number;
+  heroMode: "HERO" | "BANNER";
   heroKicker: string;
   heroTitleWhite: string;
   heroTitleGold: string;
@@ -495,6 +496,7 @@ export function toHomePageContentView(row: Row, locale: string): HomePageContent
   return {
     id: String(row.id),
     version: Number(row.version),
+    heroMode: row.heroMode === "BANNER" ? "BANNER" : "HERO",
     heroKicker: loc("heroKicker"),
     heroTitleWhite: loc("heroTitleWhite"),
     heroTitleGold: loc("heroTitleGold"),

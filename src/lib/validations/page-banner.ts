@@ -33,6 +33,17 @@ export const pageBannerFormSchema = z
     slides: z.array(pageBannerSlideSchema).max(BANNER_SLIDE_MAX),
   })
   .superRefine((data, ctx) => {
+    if (data.mode === "OFF" && data.pageSlug === "home") {
+      // Defense-in-depth (issue #138 / S1): Home must always show a hero of
+      // some kind. The admin UI never offers OFF for "home" (S2 work), but
+      // the server-side schema rejects it too in case that guard is bypassed.
+      ctx.addIssue({
+        code: "custom",
+        message: "หน้าแรกต้องมีแบนเนอร์หรือฮีโร่เสมอ ไม่สามารถปิดได้",
+        path: ["mode"],
+      });
+      return;
+    }
     if (data.mode === "OFF") return;
     if (data.mode === "FIXED") {
       if (data.slides.length !== 1) {

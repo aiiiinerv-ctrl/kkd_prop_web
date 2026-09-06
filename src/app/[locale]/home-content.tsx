@@ -4,6 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { FaqSection, type FaqEntry } from "@/components/site/faq-section";
 import { HomePortfolioGrid } from "@/components/site/home-portfolio-grid";
 import { IconFacebook } from "@/components/site/icon-facebook";
+import { PageBannerCarousel, PageBannerFixed } from "@/components/site/page-banner-carousel";
 import { Reveal } from "@/components/site/reveal";
 import { SectionHeading } from "@/components/site/section-heading";
 import { Link } from "@/i18n/navigation";
@@ -14,6 +15,7 @@ import {
   getSiteSettings,
   resolveHomeHeroImage,
 } from "@/lib/content";
+import { getPageBanner } from "@/lib/content/page-banner";
 import { resolveQuickContact } from "@/lib/site-contact";
 import { PAGE_REGISTRY } from "@/lib/pages";
 
@@ -28,6 +30,7 @@ const MESSAGE_FAQ_KEYS = ["q1", "q2", "q3", "q4", "q5"] as const;
  *   identical to the pre-cutover static render.
  */
 type HomeViewModel = {
+  heroMode: "HERO" | "BANNER";
   heroKicker: string;
   heroTitleWhite: string;
   heroTitleGold: string;
@@ -92,6 +95,7 @@ export async function HomeContent({
 
   const view: HomeViewModel = homeRow
     ? {
+        heroMode: homeRow.content.heroMode,
         heroKicker: homeRow.content.heroKicker,
         heroTitleWhite: homeRow.content.heroTitleWhite,
         heroTitleGold: homeRow.content.heroTitleGold,
@@ -136,6 +140,7 @@ export async function HomeContent({
         })),
       }
     : {
+        heroMode: "HERO",
         heroKicker: t("theme3Kicker"),
         heroTitleWhite: t("theme6HeroTitleWhite"),
         heroTitleGold: t("theme6HeroTitleGold"),
@@ -182,8 +187,23 @@ export async function HomeContent({
 
   const hero = await resolveHomeHeroImage(view.heroImageKey);
 
+  // Home hero toggle (issue #140 / S3): BANNER mode reuses the same
+  // PageBanner system as the other 7 banner pages, but Home can never
+  // render nothing — if there's no active banner (row missing, mode OFF,
+  // or every slide's blob is gone), fall back to the classic Hero markup
+  // below rather than a blank gap (edge-case research #135, requirement 1).
+  const banner = view.heroMode === "BANNER" ? await getPageBanner("home", locale) : null;
+  const useBanner = view.heroMode === "BANNER" && banner !== null;
+
   return (
     <main>
+      {useBanner ? (
+        banner.mode === "SLIDES" ? (
+          <PageBannerCarousel slides={banner.slides} />
+        ) : (
+          <PageBannerFixed slide={banner.slides[0]!} />
+        )
+      ) : (
       <section className="home-hero flex min-h-[600px] flex-col lg:flex-row">
         <svg
           className="theme6-hero-chevron"
@@ -296,6 +316,7 @@ export async function HomeContent({
           </Reveal>
         </div>
       </section>
+      )}
 
       {(view.showLatestWorks || view.showServicesCta) && (
         <section id="latest-works" className="home-latest-works mx-auto max-w-[1440px] px-5 py-16">

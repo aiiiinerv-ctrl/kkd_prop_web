@@ -8,6 +8,7 @@ import { updateHomeContent } from "@/actions/home-content";
 import { updateContactSettings } from "@/actions/site-settings";
 import { BilingualTabs, DeleteConfirm } from "@/components/admin/crud-page";
 import { PageShell } from "@/components/admin/pages";
+import { PageBannerPanel, type PageBannerAdminData } from "@/components/admin/page-banner-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +17,7 @@ import { HOME_FAQ_MAX } from "@/lib/validations/home-content";
 
 type HomeContentData = {
   version: number;
+  heroMode: string;
   heroKickerTh: string; heroKickerEn: string;
   heroTitleWhiteTh: string; heroTitleWhiteEn: string;
   heroTitleGoldTh: string; heroTitleGoldEn: string;
@@ -343,6 +345,7 @@ export function HomeClient({
   canMutateContact,
   heroImageUrl,
   heroBlobMissing,
+  bannerData,
   embedded = false,
 }: {
   home: HomeContentData;
@@ -350,6 +353,7 @@ export function HomeClient({
   canMutateContact: boolean;
   heroImageUrl: string | null;
   heroBlobMissing: boolean;
+  bannerData: PageBannerAdminData;
   /** When true, skip outer PageShell (parent tabs already provide chrome). */
   embedded?: boolean;
 }) {
@@ -359,6 +363,9 @@ export function HomeClient({
   const [showLatestWorks, setShowLatestWorks] = useState(home.showLatestWorks);
   const [showServicesCta, setShowServicesCta] = useState(home.showServicesCta);
   const [showFaq, setShowFaq] = useState(home.showFaq);
+  const [heroMode, setHeroMode] = useState<"HERO" | "BANNER">(
+    home.heroMode === "BANNER" ? "BANNER" : "HERO"
+  );
 
   const handleSubmit = (formData: FormData) => {
     formData.set("faqItemsJson", JSON.stringify(faqItems));
@@ -396,8 +403,33 @@ export function HomeClient({
 
       <form id="home-content-form" action={handleSubmit} className="space-y-6" noValidate encType="multipart/form-data">
         <input type="hidden" name="version" value={home.version} />
+        <input type="hidden" name="heroMode" value={heroMode} />
 
-        <HeroImageSection heroImageUrl={heroImageUrl} heroBlobMissing={heroBlobMissing} />
+        <div className="rounded-xl border border-border/70 bg-card p-6">
+          <div className="space-y-1.5">
+            <Label htmlFor="home-hero-mode">รูปแบบ Hero</Label>
+            <select
+              id="home-hero-mode"
+              value={heroMode}
+              onChange={(e) => setHeroMode(e.target.value as "HERO" | "BANNER")}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="HERO">Fix Hero Banner</option>
+              <option value="BANNER">Slide Banner</option>
+            </select>
+            <p className="text-xs text-muted-foreground">
+              เปลี่ยนแล้วต้องกดบันทึกเนื้อหาหน้าแรกจึงจะมีผลจริง — สลับไปมาไม่ทำให้ข้อมูลที่กรอกไว้หายไป
+            </p>
+          </div>
+        </div>
+
+        <div hidden={heroMode === "BANNER"}>
+          <HeroImageSection heroImageUrl={heroImageUrl} heroBlobMissing={heroBlobMissing} />
+        </div>
+
+        {heroMode === "BANNER" && (
+          <PageBannerPanel key={`home-${bannerData.version}`} pageSlug="home" data={bannerData} allowOff={false} />
+        )}
 
         <div className="rounded-xl border border-border/70 bg-card p-6">
           <BilingualTabs
@@ -408,25 +440,27 @@ export function HomeClient({
                 </p>
 
                 <h3 className="border-b border-border/70 pb-1.5 text-base font-bold text-foreground">Hero</h3>
-                <div className="space-y-1.5">
-                  <Label>คำนำสั้น (Kicker) เหนือหัวข้อใหญ่</Label>
-                  <Input name="heroKickerTh" defaultValue={home.heroKickerTh} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>หัวข้อใหญ่ — ส่วนสีขาว</Label>
-                  <Input name="heroTitleWhiteTh" defaultValue={home.heroTitleWhiteTh} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>หัวข้อใหญ่ — ส่วนสีทอง (เน้น)</Label>
-                  <Input name="heroTitleGoldTh" defaultValue={home.heroTitleGoldTh} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>ข้อความรองใต้หัวข้อใหญ่</Label>
-                  <Textarea name="heroSubtitleTh" rows={2} defaultValue={home.heroSubtitleTh} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>ข้อความ alt ของรูปภาพหลัก (เพื่อการเข้าถึง) — จำเป็นต้องกรอก</Label>
-                  <Input name="heroAltTh" defaultValue={home.heroAltTh} />
+                <div hidden={heroMode === "BANNER"} className="space-y-5">
+                  <div className="space-y-1.5">
+                    <Label>คำนำสั้น (Kicker) เหนือหัวข้อใหญ่</Label>
+                    <Input name="heroKickerTh" defaultValue={home.heroKickerTh} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>หัวข้อใหญ่ — ส่วนสีขาว</Label>
+                    <Input name="heroTitleWhiteTh" defaultValue={home.heroTitleWhiteTh} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>หัวข้อใหญ่ — ส่วนสีทอง (เน้น)</Label>
+                    <Input name="heroTitleGoldTh" defaultValue={home.heroTitleGoldTh} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>ข้อความรองใต้หัวข้อใหญ่</Label>
+                    <Textarea name="heroSubtitleTh" rows={2} defaultValue={home.heroSubtitleTh} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>ข้อความ alt ของรูปภาพหลัก (เพื่อการเข้าถึง) — จำเป็นต้องกรอก</Label>
+                    <Input name="heroAltTh" defaultValue={home.heroAltTh} />
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label>ปุ่มหลัก (ตัวอย่าง: ขอใบเสนอราคา)</Label>
@@ -598,25 +632,27 @@ export function HomeClient({
                 </p>
 
                 <h3 className="border-b border-border/70 pb-1.5 text-base font-bold text-foreground">Hero</h3>
-                <div className="space-y-1.5">
-                  <Label>Kicker line above the main heading</Label>
-                  <Input name="heroKickerEn" defaultValue={home.heroKickerEn} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Main heading — white part</Label>
-                  <Input name="heroTitleWhiteEn" defaultValue={home.heroTitleWhiteEn} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Main heading — gold (emphasis) part</Label>
-                  <Input name="heroTitleGoldEn" defaultValue={home.heroTitleGoldEn} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Subtitle under the main heading</Label>
-                  <Textarea name="heroSubtitleEn" rows={2} defaultValue={home.heroSubtitleEn} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Hero image alt text (accessibility) — required</Label>
-                  <Input name="heroAltEn" defaultValue={home.heroAltEn} />
+                <div hidden={heroMode === "BANNER"} className="space-y-5">
+                  <div className="space-y-1.5">
+                    <Label>Kicker line above the main heading</Label>
+                    <Input name="heroKickerEn" defaultValue={home.heroKickerEn} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Main heading — white part</Label>
+                    <Input name="heroTitleWhiteEn" defaultValue={home.heroTitleWhiteEn} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Main heading — gold (emphasis) part</Label>
+                    <Input name="heroTitleGoldEn" defaultValue={home.heroTitleGoldEn} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Subtitle under the main heading</Label>
+                    <Textarea name="heroSubtitleEn" rows={2} defaultValue={home.heroSubtitleEn} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Hero image alt text (accessibility) — required</Label>
+                    <Input name="heroAltEn" defaultValue={home.heroAltEn} />
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Primary button (e.g. Request a quote)</Label>

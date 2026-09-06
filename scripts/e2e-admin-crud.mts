@@ -721,6 +721,153 @@ console.log(
   `PAGE SEO: mutation recorded in AuditLog ${pageSeoAudit ? "✓" : "✗ FAIL"}`
 );
 
+// --- CMS: Home hero toggle (Sprint S4, issue #141) — switch Home's hero
+// from classic Hero to Banner (FIXED, 1 slide), verify the public homepage
+// (/th + /en) renders the banner markup instead of the classic hero, then
+// switch back to Hero and verify the classic hero returns. Two independent
+// audited saves (HomePageContent.heroMode via the main form, PageBanner via
+// its own "บันทึกแบนเนอร์" button) — both are restored in `finally` so
+// repeated runs stay idempotent. ---
+console.log("\n--- Home hero toggle (Banner mode) ---");
+const homeContentBefore = await prisma.homePageContent.findUniqueOrThrow({ where: { key: "home" } });
+const homeBannerBefore = await prisma.pageBanner.findUnique({
+  where: { pageSlug: "home" },
+  include: { slides: { orderBy: { sortOrder: "asc" } } },
+});
+
+try {
+  await page.goto("http://localhost:3000/admin/pages/home");
+  await page.waitForSelector("#home-hero-mode", { timeout: 10000 });
+  await page.selectOption("#home-hero-mode", "BANNER");
+  await page.waitForSelector("#banner-mode-home", { timeout: 5000 });
+  console.log("HOME HERO TOGGLE: toggling to Banner reveals PageBannerPanel ✓");
+
+  // FIXED, 1 slide, TH+EN alt text, uploaded test image.
+  await page.selectOption("#banner-mode-home", "FIXED");
+  await page.locator("#banner-file-home-0").setInputFiles(uploadPath);
+  await page.fill("#banner-alt-th-home-0", "แบนเนอร์หน้าแรกทดสอบ");
+  // The banner panel's own bilingual tabs are the first "English" tab on the
+  // page (it's mounted above Home content's BilingualTabs in DOM order).
+  await page.getByRole("tab", { name: "English" }).first().click();
+  await page.fill("#banner-alt-en-home-0", "E2E home banner");
+  await page.click('button:has-text("บันทึกแบนเนอร์")');
+  await page.waitForSelector("text=บันทึกแบนเนอร์หน้าหน้าแรกเรียบร้อย", { timeout: 20000 });
+  console.log("HOME HERO TOGGLE: banner slide saved ✓");
+
+  // heroMode itself is a separate field, only persisted via the main
+  // home-content-form save.
+  await page.getByRole("button", { name: "บันทึกเนื้อหาหน้าแรก" }).click();
+  await page.waitForSelector("text=บันทึกเนื้อหาหน้าแรกเรียบร้อย", { timeout: 10000 });
+  console.log("HOME HERO TOGGLE: heroMode=BANNER saved ✓");
+
+  const homeAfterBanner = await prisma.homePageContent.findUniqueOrThrow({ where: { key: "home" } });
+  console.log(
+    `HOME HERO TOGGLE: DB heroMode=BANNER ${homeAfterBanner.heroMode === "BANNER" ? "✓" : "✗ FAIL"}`
+  );
+
+  const publicThBannerHtml = await (await page.request.get("http://localhost:3000/th")).text();
+  console.log(
+    `HOME HERO TOGGLE: /th shows banner markup, not classic hero ${
+      publicThBannerHtml.includes("page-banner") && !publicThBannerHtml.includes("home-hero")
+        ? "✓"
+        : "✗ FAIL"
+    }`
+  );
+  const publicEnBannerHtml = await (await page.request.get("http://localhost:3000/en")).text();
+  console.log(
+    `HOME HERO TOGGLE: /en shows banner markup, not classic hero ${
+      publicEnBannerHtml.includes("page-banner") && !publicEnBannerHtml.includes("home-hero")
+        ? "✓"
+        : "✗ FAIL"
+    }`
+  );
+
+  // Switch back to Hero mode.
+  await page.goto("http://localhost:3000/admin/pages/home");
+  await page.waitForSelector("#home-hero-mode", { timeout: 10000 });
+  await page.selectOption("#home-hero-mode", "HERO");
+  await page.getByRole("button", { name: "บันทึกเนื้อหาหน้าแรก" }).click();
+  await page.waitForSelector("text=บันทึกเนื้อหาหน้าแรกเรียบร้อย", { timeout: 10000 });
+  console.log("HOME HERO TOGGLE: heroMode=HERO saved ✓");
+
+  const publicThHeroHtml = await (await page.request.get("http://localhost:3000/th")).text();
+  console.log(
+    `HOME HERO TOGGLE: /th shows classic hero again, no banner markup ${
+      publicThHeroHtml.includes("home-hero") && !publicThHeroHtml.includes("page-banner")
+        ? "✓"
+        : "✗ FAIL"
+    }`
+  );
+  const publicEnHeroHtml = await (await page.request.get("http://localhost:3000/en")).text();
+  console.log(
+    `HOME HERO TOGGLE: /en shows classic hero again, no banner markup ${
+      publicEnHeroHtml.includes("home-hero") && !publicEnHeroHtml.includes("page-banner")
+        ? "✓"
+        : "✗ FAIL"
+    }`
+  );
+
+  const heroModeAuditCount = await prisma.auditLog.count({
+    where: {
+      entityType: "HomePageContent",
+      action: "UPDATE",
+      createdAt: { gt: homeContentBefore.updatedAt },
+    },
+  });
+  console.log(
+    `HOME HERO TOGGLE: heroMode BANNER + HERO saves both recorded in AuditLog ${
+      heroModeAuditCount >= 2 ? "✓" : "✗ FAIL"
+    }`
+  );
+  const bannerAudit = await prisma.auditLog.findFirst({
+    where: { entityType: "PageBanner" },
+    orderBy: { createdAt: "desc" },
+  });
+  console.log(
+    `HOME HERO TOGGLE: PageBanner slide change recorded in AuditLog as a separate entry ${
+      bannerAudit ? "✓" : "✗ FAIL"
+    }`
+  );
+} finally {
+  // Restore HomePageContent.heroMode (the try block already switches back to
+  // HERO via the UI when it succeeds — this is a safety net for partial
+  // failures too).
+  await prisma.homePageContent.update({
+    where: { id: homeContentBefore.id },
+    data: { heroMode: homeContentBefore.heroMode },
+  });
+
+  // Restore the "home" PageBanner row exactly as e2e-page-banners.mts does
+  // for "services".
+  if (homeBannerBefore) {
+    await prisma.pageBanner.update({
+      where: { id: homeBannerBefore.id },
+      data: { mode: homeBannerBefore.mode, version: homeBannerBefore.version },
+    });
+    await prisma.pageBannerSlide.deleteMany({ where: { bannerId: homeBannerBefore.id } });
+    if (homeBannerBefore.slides.length > 0) {
+      await prisma.pageBannerSlide.createMany({
+        data: homeBannerBefore.slides.map((s) => ({
+          id: s.id,
+          bannerId: homeBannerBefore.id,
+          sortOrder: s.sortOrder,
+          imageKey: s.imageKey,
+          altTh: s.altTh,
+          altEn: s.altEn,
+          linkPath: s.linkPath,
+          isActive: s.isActive,
+        })),
+      });
+    }
+  } else {
+    const row = await prisma.pageBanner.findUnique({ where: { pageSlug: "home" } });
+    if (row) {
+      await prisma.pageBannerSlide.deleteMany({ where: { bannerId: row.id } });
+      await prisma.pageBanner.delete({ where: { id: row.id } });
+    }
+  }
+}
+
 // --- CMS: About content — edit TH title (visible tab) + EN title (activate tab), verify pages, restore ---
 await page.goto("http://localhost:3000/admin/pages/about");
 await page.waitForSelector("text=เกี่ยวกับเรา", { timeout: 10000 });

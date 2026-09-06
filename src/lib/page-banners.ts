@@ -1,9 +1,13 @@
 /**
  * Page banner registry — code-owned slugs (never trust client-supplied paths).
- * Home is excluded: it uses HomePageContent hero instead.
+ * "home" was added in issue #138 (S1): HomePageContent.heroMode can now
+ * switch Home between its classic hero and this banner system — see
+ * docs/plans/home-hero-toggle-implementation-sprints.md. Public render
+ * branching lands in a later sprint; this is schema/validation plumbing only.
  */
 
 export const BANNER_PAGE_SLUGS = [
+  "home",
   "about",
   "services",
   "packages",
@@ -44,6 +48,7 @@ export function isExternalBannerLink(value: string): boolean {
 
 export function bannerPageLabel(slug: BannerPageSlug): string {
   const labels: Record<BannerPageSlug, string> = {
+    home: "หน้าแรก",
     about: "เกี่ยวกับเรา",
     services: "บริการ",
     packages: "แพ็กเกจ",
@@ -57,6 +62,8 @@ export function bannerPageLabel(slug: BannerPageSlug): string {
 
 /** Public + admin revalidation targets for a banner save. */
 export function bannerRevalidatePaths(slug: BannerPageSlug): readonly string[] {
+  // Home lives at the locale root (/th, /en), not /th/home — no publicPath suffix.
+  if (slug === "home") return ["/th", "/en", "/admin/settings"];
   const publicPath = slug === "about" ? "/about" : `/${slug}`;
   return [`/th${publicPath}`, `/en${publicPath}`, "/admin/settings"];
 }

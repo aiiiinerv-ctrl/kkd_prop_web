@@ -72,15 +72,25 @@ function toDrafts(data: PageBannerAdminData): SlideDraft[] {
 export function PageBannerPanel({
   pageSlug,
   data,
+  allowOff = true,
 }: {
   pageSlug: BannerPageSlug;
   data: PageBannerAdminData;
+  /** Home's banner mode can never be OFF (server rejects it — see pageBannerFormSchema) — set false to hide the option and coerce a stale OFF state. */
+  allowOff?: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [mode, setMode] = useState<BannerMode>(data.mode);
+  const [mode, setMode] = useState<BannerMode>(() =>
+    !allowOff && data.mode === "OFF" ? "FIXED" : data.mode
+  );
   const [version] = useState(data.version);
-  const [slides, setSlides] = useState<SlideDraft[]>(() => toDrafts(data));
+  const [slides, setSlides] = useState<SlideDraft[]>(() => {
+    const drafts = toDrafts(data);
+    if (!allowOff && data.mode === "OFF") return drafts.slice(0, 1).length ? drafts.slice(0, 1) : [emptySlide()];
+    return drafts;
+  });
+  const modeOptions = allowOff ? MODE_OPTIONS : MODE_OPTIONS.filter((o) => o.value !== "OFF");
 
   const syncSlideCount = (nextMode: BannerMode, current: SlideDraft[]) => {
     if (nextMode === "OFF") return [];
@@ -185,7 +195,7 @@ export function PageBannerPanel({
           onChange={(e) => handleModeChange(e.target.value as BannerMode)}
           className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
         >
-          {MODE_OPTIONS.map((o) => (
+          {modeOptions.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>
