@@ -1,137 +1,12 @@
 "use client";
 
-import {
-  CalendarCheck,
-  ClipboardList,
-  Calculator,
-  FileBarChart,
-  FileText,
-  Home,
-  Images,
-  LayoutDashboard,
-  LayoutTemplate,
-  Map,
-  Megaphone,
-  MessageSquareQuote,
-  Package,
-  Phone,
-  ScrollText,
-  Settings,
-  Users,
-  Wrench,
-} from "lucide-react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BrandLogo } from "@/components/site/brand-logo";
 import { cn } from "@/lib/utils";
-import { ROLES } from "@/lib/enums";
 import { useUnreadLeadCount } from "@/hooks/admin/use-unread-lead-count";
 import type { Role } from "@/lib/auth";
-
-const ALL_ROLES: Role[] = ROLES;
-
-// Each item lists the roles allowed to see it. CHANNEL_EXECUTIVE is scoped
-// to leads (read-only, aggregate view) + their own channel; FINANCE loses
-// every content/management link since it never mutates anything; SALES
-// loses channel/user management per spec. MARKETING/EDITOR/EXECUTIVE (added
-// 2026-08-16) follow the permission matrix in
-// docs/plans/rbac-marketing-editor-executive-tasks.md.
-const ITEMS = [
-  {
-    href: "/admin",
-    label: "แดชบอร์ด",
-    icon: LayoutDashboard,
-    exact: true,
-    roles: ["ADMIN", "SALES", "FINANCE", "MARKETING", "EDITOR", "EXECUTIVE"] as Role[],
-  },
-  { href: "/admin/leads", label: "ลูกค้า (Leads)", icon: ClipboardList, roles: ALL_ROLES },
-  {
-    href: "/admin/bookings",
-    label: "การจองสำรวจ",
-    icon: CalendarCheck,
-    roles: ["ADMIN", "SALES", "FINANCE", "EDITOR"] as Role[],
-  },
-  {
-    href: "/admin/pages/services",
-    label: "บริการ (Pages)",
-    icon: Wrench,
-    roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
-  },
-  {
-    href: "/admin/pages/packages",
-    label: "แพ็กเกจ (Pages)",
-    icon: Package,
-    roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
-  },
-  {
-    href: "/admin/pages/portfolio",
-    label: "ผลงาน (Pages)",
-    icon: Images,
-    roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
-  },
-  {
-    href: "/admin/pages/calculator",
-    label: "เครื่องคำนวณ (Pages)",
-    icon: Calculator,
-    roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
-  },
-  {
-    href: "/admin/testimonials",
-    label: "รีวิวลูกค้า",
-    icon: MessageSquareQuote,
-    roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
-  },
-  {
-    href: "/admin/pages/about",
-    label: "เกี่ยวกับเรา (Pages)",
-    icon: FileText,
-    roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
-  },
-  {
-    // Pages CMS — Home Content + Properties + Shared CTA (#62 / #68)
-    href: "/admin/pages/home",
-    label: "หน้าแรก (Pages)",
-    icon: LayoutTemplate,
-    roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
-  },
-  {
-    // Bespoke shell (not in PAGE_REGISTRY) — content lives in SiteSettings singleton
-    href: "/admin/pages/contact",
-    label: "ติดต่อเรา (Pages)",
-    icon: Phone,
-    roles: ["ADMIN", "SALES", "MARKETING", "EDITOR"] as Role[],
-  },
-  {
-    href: "/admin/channels",
-    label: "ช่องทางโปรโมท",
-    icon: Megaphone,
-    roles: ["ADMIN", "CHANNEL_EXECUTIVE", "MARKETING", "EDITOR"] as Role[],
-  },
-  {
-    href: "/admin/reports",
-    label: "รายงาน",
-    icon: FileBarChart,
-    roles: ["ADMIN", "FINANCE", "MARKETING", "EDITOR", "EXECUTIVE"] as Role[],
-  },
-  {
-    href: "/admin/users",
-    label: "ผู้ใช้ระบบ",
-    icon: Users,
-    roles: ["ADMIN", "EXECUTIVE"] as Role[],
-  },
-  {
-    href: "/admin/audit",
-    label: "ประวัติการแก้ไข",
-    icon: ScrollText,
-    roles: ["ADMIN", "EXECUTIVE"] as Role[],
-  },
-  {
-    href: "/admin/settings",
-    label: "ตั้งค่าระบบ",
-    icon: Settings,
-    roles: ["ADMIN", "MARKETING"] as Role[],
-  },
-];
+import { UTILITY_ITEMS, visiblePinned, visibleZones } from "./nav-items";
+import { NavRow, UtilityRow } from "./nav-row";
 
 export function AdminSidebar({ role }: { role: Role }) {
   const pathname = usePathname();
@@ -151,61 +26,74 @@ export function AdminSidebar({ role }: { role: Role }) {
       ? 0
       : (unreadLeads?.count ?? 0);
 
+  const pinned = visiblePinned(role);
+  const zones = visibleZones(role);
+
   return (
     <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-background md:flex">
       <div className="border-b border-border p-5">
         <BrandLogo />
       </div>
-      <nav className="flex-1 space-y-0.5 p-3">
-        {ITEMS.filter((i) => i.roles.includes(role)).map((item) => {
-          const active = item.exact
-            ? pathname === item.href
-            : pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
+      <nav className="flex-1 overflow-y-auto p-3">
+        {pinned && (
+          <NavRow
+            item={pinned}
+            active={pathname === pinned.href}
+          />
+        )}
+        {zones.map((zone) => (
+          <div key={zone.key} className="mt-4 border-t border-border/60 pt-3">
+            <div
               className={cn(
-                "flex items-center gap-2.5 rounded-lg border-l-[3px] px-3 py-2.5 text-sm font-medium transition-colors",
-                active
-                  ? "border-brand-orange bg-primary/8 text-primary"
-                  : "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
+                "px-3 pb-1.5 text-[11px] font-semibold leading-4 tracking-[0.04em]",
+                zone.items.length === 0
+                  ? "text-muted-foreground/50"
+                  : "text-muted-foreground"
               )}
             >
-              <item.icon className="size-4" />
-              <span className="flex-1">{item.label}</span>
-              {item.href === "/admin/leads" && unreadLeadCount > 0 && (
-                <span
-                  aria-label={`Lead ใหม่ที่ยังไม่ได้เปิด ${unreadLeadCount} รายการ`}
-                  className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-orange px-1.5 text-xs font-semibold text-black"
-                >
-                  {unreadLeadCount > 99 ? "99+" : unreadLeadCount}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+              {zone.label}
+            </div>
+            {zone.items.length > 0 && (
+              <div className="space-y-0.5">
+                {zone.items.map((item) => {
+                  const active = item.exact
+                    ? pathname === item.href
+                    : pathname.startsWith(item.href);
+                  return (
+                    <NavRow
+                      key={item.href}
+                      item={item}
+                      active={active}
+                      badge={
+                        item.href === "/admin/leads" && unreadLeadCount > 0 ? (
+                          <span
+                            aria-label={`Lead ใหม่ที่ยังไม่ได้เปิด ${unreadLeadCount} รายการ`}
+                            className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-orange px-1.5 text-xs font-semibold text-black"
+                          >
+                            {unreadLeadCount > 99 ? "99+" : unreadLeadCount}
+                          </span>
+                        ) : undefined
+                      }
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ))}
       </nav>
-      <div className="border-t border-border p-3 space-y-0.5">
-        <Link
-          href="/admin/sitemap"
-          className={cn(
-            "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-            pathname.startsWith("/admin/sitemap")
-              ? "bg-primary/8 text-primary"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground"
-          )}
-        >
-          <Map className="size-4" />
-          แผนผังเว็บไซต์
-        </Link>
-        <Link
-          href="/th"
-          className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <Home className="size-4" />
-          ดูหน้าเว็บไซต์
-        </Link>
+      <div className="shrink-0 border-t border-border p-3 space-y-0.5">
+        {UTILITY_ITEMS.map((item) => (
+          <UtilityRow
+            key={item.href}
+            item={item}
+            active={
+              item.href === "/th"
+                ? false
+                : pathname.startsWith(item.href)
+            }
+          />
+        ))}
       </div>
     </aside>
   );
