@@ -120,7 +120,10 @@ export function FaqSection({
   }
 
   return (
-    <section className="relative isolate py-16">
+    // Below lg, [locale]/layout.tsx pads <main> with pb-[76px] for the fixed
+    // Book/Quote bar; FAQ is the last section, so extend the band over that gap
+    // instead of leaving a strip of page background above the footer.
+    <section className="relative isolate py-16 max-lg:-mb-[76px] max-lg:pb-[calc(4rem+76px)]">
       <div className="absolute inset-0 -z-10" aria-hidden="true">
         <Image
           src={backgroundImageUrl}
