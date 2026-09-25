@@ -1,20 +1,16 @@
 import { z } from "zod";
 
-export const calculatorConfigPhaseASchema = z.object({
-  sunHoursPerDay: z.coerce.number().min(1).max(12),
-  pricePerKwhThb: z.coerce.number().min(0.01).max(50),
-  annualSavingMonthsMultiplier: z.coerce.number().int().min(1).max(12),
-});
-
-export type CalculatorConfigPhaseAInput = z.infer<typeof calculatorConfigPhaseASchema>;
-
-export const calculatorConfigSchema = calculatorConfigPhaseASchema
-  .extend({
+// S6 (docs/plans/calculator-excel-import-sprints.md): the admin config form
+// keeps only the ×10 multiplier + slider bounds. Sun hours / price-per-kWh /
+// tier thresholds moved to the per-row Excel size table (S1/S5) — those old
+// `CalculatorConfig` columns still exist in the DB (kept for the still-live
+// public tiered calculator until S7) but are no longer written by this form.
+export const calculatorConfigSchema = z
+  .object({
+    annualSavingMonthsMultiplier: z.coerce.number().int().min(1).max(12),
     minBill: z.coerce.number().int().min(100).max(99_999),
     maxBill: z.coerce.number().int().min(100).max(99_999),
-    stepBill: z.coerce.number().int().min(50).max(2000),
-    billThreshold3To5Kw: z.coerce.number().int().min(100).max(99_999),
-    billThreshold5To10Kw: z.coerce.number().int().min(100).max(99_999),
+    stepBill: z.coerce.number().int(),
   })
   .superRefine((data, ctx) => {
     if (data.minBill >= data.maxBill) {
@@ -24,24 +20,11 @@ export const calculatorConfigSchema = calculatorConfigPhaseASchema
         path: ["minBill"],
       });
     }
-    if (
-      data.billThreshold3To5Kw <= data.minBill ||
-      data.billThreshold3To5Kw >= data.maxBill
-    ) {
+    if (data.stepBill <= 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "เกณฑ์ 3→5 kW ต้องอยู่ระหว่างบิลขั้นต่ำและสูงสุด",
-        path: ["billThreshold3To5Kw"],
-      });
-    }
-    if (
-      data.billThreshold5To10Kw <= data.billThreshold3To5Kw ||
-      data.billThreshold5To10Kw > data.maxBill
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "เกณฑ์ 5→10 kW ต้องมากกว่าเกณฑ์ 3→5 kW และไม่เกินบิลสูงสุด",
-        path: ["billThreshold5To10Kw"],
+        message: "ขั้นสไลด์ต้องมากกว่า 0",
+        path: ["stepBill"],
       });
     }
   });

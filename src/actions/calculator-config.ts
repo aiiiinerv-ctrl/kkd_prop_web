@@ -22,14 +22,10 @@ const calculatorConfig = auditedEntity({
 
 function parseConfig(formData: FormData) {
   return calculatorConfigSchema.safeParse({
-    sunHoursPerDay: formData.get("sunHoursPerDay"),
-    pricePerKwhThb: formData.get("pricePerKwhThb"),
     annualSavingMonthsMultiplier: formData.get("annualSavingMonthsMultiplier"),
     minBill: formData.get("minBill"),
     maxBill: formData.get("maxBill"),
     stepBill: formData.get("stepBill"),
-    billThreshold3To5Kw: formData.get("billThreshold3To5Kw"),
-    billThreshold5To10Kw: formData.get("billThreshold5To10Kw"),
   });
 }
 
@@ -56,14 +52,10 @@ export async function updateCalculatorConfig(
   }
 
   const updated = await calculatorConfig.update(existing.id, {
-    sunHoursPerDay: parsed.data.sunHoursPerDay,
-    pricePerKwhThb: parsed.data.pricePerKwhThb,
     annualSavingMonthsMultiplier: parsed.data.annualSavingMonthsMultiplier,
     minBill: parsed.data.minBill,
     maxBill: parsed.data.maxBill,
     stepBill: parsed.data.stepBill,
-    billThreshold3To5Kw: parsed.data.billThreshold3To5Kw,
-    billThreshold5To10Kw: parsed.data.billThreshold5To10Kw,
     version: existing.version + 1,
   });
   if (!updated) return { ok: false, error: "ไม่พบการตั้งค่า" };
