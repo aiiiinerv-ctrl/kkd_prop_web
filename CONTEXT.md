@@ -85,6 +85,20 @@ A completed installation shown as a case study, categorized by `BuildingType` an
 **Testimonial**:
 A customer quote, optionally attached to a Portfolio Project. Unpublished by default (`isPublished` defaults false) — requires explicit admin approval before appearing publicly.
 
+### Calculator
+
+**Size table**:
+The row-per-system-size model (`SizeRow[]`, `src/lib/calculator-size-table.ts`) the public calculator recommends from: each row is one installable size (kW) with its own production params (sun hours, days, price per kWh), panel count, roof area, and bill range (`billMin`/`billMax`). Replaces the earlier fixed 3/5/10 kW tiers, whose thresholds lived in shared `CalculatorConfig` fields instead of per-row data.
+_Avoid_: tier table, pricing table
+
+**Import** (`CalculatorImport`):
+One admin-uploaded Excel file parsed into a Size table, kept as history (original file + parsed rows) even after a newer one is applied. Distinct from applying it — an Import can exist without ever becoming the active table.
+_Avoid_: upload, size table file
+
+**Legacy table**:
+`DEFAULT_SIZE_TABLE` — the fixed 3 kW / 5 kW / 10 kW rows matching production's numbers before any Excel Import exists, used as the calculator's fallback and as the equality baseline that proves the Size table model reproduces the old fixed-tier behavior exactly.
+_Avoid_: default table (ambiguous with `CalculatorConfig` defaults), old table
+
 ### Localized content
 
 **Paired locale columns**:

@@ -38,12 +38,12 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 | Sprint | เป้าหมาย | Implement | Reviewer อิสระ | ขนาน/รอ | Est. | Status |
 |---:|---|---|---|---|---:|---|
 | **S0** | Live baseline ใหม่ + ignore `/stuffs/` (F1) | `nextjs-dev` (browser/curl) | — | เริ่มก่อน | 0.25 d | done 2026-09-26 |
-| **S1** | Pure lib: `SizeRow`, `DEFAULT_SIZE_TABLE` legacy, `recommendFromTable()` + equality proof | `nextjs-dev` | — (script = reviewer) | ⏳ S0 | 0.5 d | pending |
+| **S1** | Pure lib: `SizeRow`, `DEFAULT_SIZE_TABLE` legacy, `recommendFromTable()` + equality proof | `nextjs-dev` | — (script = reviewer) | ⏳ S0 | 0.5 d | done — pending review |
 | **S2** | Pure parser + guards + diff + `verify-calculator-import.mts` (fixture สังเคราะห์) | `nextjs-dev` | `audit-compliance-reviewer` (อ่าน guards เป็น security review) | ⏳ S1 (type) | 1 d | pending |
 | **S3** | Schema additive + migration + prod DDL asset + storage-engine contract + audit type | `nextjs-dev` | `deploy-verify` (DDL/InnoDB) | ✅ ขนานกับ S2 (⏳ S1) | 0.5 d | pending |
 | **S4** | `/files` hardening: `private/calculator-imports/` ADMIN-only + xlsx/attachment/nosniff | `nextjs-dev` | `audit-compliance-reviewer` | ✅ ขนานกับ S1–S3 (⏳ S0) | 0.5 d | pending |
 | **S5** | Server actions preview/apply + reset ล้าง `sizeTable` + `getCalculatorConfig` คืนตาราง | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ S2, S3, S4 | 1 d | pending |
-| **S6a** | Admin UI spec การ์ด "ตารางขนาดระบบ (Excel)" | `ux-ui-expert` (read-only) | — | ✅ ขนานกับ S1–S5 | 0.5 d | pending |
+| **S6a** | Admin UI spec การ์ด "ตารางขนาดระบบ (Excel)" | `ux-ui-expert` (read-only) | — | ✅ ขนานกับ S1–S5 | 0.5 d | done 2026-09-26 |
 | **S6** | Admin tab: ลบ threshold/sun/price fields, preview ใช้ตาราง (แก้ "5kw kW"), การ์ด upload/preview/diff/ยืนยัน/ประวัติ + e2e | `nextjs-dev` | `audit-compliance-reviewer`, `design-business-reviewer` (admin real render) | ⏳ S5, S6a | 1.5 d | pending |
 | **S7** | Public calculator ใช้ตาราง: ลบ tier markers, พิมพ์เกิน slider, tiles 3 ช่อง, สถานะพิเศษ, 100%, messages TH/EN | `nextjs-dev` | `i18n-parity-checker`, `design-business-reviewer` (TH/EN + mobile) | ⏳ S5 (✅ ขนานกับ S6 ได้ ถ้าคนละ agent) | 1.5 d | pending |
 | **S8** | Cleanup โค้ด legacy (`calculateSavings`, `systemKey`, threshold, sun/days/price ใน schema/zod/seed) | `nextjs-dev` | `audit-compliance-reviewer` (actions/zod) | ⏳ S6, S7 | 0.5 d | pending |
@@ -160,7 +160,18 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 
 **Rollback:** revert commits — ไม่มีผู้เรียก ไม่กระทบ runtime
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้ (2026-09-26):**
+- `src/lib/calculator-size-table.ts` (ใหม่): `SizeRow` type (`kw`, `phases: (1|3)[]`, `sunHours`, `days`, `pricePerKwh`, `panels`, `roofM2`, `billMin`, `billMax`); `sizeTableSchema` (zod: array ≥1, kw>0, sun 1–12, days 28–31, price 0.01–50, panels int ≥1, roofM2>0, `billMin<billMax` ต่อแถว, kw ไม่ซ้ำ, `billMax` เพิ่มเคร่งครัดตามลำดับแถวที่ให้มา); `DEFAULT_SIZE_TABLE` = ตาราง legacy 3 แถว (3/5/10 kW ตรงตัวเลข #150 ทุกฟิลด์ ไม่มีราคา); `resolveSizeTable(json)` — `null/undefined` หรือ parse ไม่ผ่าน → `{table: DEFAULT_SIZE_TABLE, source:"default"}` พร้อม `console.error` (ไม่ throw); parse ผ่าน → `{table, source:"import"}`
+- `src/lib/calculator.ts` — เพิ่ม `SizeTableRecommendation` union (`empty | tooLarge{lastRow} | ok{row, belowFirstRow, monthlySaving, afterBill, coversFullBill, kwhPerMonth, paybackYears}`) และ `recommendFromTable(bill, table, packages, multiplier)` ตามกติกา #146 (แถวเล็กสุดที่ `billMax > bill`; `bill >= billMax` แถวสุดท้าย → `tooLarge`; `belowFirstRow = bill < table[0].billMin`; `coversFullBill` = ประหยัดตามทฤษฎีไม่ cap ≥ บิล; payback เฉพาะเมื่อมี `Package.sizeKw === row.kw` และ saving>0). ของเดิม (`calculateSavings`, `recommendSystemSizeKw`, ฯลฯ) ไม่ถูกแตะ — เพิ่ม `import type { SizeRow }` เท่านั้น
+- `scripts/verify-calculator.mts` — เพิ่ม 4 ส่วน: (a) equality sweep 500→8,000 ทุก 100 ฿ (76 จุด) เทียบ `recommendFromTable(DEFAULT_SIZE_TABLE)` กับ `calculateSavings` ทั้ง size/monthlySaving/afterBill/paybackYears — **76/76 ผ่าน**; (b) กติกาตารางบน synthetic table 5 แถว (3/5/10/40/115 kW): 2,500→3kW, 3,000→5kW (ขอบ `billMax` แบบ exclusive), 25,500→40kW+`coversFullBill`, 110,000→115kW ไม่มี Package→`paybackYears=null`, 1,500→`belowFirstRow`, 150,000→`tooLarge`, ตารางว่าง→`empty`; (c) `resolveSizeTable` กับ `null`/object มั่ว/kw ซ้ำ/`billMax` ไม่เพิ่มเคร่งครัด → `default`, ตารางถูกต้อง → `import`; (d) ยืนยัน 7 บิล baseline ของ S0 (500/2,500/2,999/3,000/5,999/6,000/8,000) ตรงตาราง S0 ทุกค่า (kW, afterBill, monthlySaving, paybackYears ปัด 1 ตำแหน่ง) ตรง 100%
+- `CONTEXT.md` — เพิ่ม subsection "### Calculator" ใต้ "### Content": ศัพท์ "Size table", "Import" (`CalculatorImport`), "Legacy table" (`DEFAULT_SIZE_TABLE`)
+- **ยืนยัน (verification):**
+  - `npx tsx scripts/verify-calculator.mts` → ทุกบรรทัด `✓` รวม `equality sweep covered all 76 points (76/76)` และ S0-baseline 7 บิล × 4 ค่า ทั้งหมด `✓`
+  - `npx tsc --noEmit -p .` → ไม่มี error
+  - `npx eslint src/lib/calculator-size-table.ts src/lib/calculator.ts scripts/verify-calculator.mts` → ไม่มี warning/error
+  - `npm run build` → `✓ Compiled successfully` + `Finished TypeScript` ไม่มี error (รันเพิ่มแม้ optional เพราะแก้ shared lib)
+- **ไม่มีใครเรียก `recommendFromTable`/`resolveSizeTable` นอก verify script** — public/admin/actions/schema ไม่ถูกแตะ ตาม scope guardrail
+- **ข้อสังเกต**: การเทียบ kW ในส่วน equality sweep แปลง `legacy.systemKey` (`"system3kw"` เป็นต้น) กลับเป็นตัวเลขด้วย regex เพื่อเทียบกับ `SizeRow.kw` โดยตรง — ไม่ใช่การเปลี่ยนพฤติกรรม `systemKey` เดิม
 
 ---
 
@@ -274,7 +285,7 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 
 **DoD:** spec ครบทุก state (idle / uploading / reject / preview มี warning / conflict / applied / history empty) · ไม่มี commit โค้ด · Commit: `docs(admin): add calculator excel import card ui spec`
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้ (2026-09-26):** spec → `docs/plans/calculator-excel-import-admin-ui-spec.md` — direction A (inline card, reuse FAQ-bg pattern จาก #142); states S-1…S-13, copy TH ครบ (§7 = source ของ `messages.ts` ใน S2), a11y/mobile, stable ids สำหรับ e2e. คำถาม owner Q1–Q6 (§10) ใช้ default ทั้งหมด — Q3/Q4: diff ตัวอย่างบิลคืน `hasPackage` + เพิ่มบิล 4,500 (ส่งให้ S2). พบ bug: `page.tsx` `key` รวม `configRow.version` → save แล้ว shell remount กลับแท็บแรก — แก้ใน S6 (spec §9.3)
 
 ---
 
