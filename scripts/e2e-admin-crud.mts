@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { chromium } from "playwright";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { PrismaClient } from "../src/generated/prisma/client.js";
@@ -866,6 +866,132 @@ try {
       await prisma.pageBanner.delete({ where: { id: row.id } });
     }
   }
+}
+
+// --- CMS: Home FAQ background image (Sprint S5, issue #142) — upload the
+// optional full-bleed FAQ background, verify the managed-key lifecycle (DB
+// key prefix, public HTML on both locales, decorative aria-hidden wrapper),
+// reject a file+remove combo injected directly into the DOM (the UI already
+// prevents this, so this exercises the server-side guard), then remove the
+// image via the inline confirm and verify the public markup returns to the
+// pixel-for-pixel baseline. Restores the original key in `finally` so
+// repeated runs stay idempotent. ---
+console.log("\n--- Home FAQ background image ---");
+const FAQ_BG_DIR = path.resolve(process.env.STORAGE_ROOT ?? "./storage", "public/pages/home/faq-bg");
+const FAQ_BG_BASELINE_SECTION_CLASS = 'class="mx-auto max-w-7xl px-4 py-16 sm:px-6"';
+function countFaqBgFiles() {
+  return existsSync(FAQ_BG_DIR) ? readdirSync(FAQ_BG_DIR).length : 0;
+}
+const homeFaqBgBefore = await prisma.homePageContent.findUniqueOrThrow({ where: { key: "home" } });
+
+try {
+  // --- Upload ---
+  await page.goto("http://localhost:3000/admin/pages/home");
+  await page.waitForSelector("#home-faq-bg-image", { timeout: 10000 });
+  await page.locator("#home-faq-bg-image").setInputFiles(uploadPath);
+  await page.getByRole("button", { name: "บันทึกเนื้อหาหน้าแรก" }).click();
+  await page.waitForSelector("text=บันทึกเนื้อหาหน้าแรกเรียบร้อย", { timeout: 15000 });
+
+  const homeFaqBgAfterUpload = await prisma.homePageContent.findUniqueOrThrow({ where: { key: "home" } });
+  const uploadedKey = homeFaqBgAfterUpload.faqBackgroundImageKey;
+  assertCheck(
+    uploadedKey && uploadedKey.startsWith("public/pages/home/faq-bg/") && uploadedKey !== homeFaqBgBefore.faqBackgroundImageKey,
+    "HOME FAQ BG: new managed key generated with expected prefix",
+    uploadedKey ?? "null"
+  );
+
+  const publicThFaqBgHtml = await (await page.request.get("http://localhost:3000/th")).text();
+  const publicEnFaqBgHtml = await (await page.request.get("http://localhost:3000/en")).text();
+  assertCheck(
+    publicThFaqBgHtml.includes(uploadedKey!) && publicThFaqBgHtml.includes('aria-hidden="true"'),
+    "HOME FAQ BG: /th shows new key inside an aria-hidden wrapper"
+  );
+  assertCheck(
+    publicEnFaqBgHtml.includes(uploadedKey!) && publicEnFaqBgHtml.includes('aria-hidden="true"'),
+    "HOME FAQ BG: /en shows new key inside an aria-hidden wrapper"
+  );
+
+  // --- Conflict: file + remove sent together (UI prevents this — inject the
+  // hidden field directly into the DOM to exercise the server-side guard). ---
+  await page.goto("http://localhost:3000/admin/pages/home");
+  await page.waitForSelector("#home-faq-bg-image", { timeout: 10000 });
+  await page.locator("#home-faq-bg-image").setInputFiles(uploadPath);
+  await page.evaluate(() => {
+    const form = document.querySelector<HTMLFormElement>("#home-content-form");
+    if (!form) throw new Error("home-content-form not found");
+    const hidden = document.createElement("input");
+    hidden.type = "hidden";
+    hidden.name = "removeFaqBackground";
+    hidden.value = "on";
+    hidden.id = "e2e-injected-remove-faq-bg";
+    form.appendChild(hidden);
+  });
+  const faqBgFileCountBeforeConflict = countFaqBgFiles();
+  await page.getByRole("button", { name: "บันทึกเนื้อหาหน้าแรก" }).click();
+  await page.waitForSelector("text=เลือกได้อย่างใดอย่างหนึ่ง: อัปโหลดรูปใหม่ หรือ ลบรูปพื้นหลัง", {
+    timeout: 10000,
+  });
+  console.log("HOME FAQ BG: server rejects file + remove sent together ✓");
+  const homeFaqBgAfterConflict = await prisma.homePageContent.findUniqueOrThrow({ where: { key: "home" } });
+  assertCheck(
+    homeFaqBgAfterConflict.faqBackgroundImageKey === uploadedKey,
+    "HOME FAQ BG: DB key unchanged after rejected conflicting submit"
+  );
+  assertCheck(
+    countFaqBgFiles() === faqBgFileCountBeforeConflict,
+    "HOME FAQ BG: no new blob written to disk after rejected conflicting submit"
+  );
+
+  // --- Remove via inline confirm ---
+  await page.goto("http://localhost:3000/admin/pages/home");
+  await page.waitForSelector("#home-faq-bg-remove", { timeout: 10000 });
+  await page.click("#home-faq-bg-remove");
+  await page.click("#home-faq-bg-remove-confirm");
+  await page.getByRole("button", { name: "บันทึกเนื้อหาหน้าแรก" }).click();
+  await page.waitForSelector("text=บันทึกเนื้อหาหน้าแรกเรียบร้อย", { timeout: 15000 });
+
+  const homeFaqBgAfterRemove = await prisma.homePageContent.findUniqueOrThrow({ where: { key: "home" } });
+  assertCheck(
+    homeFaqBgAfterRemove.faqBackgroundImageKey === null,
+    "HOME FAQ BG: DB key cleared to null after remove"
+  );
+
+  const oldFaqBgRes = await fetch(`http://localhost:3000/files/${uploadedKey}`);
+  assertCheck(oldFaqBgRes.status === 404, "HOME FAQ BG: old blob deleted (404)", String(oldFaqBgRes.status));
+
+  const publicThFaqBgRemovedHtml = await (await page.request.get("http://localhost:3000/th")).text();
+  const publicEnFaqBgRemovedHtml = await (await page.request.get("http://localhost:3000/en")).text();
+  assertCheck(
+    publicThFaqBgRemovedHtml.includes(FAQ_BG_BASELINE_SECTION_CLASS),
+    "HOME FAQ BG: /th FAQ section returns to baseline flat markup"
+  );
+  assertCheck(
+    publicEnFaqBgRemovedHtml.includes(FAQ_BG_BASELINE_SECTION_CLASS),
+    "HOME FAQ BG: /en FAQ section returns to baseline flat markup"
+  );
+
+  const faqBgAudit = await prisma.auditLog.findFirst({
+    where: { entityType: "HomePageContent", action: "UPDATE" },
+    orderBy: { createdAt: "desc" },
+  });
+  const faqBgAuditAfter = faqBgAudit?.after as { faqBackgroundImageKey?: unknown } | null;
+  assertCheck(
+    faqBgAudit && "faqBackgroundImageKey" in (faqBgAuditAfter ?? {}) && faqBgAuditAfter!.faqBackgroundImageKey === null,
+    "HOME FAQ BG: latest audit snapshot has only the (null) key, no bytes"
+  );
+  assertCheck(
+    !JSON.stringify(faqBgAudit?.after ?? "").includes("base64"),
+    "HOME FAQ BG: audit snapshot contains no embedded image bytes"
+  );
+} finally {
+  // Restore the original key directly — the UI has no way to set a specific
+  // pre-existing key without re-uploading a file, and this mirrors how other
+  // blocks in this script restore singleton rows.
+  await prisma.homePageContent.update({
+    where: { id: homeFaqBgBefore.id },
+    data: { faqBackgroundImageKey: homeFaqBgBefore.faqBackgroundImageKey },
+  });
+  console.log("HOME FAQ BG: original key restored ✓");
 }
 
 // --- CMS: About content — edit TH title (visible tab) + EN title (activate tab), verify pages, restore ---
