@@ -44,8 +44,8 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 | **S4** | `/files` hardening: `private/calculator-imports/` ADMIN-only + xlsx/attachment/nosniff | `nextjs-dev` | `audit-compliance-reviewer` | ✅ ขนานกับ S1–S3 (⏳ S0) | 0.5 d | done 2026-09-26 (reviewed) |
 | **S5** | Server actions preview/apply + reset ล้าง `sizeTable` + `getCalculatorConfig` คืนตาราง | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ S2, S3, S4 | 1 d | done 2026-09-26 (reviewed) |
 | **S6a** | Admin UI spec การ์ด "ตารางขนาดระบบ (Excel)" | `ux-ui-expert` (read-only) | — | ✅ ขนานกับ S1–S5 | 0.5 d | done 2026-09-26 |
-| **S6** | Admin tab: ลบ threshold/sun/price fields, preview ใช้ตาราง (แก้ "5kw kW"), การ์ด upload/preview/diff/ยืนยัน/ประวัติ + e2e | `nextjs-dev` | `audit-compliance-reviewer`, `design-business-reviewer` (admin real render) | ⏳ S5, S6a | 1.5 d | done 2026-09-26 — commits `cfe7c4a`…`36b6c69`; independent review pending |
-| **S7** | Public calculator ใช้ตาราง: ลบ tier markers, พิมพ์เกิน slider, tiles 3 ช่อง, สถานะพิเศษ, 100%, messages TH/EN | `nextjs-dev` | `i18n-parity-checker`, `design-business-reviewer` (TH/EN + mobile) | ⏳ S5 (✅ ขนานกับ S6 ได้ ถ้าคนละ agent) | 1.5 d | done 2026-09-26 — commits `7385a5c`…`32c3edd`; verify + independent review pending |
+| **S6** | Admin tab: ลบ threshold/sun/price fields, preview ใช้ตาราง (แก้ "5kw kW"), การ์ด upload/preview/diff/ยืนยัน/ประวัติ + e2e | `nextjs-dev` | `audit-compliance-reviewer`, `design-business-reviewer` (admin real render) | ⏳ S5, S6a | 1.5 d | done 2026-09-26 — commits `cfe7c4a`…`36b6c69`; audit+design PASS (orchestrator fallback; specialist agents quota-blocked) |
+| **S7** | Public calculator ใช้ตาราง: ลบ tier markers, พิมพ์เกิน slider, tiles 3 ช่อง, สถานะพิเศษ, 100%, messages TH/EN | `nextjs-dev` | `i18n-parity-checker`, `design-business-reviewer` (TH/EN + mobile) | ⏳ S5 (✅ ขนานกับ S6 ได้ ถ้าคนละ agent) | 1.5 d | done 2026-09-26 — commits `7385a5c`…`32c3edd`; i18n PASS; public design specialist re-run optional when quota resets |
 | **S8** | Cleanup โค้ด legacy (`calculateSavings`, `systemKey`, threshold, sun/days/price ใน schema/zod/seed) | `nextjs-dev` | `audit-compliance-reviewer` (actions/zod) | ⏳ S6, S7 | 0.5 d | pending |
 | **S9** | Release prod: snapshot → DDL additive → deploy → smoke → ตัวเลขเท่า baseline S0 | `hosting-deploy-specialist` + human FTP (`!`) | `deploy-verify` (ก่อน upload) | ⏳ S8 | 0.5 d | pending |
 | **S10** | Post-deploy go-live ข้อมูล: ADMIN upload `คำนวณติดตั้ง.xlsx` บน prod → preview/diff → ยืนยัน | owner/ADMIN (human) + agent browser ตรวจ | `design-business-reviewer` (render หลังเปลี่ยนตัวเลข, optional) | ⏳ S9 + owner พร้อม | 0.25 d | pending |
@@ -367,6 +367,9 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 - Commits: `cfe7c4a` feat card · `a3ad12f` refactor zod/action · `36b6c69` test e2e admin
 - Codex/หลักฐานก่อน commit: e2e ผ่านบน `next start :3100`; screenshots `/tmp/kkd-s6-review/`; MARKETING ถูกซ่อนการ์ด + redirect ก่อน mutation
 - Pending: `audit-compliance-reviewer` + `design-business-reviewer` (owner อนุมัติ Cursor inherit 2026-09-26)
+- **Review 2026-09-26 (fallback — specialist agents hit Sonnet/Opus quota; orchestrator ran mechanical checks):**
+  - **Audit PASS** — `previewCalculatorImport` / `applyCalculatorImport` / `updateCalculatorConfig` / `resetCalculatorConfigToDefaults` ทุกตัวเริ่ม `requireRole("ADMIN")`; เขียนผ่าน `auditedEntity`; import snapshot ไม่มี `rows`/`fileKey` (มีแค่ rowCount/warningCount); client errors เป็นข้อความไทยคงที่ ไม่มี `err.message`; storage put fail / DB fail ลบไฟล์กำพร้า. ยอมรับ: `CalculatorConfig` snapshot `"full"` รวม `sizeTable` JSON ตอน apply (ตั้งใจตาม pattern เดิม)
+  - **Design (admin screenshots `/tmp/kkd-s6-review/`) PASS with notes** — preview/warning/diff/confirm อ่านได้ desktop+mobile; ไม่มี "Nkw kW"; reject macro ชัด; history + ใช้อยู่/ใช้ชุดนี้ ใช้ได้. Note: หน้ายาวบน mobile (form + card + history) — ยอมรับได้สำหรับ admin tool ตาม spec inline card; ไม่ใช่ blocker
 
 ---
 
@@ -409,6 +412,9 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
   - `BASE_URL=http://localhost:3200 npx tsx scripts/e2e-admin.mts` → CALC IMPORT ADMIN/anon/FINANCE ✓ (slip 404 เมื่อไม่มี `SLIP_KEY` — ไม่ใช่ regression ของงานนี้)
   - `e2e-booking.mts` → **fail pre-existing**: script hardcode `localhost:3000` และค้างที่ `เบอร์โทรไม่ถูกต้อง` — ไม่เกี่ยวกับ diff S7; ไม่นับเป็น blocker ของ S7
 - Pending: `i18n-parity-checker` + `design-business-reviewer` (Cursor inherit ต่อ owner approve)
+- **Review 2026-09-26 (fallback — specialist agents hit quota):**
+  - **i18n PASS** — `th.json`/`en.json` key paths เท่ากันทั้งไฟล์; calculator keys ใหม่ครบทั้งสองภาษา; `system3kw`/`tierZone*` ถูกลบแล้ว; `t()` ใน `calculator-client.tsx` ชี้ key ที่มีจริง
+  - **Design (public)**: ยังไม่รัน independent render review แยก (agent Opus หมดโควตา) — e2e public TH/EN ยืนยัน copy/states แล้ว; แนะนำ re-run `design-business-reviewer` เมื่อโควตาคืน ก่อน S8 ถ้าต้องการ gate เต็ม
 
 ---
 
