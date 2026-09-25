@@ -1,9 +1,20 @@
 "use client";
 
 import { ChevronDown, MessageCircle } from "lucide-react";
+import Image from "next/image";
 import { useState } from "react";
 import { Reveal } from "@/components/site/reveal";
 import { cn } from "@/lib/utils";
+
+/**
+ * Overlay applied over an optional FAQ background image (#142). Locked by
+ * S0 (ux-ui-expert, opus) at 88% white — 85% fails WCAG AA 4.5:1 for
+ * `text-muted-foreground` against a worst-case black photo (4.44:1); 88%
+ * clears it with margin (4.77:1) while still keeping the photo visible.
+ * Exported so the admin preview card renders the exact same overlay the
+ * public page uses.
+ */
+export const FAQ_BG_OVERLAY_CLASS = "absolute inset-0 bg-white/88";
 
 export type FaqEntry = {
   /** Stable id for the React key — a `HomeFaqItem.id` or a static message key when there's no DB row. */
@@ -27,6 +38,7 @@ export function FaqSection({
   lineButtonLabel,
   lineUrl,
   items,
+  backgroundImageUrl,
 }: {
   badge: string;
   title: string;
@@ -34,12 +46,13 @@ export function FaqSection({
   lineButtonLabel: string;
   lineUrl: string;
   items: FaqEntry[];
+  /** Optional decorative background (#142) — `null`/`undefined` renders the original flat markup pixel-for-pixel. */
+  backgroundImageUrl?: string | null;
 }) {
   const [openIndex, setOpenIndex] = useState<number | null>(items.length > 0 ? 0 : null);
 
-  return (
-    <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] lg:gap-14">
+  const content = (
+    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] lg:gap-14">
         <Reveal>
           <span className="inline-block rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-primary">
             {badge}
@@ -99,7 +112,26 @@ export function FaqSection({
             })}
           </div>
         )}
+    </div>
+  );
+
+  if (!backgroundImageUrl) {
+    return <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">{content}</section>;
+  }
+
+  return (
+    <section className="relative isolate py-16">
+      <div className="absolute inset-0 -z-10" aria-hidden="true">
+        <Image
+          src={backgroundImageUrl}
+          alt=""
+          fill
+          sizes="100vw"
+          className="object-cover object-center"
+        />
+        <div className={FAQ_BG_OVERLAY_CLASS} />
       </div>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">{content}</div>
     </section>
   );
 }

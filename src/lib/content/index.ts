@@ -307,6 +307,23 @@ export async function resolveHomeHeroImage(
   return { url: STATIC_HERO_URL, isFallback: true };
 }
 
+/**
+ * Resolves the Home FAQ section's optional decorative background image
+ * (#142). Unlike the hero, there's no static fallback — a missing key or a
+ * key pointing at a deleted blob both resolve to `null`, which tells
+ * `FaqSection` to render the flat, pre-existing markup rather than a broken
+ * image (edge case E4/E12). Not cached with `react.cache()` for the same
+ * reason as `resolveHomeHeroImage`: the existence check is a cheap `stat`
+ * and per-request caching would risk a stale "missing" state right after an
+ * admin replaces the image within the same request lifecycle.
+ */
+export async function resolveHomeFaqBackground(key: string | null): Promise<string | null> {
+  if (key && (await storage.exists(key))) {
+    return storage.publicUrl(key);
+  }
+  return null;
+}
+
 export type { HomeFaqItemView, HomePageContentView };
 
 export type {

@@ -13,6 +13,7 @@ import {
   getHomePageContent,
   getLatestProjects,
   getSiteSettings,
+  resolveHomeFaqBackground,
   resolveHomeHeroImage,
 } from "@/lib/content";
 import { getPageBanner } from "@/lib/content/page-banner";
@@ -69,6 +70,7 @@ type HomeViewModel = {
   faqIntro: string;
   faqLineButtonLabel: string;
   faqItems: FaqEntry[];
+  faqBackgroundImageKey: string | null;
 };
 
 export async function HomeContent({
@@ -138,6 +140,7 @@ export async function HomeContent({
           question: item.question,
           answer: item.answer,
         })),
+        faqBackgroundImageKey: homeRow.content.faqBackgroundImageKey,
       }
     : {
         heroMode: "HERO",
@@ -183,6 +186,7 @@ export async function HomeContent({
           question: tFaq(key),
           answer: tFaq(`a${i + 1}` as "a1" | "a2" | "a3" | "a4" | "a5"),
         })),
+        faqBackgroundImageKey: null,
       };
 
   const hero = await resolveHomeHeroImage(view.heroImageKey);
@@ -194,6 +198,14 @@ export async function HomeContent({
   // below rather than a blank gap (edge-case research #135, requirement 1).
   const banner = view.heroMode === "BANNER" ? await getPageBanner("home", locale) : null;
   const useBanner = view.heroMode === "BANNER" && banner !== null;
+
+  // Only resolve when the FAQ section will actually render (same gate as the
+  // `<FaqSection>` call below, #142) — skips a needless `storage.exists()`
+  // stat when the section is hidden.
+  const faqBackgroundUrl =
+    view.showFaq && lineUrl
+      ? await resolveHomeFaqBackground(view.faqBackgroundImageKey)
+      : null;
 
   return (
     <main>
@@ -391,6 +403,7 @@ export async function HomeContent({
           lineButtonLabel={view.faqLineButtonLabel}
           lineUrl={lineUrl}
           items={view.faqItems}
+          backgroundImageUrl={faqBackgroundUrl}
         />
       )}
     </main>
