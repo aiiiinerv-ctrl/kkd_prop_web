@@ -60,6 +60,7 @@ prisma/*.db-journal
 # client-supplied documents (company registration certificate, requirement PDFs,
 # pricing spreadsheets) — this repo is PUBLIC, these must never be committed
 /docs/stuffs/
+/stuffs/
 
 # shared-hosting deploy artifact staging (scripts/build-shared-hosting-deploy.mts)
 /deploy/dist/
