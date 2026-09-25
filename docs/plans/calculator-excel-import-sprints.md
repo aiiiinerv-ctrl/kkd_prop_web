@@ -37,7 +37,7 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 
 | Sprint | เป้าหมาย | Implement | Reviewer อิสระ | ขนาน/รอ | Est. | Status |
 |---:|---|---|---|---|---:|---|
-| **S0** | Live baseline ใหม่ + ignore `/stuffs/` (F1) | `nextjs-dev` (browser/curl) | — | เริ่มก่อน | 0.25 d | pending |
+| **S0** | Live baseline ใหม่ + ignore `/stuffs/` (F1) | `nextjs-dev` (browser/curl) | — | เริ่มก่อน | 0.25 d | done 2026-09-26 |
 | **S1** | Pure lib: `SizeRow`, `DEFAULT_SIZE_TABLE` legacy, `recommendFromTable()` + equality proof | `nextjs-dev` | — (script = reviewer) | ⏳ S0 | 0.5 d | pending |
 | **S2** | Pure parser + guards + diff + `verify-calculator-import.mts` (fixture สังเคราะห์) | `nextjs-dev` | `audit-compliance-reviewer` (อ่าน guards เป็น security review) | ⏳ S1 (type) | 1 d | pending |
 | **S3** | Schema additive + migration + prod DDL asset + storage-engine contract + audit type | `nextjs-dev` | `deploy-verify` (DDL/InnoDB) | ✅ ขนานกับ S2 (⏳ S1) | 0.5 d | pending |
@@ -114,13 +114,31 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 - Screenshot เก็บในเครื่อง dev ไม่ commit (อาจมีข้อมูล admin)
 
 **DoD**
-- [ ] `git check-ignore stuffs/คำนวณติดตั้ง.xlsx` คืน path (ignored); `git status` ไม่มี `stuffs/`
-- [ ] ตาราง baseline 7 บิล × TH/EN อยู่ใน "สรุปหลังแก้" ด้านล่าง
+- [x] `git check-ignore stuffs/คำนวณติดตั้ง.xlsx` คืน path (ignored); `git status` ไม่มี `stuffs/`
+- [x] ตาราง baseline 7 บิล × TH/EN อยู่ใน "สรุปหลังแก้" ด้านล่าง
 - Commit: `chore(calculator): ignore root stuffs dir holding private pricing excel`
 
 **Rollback:** revert `.gitignore` (ไม่มีความเสี่ยง)
 
-**สรุปหลังแก้:** _(กรอกหลังทำ: วันที่, baseline table, สิ่งที่ต่างจาก 2026-09-25)_
+**สรุปหลังแก้ (2026-09-26):**
+- `.gitignore`: เพิ่ม `/stuffs/` ใต้ `/docs/stuffs/` → `git check-ignore -v` ชี้ `.gitignore:63:/stuffs/`; `git status` ไม่มี `stuffs/` แล้ว
+- **Prod public** (`https://kkdproperty.co.th`, browser จริง, ตั้งค่าในช่องบิลแล้วอ่านผล): `/th/calculator` + `/en/calculator` → 200, slider `min=500 max=8000 step=100`
+
+  | บิล ฿ | ขนาด (TH / EN) | หลังติดตั้ง | ประหยัด/เดือน | คืนทุน |
+  |---:|---|---:|---:|---:|
+  | 500 | ระบบ 3KW / 3KW System | ฿0 | ฿500 | ~19.8 ปี |
+  | 2,500 | ระบบ 3KW / 3KW System | ฿475 | ฿2,025 | ~4.9 ปี |
+  | 2,999 | ระบบ 3KW / 3KW System | ฿974 | ฿2,025 | ~4.9 ปี |
+  | 3,000 | ระบบ 5KW (ยอดนิยม) / 5KW System (Popular) | ฿0 | ฿3,000 | ~5.2 ปี |
+  | 5,999 | ระบบ 5KW (ยอดนิยม) / 5KW System (Popular) | ฿2,624 | ฿3,375 | ~4.6 ปี |
+  | 6,000 | ระบบ 10KW หรือมากกว่า / 10KW System or larger | ฿0 | ฿6,000 | ~4.8 ปี |
+  | 8,000 | ระบบ 10KW หรือมากกว่า / 10KW System or larger | ฿1,250 | ฿6,750 | ~4.2 ปี |
+
+  TH กับ EN ตรงกันทุกจุด; tier labels 3KW / 5KW / 10KW+ ใต้ slider ยังอยู่
+- **Prod Packages** (`/th/packages`): 3KW ฿99,000 · 5KW ฿155,000 · 10KW ฿285,000
+- **Admin (local DB)**: `CalculatorConfig.version = 5`, updatedAt 2026-08-28, thresholds 3,000/6,000, slider 500/8,000/100 — screenshot tab "ตัวเลขการคำนวณ" จาก 2026-09-25 (#144) ยังใช้ได้ (ไม่มี commit แตะ calculator ตั้งแต่นั้น); **prod admin: skip** (ไม่มี credential prod ในมือ agent — owner login ได้ถ้าต้องการ)
+- **Code บน prod**: deploy log (#142, 2026-09-25) ไม่บันทึก hash — code commit ล่าสุดก่อน log คือ `fd740cd` (อนุมาน)
+- **ต่างจาก 2026-09-25**: ไม่มี — ค่าทั้งหมดเท่าเดิม; ตัวเลขชุดนี้คือ target ของ equality sweep S1 และ smoke S9
 
 ---
 
