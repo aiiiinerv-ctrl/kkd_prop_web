@@ -6,6 +6,7 @@ import { calculatorParamsToSeedData } from "@/lib/calculator-config";
 import { CALCULATOR_DEFAULTS } from "@/lib/calculator";
 import { prisma } from "@/lib/db";
 import { calculatorConfigSchema } from "@/lib/validations/calculator-config";
+import { Prisma } from "@/generated/prisma/client";
 import type { ActionResult } from "./users";
 
 const calculatorConfig = auditedEntity({
@@ -81,6 +82,8 @@ export async function resetCalculatorConfigToDefaults(): Promise<
   const defaults = calculatorParamsToSeedData(CALCULATOR_DEFAULTS);
   const updated = await calculatorConfig.update(existing.id, {
     ...defaults,
+    sizeTable: Prisma.JsonNull,
+    sizeTableImportId: null,
     version: existing.version + 1,
   });
   if (!updated) return { ok: false, error: "ไม่พบการตั้งค่า" };
