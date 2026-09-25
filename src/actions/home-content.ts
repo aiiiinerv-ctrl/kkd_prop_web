@@ -28,12 +28,22 @@ export type HomeContentActionResult =
  */
 const HERO_IMAGE_PREFIX = "pages/home/hero";
 
+/**
+ * Namespace for the FAQ section's optional decorative background blob
+ * (#142) — `public/pages/home/faq-bg/<cuid>.jpg`. Same `public/` reasoning
+ * as `HERO_IMAGE_PREFIX`: it renders on every locale's homepage, so it must
+ * be servable through `/files` without a session.
+ */
+const FAQ_BG_IMAGE_PREFIX = "pages/home/faq-bg";
+
 const HOME_ALLOWED_KEYS = new Set<string>([
   ...HOME_CONTENT_FIELDS,
   ...HOME_BOOLEAN_FIELDS,
   "version",
   "faqItemsJson",
   "heroImage",
+  "faqBackgroundImage",
+  "removeFaqBackground",
 ]);
 
 const homeContentAggregate = auditedAggregate({
@@ -161,6 +171,20 @@ async function homeAuditSnapshot(tx: Prisma.TransactionClient, homeId: string) {
  * key is left untouched. Only after a successful commit is the *previous*
  * key deleted, so a mid-flight failure never leaves the public page pointing
  * at a missing blob.
+ *
+ * FAQ background image lifecycle (#142, same discipline as the hero): the
+ * client sends either a `faqBackgroundImage` file or `removeFaqBackground:
+ * "on"`, never both — both present is rejected before either upload runs.
+ * Upload order is hero then FAQ background; if the FAQ background upload
+ * fails after the hero one already landed, the hero blob is deleted too
+ * before returning the error (no orphaned blob from a half-applied form).
+ * On aggregate-save conflict or an unexpected throw, both new blobs (hero
+ * and FAQ background) are deleted and the old keys are left untouched. Only
+ * after a successful commit is the *previous* FAQ background key deleted,
+ * best-effort or overwritten, and only when it starts with
+ * `public/pages/home/faq-bg/` and differs from the new key — a stray blob
+ * from a failed delete is preferred over reporting an error after the DB
+ * commit already succeeded.
  */
 export async function updateHomeContent(formData: FormData): Promise<HomeContentActionResult> {
   await requireRole("ADMIN", "SALES", "MARKETING", "EDITOR");
@@ -201,9 +225,23 @@ export async function updateHomeContent(formData: FormData): Promise<HomeContent
   const existing = await prisma.homePageContent.findUnique({ where: { key: "home" } });
   if (!existing) return { ok: false, error: "ไม่พบข้อมูลหน้าแรก — ต้องรัน backfill ก่อน" };
 
+  const faqBgFile = formData.get("faqBackgroundImage");
+  const removeFaqBg = formData.get("removeFaqBackground") === "on";
+  const hasFaqBgFile = faqBgFile instanceof File && faqBgFile.size > 0;
+  if (hasFaqBgFile && removeFaqBg) {
+    return { ok: false, error: "เลือกได้อย่างใดอย่างหนึ่ง: อัปโหลดรูปใหม่ หรือ ลบรูปพื้นหลัง" };
+  }
+
   const heroUpload = await storePublicImage(formData.get("heroImage"), HERO_IMAGE_PREFIX);
   if (!heroUpload.ok) return { ok: false, error: heroUpload.error };
   const newHeroKey = heroUpload.key;
+
+  const faqBgUpload = await storePublicImage(faqBgFile, FAQ_BG_IMAGE_PREFIX);
+  if (!faqBgUpload.ok) {
+    if (newHeroKey) await storage.delete(newHeroKey);
+    return { ok: false, error: faqBgUpload.error };
+  }
+  const newFaqBgKey = faqBgUpload.key;
 
   try {
     const result = await homeContentAggregate.save({
@@ -219,6 +257,11 @@ export async function updateHomeContent(formData: FormData): Promise<HomeContent
             showServicesCta,
             showFaq,
             ...(newHeroKey ? { heroImageKey: newHeroKey } : {}),
+            ...(newFaqBgKey
+              ? { faqBackgroundImageKey: newFaqBgKey }
+              : removeFaqBg
+                ? { faqBackgroundImageKey: null }
+                : {}),
           },
         });
         await syncFaqItems(tx, existing.id, parsedFaq.data);
@@ -228,14 +271,28 @@ export async function updateHomeContent(formData: FormData): Promise<HomeContent
 
     if (!result.ok) {
       if (newHeroKey) await storage.delete(newHeroKey);
+      if (newFaqBgKey) await storage.delete(newFaqBgKey);
       return { ok: false, conflict: true };
     }
     if (newHeroKey && existing.heroImageKey && existing.heroImageKey !== newHeroKey) {
       await storage.delete(existing.heroImageKey);
     }
+    if (
+      (newFaqBgKey || removeFaqBg) &&
+      existing.faqBackgroundImageKey &&
+      existing.faqBackgroundImageKey.startsWith("public/pages/home/faq-bg/") &&
+      existing.faqBackgroundImageKey !== newFaqBgKey
+    ) {
+      try {
+        await storage.delete(existing.faqBackgroundImageKey);
+      } catch (err) {
+        console.error("Failed to delete old FAQ background blob", err);
+      }
+    }
     return { ok: true };
   } catch (err) {
     if (newHeroKey) await storage.delete(newHeroKey);
+    if (newFaqBgKey) await storage.delete(newFaqBgKey);
     if (err instanceof ForeignFaqIdError) {
       return { ok: false, error: "พบรายการคำถามที่ไม่ถูกต้อง กรุณาโหลดหน้าใหม่แล้วลองอีกครั้ง" };
     }
