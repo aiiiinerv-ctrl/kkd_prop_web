@@ -2,7 +2,7 @@
 
 import { AlertTriangle, ExternalLink, Plus, ChevronDown, ChevronUp } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { updateHomeContent } from "@/actions/home-content";
 import { updateContactSettings } from "@/actions/site-settings";
@@ -301,6 +301,7 @@ function FaqBackgroundSection({
   const [fileError, setFileError] = useState<string | null>(null);
   const [pendingRemove, setPendingRemove] = useState(false);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const hasCurrentImage = Boolean(faqBackgroundImageUrl);
 
@@ -336,7 +337,7 @@ function FaqBackgroundSection({
       <h2 className="mb-1 font-semibold">รูปพื้นหลังส่วนคำถามที่พบบ่อย (FAQ)</h2>
       <p className="mb-4 text-sm text-muted-foreground">
         ใช้ภาพเดียวกันทั้งเว็บไทยและอังกฤษ — แนะนำแนวนอน กว้างอย่างน้อย 1920px วางจุดสนใจไว้กลางภาพ
-        ไม่เกิน {FAQ_BG_MAX_MB}MB (JPEG/PNG/WebP) ระบบจะใส่ชั้นสีขาวโปร่งทับให้อัตโนมัติ
+        หลีกเลี่ยงภาพที่มืดจัด ไม่เกิน {FAQ_BG_MAX_MB}MB (JPEG/PNG/WebP) ระบบจะใส่ชั้นสีขาวโปร่งทับให้อัตโนมัติ
       </p>
 
       {(!showFaq || faqLineMissing) && (
@@ -394,6 +395,7 @@ function FaqBackgroundSection({
       <div className="space-y-1.5">
         <Label htmlFor="home-faq-bg-image">อัปโหลดรูปพื้นหลัง</Label>
         <Input
+          ref={fileInputRef}
           id="home-faq-bg-image"
           name="faqBackgroundImage"
           type="file"
@@ -431,6 +433,9 @@ function FaqBackgroundSection({
               setPendingRemove(true);
               setPreview(null);
               setFileError(null);
+              // Clear the picked file too — otherwise "เลิกลบ" re-enables an input that still
+              // holds it, and saving uploads a file the preview no longer shows.
+              if (fileInputRef.current) fileInputRef.current.value = "";
             }}
           >
             ยืนยันลบ
