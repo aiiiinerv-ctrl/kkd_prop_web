@@ -305,15 +305,10 @@ async function seedCalculatorConfig() {
   if (existing) return;
   await prisma.calculatorConfig.create({
     data: {
-      sunHoursPerDay: 5,
-      daysPerMonth: 30,
-      pricePerKwhThb: 4.5,
       annualSavingMonthsMultiplier: 10,
       minBill: 500,
       maxBill: 8000,
       stepBill: 100,
-      billThreshold3To5Kw: 3000,
-      billThreshold5To10Kw: 6000,
     },
   });
   console.log("Calculator config: ready");

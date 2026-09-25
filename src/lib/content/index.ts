@@ -257,13 +257,9 @@ export const getCalculatorPageContent = cache(
   }
 );
 
-/** Active calculator parameters for public rendering. Falls back to Excel defaults. */
 /**
- * Public calculator config: the tier params (`.params`, unchanged shape —
- * callers that only need the old fields keep working) plus the resolved
- * size table (`.sizeTable`/`.sizeTableSource`). The size table isn't wired
- * into the public page yet (S7); `getCalculatorConfig().params` keeps
- * today's behaviour exactly.
+ * Public calculator config: slider / multiplier (`.params`) plus the resolved
+ * size table (`.sizeTable`/`.sizeTableSource`).
  */
 export const getCalculatorConfig = cache(
   async (): Promise<{
