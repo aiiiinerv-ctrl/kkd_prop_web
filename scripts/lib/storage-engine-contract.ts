@@ -23,6 +23,8 @@ export const APPLICATION_TABLE_CONTRACTS = [
   { table: "PackagesPageContent", delegate: "packagesPageContent" },
   { table: "PortfolioPageContent", delegate: "portfolioPageContent" },
   { table: "CalculatorPageContent", delegate: "calculatorPageContent" },
+  { table: "PageBanner", delegate: "pageBanner" },
+  { table: "PageBannerSlide", delegate: "pageBannerSlide" },
   { table: "AuditLog", delegate: "auditLog" },
 ] as const;
 
@@ -162,6 +164,15 @@ export const FOREIGN_KEY_CONTRACTS: readonly ForeignKeyContract[] = [
     referencedTable: "Testimonial",
     referencedColumn: "id",
     deleteRule: "RESTRICT",
+    updateRule: "CASCADE",
+  },
+  {
+    name: "PageBannerSlide_bannerId_fkey",
+    table: "PageBannerSlide",
+    column: "bannerId",
+    referencedTable: "PageBanner",
+    referencedColumn: "id",
+    deleteRule: "CASCADE",
     updateRule: "CASCADE",
   },
   {
