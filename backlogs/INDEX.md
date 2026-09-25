@@ -8,6 +8,7 @@ Live status = GitHub labels. This file is a TOC of PLAN paths only.
 | GitHub | PLAN | Notes |
 |---|---|---|
 | [#142](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/142) | [`ISSUE_142_home_faq_background`](ISSUE_142_home_faq_background/PLAN.md) | Deployed 2026-09-25 (S0–S6); awaiting owner's real FAQ image for post-image smoke + prod design review; sprints in `docs/plans/home-faq-background-tasks.md` |
+| [#143](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/143) | [`ISSUE_143_calculator_excel_import_map`](done/ISSUE_143_calculator_excel_import_map/PLAN.md) | Done 2026-09-26 — wayfinder map closed; sprint plan [`calculator-excel-import-sprints.md`](../docs/plans/calculator-excel-import-sprints.md) ready (S0–S10); follow-ups #151, #152 |
 | [#76](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/76) | [`ISSUE_076_pages_cms_sprint12_cleanup`](ISSUE_076_pages_cms_sprint12_cleanup/PLAN.md) | Owner approved 2026-08-28 — execute blocked until 2026-09-11 |
 | [#38](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/38) | [`ISSUE_038_cookieyes_banner_locale_en`](ISSUE_038_cookieyes_banner_locale_en/PLAN.md) | CookieYes Free = one language — owner decision |
 | [#32](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/32) | [`ISSUE_032_lead_notifications_resend_line`](ISSUE_032_lead_notifications_resend_line/PLAN.md) | Blocked on Resend/LINE secrets |
