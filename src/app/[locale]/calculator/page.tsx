@@ -37,8 +37,6 @@ export default async function CalculatorPage({
     usePages ? getCalculatorPageContent(locale) : Promise.resolve(null),
     getCalculatorConfig(),
   ]);
-  // Size table isn't wired into the public page yet (S7) — keep today's
-  // params-only behaviour.
   const calculatorConfig = calculatorConfigResult.params;
 
   const hasRow = Boolean(pageContent);
@@ -68,7 +66,8 @@ export default async function CalculatorPage({
         </Reveal>
 
         <CalculatorClient
-          packages={packages}
+          packages={packages.map(({ sizeKw, priceThb, isPopular }) => ({ sizeKw, priceThb, isPopular }))}
+          sizeTable={calculatorConfigResult.sizeTable}
           panelTitle={usePages && hasRow ? pageContent?.panelTitle : undefined}
           panelIntro={usePages && hasRow ? pageContent?.panelIntro : undefined}
           config={calculatorConfig}
