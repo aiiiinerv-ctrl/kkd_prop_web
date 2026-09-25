@@ -40,7 +40,7 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 | **S0** | Live baseline ใหม่ + ignore `/stuffs/` (F1) | `nextjs-dev` (browser/curl) | — | เริ่มก่อน | 0.25 d | done 2026-09-26 |
 | **S1** | Pure lib: `SizeRow`, `DEFAULT_SIZE_TABLE` legacy, `recommendFromTable()` + equality proof | `nextjs-dev` | — (script = reviewer) | ⏳ S0 | 0.5 d | done — pending review |
 | **S2** | Pure parser + guards + diff + `verify-calculator-import.mts` (fixture สังเคราะห์) | `nextjs-dev` | `audit-compliance-reviewer` (อ่าน guards เป็น security review) | ⏳ S1 (type) | 1 d | done 2026-09-26 (reviewed) |
-| **S3** | Schema additive + migration + prod DDL asset + storage-engine contract + audit type | `nextjs-dev` | `deploy-verify` (DDL/InnoDB) | ✅ ขนานกับ S2 (⏳ S1) | 0.5 d | pending |
+| **S3** | Schema additive + migration + prod DDL asset + storage-engine contract + audit type | `nextjs-dev` | `deploy-verify` (DDL/InnoDB) | ✅ ขนานกับ S2 (⏳ S1) | 0.5 d | done 2026-09-26 (reviewed) |
 | **S4** | `/files` hardening: `private/calculator-imports/` ADMIN-only + xlsx/attachment/nosniff | `nextjs-dev` | `audit-compliance-reviewer` | ✅ ขนานกับ S1–S3 (⏳ S0) | 0.5 d | pending |
 | **S5** | Server actions preview/apply + reset ล้าง `sizeTable` + `getCalculatorConfig` คืนตาราง | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ S2, S3, S4 | 1 d | pending |
 | **S6a** | Admin UI spec การ์ด "ตารางขนาดระบบ (Excel)" | `ux-ui-expert` (read-only) | — | ✅ ขนานกับ S1–S5 | 0.5 d | done 2026-09-26 |
@@ -250,7 +250,11 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 
 **Rollback (local):** `git revert` + `npx prisma migrate reset` บน dev DB. **Prod:** ยังไม่เกี่ยว (DDL รันใน S9)
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้:** ทำครบตามสเปก — `CalculatorConfig` เพิ่ม `sizeTable Json?` + `sizeTableImportId String? @db.VarChar(40)`; model ใหม่ `CalculatorImport` (fileName/fileKey VarChar(120), sha256 Char(64), sizeBytes Int, rows/warnings Json, uploadedById → `AdminUser` ON DELETE RESTRICT, index บน createdAt/sha256) + back-relation `calculatorImports` บน `AdminUser`; migration `prisma/migrations/20260925173525_add_calculator_size_table_import/migration.sql` apply สำเร็จบน MySQL local (ผ่าน docker compose, ไม่ต้องเปิด OrbStack เพิ่ม); `CalculatorImport` ลงทะเบียนใน `storage-engine-contract.ts` (ต่อจาก `AdminUser`, FK ใหม่ `CalculatorImport_uploadedById_fkey` RESTRICT/CASCADE) และ `AuditEntityType`/`AUDIT_ENTITY_LABELS`; DDL asset ใหม่ `docs/plans/assets/calculator-excel-import-production-ddl.sql` คัดลอกชนิดคอลัมน์ตรงจาก migration.sql, `ADD COLUMN IF NOT EXISTS` บน `CalculatorConfig`, `CREATE TABLE IF NOT EXISTS … ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci` พร้อม FK inline (กัน "ADD CONSTRAINT IF NOT EXISTS" ที่ MySQL ไม่มี) และ verify query ท้ายไฟล์ ไม่มี DROP ที่ไหนเลย
+
+**พบระหว่าง S3 และแก้แยก commit (`cabc3fd` `fix(deploy)`):** `PageBanner`/`PageBannerSlide` (เพิ่มใน `3b45560`, 2026-08-28) ไม่เคยถูกลงทะเบียนใน `scripts/lib/storage-engine-contract.ts` → `verify-storage-engine` RED และ **`backup-db.mts` ใช้ไม่ได้เลยตั้งแต่ 2026-08-28** (snapshot ล่าสุด 2026-08-27) — เป็น prerequisite ของ S9 (runbook บังคับ snapshot ก่อน DDL) จึงแก้ทันทีแยกจากงาน S3. หลังแก้ (main session, 2026-09-26): `verify-storage-engine` → `ENGINE_GATE=GREEN`; `backup-db` → snapshot 6.6 MB (มี PageBanner/PageBannerSlide/CalculatorImport); `restore-db` dry-run → ผ่าน, "nothing was changed"
+- `prisma format` เผลอจัด alignment model อื่น → agent คืนค่าแล้ว; diff schema เหลือเฉพาะที่ตั้งใจ (+ จัด alignment บรรทัด `billThreshold5To10Kw` ที่เยื้องผิดอยู่เดิม 1 บรรทัด)
+- DoD: migrate ✓ · seed ×2 ✓ · storage/backup/restore ✓ (หลัง fix) · build ✓ · verify-calculator + verify-calculator-import ✓ · e2e-calculator-config ✓ (`CALC CONFIG LIVE-VERIFY: all checks passed`) · `deploy-verify` บน DDL asset → **GO** (7/7: MariaDB ยืนยันจาก asset เดิม 3 ไฟล์ที่ใช้ `ADD COLUMN IF NOT EXISTS` ผ่านบน host นี้; `AdminUser` เป็น InnoDB ตาม Gate D/E 2026-08-27; ชนิด/index/FK ตรง migration; JSON column มี precedent บน prod; idempotent; ไม่มี DROP) — เพิ่ม engine pre-check query ตามข้อแนะนำ
 
 ---
 
