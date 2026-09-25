@@ -31,7 +31,7 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 
 ## Status
 
-**In progress — 2026-09-26**: S0–S7 code committed on main (ahead of origin); S6/S7 independent reviews pending (owner approved Cursor inherit); S8–S10 ยังไม่เริ่ม. Handoff: [`calculator-excel-import-codex-handoff-tasks.md`](calculator-excel-import-codex-handoff-tasks.md)
+**In progress — 2026-09-26**: S0–S8 code on main (ahead of origin); S9–S10 ยังไม่เริ่ม (prod deploy / Excel go-live). Handoff: [`calculator-excel-import-codex-handoff-tasks.md`](calculator-excel-import-codex-handoff-tasks.md)
 
 ## Sprint tracker
 
@@ -46,7 +46,7 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 | **S6a** | Admin UI spec การ์ด "ตารางขนาดระบบ (Excel)" | `ux-ui-expert` (read-only) | — | ✅ ขนานกับ S1–S5 | 0.5 d | done 2026-09-26 |
 | **S6** | Admin tab: ลบ threshold/sun/price fields, preview ใช้ตาราง (แก้ "5kw kW"), การ์ด upload/preview/diff/ยืนยัน/ประวัติ + e2e | `nextjs-dev` | `audit-compliance-reviewer`, `design-business-reviewer` (admin real render) | ⏳ S5, S6a | 1.5 d | done 2026-09-26 — commits `cfe7c4a`…`36b6c69`; audit+design PASS (orchestrator fallback; specialist agents quota-blocked) |
 | **S7** | Public calculator ใช้ตาราง: ลบ tier markers, พิมพ์เกิน slider, tiles 3 ช่อง, สถานะพิเศษ, 100%, messages TH/EN | `nextjs-dev` | `i18n-parity-checker`, `design-business-reviewer` (TH/EN + mobile) | ⏳ S5 (✅ ขนานกับ S6 ได้ ถ้าคนละ agent) | 1.5 d | done 2026-09-26 — commits `7385a5c`…`32c3edd`; i18n PASS; public design specialist re-run optional when quota resets |
-| **S8** | Cleanup โค้ด legacy (`calculateSavings`, `systemKey`, threshold, sun/days/price ใน schema/zod/seed) | `nextjs-dev` | `audit-compliance-reviewer` (actions/zod) | ⏳ S6, S7 | 0.5 d | pending |
+| **S8** | Cleanup โค้ด legacy (`calculateSavings`, `systemKey`, threshold, sun/days/price ใน schema/zod/seed) | `nextjs-dev` | `audit-compliance-reviewer` (actions/zod) | ⏳ S6, S7 | 0.5 d | done 2026-09-26 — verify green; migration deferred on prod |
 | **S9** | Release prod: snapshot → DDL additive → deploy → smoke → ตัวเลขเท่า baseline S0 | `hosting-deploy-specialist` + human FTP (`!`) | `deploy-verify` (ก่อน upload) | ⏳ S8 | 0.5 d | pending |
 | **S10** | Post-deploy go-live ข้อมูล: ADMIN upload `คำนวณติดตั้ง.xlsx` บน prod → preview/diff → ยืนยัน | owner/ADMIN (human) + agent browser ตรวจ | `design-business-reviewer` (render หลังเปลี่ยนตัวเลข, optional) | ⏳ S9 + owner พร้อม | 0.25 d | pending |
 
@@ -440,7 +440,13 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 
 **Rollback:** revert — migration DROP กระทบแค่ dev DB (`prisma migrate reset`)
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้ (2026-09-26):**
+- ลบ `calculateSavings` / `recommendSystemSizeKw` / `systemKey` / threshold + sun/days/price จาก `CalculatorParams`/`CALCULATOR_DEFAULTS`, schema, seed, `calculator-config.ts`
+- `scripts/verify-calculator.mts` ใช้ `legacyReference()` inline (threshold 3000/6000 + kW×5×30×4.5) — equality sweep 76/76 ยังเขียว
+- Migration `prisma/migrations/20260925193000_drop_legacy_calculator_params/migration.sql` มีหัวข้อ `-- DEFERRED: apply on prod only in the cleanup follow-up` — **S9 ห้ามรันบน prod**
+- **Verify:** `prisma migrate deploy` + seed ×2 ✓; `verify-calculator.mts` ✓; `verify-calculator-import.mts` ✓; `npm run build` ✓; `e2e-calculator-config.mts` (:3200) ✓; grep DoD ว่าง (ยกเว้น comment ใน verify)
+- **R9 restore dry-run:** `npx tsx scripts/restore-db.mts backups/2026-09-25T18-51-16` → Dry run OK (parse/count). Snapshot `database.sql` ยังมีคอลัมน์เก่า → `--confirm` เข้า schema หลัง S8 จะล้มที่ INSERT (ตั้งใจ; rollback = revert code คู่ snapshot ตามแผน)
+- Audit: ไม่มี mutation ใหม่ — `reset`/`update` ยัง `requireRole("ADMIN")` + `auditedEntity`; seed data เหลือ 4 ฟิลด์
 
 ---
 
