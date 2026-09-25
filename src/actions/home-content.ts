@@ -274,8 +274,14 @@ export async function updateHomeContent(formData: FormData): Promise<HomeContent
       if (newFaqBgKey) await storage.delete(newFaqBgKey);
       return { ok: false, conflict: true };
     }
+    // Post-commit and best-effort: a throw here would reach the outer catch,
+    // which deletes the *new* (now committed) hero/FAQ-bg blobs.
     if (newHeroKey && existing.heroImageKey && existing.heroImageKey !== newHeroKey) {
-      await storage.delete(existing.heroImageKey);
+      try {
+        await storage.delete(existing.heroImageKey);
+      } catch (err) {
+        console.error("Failed to delete old hero image blob", err);
+      }
     }
     if (
       (newFaqBgKey || removeFaqBg) &&
