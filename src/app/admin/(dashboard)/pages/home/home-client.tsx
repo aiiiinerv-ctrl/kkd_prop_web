@@ -9,6 +9,7 @@ import { updateContactSettings } from "@/actions/site-settings";
 import { BilingualTabs, DeleteConfirm } from "@/components/admin/crud-page";
 import { PageShell } from "@/components/admin/pages";
 import { PageBannerPanel, type PageBannerAdminData } from "@/components/admin/page-banner-panel";
+import { FAQ_BG_OVERLAY_CLASS } from "@/components/site/faq-section";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -274,6 +275,191 @@ function HeroImageSection({
   );
 }
 
+const FAQ_BG_MAX_MB = 5;
+
+/**
+ * Optional, non-locale-specific background image for the FAQ section (#142).
+ * Mirrors `HeroImageSection`'s client-side type/size check and preview
+ * pattern, but not extracted into a shared component (Default #14 — hero
+ * has no remove flow and just shipped; refactoring both is unneeded risk).
+ * Upload and remove are mutually exclusive on the client (picking a new
+ * file cancels a pending remove and vice versa) because the server rejects
+ * both being present at once (Default #4).
+ */
+function FaqBackgroundSection({
+  faqBackgroundImageUrl,
+  faqBackgroundBlobMissing,
+  showFaq,
+  faqLineMissing,
+}: {
+  faqBackgroundImageUrl: string | null;
+  faqBackgroundBlobMissing: boolean;
+  showFaq: boolean;
+  faqLineMissing: boolean;
+}) {
+  const [preview, setPreview] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [pendingRemove, setPendingRemove] = useState(false);
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
+
+  const hasCurrentImage = Boolean(faqBackgroundImageUrl);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setFileError(null);
+    if (!file) {
+      setPreview(null);
+      return;
+    }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setFileError("รองรับเฉพาะไฟล์ JPEG, PNG หรือ WebP");
+      e.target.value = "";
+      setPreview(null);
+      return;
+    }
+    if (file.size > FAQ_BG_MAX_MB * 1024 * 1024) {
+      setFileError(`ไฟล์ต้องมีขนาดไม่เกิน ${FAQ_BG_MAX_MB}MB`);
+      e.target.value = "";
+      setPreview(null);
+      return;
+    }
+    // Picking a new file cancels any pending remove (Default #4 — the two are mutually exclusive).
+    setPendingRemove(false);
+    setConfirmingRemove(false);
+    setPreview(URL.createObjectURL(file));
+  };
+
+  const previewSrc = pendingRemove ? null : preview ?? faqBackgroundImageUrl;
+
+  return (
+    <div className="rounded-xl border border-border/70 bg-card p-6">
+      <h2 className="mb-1 font-semibold">รูปพื้นหลังส่วนคำถามที่พบบ่อย (FAQ)</h2>
+      <p className="mb-4 text-sm text-muted-foreground">
+        ใช้ภาพเดียวกันทั้งเว็บไทยและอังกฤษ — แนะนำแนวนอน กว้างอย่างน้อย 1920px วางจุดสนใจไว้กลางภาพ
+        ไม่เกิน {FAQ_BG_MAX_MB}MB (JPEG/PNG/WebP) ระบบจะใส่ชั้นสีขาวโปร่งทับให้อัตโนมัติ
+      </p>
+
+      {(!showFaq || faqLineMissing) && (
+        <p className="mb-4 rounded-md border border-border/70 bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+          {!showFaq
+            ? "ส่วน FAQ ถูกปิดอยู่ รูปจะยังไม่แสดงบนหน้าเว็บ"
+            : "ยังไม่ได้ตั้งค่า LINE ในข้อมูลติดต่อ รูปจะยังไม่แสดงบนหน้าเว็บ"}
+        </p>
+      )}
+
+      {faqBackgroundBlobMissing && (
+        <p className="mb-4 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          ไม่พบไฟล์รูปพื้นหลังในระบบจัดเก็บ — หน้าเว็บจริงแสดงพื้นเรียบแทน
+        </p>
+      )}
+
+      <div
+        className="relative mb-4 overflow-hidden rounded-lg border border-border/70 bg-muted/40"
+        style={{ aspectRatio: "16/6" }}
+      >
+        {previewSrc ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={previewSrc}
+              alt="ตัวอย่างรูปพื้นหลัง FAQ"
+              className="absolute inset-0 size-full object-cover object-center"
+            />
+            <div className={FAQ_BG_OVERLAY_CLASS} />
+            <div className="relative flex size-full flex-col items-start justify-center gap-1.5 px-6">
+              <span className="inline-block w-fit rounded-full bg-accent px-3 py-1 text-[11px] font-semibold text-primary">
+                คำถามที่พบบ่อย
+              </span>
+              <p className="text-sm font-extrabold text-primary sm:text-base">
+                ตัวอย่างหัวข้อ FAQ บนพื้นหลังนี้
+              </p>
+              <p className="max-w-md text-xs text-muted-foreground">
+                ตัวอย่างข้อความนำ — แสดงให้เห็นว่าอ่านง่ายบนรูปพื้นหลังที่เลือก
+              </p>
+            </div>
+          </>
+        ) : (
+          <div className="flex size-full items-center justify-center text-xs text-muted-foreground">
+            ยังไม่มีรูป — หน้าเว็บใช้พื้นเรียบ
+          </div>
+        )}
+        {pendingRemove && (
+          <span className="absolute right-2 top-2 rounded-full bg-destructive px-2.5 py-1 text-[11px] font-semibold text-destructive-foreground">
+            จะถูกลบเมื่อบันทึก
+          </span>
+        )}
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="home-faq-bg-image">อัปโหลดรูปพื้นหลัง</Label>
+        <Input
+          id="home-faq-bg-image"
+          name="faqBackgroundImage"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          disabled={pendingRemove}
+          onChange={handleFileChange}
+        />
+        {fileError && <p className="text-xs text-destructive">{fileError}</p>}
+      </div>
+
+      {pendingRemove && <input type="hidden" name="removeFaqBackground" value="on" />}
+
+      {hasCurrentImage && !pendingRemove && !confirmingRemove && (
+        <Button
+          type="button"
+          id="home-faq-bg-remove"
+          variant="outline"
+          className="mt-3"
+          onClick={() => setConfirmingRemove(true)}
+        >
+          ลบรูปพื้นหลัง
+        </Button>
+      )}
+
+      {confirmingRemove && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          <span>ยืนยันลบรูปพื้นหลัง? รูปจะถูกลบเมื่อกดบันทึก</span>
+          <Button
+            type="button"
+            id="home-faq-bg-remove-confirm"
+            variant="destructive"
+            className="h-7 px-2.5 py-0 text-xs"
+            onClick={() => {
+              setConfirmingRemove(false);
+              setPendingRemove(true);
+              setPreview(null);
+              setFileError(null);
+            }}
+          >
+            ยืนยันลบ
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-7 px-2.5 py-0 text-xs"
+            onClick={() => setConfirmingRemove(false)}
+          >
+            ยกเลิก
+          </Button>
+        </div>
+      )}
+
+      {pendingRemove && (
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-3"
+          onClick={() => setPendingRemove(false)}
+        >
+          เลิกลบ
+        </Button>
+      )}
+    </div>
+  );
+}
+
 function ContactSection({ contact }: { contact: ContactData }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -345,6 +531,9 @@ export function HomeClient({
   canMutateContact,
   heroImageUrl,
   heroBlobMissing,
+  faqBackgroundImageUrl,
+  faqBackgroundBlobMissing,
+  faqLineMissing,
   bannerData,
   embedded = false,
 }: {
@@ -353,6 +542,9 @@ export function HomeClient({
   canMutateContact: boolean;
   heroImageUrl: string | null;
   heroBlobMissing: boolean;
+  faqBackgroundImageUrl: string | null;
+  faqBackgroundBlobMissing: boolean;
+  faqLineMissing: boolean;
   bannerData: PageBannerAdminData;
   /** When true, skip outer PageShell (parent tabs already provide chrome). */
   embedded?: boolean;
@@ -786,6 +978,13 @@ export function HomeClient({
             }
           />
         </div>
+
+        <FaqBackgroundSection
+          faqBackgroundImageUrl={faqBackgroundImageUrl}
+          faqBackgroundBlobMissing={faqBackgroundBlobMissing}
+          showFaq={showFaq}
+          faqLineMissing={faqLineMissing}
+        />
 
         <div className="rounded-xl border border-border/70 bg-card p-6">
           <h2 className="mb-1 font-semibold">คำถามที่พบบ่อย (FAQ) — {faqItems.length}/{HOME_FAQ_MAX} ข้อ</h2>

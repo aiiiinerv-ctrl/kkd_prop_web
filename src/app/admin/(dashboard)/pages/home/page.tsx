@@ -2,6 +2,8 @@ import { canManageContent, canManageSiteSettings, requireRole } from "@/lib/auth
 import { getPageBannerAdmin } from "@/lib/admin/page-banner-admin";
 import { prisma } from "@/lib/db";
 import { storage } from "@/lib/storage";
+import { toSiteSettingsView } from "@/lib/content/views";
+import { resolveQuickContact } from "@/lib/site-contact";
 import { HomeAdminShell } from "./home-admin-shell";
 
 export default async function PagesHomeContentPage() {
@@ -36,6 +38,14 @@ export default async function PagesHomeContentPage() {
   }
 
   const heroBlobMissing = home.heroImageKey ? !(await storage.exists(home.heroImageKey)) : false;
+  const faqBackgroundBlobMissing = home.faqBackgroundImageKey
+    ? !(await storage.exists(home.faqBackgroundImageKey))
+    : false;
+  // E6: same lineUrl resolution the public page uses (resolveQuickContact),
+  // so the admin hint matches whether the LINE button will actually render.
+  const faqLineMissing = !resolveQuickContact(
+    siteSettings ? toSiteSettingsView(siteSettings, "th") : null
+  ).lineUrl;
 
   return (
     <HomeAdminShell
@@ -53,6 +63,11 @@ export default async function PagesHomeContentPage() {
       canMutateProperties={canMutateProperties}
       heroImageUrl={home.heroImageKey ? storage.publicUrl(home.heroImageKey) : null}
       heroBlobMissing={heroBlobMissing}
+      faqBackgroundImageUrl={
+        home.faqBackgroundImageKey ? storage.publicUrl(home.faqBackgroundImageKey) : null
+      }
+      faqBackgroundBlobMissing={faqBackgroundBlobMissing}
+      faqLineMissing={faqLineMissing}
       bannerData={bannerData}
       pageSeo={
         pageSeo
