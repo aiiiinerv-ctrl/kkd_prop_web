@@ -20,6 +20,7 @@ export type AuditEntityType =
   | "Package"
   | "CalculatorPageContent"
   | "CalculatorConfig"
+  | "CalculatorImport"
   | "PackagesPageContent"
   | "PageSeo"
   | "PageBanner"

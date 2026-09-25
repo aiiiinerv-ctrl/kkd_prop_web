@@ -112,6 +112,7 @@ model AdminUser {
   assignedLeads              Lead[]          @relation("LeadAssignedSales")
   assignedBookingsAsSales    SurveyBooking[] @relation("BookingAssignedSales")
   assignedBookingsAsEngineer SurveyBooking[] @relation("BookingAssignedEngineer")
+  calculatorImports          CalculatorImport[]
 }
 
 model PromoChannel {
@@ -685,9 +686,33 @@ model CalculatorConfig {
   maxBill                      Int      @default(8000)
   stepBill                     Int      @default(100)
   billThreshold3To5Kw          Int      @default(3000)
-  billThreshold5To10Kw          Int      @default(6000)
+  billThreshold5To10Kw         Int      @default(6000)
+  // Excel-imported size table (SizeRow[] — see src/lib/calculator-size-table.ts).
+  // null = use the committed DEFAULT_SIZE_TABLE. No app code reads these two
+  // columns yet — wired up in a later sprint (S5).
+  sizeTable                    Json?
+  sizeTableImportId            String?  @db.VarChar(40)
   version                      Int      @default(1)
   updatedAt                    DateTime @updatedAt
+}
+
+// History of Excel size-table uploads (preview drafts + applied versions).
+// "currently active" = CalculatorConfig.sizeTableImportId; everything else
+// here is just history/rollback material — no status column, no dual-write.
+model CalculatorImport {
+  id           String    @id @default(cuid())
+  fileName     String    @db.VarChar(120)
+  fileKey      String    @db.VarChar(120)
+  sha256       String    @db.Char(64)
+  sizeBytes    Int
+  rows         Json
+  warnings     Json
+  uploadedById String    @db.VarChar(40)
+  uploadedBy   AdminUser @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime  @default(now())
+
+  @@index([createdAt])
+  @@index([sha256])
 }
 
 // Singleton (mirrors BookingCapacitySetting) — admin-configurable payment

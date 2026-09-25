@@ -110,6 +110,7 @@ export const AUDIT_ENTITY_LABELS: Record<AuditEntityType, string> = {
   Package: "แพ็กเกจ",
   CalculatorPageContent: "เนื้อหาหน้าเครื่องคำนวณ",
   CalculatorConfig: "ตัวเลขการคำนวณ",
+  CalculatorImport: "ชุดตารางคำนวณ (Excel)",
   PackagesPageContent: "เนื้อหาหน้าแพ็กเกจ",
   PageSeo: "SEO หน้าเว็บ",
   PageBanner: "แบนเนอร์หน้าเว็บ",

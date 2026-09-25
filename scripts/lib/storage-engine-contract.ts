@@ -4,6 +4,7 @@ export const APPLICATION_TABLE_CONTRACTS = [
   { table: "PromoLandingPath", delegate: "promoLandingPath" },
   { table: "ChannelExecutive", delegate: "channelExecutive" },
   { table: "AdminUser", delegate: "adminUser" },
+  { table: "CalculatorImport", delegate: "calculatorImport" },
   { table: "Lead", delegate: "lead" },
   { table: "SurveyBooking", delegate: "surveyBooking" },
   { table: "BookingCapacitySetting", delegate: "bookingCapacitySetting" },
@@ -173,6 +174,15 @@ export const FOREIGN_KEY_CONTRACTS: readonly ForeignKeyContract[] = [
     referencedTable: "PageBanner",
     referencedColumn: "id",
     deleteRule: "CASCADE",
+    updateRule: "CASCADE",
+  },
+  {
+    name: "CalculatorImport_uploadedById_fkey",
+    table: "CalculatorImport",
+    column: "uploadedById",
+    referencedTable: "AdminUser",
+    referencedColumn: "id",
+    deleteRule: "RESTRICT",
     updateRule: "CASCADE",
   },
   {
