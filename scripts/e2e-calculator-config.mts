@@ -1,7 +1,8 @@
 // E2E for the S6 admin calculator tab: the trimmed ×10/slider form and the
 // "ตารางขนาดระบบ (Excel)" card (upload → preview → apply/reject/duplicate →
-// rollback → reset), plus role restriction and audit trail. See
-// docs/plans/calculator-excel-import-sprints.md S6 and
+// rollback → reset), plus role restriction and audit trail — and S7 public
+// calculator checks after apply/reset. See
+// docs/plans/calculator-excel-import-sprints.md S6/S7 and
 // docs/plans/calculator-excel-import-admin-ui-spec.md.
 //
 // Server must be running (`npm run start`, production mode) before this
@@ -74,6 +75,17 @@ async function openConfigTab(page: Page) {
   await page.locator("#calculator-tab-config").click();
   await page.waitForSelector("#calculator-tab-config[data-active]", { timeout: 10000 });
   await page.waitForSelector("#calc-annual-mult", { state: "visible", timeout: 10000 });
+}
+
+/** S7: set the public bill field and read the recommendation panel text. */
+async function publicCalcBody(page: Page, locale: "th" | "en", bill: number): Promise<string> {
+  await page.goto(`${BASE_URL}/${locale}/calculator`);
+  await page.waitForSelector("#monthly-bill", { timeout: 15000 });
+  await page.fill("#monthly-bill", String(bill));
+  await page.locator("#monthly-bill").blur();
+  // Client state updates synchronously; give a tick for React to paint.
+  await page.waitForTimeout(200);
+  return page.locator("body").innerText();
 }
 
 const browser = await chromium.launch({ channel: "chrome", headless: true });
@@ -191,6 +203,23 @@ const firstImportId = firstAppliedRow?.sizeTableImportId ?? null;
 if (!firstImportId) fail("CALC SIZE TABLE: sizeTableImportId not set after apply");
 pass("CALC SIZE TABLE: DB sizeTableImportId set to the applied import");
 
+// --- S7 public: after apply (3+5 kW table, last billMax=6000) ---
+const publicPage = await browser.newPage();
+for (const locale of ["th", "en"] as const) {
+  const at2500 = await publicCalcBody(publicPage, locale, 2500);
+  if (!/3\s*kW/i.test(at2500)) fail(`PUBLIC ${locale}: bill 2500 should recommend 3 kW after apply`);
+  const at500 = await publicCalcBody(publicPage, locale, 500);
+  const covers =
+    locale === "th" ? at500.includes("ครอบคลุมค่าไฟเต็ม 100%") : at500.includes("Covers 100% of your electricity bill");
+  if (!covers) fail(`PUBLIC ${locale}: bill 500 should show covers-full-bill after apply`);
+  const atTooLarge = await publicCalcBody(publicPage, locale, 10000);
+  const tooLarge =
+    locale === "th" ? atTooLarge.includes("ระบบเกิน") : atTooLarge.includes("System larger than");
+  if (!tooLarge) fail(`PUBLIC ${locale}: bill 10000 should show tooLarge after apply (last billMax 6000)`);
+  pass(`PUBLIC ${locale}: applied table → 3 kW / 100% / tooLarge`);
+}
+await publicPage.close();
+
 // --- Macro-enabled file -> reject list ---
 const macroBuf = await withMacroEntry(await buildOnGridFixture({ includeCategory: true, rows: goodRows() }));
 const macroFilePath = await writeTempXlsx(macroBuf, "macro-fixture.xlsx");
@@ -302,6 +331,19 @@ if (resetRow.annualSavingMonthsMultiplier !== CALCULATOR_DEFAULTS.annualSavingMo
   fail("CALC SIZE TABLE: reset did not restore default multiplier");
 }
 pass("CALC SIZE TABLE: reset -> default table + default multiplier/slider");
+
+// --- S7 public: after reset → legacy 3/5/10 (S0 baseline sizes) ---
+const publicAfterReset = await browser.newPage();
+for (const locale of ["th", "en"] as const) {
+  const at2500 = await publicCalcBody(publicAfterReset, locale, 2500);
+  if (!/3\s*kW/i.test(at2500)) fail(`PUBLIC ${locale}: reset → bill 2500 should be 3 kW`);
+  const at3000 = await publicCalcBody(publicAfterReset, locale, 3000);
+  if (!/5\s*kW/i.test(at3000)) fail(`PUBLIC ${locale}: reset → bill 3000 should be 5 kW`);
+  const at6000 = await publicCalcBody(publicAfterReset, locale, 6000);
+  if (!/10\s*kW/i.test(at6000)) fail(`PUBLIC ${locale}: reset → bill 6000 should be 10 kW`);
+  pass(`PUBLIC ${locale}: reset → legacy 3/5/10 kW sizes`);
+}
+await publicAfterReset.close();
 
 // --- Audit trail ---
 const importCreateAudit = await prisma.auditLog.findFirst({
