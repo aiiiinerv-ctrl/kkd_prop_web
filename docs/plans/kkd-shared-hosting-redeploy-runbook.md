@@ -70,11 +70,14 @@ migration bookkeeping, which is fine today (Prisma Client never reads that
 table at runtime) but means the migration history in the repo is not a
 description of production's schema. Check the real columns, not the folder.
 
-Also note: production tables are **MyISAM**, which has no transactions — so
-`$transaction` in `withAudit()` does not actually roll back there. This is a
-release blocker for Pages CMS writes. Follow
-`docs/plans/pages-cms-innodb-conversion-runbook.md`; do not deploy Pages CMS or
-run a destructive restore until the InnoDB/FK gate is green.
+Also note: production tables were originally **MyISAM** (no transactions, so
+`$transaction` in `withAudit()` did not roll back). They were converted to
+InnoDB with FKs on 2026-08-27 — evidence in
+`docs/plans/assets/pages-cms-result/s02-gate-d-e/manifest.md` (conversion
+runbook: `docs/plans/pages-cms-innodb-conversion-runbook.md`). Every new
+`CREATE TABLE` in a hand-applied DDL asset must still say `ENGINE=InnoDB`
+(Prisma's generated SQL omits it), and assets should start with an
+`information_schema.TABLES` engine pre-check.
 
 ## Prerequisites
 
