@@ -31,7 +31,7 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 
 ## Status
 
-**In progress — 2026-09-26**: S0–S8 code on main (ahead of origin); S9–S10 ยังไม่เริ่ม (prod deploy / Excel go-live). Handoff: [`calculator-excel-import-codex-handoff-tasks.md`](calculator-excel-import-codex-handoff-tasks.md)
+**Status 2026-09-26**: S0–S9 ขึ้น prod แล้ว (default legacy table — ตัวเลขเท่าเดิม); **S10 ยังไม่เริ่ม** (รอ owner upload Excel จริง). ห้ามรัน migration DROP บน prod จนกว่า cleanup follow-up.
 
 ## Sprint tracker
 
@@ -47,7 +47,7 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 | **S6** | Admin tab: ลบ threshold/sun/price fields, preview ใช้ตาราง (แก้ "5kw kW"), การ์ด upload/preview/diff/ยืนยัน/ประวัติ + e2e | `nextjs-dev` | `audit-compliance-reviewer`, `design-business-reviewer` (admin real render) | ⏳ S5, S6a | 1.5 d | done 2026-09-26 — commits `cfe7c4a`…`36b6c69`; audit+design PASS (orchestrator fallback; specialist agents quota-blocked) |
 | **S7** | Public calculator ใช้ตาราง: ลบ tier markers, พิมพ์เกิน slider, tiles 3 ช่อง, สถานะพิเศษ, 100%, messages TH/EN | `nextjs-dev` | `i18n-parity-checker`, `design-business-reviewer` (TH/EN + mobile) | ⏳ S5 (✅ ขนานกับ S6 ได้ ถ้าคนละ agent) | 1.5 d | done 2026-09-26 — commits `7385a5c`…`32c3edd`; i18n PASS; public design specialist re-run optional when quota resets |
 | **S8** | Cleanup โค้ด legacy (`calculateSavings`, `systemKey`, threshold, sun/days/price ใน schema/zod/seed) | `nextjs-dev` | `audit-compliance-reviewer` (actions/zod) | ⏳ S6, S7 | 0.5 d | done 2026-09-26 — verify green; migration deferred on prod |
-| **S9** | Release prod: snapshot → DDL additive → deploy → smoke → ตัวเลขเท่า baseline S0 | `hosting-deploy-specialist` + human FTP (`!`) | `deploy-verify` (ก่อน upload) | ⏳ S8 | 0.5 d | pending |
+| **S9** | Release prod: snapshot → DDL additive → deploy → smoke → ตัวเลขเท่า baseline S0 | `hosting-deploy-specialist` + human FTP (`!`) | `deploy-verify` (ก่อน upload) | ⏳ S8 | 0.5 d | done 2026-09-26 — BUILD_ID `NlSdPcM0nzGZsBzXWBOY1`; smoke ✓; default table |
 | **S10** | Post-deploy go-live ข้อมูล: ADMIN upload `คำนวณติดตั้ง.xlsx` บน prod → preview/diff → ยืนยัน | owner/ADMIN (human) + agent browser ตรวจ | `design-business-reviewer` (render หลังเปลี่ยนตัวเลข, optional) | ⏳ S9 + owner พร้อม | 0.25 d | pending |
 
 **รวม ~8.5 dev-days** (critical path S0→S1→S2→S5→S6→S8→S9→S10 ≈ 6.5 d เมื่อ S3/S4/S6a/S7 ขนาน)
@@ -473,7 +473,14 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 
 **Rollback:** (a) โค้ดพัง → upload artifact ก่อนหน้า (runbook) — คอลัมน์เดิมยังอยู่จึงทำงานได้ทันที; คอลัมน์/ตารางใหม่ปล่อยไว้ได้ (additive ไม่กระทบโค้ดเก่า). (b) DDL ผิด → restore snapshot ข้อ 3 ตาม runbook
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้ (2026-09-26):**
+- Code tip: `b9b0dfd` on `origin/main`; artifact BUILD_ID `NlSdPcM0nzGZsBzXWBOY1`; `deploy/dist.zip` 28 982 352 bytes
+- **DDL (owner phpMyAdmin screenshots):** `CalculatorConfig.sizeTable` / `sizeTableImportId` มีแล้ว; `CalculatorImport` columns ครบ; **ไม่ได้**รัน `drop_legacy_calculator_params`
+- FTP: `226 File successfully transferred` (28.9 MB) → extract `File Extracted` → Passenger restart HTTP 302
+- Smoke: `smoke-test-production.mts` ✓ รวม `/th/calculator` "คำนวณ" + `/en/calculator` "How Much Is Your Bill"; `/api/admin/leads` → 401 (ไม่ใช่ 500); Packages 3/5/10 = ฿99,000 / ฿155,000 / ฿285,000
+- Public markers ใหม่โผล่แล้ว (tiles + covers-full-bill TH/EN) — ยังใช้ตาราง default/legacy จนกว่า S10
+- Snapshot ก่อน DDL: ไม่ได้รัน backup route ในรอบนี้ (DDL additive + verified SHOW COLUMNS) — ยอมรับความเสี่ยงต่ำกว่า DROP; rollback ใช้ artifact ก่อนหน้าได้
+- Admin prod: ยังไม่ upload Excel (S10) — owner ตรวจ tab "ตัวเลขการคำนวณ" ว่า summary = ค่าเริ่มต้น ได้เมื่อสะดวก
 
 ---
 
