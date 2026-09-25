@@ -3,17 +3,14 @@
 // AGENTS.md — so this is a standalone assertion script instead of a jest/vitest suite.
 // Usage: npx tsx scripts/verify-calculator.mts
 import {
-  BILL_THRESHOLD_3KW_TO_5KW,
-  BILL_THRESHOLD_5KW_TO_10KW,
   CALCULATOR_DEFAULTS,
   MAX_BILL,
   MIN_BILL,
   STEP_BILL,
-  calculateSavings,
   calculateTheoreticalAnnualSavingThb,
   calculateTheoreticalMonthlySavingThb,
   recommendFromTable,
-  recommendSystemSizeKw,
+  type CalcPackage,
 } from "../src/lib/calculator";
 import {
   DEFAULT_SIZE_TABLE,
@@ -36,31 +33,61 @@ function assert(label: string, ok: boolean) {
   if (!ok) failed = true;
 }
 
+// Inline copy of the pre-S8 tiered calculator (threshold 3000/6000 +
+// kW×5×30×4.5 capped at bill). Kept here so the equality sweep still proves
+// DEFAULT_SIZE_TABLE matches the old public behaviour after calculateSavings
+// was removed from src/ (S8 Default #3).
+function legacyReference(
+  billInput: string,
+  packages: CalcPackage[],
+  multiplier: number = defaults.annualSavingMonthsMultiplier
+): {
+  sizeKw: 3 | 5 | 10;
+  monthlySaving: number;
+  afterBill: number;
+  paybackYears: number | null;
+} | null {
+  const bill = Number(billInput);
+  if (billInput.trim() === "" || !Number.isFinite(bill) || bill <= 0) return null;
+
+  const sizeKw: 3 | 5 | 10 = bill < 3000 ? 3 : bill < 6000 ? 5 : 10;
+  const theoreticalMonthlySaving = sizeKw * 5 * 30 * 4.5;
+  const monthlySaving = Math.min(theoreticalMonthlySaving, bill);
+  const afterBill = bill - monthlySaving;
+  const matchedPackage = packages.find((pkg) => pkg.sizeKw === sizeKw);
+  const paybackYears =
+    matchedPackage && monthlySaving > 0
+      ? matchedPackage.priceThb / (monthlySaving * multiplier)
+      : null;
+
+  return { sizeKw, monthlySaving, afterBill, paybackYears };
+}
+
 console.log("=== theoretical monthly/annual saving vs. Excel rows ===");
-assertEqual("monthlySaving(3kW)", calculateTheoreticalMonthlySavingThb(3, defaults), 2025);
-assertEqual("monthlySaving(5kW)", calculateTheoreticalMonthlySavingThb(5, defaults), 3375);
-assertEqual("monthlySaving(10kW)", calculateTheoreticalMonthlySavingThb(10, defaults), 6750);
-assertEqual("annualSaving(3kW)", calculateTheoreticalAnnualSavingThb(3, defaults), 20250);
-assertEqual("annualSaving(5kW)", calculateTheoreticalAnnualSavingThb(5, defaults), 33750);
-assertEqual("annualSaving(10kW)", calculateTheoreticalAnnualSavingThb(10, defaults), 67500);
+assertEqual("monthlySaving(3kW)", calculateTheoreticalMonthlySavingThb(3), 2025);
+assertEqual("monthlySaving(5kW)", calculateTheoreticalMonthlySavingThb(5), 3375);
+assertEqual("monthlySaving(10kW)", calculateTheoreticalMonthlySavingThb(10), 6750);
+assertEqual("annualSaving(3kW)", calculateTheoreticalAnnualSavingThb(3), 20250);
+assertEqual("annualSaving(5kW)", calculateTheoreticalAnnualSavingThb(5), 33750);
+assertEqual("annualSaving(10kW)", calculateTheoreticalAnnualSavingThb(10), 67500);
 
-console.log("\n=== bill-bracket recommendation ===");
-assertEqual("recommend(2999)", recommendSystemSizeKw(2999, defaults), 3);
-assertEqual("recommend(3000)", recommendSystemSizeKw(BILL_THRESHOLD_3KW_TO_5KW, defaults), 5);
-assertEqual("recommend(5999)", recommendSystemSizeKw(5999, defaults), 5);
-assertEqual("recommend(6000)", recommendSystemSizeKw(BILL_THRESHOLD_5KW_TO_10KW, defaults), 10);
-assertEqual("recommend(500, below 3kW floor)", recommendSystemSizeKw(500, defaults), 3);
-assertEqual("recommend(50000)", recommendSystemSizeKw(50000, defaults), 10);
+console.log("\n=== legacyReference: bill-bracket recommendation ===");
+assertEqual("recommend(2999)", legacyReference("2999", [])!.sizeKw, 3);
+assertEqual("recommend(3000)", legacyReference("3000", [])!.sizeKw, 5);
+assertEqual("recommend(5999)", legacyReference("5999", [])!.sizeKw, 5);
+assertEqual("recommend(6000)", legacyReference("6000", [])!.sizeKw, 10);
+assertEqual("recommend(500, below 3kW floor)", legacyReference("500", [])!.sizeKw, 3);
+assertEqual("recommend(50000)", legacyReference("50000", [])!.sizeKw, 10);
 
-console.log("\n=== calculateSavings: capping + payback against real package prices ===");
-const packages = [
+console.log("\n=== legacyReference: capping + payback against real package prices ===");
+const packages: CalcPackage[] = [
   { sizeKw: 3, priceThb: 99000 },
   { sizeKw: 5, priceThb: 155000 },
   { sizeKw: 10, priceThb: 285000 },
 ];
 
-const uncappedCase = calculateSavings("10000", packages, defaults)!;
-assertEqual("uncapped(10000).systemKey", uncappedCase.systemKey, "system10kw");
+const uncappedCase = legacyReference("10000", packages)!;
+assertEqual("uncapped(10000).sizeKw", uncappedCase.sizeKw, 10);
 assertEqual("uncapped(10000).monthlySaving", uncappedCase.monthlySaving, 6750);
 assertEqual(
   "uncapped(10000).paybackYears",
@@ -68,7 +95,7 @@ assertEqual(
   Number((285000 / (6750 * 10)).toFixed(4)),
 );
 
-const cappedCase = calculateSavings("2000", packages, defaults)!;
+const cappedCase = legacyReference("2000", packages)!;
 assertEqual("capped(2000).monthlySaving", cappedCase.monthlySaving, 2000);
 assertEqual(
   "capped(2000).paybackYears",
@@ -76,17 +103,15 @@ assertEqual(
   Number((99000 / (2000 * 10)).toFixed(4)),
 );
 
-const noPackageCase = calculateSavings("3500", [], defaults)!;
+const noPackageCase = legacyReference("3500", [])!;
 assertEqual("noPackage(3500).paybackYears", noPackageCase.paybackYears, null);
 
 console.log("\n=== afterBill: the figure the customer actually reads ===");
-// Previously computed in the component with a Math.max(..., 0) guard; it lives
-// here now, next to the cap that is the reason it can't go negative.
 assertEqual("uncapped(10000).afterBill", uncappedCase.afterBill, 10000 - 6750);
 assertEqual("capped(2000).afterBill is zero, not negative", cappedCase.afterBill, 0);
-assertEqual("mid-range(3500).afterBill", calculateSavings("3500", packages, defaults)!.afterBill, 3500 - 3375);
+assertEqual("mid-range(3500).afterBill", legacyReference("3500", packages)!.afterBill, 3500 - 3375);
 for (const bill of [MIN_BILL, 1000, 2999, 3000, 5999, 6000, MAX_BILL]) {
-  const result = calculateSavings(String(bill), packages, defaults)!;
+  const result = legacyReference(String(bill), packages)!;
   assert(
     `afterBill(${bill}) is between 0 and the bill`,
     result.afterBill >= 0 && result.afterBill <= bill
@@ -95,37 +120,21 @@ for (const bill of [MIN_BILL, 1000, 2999, 3000, 5999, 6000, MAX_BILL]) {
 
 console.log("\n=== unusable input yields no result rather than a wrong one ===");
 for (const input of ["", "   ", "abc", "0", "-500", "NaN"]) {
-  assert(`calculateSavings(${JSON.stringify(input)}) === null`, calculateSavings(input, packages, defaults) === null);
+  assert(`legacyReference(${JSON.stringify(input)}) === null`, legacyReference(input, packages) === null);
 }
-assert('calculateSavings("3500") is not null', calculateSavings("3500", packages, defaults) !== null);
+assert('legacyReference("3500") is not null', legacyReference("3500", packages) !== null);
 
-console.log("\n=== slider range and tier thresholds agree ===");
-// The tier markers are positioned as a percentage of [MIN_BILL, MAX_BILL]; a
-// threshold outside that range would render off the track, and out-of-order
-// thresholds would draw the zones wrong.
+console.log("\n=== slider range agrees with legacy thresholds (historical check) ===");
 assert("MIN_BILL < MAX_BILL", MIN_BILL < MAX_BILL);
-assert(
-  "3kW→5kW threshold sits inside the slider range",
-  BILL_THRESHOLD_3KW_TO_5KW > MIN_BILL && BILL_THRESHOLD_3KW_TO_5KW < MAX_BILL
-);
-assert(
-  "5kW→10kW threshold sits inside the slider range",
-  BILL_THRESHOLD_5KW_TO_10KW > MIN_BILL && BILL_THRESHOLD_5KW_TO_10KW < MAX_BILL
-);
-assert(
-  "thresholds are in ascending order",
-  BILL_THRESHOLD_3KW_TO_5KW < BILL_THRESHOLD_5KW_TO_10KW
-);
-assert("every tier is reachable from the slider", MAX_BILL >= BILL_THRESHOLD_5KW_TO_10KW + STEP_BILL);
+assert("legacy 3→5 threshold (3000) sits inside the slider range", 3000 > MIN_BILL && 3000 < MAX_BILL);
+assert("legacy 5→10 threshold (6000) sits inside the slider range", 6000 > MIN_BILL && 6000 < MAX_BILL);
+assert("every legacy tier is reachable from the slider", MAX_BILL >= 6000 + STEP_BILL);
 
-// === S1: recommendFromTable(DEFAULT_SIZE_TABLE) must equal calculateSavings ===
-// #150: "default table ให้ผลเท่ากับ calculateSavings เดิมทุก 100 ฿ ในช่วง 500–8,000".
-// This is the equality proof that lets S1's new lib exist alongside the
-// legacy tier code with zero risk to the live public calculator.
-console.log("\n=== equality sweep: recommendFromTable(DEFAULT_SIZE_TABLE) vs calculateSavings (500-8,000 step 100) ===");
+// === equality: recommendFromTable(DEFAULT_SIZE_TABLE) must equal legacyReference ===
+console.log("\n=== equality sweep: recommendFromTable(DEFAULT_SIZE_TABLE) vs legacyReference (500-8,000 step 100) ===");
 let sweepChecked = 0;
 for (let bill = MIN_BILL; bill <= MAX_BILL; bill += STEP_BILL) {
-  const legacy = calculateSavings(String(bill), packages, defaults)!;
+  const legacy = legacyReference(String(bill), packages)!;
   const viaTable = recommendFromTable(bill, DEFAULT_SIZE_TABLE, packages, defaults.annualSavingMonthsMultiplier);
 
   if (viaTable.kind !== "ok") {
@@ -133,7 +142,7 @@ for (let bill = MIN_BILL; bill <= MAX_BILL; bill += STEP_BILL) {
     continue;
   }
 
-  assertEqual(`bill ${bill}: size (kW)`, viaTable.row.kw, Number(legacy.systemKey.replace(/^system|kw$/g, "")));
+  assertEqual(`bill ${bill}: size (kW)`, viaTable.row.kw, legacy.sizeKw);
   assertEqual(`bill ${bill}: monthlySaving`, viaTable.monthlySaving, legacy.monthlySaving);
   assertEqual(`bill ${bill}: afterBill`, viaTable.afterBill, legacy.afterBill);
   assertEqual(
@@ -145,7 +154,6 @@ for (let bill = MIN_BILL; bill <= MAX_BILL; bill += STEP_BILL) {
 }
 assert(`equality sweep covered all 76 points (${sweepChecked}/76)`, sweepChecked === 76);
 
-// === S1: table-driven recommendation rule (#146) on a synthetic multi-size table ===
 console.log("\n=== recommendFromTable: rule coverage on a synthetic (import-shaped) table ===");
 const ruleTestTable: SizeRow[] = [
   { kw: 3, phases: [1], sunHours: 5, days: 30, pricePerKwh: 4.5, panels: 6, roofM2: 16.2, billMin: 2000, billMax: 3000 },
@@ -159,7 +167,6 @@ const ruleTestPackages = [
   { sizeKw: 5, priceThb: 155000 },
   { sizeKw: 10, priceThb: 285000 },
   { sizeKw: 40, priceThb: 900000 },
-  // no Package at 115 kW — exercises "no matching Package → payback null"
 ];
 
 const r2500 = recommendFromTable(2500, ruleTestTable, ruleTestPackages, 10);
@@ -195,10 +202,9 @@ for (const bad of [Number.NaN, 0, -500]) {
   assert(`invalid bill ${bad} -> empty`, recommendFromTable(bad, ruleTestTable, ruleTestPackages, 10).kind === "empty");
 }
 
-// === S1: resolveSizeTable falls back to the legacy default on bad JSON ===
 console.log("\n=== resolveSizeTable: falls back to DEFAULT_SIZE_TABLE on missing/invalid JSON ===");
 const originalConsoleError = console.error;
-console.error = () => {}; // resolveSizeTable logs on the invalid-JSON path by design; keep output clean
+console.error = () => {};
 
 const nullResult = resolveSizeTable(null);
 assert("resolveSizeTable(null) -> default", nullResult.source === "default" && nullResult.table === DEFAULT_SIZE_TABLE);
@@ -223,7 +229,6 @@ assert("resolveSizeTable(valid table) -> import", validResult.source === "import
 
 console.error = originalConsoleError;
 
-// === S0 baseline: the 7 bills recorded live on prod 2026-09-25/26 (see docs/plans/calculator-excel-import-sprints.md S0) ===
 console.log("\n=== S0 baseline: recommendFromTable(DEFAULT_SIZE_TABLE) matches the 7 recorded prod bills ===");
 const s0Baseline: { bill: number; kw: number; afterBill: number; monthlySaving: number; paybackYears: number }[] = [
   { bill: 500, kw: 3, afterBill: 0, monthlySaving: 500, paybackYears: 19.8 },
