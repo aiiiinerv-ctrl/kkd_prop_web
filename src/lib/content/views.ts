@@ -489,6 +489,7 @@ export type HomePageContentView = {
   faqTitle: string;
   faqIntro: string;
   faqLineButtonLabel: string;
+  faqBackgroundImageKey: string | null;
 };
 
 export function toHomePageContentView(row: Row, locale: string): HomePageContentView {
@@ -534,5 +535,6 @@ export function toHomePageContentView(row: Row, locale: string): HomePageContent
     faqTitle: loc("faqTitle"),
     faqIntro: loc("faqIntro"),
     faqLineButtonLabel: loc("faqLineButtonLabel"),
+    faqBackgroundImageKey: row.faqBackgroundImageKey ? String(row.faqBackgroundImageKey) : null,
   };
 }

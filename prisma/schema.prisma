@@ -536,6 +536,8 @@ model HomePageContent {
   faqIntroEn           String? @db.Text
   faqLineButtonLabelTh String?
   faqLineButtonLabelEn String?
+  // Optional full-bleed background image for the FAQ section — #142
+  faqBackgroundImageKey String?
 
   version   Int      @default(1)
   updatedAt DateTime @updatedAt
