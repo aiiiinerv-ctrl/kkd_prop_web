@@ -39,7 +39,7 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 |---:|---|---|---|---|---:|---|
 | **S0** | Live baseline ใหม่ + ignore `/stuffs/` (F1) | `nextjs-dev` (browser/curl) | — | เริ่มก่อน | 0.25 d | done 2026-09-26 |
 | **S1** | Pure lib: `SizeRow`, `DEFAULT_SIZE_TABLE` legacy, `recommendFromTable()` + equality proof | `nextjs-dev` | — (script = reviewer) | ⏳ S0 | 0.5 d | done — pending review |
-| **S2** | Pure parser + guards + diff + `verify-calculator-import.mts` (fixture สังเคราะห์) | `nextjs-dev` | `audit-compliance-reviewer` (อ่าน guards เป็น security review) | ⏳ S1 (type) | 1 d | pending |
+| **S2** | Pure parser + guards + diff + `verify-calculator-import.mts` (fixture สังเคราะห์) | `nextjs-dev` | `audit-compliance-reviewer` (อ่าน guards เป็น security review) | ⏳ S1 (type) | 1 d | done 2026-09-26 (reviewed) |
 | **S3** | Schema additive + migration + prod DDL asset + storage-engine contract + audit type | `nextjs-dev` | `deploy-verify` (DDL/InnoDB) | ✅ ขนานกับ S2 (⏳ S1) | 0.5 d | pending |
 | **S4** | `/files` hardening: `private/calculator-imports/` ADMIN-only + xlsx/attachment/nosniff | `nextjs-dev` | `audit-compliance-reviewer` | ✅ ขนานกับ S1–S3 (⏳ S0) | 0.5 d | pending |
 | **S5** | Server actions preview/apply + reset ล้าง `sizeTable` + `getCalculatorConfig` คืนตาราง | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ S2, S3, S4 | 1 d | pending |
@@ -200,7 +200,32 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 
 **Rollback:** revert — ยังไม่มีผู้เรียก
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้ (2026-09-26):**
+- `src/lib/calculator-import/` (ใหม่ทั้งหมด, ยังไม่มีผู้เรียกนอก verify script):
+  - `validate-xlsx.ts` — `validateXlsxBuffer(buf, fileName)`: นามสกุล `.xlsx` + magic `504B0304` (ปฏิเสธ OLE `D0CF11E0`), ≤2 MB, jszip: entries ≤200, Σ uncompressed ≤20 MB (นับ byte จริงระหว่าง stream-inflate แล้วหยุดทันทีที่เกิน — **ไม่เชื่อ size ใน zip header** เพราะปลอมได้; ดู "แก้หลัง review"), reject `xl/vbaProject.bin`/`macroEnabled`, warn `xl/externalLinks/*`. รันก่อน exceljs เสมอ (ไม่เคย `new ExcelJS.Workbook()` ในไฟล์นี้)
+  - `parse-on-grid.ts` — `parseOnGridSheet(buf)`: หา sheet `/^on[\s-]?grid$/i`, header ด้วย label `ผลิตพลังงานต่อวัน` ใน 20 แถวแรก (`cell.master` สำหรับ merged cells), จับคอลัมน์ด้วยคู่ label (group|sub) ตาม research-145 §2.3 (ไม่พึ่งตำแหน่งคอลัมน์ — ผ่านทั้งไฟล์ใหม่ที่มี "ประเภท" และไฟล์เก่าที่เลื่อน 1 ช่อง), unit = คอลัมน์ถัดจาก size, billMin/billMax = 2 คอลัมน์ "ประมาณ" ใต้กลุ่ม "ค่าไฟ" เรียงตามตำแหน่ง, cap 1000 แถว/100 คอลัมน์, ใช้ cached result ของสูตรเท่านั้น (ไม่ evaluate), หยุดอ่านที่แถวแรกที่คอลัมน์ขนาดว่าง, roof area ไม่มี cached → `panels × 2.7` + warning; รวม 1φ/3φ ที่ค่าตรงกันเป็นแถวเดียว (`phases:[1,3]`), ไม่ตรง → Reject ระบุแถว+field; billMax หาย/billMin≥billMax/billMax ไม่เพิ่มเคร่งครัดตามลำดับ kW → Reject (C5); ผลลัพธ์ผ่าน `sizeTableSchema` (S1) เป็นด่านสุดท้ายเสมอ
+  - `diff.ts` — `diffSizeTables(current, next, packages, sliderMaxBill)`: เพิ่ม/ลบ/เปลี่ยนต่อ kW (field diff: phases/ช่วงค่าไฟ/panels/roofM2/sunHours/days/pricePerKwh), warning Package ที่ `isPublished` ไม่อยู่ในตารางใหม่, warning slider max ≥ billMax แถวสุดท้าย (Default #13); ผลต่อบิลตัวอย่าง **1,500/3,000/3,500/4,500/6,000/8,000** (เพิ่ม 4,500 ตามที่ coordinator สั่งหลัง admin UI spec §4.2.3) พร้อม `hasPackage` ต่อบิลทั้งก่อน/หลัง — ใช้ `recommendFromTable` (S1) ซ้ำแทนการเขียนกติกาเลือกขนาดใหม่
+  - `messages.ts` — string TH ตรงตาม admin UI spec §7.1–7.5 คำต่อคำ (ไฟล์/โครงสร้าง = `message`+`action` แยกกัน, ระดับแถว = ฝัง "→ …" ใน `message` เดียวตามตาราง §7.3 ที่ไม่มีคอลัมน์ action แยก), export `sortIssuesByRow()` ให้ reject list เรียงตามแถว Excel เสมอ; ไม่เข้า `messages/*.json` (admin ไทยล้วน — Default #6)
+  - `index.ts` — `importOnGridSizeTable(buf, fileName)` รวม validate→parse; re-export ทุกโมดูลย่อย; comment หัวไฟล์ห้าม import จาก client component (ไม่มี package `server-only` ในโปรเจกต์ ตามที่บันทึกไว้ในแผน)
+- `package.json`/`package-lock.json` — เพิ่ม `jszip: ^3.10.1` เป็น direct dependency (เวอร์ชันเดิมที่ล็อกไว้อยู่แล้วผ่าน exceljs — `npm install --package-lock-only` ไม่ได้อัปเกรดเวอร์ชัน แค่ย้ายขึ้นเป็น top-level entry)
+- `scripts/lib/calculator-import-fixtures.ts` (ใหม่) — สร้าง xlsx ใน memory ด้วย exceljs (+ jszip สำหรับแก้ zip หลัง exceljs เขียนแล้ว: macro entry, zip entries เกิน, ไฟล์ใหญ่เกิน); คอลัมน์ import เท่านั้น ไม่มีราคา/ยี่ห้อ
+- `scripts/verify-calculator-import.mts` (ใหม่) — assert 17 fixture: ไฟล์ดี(ใหม่มี "ประเภท")→Accept 3 แถว(ตรงกับ `DEFAULT_SIZE_TABLE` เป๊ะ), คอลัมน์เลื่อน(เก่า ไม่มี "ประเภท")→Accept, ไม่มี sheet→Reject, header หาย→Reject, คอลัมน์บังคับหาย→Reject, OLE magic→Reject, นามสกุลผิด→Reject, macro→Reject, zip entries 201→Reject, ไฟล์ >2MB→Reject, สูตรไม่มี cached→Reject, billMax ไม่เพิ่ม→Reject, 1φ/3φ ขัดกัน→Reject, billMax หาย→Reject, หน่วย "W"→Reject, DOCTYPE/XXE→Accept (พิสูจน์ไม่ crash), ตารางที่ 2 ด้านล่าง→Accept (อ่านเฉพาะตารางแรก) + `diffSizeTables` 3 เคส (เหมือนเดิม/เปลี่ยน/ลบ+warning); real-file check: มี `stuffs/คำนวณติดตั้ง.xlsx` → **Accept 31 แถวหลังรวม 1φ/3φ (33 แถวดิบ), kW 3 → 3,000** ตรงตาม research-145 เป๊ะ; มี `docs/stuffs/คำนวณติดตั้ง.xlsx` → **Reject เพราะ billMax หาย** (แถว 125 kW และ MW rows ในไฟล์เก่าไม่มีค่าไฟ); ไม่มีไฟล์ → พิมพ์ `- skipped (file not present)` ต่อไฟล์
+- **ยืนยัน (verification):**
+  - `npx tsx scripts/verify-calculator-import.mts` → ทุกบรรทัด `✓` รวม real-file 2 เคสข้างต้น (ไฟล์มีอยู่ในเครื่อง dev — ไม่ได้ skip)
+  - `npx tsx scripts/verify-calculator.mts` → ยังเขียวทั้งหมด (S1 ไม่ถูกแตะยกเว้นอ่าน `DEFAULT_SIZE_TABLE`)
+  - `npx tsc --noEmit -p .` → ไม่มี error (ต้องแก้ปัญหา `Buffer<ArrayBufferLike>` ชนกับ ambient `Buffer` ที่ exceljs ประกาศเอง — cast ผ่าน `Parameters<...load>[0]` แทนแก้ type จริง)
+  - `npx eslint` บนทุกไฟล์ที่แตะ (`src/lib/calculator-import/*`, `scripts/lib/calculator-import-fixtures.ts`, `scripts/verify-calculator-import.mts`) → ไม่มี warning/error
+  - `npm run build` → `✓ Compiled successfully` + `Finished TypeScript` ไม่มี error
+  - `git diff --stat` → ไม่มีไฟล์ `.xlsx`
+- **แก้หลัง review (main session + `audit-compliance-reviewer`):**
+  - zip bomb: เดิมเชื่อ `_data.uncompressedSize` จาก header (ผู้ทำไฟล์ปลอมได้ → ไฟล์ <2 MB แตกได้ ~2 GB) → เปลี่ยนเป็น stream-inflate นับ byte จริงแบบมี budget; + test bomb 25 MB (ไฟล์ 32 KB) และ bomb ที่ปลอม header เป็น 1 KB
+  - [HIGH จาก reviewer] macro check อ่าน `[Content_Types].xml` แบบ inflate เต็มก่อน budget loop → ย้ายไปหลัง loop (ทุก entry ผ่าน budget แล้วค่อยอ่านเต็ม) + test bomb ใน `[Content_Types].xml`
+  - [MEDIUM] ข้อความจาก cell ไม่จำกัดความยาว → `clip()` 40 ตัวอักษรใน messages ทุกตัวที่ echo ค่าจากไฟล์ + test cell 50,000 ตัวอักษร (ข้อความยาวสุด 94)
+  - [LOW] billMin ว่างใช้ข้อความของ billMax → เพิ่ม `billMinMissingIssue` + test
+  - [note] `hiddenRowsWarning` ยังไม่ถูกเรียก → เรียกเมื่อมีแถวซ่อนในตาราง (research-145 §4.2) + test; เพิ่ม test sheet >1,000 แถว
+  - `package-lock.json` เหลือ diff 1 บรรทัด (เอา metadata ที่ไม่เกี่ยวออก), `npm ci --dry-run` ผ่าน
+- **ไม่มีใครเรียกโมดูลนี้นอก verify script** — ไม่แตะ action/UI/schema ตาม scope guardrail; S1 ไม่ถูกแก้ (เพิ่ม import เท่านั้น)
+- **รอ**: `audit-compliance-reviewer` อ่าน `validate-xlsx.ts`/`parse-on-grid.ts` เทียบ research-145 §4.1 (ยังไม่ได้รัน — coordinator จะ dispatch แยก)
 
 ---
 
