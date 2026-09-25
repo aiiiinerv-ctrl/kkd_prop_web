@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { CALCULATOR_DEFAULTS, type CalculatorParams } from "@/lib/calculator";
 import { rowToCalculatorParams } from "@/lib/calculator-config";
+import { resolveSizeTable, type SizeRow } from "@/lib/calculator-size-table";
 import { prisma } from "@/lib/db";
 import { CLOSED_LEAD_STATUSES } from "@/lib/reports/aggregate";
 import { storage } from "@/lib/storage";
@@ -257,11 +258,25 @@ export const getCalculatorPageContent = cache(
 );
 
 /** Active calculator parameters for public rendering. Falls back to Excel defaults. */
-export const getCalculatorConfig = cache(async (): Promise<CalculatorParams> => {
-  const row = await prisma.calculatorConfig.findFirst();
-  if (!row) return CALCULATOR_DEFAULTS;
-  return rowToCalculatorParams(row);
-});
+/**
+ * Public calculator config: the tier params (`.params`, unchanged shape —
+ * callers that only need the old fields keep working) plus the resolved
+ * size table (`.sizeTable`/`.sizeTableSource`). The size table isn't wired
+ * into the public page yet (S7); `getCalculatorConfig().params` keeps
+ * today's behaviour exactly.
+ */
+export const getCalculatorConfig = cache(
+  async (): Promise<{
+    params: CalculatorParams;
+    sizeTable: SizeRow[];
+    sizeTableSource: "default" | "import";
+  }> => {
+    const row = await prisma.calculatorConfig.findFirst();
+    const params = row ? rowToCalculatorParams(row) : CALCULATOR_DEFAULTS;
+    const { table, source } = resolveSizeTable(row?.sizeTable ?? null);
+    return { params, sizeTable: table, sizeTableSource: source };
+  }
+);
 
 /**
  * Home Page Content + its FAQ children, for the public reader

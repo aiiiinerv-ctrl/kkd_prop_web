@@ -32,11 +32,14 @@ export default async function CalculatorPage({
   const tCommon = await getTranslations("common");
 
   const usePages = PAGE_REGISTRY.calculator.contentRollout === "pages";
-  const [packages, pageContent, calculatorConfig] = await Promise.all([
+  const [packages, pageContent, calculatorConfigResult] = await Promise.all([
     getPublishedPackages(locale),
     usePages ? getCalculatorPageContent(locale) : Promise.resolve(null),
     getCalculatorConfig(),
   ]);
+  // Size table isn't wired into the public page yet (S7) — keep today's
+  // params-only behaviour.
+  const calculatorConfig = calculatorConfigResult.params;
 
   const hasRow = Boolean(pageContent);
   const pick = (db: string | null | undefined, key: Parameters<typeof t>[0]) => {
