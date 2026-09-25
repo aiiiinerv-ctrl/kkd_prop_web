@@ -11,6 +11,18 @@ import {
   sortIssuesByRow,
   type SizeTableDiff,
 } from "@/lib/calculator-import";
+// Type-only re-exports for the S6 admin card (calculator-size-table-card.tsx)
+// — erased at compile time, so they don't violate "use server"'s
+// every-export-must-be-an-async-function rule (same pattern as
+// `type ActionResult` from ./users.ts).
+export type {
+  SizeTableDiff,
+  ChangedRow,
+  DiffFieldChange,
+  DiffFieldName,
+  SampleBillDiff,
+  SampleBillOutcome,
+} from "@/lib/calculator-import";
 import { prisma } from "@/lib/db";
 import { storage } from "@/lib/storage";
 import { Prisma } from "@/generated/prisma/client";
@@ -73,7 +85,7 @@ function issuesToMessages(errors: { message: string; action?: string; row?: numb
   ).map((issue) => (issue.action ? `${issue.message}\n→ ${issue.action}` : issue.message));
 }
 
-type PreviewResult =
+export type PreviewResult =
   | {
       ok: true;
       importId: string;

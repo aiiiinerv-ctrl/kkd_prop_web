@@ -5,10 +5,9 @@ import { PageShell } from "@/components/admin/pages";
 import { PageBannerTabContent, PageBannerTabTrigger } from "@/components/admin/page-banner-tabs";
 import type { PageBannerAdminData } from "@/components/admin/page-banner-panel";
 import { PagePropertiesPanel, type PageSeoFormData } from "../home/home-properties-panel";
-import {
-  CalculatorConfigClient,
-  type CalculatorConfigFormData,
-} from "./calculator-config-client";
+import { CalculatorConfigTab } from "./calculator-config-tab";
+import type { CalculatorConfigFormData } from "./calculator-config-client";
+import type { CalculatorSizeTableCardData } from "./calculator-size-table-card";
 import {
   CalculatorPageContentClient,
   type CalculatorPageFormData,
@@ -20,6 +19,7 @@ export function CalculatorAdminShell({
   pageSeo,
   pageContent,
   calculatorConfig,
+  sizeTableData,
   bannerData,
 }: {
   canManageConfig: boolean;
@@ -27,12 +27,13 @@ export function CalculatorAdminShell({
   pageSeo: PageSeoFormData | null;
   pageContent: CalculatorPageFormData | null;
   calculatorConfig: CalculatorConfigFormData | null;
+  sizeTableData: CalculatorSizeTableCardData | null;
   bannerData: PageBannerAdminData;
 }) {
   const content = <CalculatorPageContentClient data={pageContent} />;
   const configTab =
-    canManageConfig && calculatorConfig ? (
-      <CalculatorConfigClient data={calculatorConfig} />
+    canManageConfig && calculatorConfig && sizeTableData ? (
+      <CalculatorConfigTab configData={calculatorConfig} sizeTableData={sizeTableData} />
     ) : null;
 
   if (!canMutateProperties || !pageSeo) {

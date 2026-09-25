@@ -1,10 +1,12 @@
 import { canManageContent, canManageSiteSettings, requireRole } from "@/lib/auth";
 import { getPageBannerAdmin } from "@/lib/admin/page-banner-admin";
 import { CALCULATOR_DEFAULTS } from "@/lib/calculator";
+import { resolveSizeTable } from "@/lib/calculator-size-table";
 import { rowToCalculatorParams } from "@/lib/calculator-config";
 import { prisma } from "@/lib/db";
 import { storage } from "@/lib/storage";
 import { CalculatorAdminShell } from "./calculator-admin-shell";
+import type { SizeTableHistoryItem } from "./calculator-size-table-card";
 
 export default async function PagesCalculatorPage() {
   const session = await requireRole("ADMIN", "SALES", "MARKETING", "EDITOR");
@@ -28,9 +30,50 @@ export default async function PagesCalculatorPage() {
     ? rowToCalculatorParams(configRow)
     : CALCULATOR_DEFAULTS;
 
+  // Size table card data (S6) — only fetched when the config tab itself is
+  // visible (ADMIN only, `canManageConfig`). `activeImport` resolves the
+  // uploader name for the "ยืนยันใช้เมื่อ" summary line; `history` selects
+  // `rows` only to compute a count server-side, never sending the JSON blob
+  // to the client (admin UI spec §9.6 / task guardrail).
+  const [activeImport, historyRows] = canManageConfig
+    ? await Promise.all([
+        configRow?.sizeTableImportId
+          ? prisma.calculatorImport.findUnique({
+              where: { id: configRow.sizeTableImportId },
+              select: { fileName: true, uploadedBy: { select: { name: true } } },
+            })
+          : Promise.resolve(null),
+        prisma.calculatorImport.findMany({
+          orderBy: { createdAt: "desc" },
+          take: 20,
+          select: {
+            id: true,
+            fileName: true,
+            createdAt: true,
+            rows: true,
+            warnings: true,
+            uploadedBy: { select: { name: true } },
+          },
+        }),
+      ])
+    : [null, []];
+
+  const history: SizeTableHistoryItem[] = historyRows.map((row) => ({
+    id: row.id,
+    fileName: row.fileName,
+    createdAt: row.createdAt.toISOString(),
+    uploadedByName: row.uploadedBy.name,
+    rowCount: Array.isArray(row.rows) ? row.rows.length : 0,
+    warnings: Array.isArray(row.warnings) ? (row.warnings as string[]) : [],
+  }));
+
+  const { table: activeTable, source: sizeTableSource } = resolveSizeTable(
+    configRow?.sizeTable ?? null
+  );
+
   return (
     <CalculatorAdminShell
-      key={`${pageRow?.version ?? 0}-${pageSeo?.version ?? 0}-${configRow?.version ?? 0}`}
+      key={`${pageRow?.version ?? 0}-${pageSeo?.version ?? 0}`}
       canManageConfig={canManageConfig}
       canMutateProperties={canMutateProperties}
       pageSeo={
@@ -81,10 +124,25 @@ export default async function PagesCalculatorPage() {
         canManageConfig
           ? {
               version: configRow?.version ?? 1,
-              sunHoursPerDay: params.sunHoursPerDay,
-              pricePerKwhThb: params.pricePerKwhThb,
               annualSavingMonthsMultiplier: params.annualSavingMonthsMultiplier,
-              params,
+              minBill: params.minBill,
+              maxBill: params.maxBill,
+              stepBill: params.stepBill,
+              activeTable,
+            }
+          : null
+      }
+      sizeTableData={
+        canManageConfig
+          ? {
+              source: sizeTableSource,
+              activeTable,
+              activeImportId: configRow?.sizeTableImportId ?? null,
+              activeFileName: activeImport?.fileName ?? null,
+              activeUploadedByName: activeImport?.uploadedBy.name ?? null,
+              configVersion: configRow?.version ?? 1,
+              configUpdatedAt: (configRow?.updatedAt ?? new Date()).toISOString(),
+              history,
             }
           : null
       }

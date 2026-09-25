@@ -1,35 +1,28 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
-import { ExternalLink, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { ExternalLink } from "lucide-react";
 import { toast } from "sonner";
-import {
-  resetCalculatorConfigToDefaults,
-  updateCalculatorConfig,
-} from "@/actions/calculator-config";
-import {
-  CALCULATOR_DEFAULTS,
-  calculateSavings,
-  recommendSystemSizeKw,
-  type CalculatorParams,
-} from "@/lib/calculator";
+import { updateCalculatorConfig } from "@/actions/calculator-config";
+import { CALCULATOR_DEFAULTS, recommendFromTable } from "@/lib/calculator";
+import type { SizeRow } from "@/lib/calculator-size-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const PREVIEW_BILL = "3500";
 
-function billToPercent(bill: number, minBill: number, maxBill: number) {
-  return ((bill - minBill) / (maxBill - minBill)) * 100;
-}
-
 export type CalculatorConfigFormData = {
   version: number;
-  sunHoursPerDay: number;
-  pricePerKwhThb: number;
   annualSavingMonthsMultiplier: number;
-  params: CalculatorParams;
+  minBill: number;
+  maxBill: number;
+  stepBill: number;
+  /** The size table currently live on the public calculator (imported or
+   * the legacy default) — used only to compute the "ตัวอย่างผลคำนวณ" preview,
+   * see docs/plans/calculator-excel-import-admin-ui-spec.md §1.2. */
+  activeTable: SizeRow[];
 };
 
 function numField(value: string, fallback: number): number {
@@ -37,71 +30,45 @@ function numField(value: string, fallback: number): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-export function CalculatorConfigClient({ data }: { data: CalculatorConfigFormData }) {
+function phaseText(phases: number[]): string {
+  const has1 = phases.includes(1);
+  const has3 = phases.includes(3);
+  if (has1 && has3) return "1 หรือ 3 เฟส";
+  if (has3) return "3 เฟส";
+  return "1 เฟส";
+}
+
+export function CalculatorConfigClient({ data, onBusyChange }: { data: CalculatorConfigFormData; onBusyChange: (busy: boolean) => void }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [resetPending, startResetTransition] = useTransition();
-  const [sunHoursPerDay, setSunHoursPerDay] = useState(String(data.sunHoursPerDay));
-  const [pricePerKwhThb, setPricePerKwhThb] = useState(String(data.pricePerKwhThb));
+  useEffect(() => {
+    onBusyChange(pending);
+    return () => onBusyChange(false);
+  }, [pending, onBusyChange]);
   const [annualSavingMonthsMultiplier, setAnnualSavingMonthsMultiplier] = useState(
     String(data.annualSavingMonthsMultiplier)
   );
-  const [minBill, setMinBill] = useState(String(data.params.minBill));
-  const [maxBill, setMaxBill] = useState(String(data.params.maxBill));
-  const [stepBill, setStepBill] = useState(String(data.params.stepBill));
-  const [billThreshold3To5Kw, setBillThreshold3To5Kw] = useState(
-    String(data.params.billThreshold3To5Kw)
-  );
-  const [billThreshold5To10Kw, setBillThreshold5To10Kw] = useState(
-    String(data.params.billThreshold5To10Kw)
-  );
+  const [minBill, setMinBill] = useState(String(data.minBill));
+  const [maxBill, setMaxBill] = useState(String(data.maxBill));
+  const [stepBill, setStepBill] = useState(String(data.stepBill));
   const [previewBill, setPreviewBill] = useState(PREVIEW_BILL);
 
-  const draftParams = useMemo((): CalculatorParams => {
-    return {
-      ...data.params,
-      sunHoursPerDay: numField(sunHoursPerDay, data.params.sunHoursPerDay),
-      pricePerKwhThb: numField(pricePerKwhThb, data.params.pricePerKwhThb),
-      annualSavingMonthsMultiplier: numField(
-        annualSavingMonthsMultiplier,
-        data.params.annualSavingMonthsMultiplier
-      ),
-      minBill: numField(minBill, data.params.minBill),
-      maxBill: numField(maxBill, data.params.maxBill),
-      stepBill: numField(stepBill, data.params.stepBill),
-      billThreshold3To5Kw: numField(billThreshold3To5Kw, data.params.billThreshold3To5Kw),
-      billThreshold5To10Kw: numField(billThreshold5To10Kw, data.params.billThreshold5To10Kw),
-    };
-  }, [
-    annualSavingMonthsMultiplier,
-    billThreshold3To5Kw,
-    billThreshold5To10Kw,
-    data.params,
-    maxBill,
-    minBill,
-    pricePerKwhThb,
-    stepBill,
-    sunHoursPerDay,
-  ]);
+  const multiplierNum = numField(annualSavingMonthsMultiplier, data.annualSavingMonthsMultiplier);
+  const minBillNum = numField(minBill, data.minBill);
+  const maxBillNum = numField(maxBill, data.maxBill);
+  const stepBillNum = numField(stepBill, data.stepBill);
 
-  const boundsValid =
-    draftParams.minBill < draftParams.maxBill &&
-    draftParams.billThreshold3To5Kw > draftParams.minBill &&
-    draftParams.billThreshold3To5Kw < draftParams.maxBill &&
-    draftParams.billThreshold5To10Kw > draftParams.billThreshold3To5Kw &&
-    draftParams.billThreshold5To10Kw <= draftParams.maxBill;
+  const boundsValid = minBillNum < maxBillNum && stepBillNum > 0;
 
-  const previewBillNum = numField(previewBill, draftParams.minBill);
+  const previewBillNum = numField(previewBill, minBillNum);
   const clampedPreviewBill = boundsValid
-    ? Math.min(draftParams.maxBill, Math.max(draftParams.minBill, previewBillNum))
+    ? Math.min(maxBillNum, Math.max(minBillNum, previewBillNum))
     : previewBillNum;
 
-  const preview = useMemo(
-    () => (boundsValid ? calculateSavings(String(clampedPreviewBill), [], draftParams) : null),
-    [boundsValid, clampedPreviewBill, draftParams]
+  const recommendation = useMemo(
+    () => recommendFromTable(clampedPreviewBill, data.activeTable, [], multiplierNum),
+    [clampedPreviewBill, data.activeTable, multiplierNum]
   );
-
-  const previewKw = boundsValid ? recommendSystemSizeKw(clampedPreviewBill, draftParams) : null;
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -120,32 +87,13 @@ export function CalculatorConfigClient({ data }: { data: CalculatorConfigFormDat
     });
   }
 
-  function onReset() {
-    if (
-      !window.confirm(
-        "คืนค่าตัวเลขทั้งหมดเป็นค่าเริ่มต้นจาก Excel ใช่หรือไม่?"
-      )
-    ) {
-      return;
-    }
-    startResetTransition(async () => {
-      const result = await resetCalculatorConfigToDefaults();
-      if ("ok" in result && result.ok) {
-        toast.success("คืนค่าเริ่มต้นแล้ว");
-        router.refresh();
-      } else {
-        toast.error("error" in result ? result.error : "คืนค่าไม่สำเร็จ");
-      }
-    });
-  }
-
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
+    <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">ตัวเลขการคำนวณ</h2>
           <p className="text-sm text-muted-foreground">
-            ปรับสมมติฐานธุรกิจและช่วงสไลด์บิล — หน้าจริงอัปเดตหลังบันทึก
+            ตั้งค่าตัวคูณรายปี ช่วงสไลด์บิล และตารางขนาดระบบจาก Excel — หน้าจริงอัปเดตทันทีหลังบันทึกหรือยืนยัน
           </p>
         </div>
         <a
@@ -159,46 +107,12 @@ export function CalculatorConfigClient({ data }: { data: CalculatorConfigFormDat
         </a>
       </div>
 
-      <form onSubmit={onSubmit} noValidate className="space-y-8">
+      <form onSubmit={onSubmit} noValidate className="space-y-6">
         <input type="hidden" name="version" value={data.version} />
 
         <section className="space-y-4">
-          <h3 className="text-sm font-semibold">สมมติฐานธุรกิจ (Phase A)</h3>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="calc-sun-hours">ชั่วโมงแดด/วัน</Label>
-              <Input
-                id="calc-sun-hours"
-                name="sunHoursPerDay"
-                type="number"
-                min={1}
-                max={12}
-                step={0.5}
-                required
-                value={sunHoursPerDay}
-                onChange={(e) => setSunHoursPerDay(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                ค่าเริ่มต้น {CALCULATOR_DEFAULTS.sunHoursPerDay}
-              </p>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="calc-price-kwh">ราคาไฟ (บาท/kWh)</Label>
-              <Input
-                id="calc-price-kwh"
-                name="pricePerKwhThb"
-                type="number"
-                min={0.01}
-                max={50}
-                step={0.1}
-                required
-                value={pricePerKwhThb}
-                onChange={(e) => setPricePerKwhThb(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                ค่าเริ่มต้น {CALCULATOR_DEFAULTS.pricePerKwhThb}
-              </p>
-            </div>
+          <h3 className="text-sm font-semibold">ตัวคูณและช่วงสไลด์บิล</h3>
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="calc-annual-mult">ตัวคูณรายปี (เดือน)</Label>
               <Input
@@ -213,15 +127,10 @@ export function CalculatorConfigClient({ data }: { data: CalculatorConfigFormDat
                 onChange={(e) => setAnnualSavingMonthsMultiplier(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                ค่าเริ่มต้น {CALCULATOR_DEFAULTS.annualSavingMonthsMultiplier}
+                ใช้คูณเงินประหยัดต่อเดือนเป็นต่อปี · ค่าเริ่มต้น{" "}
+                {CALCULATOR_DEFAULTS.annualSavingMonthsMultiplier}
               </p>
             </div>
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <h3 className="text-sm font-semibold">ช่วงบิลและเกณฑ์ kW</h3>
-          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="calc-min-bill">บิลขั้นต่ำ (฿)</Label>
               <Input
@@ -234,6 +143,9 @@ export function CalculatorConfigClient({ data }: { data: CalculatorConfigFormDat
                 value={minBill}
                 onChange={(e) => setMinBill(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">
+                ค่าเริ่มต้น {CALCULATOR_DEFAULTS.minBill.toLocaleString("th-TH")}
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="calc-max-bill">บิลสูงสุด (฿)</Label>
@@ -247,6 +159,9 @@ export function CalculatorConfigClient({ data }: { data: CalculatorConfigFormDat
                 value={maxBill}
                 onChange={(e) => setMaxBill(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">
+                ค่าเริ่มต้น {CALCULATOR_DEFAULTS.maxBill.toLocaleString("th-TH")} · ลูกค้ายังพิมพ์บิลเกินนี้ได้
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="calc-step-bill">ขั้นสไลด์ (฿)</Label>
@@ -260,119 +175,87 @@ export function CalculatorConfigClient({ data }: { data: CalculatorConfigFormDat
                 value={stepBill}
                 onChange={(e) => setStepBill(e.target.value)}
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="calc-thresh-35">เกณฑ์ 3 → 5 kW (฿)</Label>
-              <Input
-                id="calc-thresh-35"
-                name="billThreshold3To5Kw"
-                type="number"
-                min={100}
-                step={100}
-                required
-                value={billThreshold3To5Kw}
-                onChange={(e) => setBillThreshold3To5Kw(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="calc-thresh-510">เกณฑ์ 5 → 10 kW (฿)</Label>
-              <Input
-                id="calc-thresh-510"
-                name="billThreshold5To10Kw"
-                type="number"
-                min={100}
-                step={100}
-                required
-                value={billThreshold5To10Kw}
-                onChange={(e) => setBillThreshold5To10Kw(e.target.value)}
-              />
+              <p className="text-xs text-muted-foreground">
+                ค่าเริ่มต้น {CALCULATOR_DEFAULTS.stepBill}
+              </p>
             </div>
           </div>
 
           {!boundsValid && (
             <p className="text-sm text-destructive">
-              ตรวจลำดับ: ขั้นต่ำ &lt; เกณฑ์ 3→5 &lt; เกณฑ์ 5→10 ≤ สูงสุด
+              {minBillNum >= maxBillNum
+                ? "บิลขั้นต่ำต้องน้อยกว่าบิลสูงสุด"
+                : "ขั้นสไลด์ต้องมากกว่า 0"}
             </p>
           )}
 
           {boundsValid && (
-            <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
-              <Label htmlFor="calc-preview-slider">ตัวอย่างสไลด์</Label>
+            <fieldset className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
+              <legend className="px-1 text-sm font-semibold">
+                ตัวอย่างผลคำนวณ (ตามตารางที่ใช้อยู่)
+              </legend>
               <div className="relative pt-2">
                 <input
                   id="calc-preview-slider"
                   type="range"
-                  min={draftParams.minBill}
-                  max={draftParams.maxBill}
-                  step={draftParams.stepBill}
+                  min={minBillNum}
+                  max={maxBillNum}
+                  step={stepBillNum}
                   value={clampedPreviewBill}
                   onChange={(e) => setPreviewBill(e.target.value)}
                   className="w-full accent-brand-orange"
                 />
-                <span
-                  className="pointer-events-none absolute top-0 h-3 w-0.5 -translate-x-1/2 bg-brand-orange/70"
-                  style={{
-                    left: `${billToPercent(draftParams.billThreshold3To5Kw, draftParams.minBill, draftParams.maxBill)}%`,
-                  }}
-                />
-                <span
-                  className="pointer-events-none absolute top-0 h-3 w-0.5 -translate-x-1/2 bg-brand-orange/70"
-                  style={{
-                    left: `${billToPercent(draftParams.billThreshold5To10Kw, draftParams.minBill, draftParams.maxBill)}%`,
-                  }}
-                />
               </div>
               <p className="text-sm text-muted-foreground">
-                บิล ฿{clampedPreviewBill.toLocaleString("th-TH")} → แนะนำ{" "}
-                <span className="font-semibold text-foreground">{previewKw} kW</span>
+                บิล ฿{clampedPreviewBill.toLocaleString("th-TH")}
               </p>
-            </div>
+
+              {recommendation.kind === "empty" && (
+                <p className="text-sm text-muted-foreground">ยังไม่มีตาราง</p>
+              )}
+              {recommendation.kind === "tooLarge" && (
+                <p className="text-sm font-semibold">
+                  เกินตาราง (ใหญ่สุด {recommendation.lastRow.kw.toLocaleString("th-TH")} kW)
+                </p>
+              )}
+              {recommendation.kind === "ok" && (
+                <>
+                  <dl className="grid gap-2 text-sm sm:grid-cols-3">
+                    <div>
+                      <dt className="text-muted-foreground">ระบบที่แนะนำ</dt>
+                      <dd className="font-semibold">
+                        {recommendation.row.kw.toLocaleString("th-TH")} kW ·{" "}
+                        {phaseText(recommendation.row.phases)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">ประหยัด/เดือน</dt>
+                      <dd className="font-semibold">
+                        ฿{recommendation.monthlySaving.toLocaleString("th-TH")}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">บิลหลังติดตั้ง</dt>
+                      <dd className="font-semibold">
+                        {recommendation.coversFullBill
+                          ? "ครอบคลุมเต็ม 100%"
+                          : `฿${recommendation.afterBill.toLocaleString("th-TH")}`}
+                      </dd>
+                    </div>
+                  </dl>
+                  {recommendation.belowFirstRow && (
+                    <p className="text-xs text-muted-foreground">
+                      บิลต่ำกว่าช่วงของขนาดเล็กสุดในตาราง — หน้าเว็บจะแสดงหมายเหตุ
+                    </p>
+                  )}
+                </>
+              )}
+            </fieldset>
           )}
         </section>
 
-        <fieldset className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
-          <legend className="px-1 text-sm font-semibold">
-            ตัวอย่างผลคำนวณ (บิล ฿{clampedPreviewBill.toLocaleString("th-TH")})
-          </legend>
-          {preview ? (
-            <dl className="grid gap-2 text-sm sm:grid-cols-3">
-              <div>
-                <dt className="text-muted-foreground">ระบบที่แนะนำ</dt>
-                <dd className="font-semibold">{preview.systemKey.replace("system", "")} kW</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">ประหยัด/เดือน</dt>
-                <dd className="font-semibold">
-                  ฿{preview.monthlySaving.toLocaleString("th-TH")}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">บิลหลังติดตั้ง</dt>
-                <dd className="font-semibold">
-                  ฿{preview.afterBill.toLocaleString("th-TH")}
-                </dd>
-              </div>
-            </dl>
-          ) : (
-            <p className="text-sm text-muted-foreground">กรอกตัวเลขให้ถูกต้องเพื่อดูตัวอย่าง</p>
-          )}
-        </fieldset>
-
         <div className="flex flex-wrap justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={pending || resetPending}
-            onClick={onReset}
-          >
-            <RotateCcw className="size-4" />
-            คืนค่าเริ่มต้น
-          </Button>
-          <Button
-            type="submit"
-            id="calc-config-submit"
-            disabled={pending || resetPending || !boundsValid}
-          >
+          <Button type="submit" id="calc-config-submit" disabled={pending || !boundsValid}>
             {pending ? "กำลังบันทึก…" : "บันทึกตัวเลข"}
           </Button>
         </div>
