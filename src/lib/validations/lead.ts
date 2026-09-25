@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const AVG_MONTHLY_BILL_MAX = 1_000_000;
+
 // Error messages are machine codes, not prose — the booking form translates
 // them per-locale via `messages/{th,en}.json` (booking.err* keys). The same
 // codes flow through both directions of the seam: react-hook-form's
@@ -34,7 +36,7 @@ const baseLeadSchema = z.object({
   // survey tab captures the same technical context (#14 map decision 4, G4).
   avgMonthlyBill: z.preprocess(
     (v) => (v === "" || v == null ? undefined : v),
-    z.coerce.number().int().min(0).max(1_000_000).optional()
+    z.coerce.number().int().min(0).max(AVG_MONTHLY_BILL_MAX).optional()
   ),
   interestedSystems: z.array(z.enum(["ON_GRID", "HYBRID", "OFF_GRID"])).optional(),
 });
