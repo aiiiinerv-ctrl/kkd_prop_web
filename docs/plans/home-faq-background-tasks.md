@@ -4,6 +4,8 @@ Date: 2026-09-25
 GitHub: [#142](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/142)
 Backlog plan: [`backlogs/ISSUE_142_home_faq_background/PLAN.md`](../../backlogs/ISSUE_142_home_faq_background/PLAN.md)
 
+**Deployed to production 2026-09-25** (S0–S6; DDL applied and verified before restart). Awaiting the owner's real FAQ image for the post-image smoke check and production design review — evidence in the backlog PLAN.
+
 อ้างอิง:
 - Pattern รูป Hero (Home CMS H1–H3): `docs/plans/home-cms-slice-security-research.md` ("Image lifecycle (hero)", S3/S4/S6/S16), `docs/plans/home-cms-slice-implementation-sprints.md`
 - Home hero toggle (map #132): `docs/plans/home-hero-toggle-implementation-sprints.md`, prod DDL asset `docs/plans/assets/home-hero-toggle-production-ddl.sql`

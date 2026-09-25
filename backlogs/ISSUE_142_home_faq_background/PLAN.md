@@ -8,7 +8,7 @@
 |---|---|
 | GitHub | https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/142 |
 | Opened | 2026-09-25 |
-| Status (disk) | active — draft plan รอ owner review; live triage status is GitHub labels |
+| Status (disk) | active — deployed 2026-09-25, awaiting owner's real FAQ image for post-image smoke + production design review; live triage status is GitHub labels |
 | Triage labels | `enhancement`, `needs-triage` → promote เป็น `ready-for-agent` หลัง owner อนุมัติ plan |
 | Type | enhancement |
 
@@ -38,15 +38,15 @@
 
 | # | Work | Owner (agent / human) | Depends on | Parallel? | Status |
 |---:|---|---|---|---|---|
-| 0 | Owner review sprint plan | User | — | — | pending |
-| S0 | Overlay spec lock (contrast AA) | `ux-ui-expert` | 0 | ✅ กับ S1 | pending |
-| S1 | Schema + migration + prod DDL asset + view field | `nextjs-dev` | 0 | ✅ กับ S0 | pending |
-| S2 | Server action upload/remove/lifecycle + review | `nextjs-dev` → `audit-compliance-reviewer` | S1 | ✅ กับ S3 | pending |
-| S3 | Public render + resolver fallback | `nextjs-dev` | S1 (+S0 ค่า overlay) | ✅ กับ S2 | pending |
-| S4 | Admin card (preview, inline remove confirm, hints) | `nextjs-dev` | S2, S3 | — | pending |
-| S5 | E2E + verify-all + audit review + real-render design review (desktop/mobile) | `nextjs-dev` → `audit-compliance-reviewer` ∥ `design-business-reviewer` | S4 | reviewers ✅ | pending |
-| S6 | Deploy: runbook → DDL → build/upload → smoke → owner อัปรูปจริง → re-review | `deploy-verify` → `hosting-deploy-specialist` + owner | S5 | — | pending |
-| 7 | Owner accept + close #142 + move folder to `backlogs/done/` | User | S6 | — | pending |
+| 0 | Owner review sprint plan | User | — | — | done (approved 2026-09-25) |
+| S0 | Overlay spec lock (contrast AA) | `ux-ui-expert` | 0 | ✅ กับ S1 | done — `bg-white/88` |
+| S1 | Schema + migration + prod DDL asset + view field | `nextjs-dev` | 0 | ✅ กับ S0 | done `206e029` |
+| S2 | Server action upload/remove/lifecycle + review | `nextjs-dev` → `audit-compliance-reviewer` | S1 | ✅ กับ S3 | done `327484f` + fix `1d96f94` |
+| S3 | Public render + resolver fallback | `nextjs-dev` | S1 (+S0 ค่า overlay) | ✅ กับ S2 | done `343c8d2` |
+| S4 | Admin card (preview, inline remove confirm, hints) | `nextjs-dev` | S2, S3 | — | done `1df28f6` |
+| S5 | E2E + verify-all + audit review + real-render design review (desktop/mobile) | `nextjs-dev` → `audit-compliance-reviewer` ∥ `design-business-reviewer` | S4 | reviewers ✅ | done `7eae9ae` + fixes `9a362b9`, `fd740cd` |
+| S6 | Deploy: runbook → DDL → build/upload → smoke → owner อัปรูปจริง → re-review | `deploy-verify` → `hosting-deploy-specialist` + owner | S5 | — | deployed 2026-09-25 — awaiting owner image |
+| 7 | Owner accept + close #142 + move folder to `backlogs/done/` | User | S6 | — | pending (after owner image) |
 
 ## Parallel lanes
 
@@ -62,13 +62,13 @@
 
 ## Definition of Done
 
-- [ ] Behavior matches Goal — ไม่มีรูป = markup FAQ เดิม (`/th`, `/en`)
-- [ ] Verify skill evidence: `verify-all.mts` + `e2e-home-cms.mts` ✓ lines
-- [ ] `audit-compliance-reviewer` pass บน `src/actions/home-content.ts`
-- [ ] `design-business-reviewer` pass บน real render desktop + mobile (local และ production)
-- [ ] Prod DDL applied + `SHOW COLUMNS` verified ก่อน restart
-- [ ] `smoke-test-production.mts --check/--expect-text` green ทั้งก่อนและหลังอัปรูป
-- [ ] No secrets in PLAN, INDEX, or GitHub comments
+- [x] Behavior matches Goal — ไม่มีรูป = markup FAQ เดิม (`/th`, `/en`)
+- [x] Verify skill evidence: `verify-all.mts` + `e2e-home-cms.mts` ✓ lines — new #142 block all ✓; 4 unrelated pre-existing failures reproduced on `1df28f6` (see #142 S5 comment)
+- [x] `audit-compliance-reviewer` pass บน `src/actions/home-content.ts`
+- [ ] `design-business-reviewer` pass บน real render desktop + mobile (local ✅ PASS; production — pending owner image)
+- [x] Prod DDL applied + `SHOW COLUMNS` verified ก่อน restart
+- [ ] `smoke-test-production.mts --check/--expect-text` green ทั้งก่อนและหลังอัปรูป (before-image ✅ 2026-09-25; after-image pending)
+- [x] No secrets in PLAN, INDEX, or GitHub comments
 - [ ] GitHub issue commented with outcome and closed (owner)
 - [ ] Folder moved to `backlogs/done/`; `backlogs/INDEX.md` updated
 
@@ -93,3 +93,12 @@
 
 - Residual risk: รูปแนวนอนถูก crop มากบนมือถือ (section สูง) — design reviewer ตัดสิน
 - Follow-up candidates: ปุ่มลบรูป hero + shared image-card
+
+### Deploy 2026-09-25
+
+1. Prod DDL via phpMyAdmin (`kkdprop1_kkdproperty`): `ADD COLUMN IF NOT EXISTS faqBackgroundImageKey` → verified in table Structure (`varchar(191)`, NULL, default NULL) before restart
+2. Build `scripts/build-shared-hosting-deploy.mts` on OrbStack (two earlier attempts failed on an accidental colima runtime — OOM, then MySQL caching_sha2 auth; not code issues)
+3. Upload by owner via `!` — `226`, 28645765 bytes; extract `File Extracted`; restart `tmp/restart.txt` (302)
+4. Verify: 20 public routes 200 (warmed twice), `/admin/pages/home` 307, `/api/admin/leads` 401, `/th` `/en` FAQ still flat with 0 `faq-bg` refs (no image yet), `smoke-test-production.mts` 3/3 ✓, admin card present in production (`#home-faq-bg-image`, empty state, latest hint copy)
+5. Remaining: owner uploads a real image → `smoke-test-production.mts --check /th --expect-text '/files/public/pages/home/faq-bg/'` (+ `/en`) → `design-business-reviewer` on production render → close #142, move folder to `backlogs/done/`
+
