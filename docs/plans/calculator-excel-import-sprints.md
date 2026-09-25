@@ -31,21 +31,21 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 
 ## Status
 
-**Planned 2026-09-25** — ยังไม่เริ่ม implement. อัปเดตตาราง tracker + "สรุปหลังแก้" ทุก sprint ทันทีที่จบ
+**In progress — 2026-09-26**: S0–S7 code committed on main (ahead of origin); S6/S7 independent reviews pending (owner approved Cursor inherit); S8–S10 ยังไม่เริ่ม. Handoff: [`calculator-excel-import-codex-handoff-tasks.md`](calculator-excel-import-codex-handoff-tasks.md)
 
 ## Sprint tracker
 
 | Sprint | เป้าหมาย | Implement | Reviewer อิสระ | ขนาน/รอ | Est. | Status |
 |---:|---|---|---|---|---:|---|
 | **S0** | Live baseline ใหม่ + ignore `/stuffs/` (F1) | `nextjs-dev` (browser/curl) | — | เริ่มก่อน | 0.25 d | done 2026-09-26 |
-| **S1** | Pure lib: `SizeRow`, `DEFAULT_SIZE_TABLE` legacy, `recommendFromTable()` + equality proof | `nextjs-dev` | — (script = reviewer) | ⏳ S0 | 0.5 d | done — pending review |
+| **S1** | Pure lib: `SizeRow`, `DEFAULT_SIZE_TABLE` legacy, `recommendFromTable()` + equality proof | `nextjs-dev` | — (script = reviewer) | ⏳ S0 | 0.5 d | done 2026-09-26 (equality 76/76) |
 | **S2** | Pure parser + guards + diff + `verify-calculator-import.mts` (fixture สังเคราะห์) | `nextjs-dev` | `audit-compliance-reviewer` (อ่าน guards เป็น security review) | ⏳ S1 (type) | 1 d | done 2026-09-26 (reviewed) |
 | **S3** | Schema additive + migration + prod DDL asset + storage-engine contract + audit type | `nextjs-dev` | `deploy-verify` (DDL/InnoDB) | ✅ ขนานกับ S2 (⏳ S1) | 0.5 d | done 2026-09-26 (reviewed) |
 | **S4** | `/files` hardening: `private/calculator-imports/` ADMIN-only + xlsx/attachment/nosniff | `nextjs-dev` | `audit-compliance-reviewer` | ✅ ขนานกับ S1–S3 (⏳ S0) | 0.5 d | done 2026-09-26 (reviewed) |
 | **S5** | Server actions preview/apply + reset ล้าง `sizeTable` + `getCalculatorConfig` คืนตาราง | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ S2, S3, S4 | 1 d | done 2026-09-26 (reviewed) |
 | **S6a** | Admin UI spec การ์ด "ตารางขนาดระบบ (Excel)" | `ux-ui-expert` (read-only) | — | ✅ ขนานกับ S1–S5 | 0.5 d | done 2026-09-26 |
-| **S6** | Admin tab: ลบ threshold/sun/price fields, preview ใช้ตาราง (แก้ "5kw kW"), การ์ด upload/preview/diff/ยืนยัน/ประวัติ + e2e | `nextjs-dev` | `audit-compliance-reviewer`, `design-business-reviewer` (admin real render) | ⏳ S5, S6a | 1.5 d | pending |
-| **S7** | Public calculator ใช้ตาราง: ลบ tier markers, พิมพ์เกิน slider, tiles 3 ช่อง, สถานะพิเศษ, 100%, messages TH/EN | `nextjs-dev` | `i18n-parity-checker`, `design-business-reviewer` (TH/EN + mobile) | ⏳ S5 (✅ ขนานกับ S6 ได้ ถ้าคนละ agent) | 1.5 d | pending |
+| **S6** | Admin tab: ลบ threshold/sun/price fields, preview ใช้ตาราง (แก้ "5kw kW"), การ์ด upload/preview/diff/ยืนยัน/ประวัติ + e2e | `nextjs-dev` | `audit-compliance-reviewer`, `design-business-reviewer` (admin real render) | ⏳ S5, S6a | 1.5 d | done 2026-09-26 — commits `cfe7c4a`…`36b6c69`; independent review pending |
+| **S7** | Public calculator ใช้ตาราง: ลบ tier markers, พิมพ์เกิน slider, tiles 3 ช่อง, สถานะพิเศษ, 100%, messages TH/EN | `nextjs-dev` | `i18n-parity-checker`, `design-business-reviewer` (TH/EN + mobile) | ⏳ S5 (✅ ขนานกับ S6 ได้ ถ้าคนละ agent) | 1.5 d | done 2026-09-26 — commits `7385a5c`…`32c3edd`; verify + independent review pending |
 | **S8** | Cleanup โค้ด legacy (`calculateSavings`, `systemKey`, threshold, sun/days/price ใน schema/zod/seed) | `nextjs-dev` | `audit-compliance-reviewer` (actions/zod) | ⏳ S6, S7 | 0.5 d | pending |
 | **S9** | Release prod: snapshot → DDL additive → deploy → smoke → ตัวเลขเท่า baseline S0 | `hosting-deploy-specialist` + human FTP (`!`) | `deploy-verify` (ก่อน upload) | ⏳ S8 | 0.5 d | pending |
 | **S10** | Post-deploy go-live ข้อมูล: ADMIN upload `คำนวณติดตั้ง.xlsx` บน prod → preview/diff → ยืนยัน | owner/ADMIN (human) + agent browser ตรวจ | `design-business-reviewer` (render หลังเปลี่ยนตัวเลข, optional) | ⏳ S9 + owner พร้อม | 0.25 d | pending |
@@ -362,7 +362,11 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 
 **Rollback:** revert commits ของ S6 — DB ยังมีคอลัมน์เดิม, `sizeTable` ที่ apply ไว้ public ยังไม่อ่าน (จนถึง S7) → ไม่กระทบลูกค้า
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้ (2026-09-26 — code committed; independent review pending):**
+- รับช่วงจาก Claude/Codex ที่ HEAD `94c57f1`: การ์ด Excel + tab แยก (`calculator-size-table-card.tsx`, `calculator-config-tab.tsx`), ตัด sun/price/threshold จากฟอร์ม, preview ใช้ `recommendFromTable` (แก้ "5kw kW"), `page.tsx` ไม่ใส่ `configRow.version` ใน shell `key` (spec §9.3)
+- Commits: `cfe7c4a` feat card · `a3ad12f` refactor zod/action · `36b6c69` test e2e admin
+- Codex/หลักฐานก่อน commit: e2e ผ่านบน `next start :3100`; screenshots `/tmp/kkd-s6-review/`; MARKETING ถูกซ่อนการ์ด + redirect ก่อน mutation
+- Pending: `audit-compliance-reviewer` + `design-business-reviewer` (owner อนุมัติ Cursor inherit 2026-09-26)
 
 ---
 
@@ -394,7 +398,17 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 
 **Rollback:** revert commits S7 — public กลับไปใช้ params เดิม (คอลัมน์ยังอยู่จนถึง S8)
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้ (2026-09-26 — code committed; independent review pending):**
+- `calculator-client.tsx` ใช้ `recommendFromTable` + tiles + tooLarge/belowFirst/coversFullBill/noPayback + CTA จำกัด `AVG_MONTHLY_BILL_MAX`; `page.tsx` ส่ง `sizeTable` + `isPopular`
+- messages TH/EN: keys ใหม่ครบ / ลบ `system3kw`/`tierZone*`; parity ตรงกัน
+- Commits: `7385a5c` feat site · `e3ddc07` refactor lead max · `32c3edd` test e2e public after apply/reset
+- **Verify (tip `32c3edd`, `PORT=3200 npm run start`):**
+  - `npm run build` → Compiled + Finished TypeScript ✓
+  - `npx tsx scripts/verify-calculator.mts` → All assertions passed ✓ (equality + S0 baseline 7 bills)
+  - `BASE_URL=http://localhost:3200 npx tsx scripts/e2e-calculator-config.mts` → ทุกบรรทัด ✓ รวม `PUBLIC th/en` apply + reset
+  - `BASE_URL=http://localhost:3200 npx tsx scripts/e2e-admin.mts` → CALC IMPORT ADMIN/anon/FINANCE ✓ (slip 404 เมื่อไม่มี `SLIP_KEY` — ไม่ใช่ regression ของงานนี้)
+  - `e2e-booking.mts` → **fail pre-existing**: script hardcode `localhost:3000` และค้างที่ `เบอร์โทรไม่ถูกต้อง` — ไม่เกี่ยวกับ diff S7; ไม่นับเป็น blocker ของ S7
+- Pending: `i18n-parity-checker` + `design-business-reviewer` (Cursor inherit ต่อ owner approve)
 
 ---
 
