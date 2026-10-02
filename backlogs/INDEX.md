@@ -1,12 +1,13 @@
 # Backlog Index
 
-Updated: 2026-09-25 (#142 Home FAQ background — deployed, awaiting owner image)  
+Updated: 2026-10-02 (#153 calculator Hybrid toggle map charted)  
 Live status = GitHub labels. This file is a TOC of PLAN paths only.
 
 ## Active
 
 | GitHub | PLAN | Notes |
 |---|---|---|
+| [#153](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/153) | [`ISSUE_153_calculator_hybrid_toggle_map`](ISSUE_153_calculator_hybrid_toggle_map/PLAN.md) | Wayfinder map charted 2026-10-02 — On-grid/Hybrid toggle; frontier = #154 research; implementation after On-grid S10 |
 | [#142](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/142) | [`ISSUE_142_home_faq_background`](ISSUE_142_home_faq_background/PLAN.md) | Deployed 2026-09-25 (S0–S6); awaiting owner's real FAQ image for post-image smoke + prod design review; sprints in `docs/plans/home-faq-background-tasks.md` |
 | [#143](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/143) | [`ISSUE_143_calculator_excel_import_map`](done/ISSUE_143_calculator_excel_import_map/PLAN.md) | Done 2026-09-26 — wayfinder map closed; sprint plan [`calculator-excel-import-sprints.md`](../docs/plans/calculator-excel-import-sprints.md) ready (S0–S10); follow-ups #151, #152 |
 | [#76](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/76) | [`ISSUE_076_pages_cms_sprint12_cleanup`](ISSUE_076_pages_cms_sprint12_cleanup/PLAN.md) | Owner approved 2026-08-28 — execute blocked until 2026-09-11 |
