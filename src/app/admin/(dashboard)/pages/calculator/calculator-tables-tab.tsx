@@ -2,21 +2,38 @@
 
 // Root of the "ตารางขนาดระบบ" tab (R1-S5, design-162 §2.3 / §10): heading, the
 // "in use" summary with export + import buttons, the collapsible Excel import
-// panel, the read-only On-grid list and the version history. R1 has no Hybrid
-// sub-tab and no editor yet (R1-S6).
+// panel, the On-grid list with its edit dialog, the sticky save bar + confirm
+// dialog (R1-S6) and the version history. R1 has no Hybrid sub-tab (Q6).
+//
+// The edit state is a client-side working copy (use-table-draft.ts): nothing
+// reaches the server until the owner confirms the diff dialog.
 //
 // Width: PageShell is `max-w-3xl` and must stay that way for the other tabs
 // (it is not touched), so this tab breaks out of it with an explicit width —
 // at most `max-w-5xl` (64rem), capped to the space the admin layout leaves
 // (viewport − sidebar `w-60` − `main` padding `p-6` on md+, − padding below).
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Download, Upload } from "lucide-react";
+import { toast } from "sonner";
+import { saveCalculatorTables } from "@/actions/calculator-import";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  issueText,
+  resolveRow,
+  rowStatus,
+  toDraftField,
+  useTableDraft,
+  type DraftField,
+} from "@/hooks/admin/use-table-draft";
+import type { CalcPackageForDiff } from "@/lib/calculator-import/diff";
 import type { SizeRow } from "@/lib/calculator-size-table";
 import { CalculatorImportPanel } from "./calculator-import-panel";
 import { OnGridList } from "./calculator-table-list";
 import { formatDateTime } from "./calculator-table-format";
+import { OnGridSizeDialog } from "./on-grid-size-dialog";
+import { SaveTablesDialog, type ServerIssueView } from "./save-tables-dialog";
 import {
   CalculatorVersionHistory,
   SourceBadge,
@@ -34,10 +51,18 @@ export type CalculatorTablesTabData = {
     hasSourceFile: boolean;
   };
   onGrid: SizeRow[];
+  /** For the whole-table warnings in the save-confirm dialog. */
+  packages: CalcPackageForDiff[];
+  sliderMaxBill: number;
   history: SizeTableHistoryItem[];
 };
 
+type DialogState = { key: string | null; focus: DraftField | null; nonce: number };
+
+const kwList = (kws: number[]) => kws.map((k) => k.toLocaleString("th-TH")).join(", ");
+
 export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData }) {
+  const router = useRouter();
   const [importOpen, setImportOpen] = useState(false);
   const [importBusy, setImportBusy] = useState(false);
   const [historyBusy, setHistoryBusy] = useState(false);
@@ -45,10 +70,122 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
   const onImportBusy = useCallback((v: boolean) => setImportBusy(v), []);
   const onHistoryBusy = useCallback((v: boolean) => setHistoryBusy(v), []);
 
+  const draft = useTableDraft({ onGrid: data.onGrid, configVersion: data.configVersion });
+  const [dlg, setDlg] = useState<DialogState | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [conflictSummary, setConflictSummary] = useState<string | null>(null);
+  const [serverIssues, setServerIssues] = useState<ServerIssueView[] | null>(null);
+  const [discarding, setDiscarding] = useState(false);
+  const [live, setLive] = useState("");
+  const headingRef = useRef<HTMLHeadingElement>(null);
+
   const { active, onGrid } = data;
+  const { dirty, issues, rows } = draft;
+  const errorCount = issues.length;
   const kws = onGrid.map((r) => r.kw);
   const minKw = kws.length ? Math.min(...kws) : null;
   const maxKw = kws.length ? Math.max(...kws) : null;
+
+  // Editing and importing/applying a set are mutually exclusive: an import or
+  // "ใช้ชุดนี้" would replace the table under unsaved edits, and edits made
+  // while the import preview is open would be replaced by "ใช้ตารางนี้".
+  const editLocked = busy || importOpen;
+  const lockReason = busy
+    ? null
+    : importOpen
+      ? "ปิดการนำเข้าไฟล์ก่อน จึงจะแก้ตารางในหน้านี้ได้"
+      : null;
+
+  // `beforeunload`: leaving with unsaved edits asks for confirmation.
+  useEffect(() => {
+    if (!dirty) return;
+    const handler = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
+
+  // Screen-reader status (design-162 §13.2): derived while editing, the saved
+  // note afterwards.
+  const liveText = dirty
+    ? `แก้ไว้ ${draft.changedCount} ขนาด ยังไม่บันทึก${errorCount > 0 ? ` · มีข้อผิดพลาด ${errorCount} จุด` : ""}`
+    : live;
+
+  const dlgRow = dlg?.key ? (rows.find((r) => r.key === dlg.key) ?? null) : null;
+  const firstIssue = issues.find((i) => i.key !== "");
+
+  function focusAfter(id: string) {
+    setTimeout(() => document.getElementById(id)?.focus(), 80);
+  }
+  const editButtonId = (kw: number | null) =>
+    kw !== null && Number.isFinite(kw) ? `calc-edit-on-grid-${String(kw).replace(".", "_")}` : "calc-add-on-grid";
+
+  function openDialog(key: string | null, focus: DraftField | null = null) {
+    setConfirmOpen(false);
+    setDlg({ key, focus, nonce: Date.now() });
+  }
+
+  function changedNames(): string {
+    const names = rows.filter((r) => rowStatus(r) !== "same").flatMap((r) => (r.current.kw ? [r.current.kw] : []));
+    return names.length ? `On-grid ${kwList(names)} kW` : "—";
+  }
+
+  function openConfirm() {
+    setConflictSummary(null);
+    setServerIssues(null);
+    setConfirmOpen(true);
+  }
+
+  function closeConfirm() {
+    setConfirmOpen(false);
+    setConflictSummary(null);
+    setServerIssues(null);
+  }
+
+  async function doSave() {
+    const sent = draft.table;
+    if (!sent) return;
+    setSaving(true);
+    try {
+      const result = await saveCalculatorTables({ onGrid: sent, version: draft.baseVersion });
+      if ("ok" in result && result.ok) {
+        draft.rebase(sent, result.version);
+        closeConfirm();
+        setLive("บันทึกแล้ว — หน้าเครื่องคำนวณอัปเดตแล้ว");
+        toast.success("บันทึกแล้ว — หน้าเครื่องคำนวณอัปเดตแล้ว");
+        router.refresh();
+        setTimeout(() => headingRef.current?.focus(), 80);
+      } else if ("conflict" in result && result.conflict) {
+        toast.error("มีคนแก้ก่อนคุณ — รีเฟรชแล้วลองใหม่");
+        setConflictSummary(changedNames());
+      } else if ("issues" in result) {
+        // Server found something the client validator did not (T-7): point at
+        // the same fields. rowIndex indexes the payload we just sent.
+        setServerIssues(
+          result.issues.map((issue) => {
+            const kw = sent[issue.rowIndex]?.kw;
+            const row = rows.find((r) => {
+              const resolved = resolveRow(r.current);
+              return !r.deleted && resolved?.kw === kw;
+            });
+            return { message: issue.message, key: row?.key ?? "", field: toDraftField(issue.field) };
+          })
+        );
+      } else {
+        toast.error("error" in result ? result.error : "บันทึกไม่สำเร็จ");
+      }
+    } catch {
+      toast.error("บันทึกไม่สำเร็จ");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function reloadLatest() {
+    draft.discard();
+    closeConfirm();
+    router.refresh();
+  }
 
   return (
     <div className="min-w-0 space-y-6 w-[min(64rem,calc(100vw-4rem))] md:w-[min(64rem,calc(100vw-19rem))]">
@@ -61,14 +198,15 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
           <div>
             <h2
               id="calc-tables-heading"
+              ref={headingRef}
               tabIndex={-1}
               className="mb-1 font-semibold outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring/50"
             >
               ตารางขนาดระบบ
             </h2>
             <p className="text-sm text-muted-foreground">
-              ใช้แนะนำขนาดระบบในหน้าเครื่องคำนวณ — ดาวน์โหลดเป็น Excel เพื่อแก้ หรืออัปโหลดไฟล์ Excel
-              ของฝ่ายขาย ตรวจผลก่อนแล้วกดยืนยันเพื่อใช้บนหน้าเว็บ
+              ใช้แนะนำขนาดระบบในหน้าเครื่องคำนวณ — แก้ในหน้านี้ หรือดาวน์โหลดเป็น Excel เพื่อแก้
+              แล้วนำเข้ากลับ ตรวจผลก่อนแล้วกดยืนยันเพื่อใช้บนหน้าเว็บ
             </p>
           </div>
 
@@ -135,6 +273,7 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
                   variant="outline"
                   aria-expanded={importOpen}
                   aria-controls="calc-import-panel"
+                  disabled={dirty}
                   onClick={() => setImportOpen((v) => !v)}
                 >
                   <Upload className="size-4" />
@@ -144,7 +283,13 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
               ไฟล์ที่ดาวน์โหลดมีชีต On-grid ตามแบบไฟล์เดิม แก้แล้วนำเข้ากลับได้
+              {dirty ? " · ไม่รวมการแก้ที่ยังไม่บันทึก" : ""}
             </p>
+            {dirty && (
+              <p id="calc-import-lock-hint" className="mt-1 text-xs text-muted-foreground">
+                บันทึกหรือยกเลิกการแก้ก่อนนำเข้าไฟล์
+              </p>
+            )}
           </div>
 
           {importOpen && (
@@ -154,7 +299,85 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
             />
           )}
 
-          <OnGridList rows={onGrid} />
+          <OnGridList
+            rows={rows}
+            issues={issues}
+            editLocked={editLocked}
+            lockReason={lockReason}
+            onAdd={() => openDialog(null)}
+            onEdit={(key) => openDialog(key)}
+            onRestore={draft.restore}
+          />
+
+          {dirty && (
+            <div
+              id="calc-tables-savebar"
+              role="region"
+              aria-label="การแก้ที่ยังไม่บันทึก"
+              className="sticky bottom-0 z-10 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary bg-card px-3 py-2 shadow-sm"
+            >
+              <div className="min-w-0 space-y-0.5">
+                <p className="text-sm">
+                  <strong>แก้ไว้ {draft.changedCount} ขนาด</strong> (On-grid {draft.changedCount}) — ยังไม่บันทึก
+                </p>
+                {errorCount > 0 && (
+                  <p id="calc-tables-errline" className="text-xs text-destructive">
+                    มีข้อผิดพลาด {errorCount} จุด ต้องแก้ก่อนบันทึก
+                    {firstIssue && (
+                      <>
+                        {" · "}
+                        <button
+                          type="button"
+                          id="calc-tables-goto-error"
+                          className="underline-offset-2 hover:underline"
+                          onClick={() => openDialog(firstIssue.key, firstIssue.field === "table" ? null : firstIssue.field)}
+                        >
+                          ไปที่จุดแรก ({issueText(firstIssue, rows).split(":")[0]})
+                        </button>
+                      </>
+                    )}
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {discarding ? (
+                  <span className="flex flex-wrap items-center gap-2 text-sm">
+                    ทิ้งการแก้ทั้งหมด {draft.changedCount} ขนาด?
+                    <Button type="button" size="sm" variant="outline" className="h-8" onClick={() => setDiscarding(false)}>
+                      ไม่ทิ้ง
+                    </Button>
+                    <Button
+                      type="button"
+                      id="calc-tables-discard-confirm"
+                      size="sm"
+                      variant="destructive"
+                      className="h-8"
+                      onClick={() => {
+                        draft.discard();
+                        setDiscarding(false);
+                      }}
+                    >
+                      ทิ้งการแก้
+                    </Button>
+                  </span>
+                ) : (
+                  <Button type="button" id="calc-tables-discard" size="sm" variant="ghost" onClick={() => setDiscarding(true)}>
+                    ยกเลิกการแก้ทั้งหมด
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  id="calc-tables-save"
+                  size="sm"
+                  disabled={errorCount > 0}
+                  aria-describedby={errorCount > 0 ? "calc-tables-errline" : undefined}
+                  onClick={openConfirm}
+                >
+                  ตรวจและบันทึก…
+                </Button>
+              </div>
+            </div>
+          )}
         </section>
       </fieldset>
 
@@ -167,10 +390,68 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
             history={data.history}
             activeImportId={active.versionId}
             configVersion={data.configVersion}
+            locked={dirty}
             onBusyChange={onHistoryBusy}
           />
         </section>
       </fieldset>
+
+      <p role="status" aria-live="polite" className="sr-only">
+        {liveText}
+      </p>
+
+      {dlg && (
+        <OnGridSizeDialog
+          key={dlg.nonce}
+          row={dlgRow}
+          others={rows.filter((r) => r.key !== dlg.key)}
+          focusFieldName={dlg.focus}
+          onClose={() => {
+            const kw = dlgRow?.current.kw ?? null;
+            setDlg(null);
+            focusAfter(editButtonId(kw));
+          }}
+          onCommit={(values) => {
+            draft.commit(dlg.key, values);
+            setDlg(null);
+            focusAfter(editButtonId(values.kw));
+          }}
+          onDelete={() => {
+            if (dlg.key && dlgRow) {
+              const kw = dlgRow.current.kw;
+              draft.markDelete(dlg.key);
+              const label = kw ? `${kw.toLocaleString("th-TH")} kW` : "ขนาดใหม่";
+              toast(
+                dlgRow.original
+                  ? `ทำเครื่องหมายลบ ${label} แล้ว — กด "คืนขนาดนี้" ได้ถ้าเปลี่ยนใจ`
+                  : `เอาขนาด ${label} ที่เพิ่มไว้ออกแล้ว`
+              );
+            }
+            setDlg(null);
+            focusAfter("calc-add-on-grid");
+          }}
+        />
+      )}
+
+      {confirmOpen && draft.table && (
+        <SaveTablesDialog
+          before={rows.flatMap((r) => (r.original ? [r.original] : [])).sort((a, b) => a.kw - b.kw)}
+          after={draft.table}
+          packages={data.packages}
+          sliderMaxBill={data.sliderMaxBill}
+          saving={saving}
+          conflictSummary={conflictSummary}
+          serverIssues={serverIssues}
+          onBack={closeConfirm}
+          onSave={doSave}
+          onReload={reloadLatest}
+          onGoTo={(issue) => {
+            if (!issue.key) return closeConfirm();
+            setServerIssues(null);
+            openDialog(issue.key, issue.field as DraftField);
+          }}
+        />
+      )}
     </div>
   );
 }

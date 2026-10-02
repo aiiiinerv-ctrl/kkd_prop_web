@@ -53,21 +53,27 @@ export function SourceBadge({
   );
 }
 
+const HISTORY_PREVIEW = 5;
+
 export function CalculatorVersionHistory({
   history,
   activeImportId,
   configVersion,
+  locked,
   onBusyChange,
 }: {
   history: SizeTableHistoryItem[];
   activeImportId: string | null;
   configVersion: number;
+  /** Unsaved table edits exist — "ใช้ชุดนี้" must not run underneath them. */
+  locked: boolean;
   onBusyChange: (busy: boolean) => void;
 }) {
   const router = useRouter();
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [conflictId, setConflictId] = useState<string | null>(null);
   const [warningsOpenId, setWarningsOpenId] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -115,13 +121,18 @@ export function CalculatorVersionHistory({
       }}
     >
       <h3 className="mb-2 text-sm font-semibold">ประวัติตาราง (20 เวอร์ชันล่าสุด)</h3>
+      {locked && history.length > 1 && (
+        <p id="calc-history-lock-hint" className="mb-2 text-xs text-muted-foreground">
+          ปุ่ม &quot;ใช้ชุดนี้&quot; ใช้ไม่ได้ระหว่างที่มีการแก้ตารางที่ยังไม่บันทึก — บันทึกหรือยกเลิกการแก้ก่อน
+        </p>
+      )}
       {history.length === 0 ? (
         <p className="rounded-md border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
           ยังไม่มีเวอร์ชันในระบบ — แก้ตารางในหน้านี้ หรือนำเข้าไฟล์ Excel ของฝ่ายขาย
         </p>
       ) : (
         <ul id="calc-import-history" className="divide-y rounded-md border border-border/70">
-          {history.map((item) => {
+          {(showAll ? history : history.slice(0, HISTORY_PREVIEW)).map((item) => {
             const isActive = item.id === activeImportId;
             return (
               <li
@@ -213,7 +224,7 @@ export function CalculatorVersionHistory({
                       type="button"
                       variant="outline"
                       size="sm"
-                      disabled={pending}
+                      disabled={pending || locked}
                       onClick={() => setConfirmId(item.id)}
                     >
                       ใช้ชุดนี้
@@ -234,6 +245,20 @@ export function CalculatorVersionHistory({
             );
           })}
         </ul>
+      )}
+      {history.length > HISTORY_PREVIEW && (
+        <Button
+          type="button"
+          id="calc-history-show-all"
+          variant="ghost"
+          size="sm"
+          className="mt-1"
+          aria-expanded={showAll}
+          aria-controls="calc-import-history"
+          onClick={() => setShowAll((v) => !v)}
+        >
+          {showAll ? "แสดงน้อยลง" : `แสดงทั้งหมด (อีก ${history.length - HISTORY_PREVIEW} เวอร์ชัน)`}
+        </Button>
       )}
     </div>
   );

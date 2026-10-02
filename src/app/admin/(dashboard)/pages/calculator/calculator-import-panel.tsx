@@ -18,10 +18,7 @@ import {
   previewCalculatorImport,
   type ChangedRow,
   type DiffFieldChange,
-  type DiffFieldName,
   type PreviewResult,
-  type SampleBillDiff,
-  type SampleBillOutcome,
 } from "@/actions/calculator-import";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,63 +33,23 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { formatDateTime, phaseText } from "./calculator-table-format";
+import {
+  FIELD_LABELS,
+  formatDateTime,
+  formatFieldValue,
+  formatKwList,
+  outcomeText,
+  phaseText,
+  sampleChanged,
+} from "./calculator-table-format";
 
 const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024;
 const MAX_LIST_ITEMS = 10;
-const MAX_KW_LIST = 12;
 
 export type CalculatorImportPanelData = {
   activeImportId: string | null;
   configVersion: number;
 };
-
-function formatKwList(kws: number[], max = MAX_KW_LIST): string {
-  const sorted = [...kws].sort((a, b) => a - b);
-  if (sorted.length <= max) {
-    return sorted.map((k) => k.toLocaleString("th-TH")).join(", ");
-  }
-  const shown = sorted.slice(0, max).map((k) => k.toLocaleString("th-TH"));
-  return `${shown.join(", ")} … และอีก ${sorted.length - max} ขนาด`;
-}
-
-const FIELD_LABELS: Record<DiffFieldName, string> = {
-  phases: "เฟส",
-  billRange: "ช่วงค่าไฟ (฿)",
-  panels: "แผง",
-  roofM2: "หลังคา (ตร.ม.)",
-  sunHours: "ชม.แดด/วัน",
-  days: "วัน/เดือน",
-  pricePerKwh: "ค่าไฟ/หน่วย (฿)",
-};
-
-function formatFieldValue(field: DiffFieldName, value: unknown): string {
-  switch (field) {
-    case "phases":
-      return phaseText(value as number[]);
-    case "billRange": {
-      const v = value as { billMin: number; billMax: number };
-      return `${v.billMin.toLocaleString("th-TH")}–${v.billMax.toLocaleString("th-TH")}`;
-    }
-    case "roofM2":
-      return (value as number).toFixed(1);
-    case "pricePerKwh":
-      return (value as number).toFixed(2);
-    default:
-      return String(value);
-  }
-}
-
-function outcomeText(o: SampleBillOutcome): string {
-  if (o.status === "tooLarge") return "เกินตาราง";
-  if (o.status === "empty" || o.kw === null) return "—";
-  const kw = o.kw.toLocaleString("th-TH");
-  return o.status === "belowFirstRow" ? `${kw} kW (ต่ำกว่าช่วง)` : `${kw} kW`;
-}
-
-function sampleChanged(sample: SampleBillDiff): boolean {
-  return sample.before.kw !== sample.after.kw || sample.before.status !== sample.after.status;
-}
 
 type Screen =
   | { kind: "idle" }
@@ -519,7 +476,8 @@ function PreviewPanel({
           <p className="mt-1">
             ชุดที่ใช้อยู่แก้ในหลังบ้านเมื่อ{" "}
             {result.activeSavedAt ? formatDateTime(new Date(result.activeSavedAt).toISOString()) : "—"} โดย{" "}
-            {result.activeSavedByName ?? "—"} ค่าที่แก้ไว้จะถูกแทนด้วยค่าในไฟล์ ถ้าต้องการเก็บไว้ ให้กด
+            {result.activeSavedByName ?? "—"}{" "}
+            ค่าที่แก้ไว้จะถูกแทนด้วยค่าในไฟล์ ถ้าต้องการเก็บไว้ ให้กด
             &quot;ดาวน์โหลดเป็น Excel&quot; ก่อน (เวอร์ชันเดิมยังอยู่ในประวัติ กด &quot;ใช้ชุดนี้&quot;
             เพื่อย้อนกลับได้)
           </p>

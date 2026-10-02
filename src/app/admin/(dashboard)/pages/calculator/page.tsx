@@ -71,6 +71,12 @@ export default async function PagesCalculatorPage() {
     warnings: Array.isArray(row.warnings) ? (row.warnings as string[]) : [],
   }));
 
+  // Whole-table warnings in the save-confirm dialog (Package / slider) need the
+  // same inputs `previewCalculatorImport` feeds to diffSizeTables.
+  const packages = canManageConfig
+    ? await prisma.package.findMany({ select: { sizeKw: true, isPublished: true } })
+    : [];
+
   const { table: activeTable, source: sizeTableSource } = resolveSizeTable(
     configRow?.sizeTable ?? null
   );
@@ -154,6 +160,8 @@ export default async function PagesCalculatorPage() {
                 hasSourceFile: activeImport?.fileKey != null,
               },
               onGrid: activeTable,
+              packages,
+              sliderMaxBill: params.maxBill,
               history,
             }
           : null
