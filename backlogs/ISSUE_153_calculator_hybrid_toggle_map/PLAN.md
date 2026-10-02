@@ -8,7 +8,7 @@
 |---|---|
 | GitHub | https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/153 |
 | Opened | 2026-10-02 |
-| Status (disk) | in progress — #154 done 2026-10-02; frontier: #160 (owner), #156 |
+| Status (disk) | in progress — #154 done 2026-10-02; frontier: #155, #156 (#160 closed — owner fills Excel per template, no confirmation wait) |
 | Triage labels | `wayfinder:map` |
 | Type | wayfinder |
 
@@ -53,8 +53,8 @@
 | # | Work | Owner | Depends on | Status |
 |---:|---|---|---|---|
 | 1 | [#154](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/154) Hybrid sheet read contract + edge cases (research) | agent | — | done 2026-10-02 — [asset](research-154-hybrid-read-contract.md) |
-| 1b | [#160](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/160) Owner confirms Hybrid sheet anomalies (battery-only prices, panel counts) (task) | user → owner | 1 | open (frontier) |
-| 2 | [#155](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/155) Meaning of "lowest Excel price" for payback (grilling) | user + agent | 1, 1b | blocked |
+| 1b | [#160](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/160) Owner confirms Hybrid sheet anomalies (battery-only prices, panel counts) (task) | user → owner | 1 | closed 2026-10-02 — out of scope: owner fills Excel per template; system validates/warns |
+| 2 | [#155](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/155) Meaning of "lowest Excel price" for payback (grilling) | user + agent | 1 | open (frontier) |
 | 3 | [#156](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/156) Hybrid recommendation + battery choice rules (grilling) | user + agent | 1 | open (frontier) |
 | 4 | [#157](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/157) Public UI prototype (toggle + battery) | user + `ux-ui-expert` | 2, 3 | blocked |
 | 5 | [#158](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/158) Data model / admin 2-sheet import / lead / impact (research) | agent | 1, 2, 3 | blocked |
