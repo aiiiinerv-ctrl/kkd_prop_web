@@ -8,7 +8,7 @@
 |---|---|
 | GitHub | https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/153 |
 | Opened | 2026-10-02 |
-| Status (disk) | in progress — #154 done 2026-10-02; frontier: #157, #162 — #161, #156, #155, #158, #163 done 2026-10-02 (#160 closed — owner fills Excel per template, no confirmation wait) |
+| Status (disk) | in progress — #154 done 2026-10-02; frontier: #162 — #161, #156, #155, #158, #163, #157 done 2026-10-02 (#160 closed — owner fills Excel per template, no confirmation wait) |
 | Triage labels | `wayfinder:map` |
 | Type | wayfinder |
 
@@ -57,7 +57,7 @@
 | 1b | [#160](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/160) Owner confirms Hybrid sheet anomalies (battery-only prices, panel counts) (task) | user → owner | 1 | closed 2026-10-02 — out of scope: owner fills Excel per template; system validates/warns |
 | 2 | [#155](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/155) Meaning of "lowest Excel price" for payback (grilling) | user + agent | 1 | done 2026-10-02 — price >0 only; battery-row price valid only with same-brand base (else warn); no price → hide payback + CTA; show payback only; store all brands, ship only min price to browser |
 | 3 | [#156](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/156) Hybrid recommendation + battery choice rules (grilling) | user + agent | 1 | done 2026-10-02 — On-grid kW rule; cheaper-phase row; default smallest battery >0, nearest on kW change; cap at bill; belowFirstRow/tooLarge; one fixed-range slider; keep bill on mode switch |
-| 4 | [#157](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/157) Public UI prototype (toggle + battery) | user + `ux-ui-expert` | 2, 3 | open (frontier) |
+| 4 | [#157](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/157) Public UI prototype (toggle + battery) | user + `ux-ui-expert` | 2, 3 | done 2026-10-02 — Variant B chosen on real render ([spec](design-157-public-hybrid-toggle.md), local branch `prototype/157-calculator-hybrid-toggle`) |
 | 3b | [#161](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/161) Manual admin editing vs Excel import, On-grid + Hybrid (grilling) | user + agent | 1 | done 2026-10-02 — input-only edits + add/delete rows; save = version in shared history; import overwrites + template-faithful export with formulas (round-trip); shared validator; On-grid release before Hybrid |
 | 4b | [#162](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/162) Admin table editor + 2-sheet preview/diff prototype | user + `ux-ui-expert` | 3b | open (frontier) |
 | 5 | [#158](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/158) Data model / admin 2-sheet import / lead / impact (research) | agent | 1, 2, 3, 3b | done 2026-10-02 — [asset](research-158-data-model-impact.md) |
