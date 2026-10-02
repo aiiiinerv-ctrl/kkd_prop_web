@@ -232,6 +232,11 @@ await captureState(page, "active-summary");
 const stillOnTablesTab = await page.locator("#calculator-tab-size-table[data-active]").count();
 if (stillOnTablesTab === 0) fail("CALC SIZE TABLE: admin left the size-table tab after apply");
 pass("CALC SIZE TABLE: still on size-table tab after apply (remount bug fixed)");
+// R1-S6 review N2: a successful apply closes the import panel itself (edit lock released).
+if ((await page.locator("#calc-import-file").count()) !== 0) fail("CALC SIZE TABLE: import panel must close after a successful apply");
+await page.waitForSelector("#calc-edit-on-grid-3:not([disabled])", { timeout: 5000 }).catch(() => null);
+if (!(await page.locator("#calc-edit-on-grid-3").isEnabled())) fail("CALC SIZE TABLE: edit buttons must be enabled once the panel closed after apply");
+pass("CALC SIZE TABLE: import panel closes itself after apply, edit buttons enabled");
 
 const firstAppliedRow = await prisma.calculatorConfig.findFirst();
 const firstImportId = firstAppliedRow?.sizeTableImportId ?? null;
@@ -258,6 +263,7 @@ await publicPage.close();
 // --- Macro-enabled file -> reject list ---
 const macroBuf = await withMacroEntry(await buildOnGridFixture({ includeCategory: true, rows: goodRows() }));
 const macroFilePath = await writeTempXlsx(macroBuf, "macro-fixture.xlsx");
+await openImportPanel(page);
 await page.setInputFiles("#calc-import-file", macroFilePath);
 await page.click("#calc-import-upload");
 await page.waitForSelector("#calc-import-reject", { timeout: 15000 });
@@ -552,8 +558,26 @@ const save1ImportId = cfg1.sizeTableImportId;
 await openEdit(page, "7");
 await page.click("#calc-size-dialog-delete");
 await closeDialog(page);
-let row7 = await rowOf(page, "7").innerText();
+const row7 = await rowOf(page, "7").innerText();
 if (!row7.includes("จะลบ") || !row7.includes("คืนขนาดนี้")) fail('DELETE: row must show "จะลบ" + "คืนขนาดนี้"');
+// R1-S6 review M1: strike-through only on the kW text + number cells, never on <tr>
+// (a parent's line-through cannot be cancelled by a child) nor on the restore button / "จะลบ" badge.
+{
+  const deletedRow = rowOf(page, "7");
+  const deco = (loc: ReturnType<typeof rowOf>) => loc.evaluate((el) => getComputedStyle(el).textDecorationLine);
+  const btnDeco = await deco(deletedRow.locator("#calc-restore-on-grid-7"));
+  const trDeco = await deco(deletedRow);
+  const sizeCellDeco = await deco(deletedRow.locator("td").first());
+  const badgeDeco = await deco(deletedRow.locator('td:first-child >> text="จะลบ"'));
+  const kwDeco = await deco(deletedRow.locator("td").first().locator("span").first());
+  const numDeco = await deco(deletedRow.locator("td").nth(2));
+  if (btnDeco.includes("line-through") || trDeco.includes("line-through") || sizeCellDeco.includes("line-through") || badgeDeco.includes("line-through"))
+    fail(`DELETED ROW: button/badge/tr/size cell must not be struck through (button=${btnDeco} tr=${trDeco} cell=${sizeCellDeco} badge=${badgeDeco})`);
+  if (!kwDeco.includes("line-through") || !numDeco.includes("line-through"))
+    fail(`DELETED ROW: kW text and number cells must be struck through (kw=${kwDeco} num=${numDeco})`);
+  await checkLayout(page, "deleted-row");
+  pass(`DELETED ROW: button text-decoration=${btnDeco}, kW=${kwDeco}, number cell=${numDeco}, tr=${trDeco} (screenshots r1s6-deleted-row-1280/820)`);
+}
 await page.click("#calc-restore-on-grid-7");
 if ((await page.locator("#calc-tables-savebar").count()) !== 0) fail("DELETE: restoring the size must clear the dirty state");
 await openEdit(page, "7");
