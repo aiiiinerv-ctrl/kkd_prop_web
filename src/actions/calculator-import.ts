@@ -9,8 +9,12 @@ import {
   diffSizeTables,
   importOnGridSizeTable,
   sortIssuesByRow,
+  toManualLocation,
   type SizeTableDiff,
+  type TableIssue,
 } from "@/lib/calculator-import";
+import { validateOnGridTable } from "@/lib/calculator-import/validate-on-grid";
+import { z } from "zod";
 // Type-only re-exports for the S6 admin card (calculator-size-table-card.tsx)
 // — erased at compile time, so they don't violate "use server"'s
 // every-export-must-be-an-async-function rule (same pattern as
@@ -97,6 +101,9 @@ export type PreviewResult =
       skippedSheets: string[];
       diff: SizeTableDiff;
       configVersion: number;
+      activeSource: string | null;
+      activeSavedAt: Date | null;
+      activeSavedByName: string | null;
       duplicate?: { createdAt: Date; uploadedByName: string };
     }
   | { ok: false; error: string; messages: string[] };
@@ -127,6 +134,20 @@ export async function previewCalculatorImport(formData: FormData): Promise<Previ
   }
 
   const sha256 = createHash("sha256").update(buffer).digest("hex");
+
+  // Who/when/how the currently-active set was saved — feeds the "replaces the
+  // whole set" box in the import panel.
+  const activeImport = existingConfig.sizeTableImportId
+    ? await prisma.calculatorImport.findUnique({
+        where: { id: existingConfig.sizeTableImportId },
+        select: { source: true, createdAt: true, uploadedBy: { select: { name: true } } },
+      })
+    : null;
+  const active = {
+    activeSource: activeImport?.source ?? null,
+    activeSavedAt: activeImport?.createdAt ?? null,
+    activeSavedByName: activeImport?.uploadedBy.name ?? null,
+  };
 
   // Dedupe BEFORE parsing so a re-upload of a previously-rejected file still
   // gets a fresh parse (only accepted files are ever persisted), but a
@@ -159,6 +180,7 @@ export async function previewCalculatorImport(formData: FormData): Promise<Previ
       skippedSheets: [],
       diff,
       configVersion: existingConfig.version,
+      ...active,
       duplicate: {
         createdAt: duplicateRow.createdAt,
         uploadedByName: duplicateRow.uploadedBy.name,
@@ -197,6 +219,7 @@ export async function previewCalculatorImport(formData: FormData): Promise<Previ
   try {
     const created = await calculatorImportEntity.create({
       id,
+      source: "EXCEL",
       fileName,
       fileKey,
       sha256,
@@ -216,6 +239,7 @@ export async function previewCalculatorImport(formData: FormData): Promise<Previ
       skippedSheets: parsed.skippedSheets,
       diff,
       configVersion: existingConfig.version,
+      ...active,
     };
   } catch {
     await storage.delete(fileKey).catch(() => undefined);
@@ -279,4 +303,95 @@ export async function applyCalculatorImport({
   if (!updated) return { ok: false, error: "ไม่พบการตั้งค่า" };
 
   return { ok: true };
+}
+
+const MAX_ON_GRID_ROWS = 200; // Default #11 — the server never trusts the client's row count.
+
+// Shape only (types, finiteness, size cap). Range / ordering rules belong to
+// validateOnGridTable so every failure carries a rowIndex/field the editor
+// can point at.
+const num = z.number().finite();
+const savePayloadSchema = z.object({
+  onGrid: z
+    .array(
+      z.object({
+        kw: num,
+        phases: z.array(z.union([z.literal(1), z.literal(3)])).min(1).max(2),
+        sunHours: num,
+        days: num,
+        pricePerKwh: num,
+        panels: num,
+        roofM2: num,
+        billMin: num,
+        billMax: num,
+      })
+    )
+    .min(1)
+    .max(MAX_ON_GRID_ROWS),
+  version: z.number().int().min(1),
+});
+
+export type SaveTablesResult =
+  | { ok: true; importId: string; version: number }
+  | { ok: false; error: string }
+  | { ok: false; issues: TableIssue[] }
+  | { ok: false; conflict: true };
+
+/**
+ * Saves a hand-edited On-grid table as a new `CalculatorImport` (source
+ * MANUAL, no file) and applies it immediately (D5: no draft). Takes an object
+ * so the Hybrid table can be added later without changing callers.
+ *
+ * Two audited writes, not one transaction (Default #10): if the config update
+ * loses a race, the MANUAL row stays in history as an unused version.
+ */
+export async function saveCalculatorTables(input: {
+  onGrid: SizeRow[];
+  version: number;
+}): Promise<SaveTablesResult> {
+  const session = await requireRole("ADMIN");
+
+  const shape = savePayloadSchema.safeParse(input);
+  if (!shape.success) {
+    return { ok: false, error: "ข้อมูลตารางไม่ถูกต้อง — กรุณาตรวจสอบแล้วลองใหม่" };
+  }
+  const { onGrid, version } = shape.data;
+
+  const validation = validateOnGridTable(onGrid);
+  if (validation.issues.length > 0) {
+    const kwByRow = onGrid.map((r) => r.kw);
+    return {
+      ok: false,
+      issues: validation.issues.map((issue) => toManualLocation(issue, kwByRow)),
+    };
+  }
+
+  const existing = await prisma.calculatorConfig.findFirst();
+  if (!existing) return { ok: false, error: "ไม่พบการตั้งค่า" };
+  if (existing.version !== version) return { ok: false, conflict: true };
+
+  let created;
+  try {
+    created = await calculatorImportEntity.create({
+      source: "MANUAL",
+      fileName: null,
+      fileKey: null,
+      sha256: null,
+      sizeBytes: null,
+      rows: validation.rows as unknown as Prisma.InputJsonValue,
+      warnings: validation.warnings.map((w) => w.message) as unknown as Prisma.InputJsonValue,
+      uploadedById: session.user.id,
+    });
+  } catch {
+    return { ok: false, error: "บันทึกไม่สำเร็จ — ลองใหม่อีกครั้ง" };
+  }
+
+  const updated = await calculatorConfigEntity.update(existing.id, {
+    sizeTable: validation.rows as unknown as Prisma.InputJsonValue,
+    sizeTableImportId: created.id,
+    version: existing.version + 1,
+  });
+  if (!updated) return { ok: false, error: "ไม่พบการตั้งค่า" };
+
+  return { ok: true, importId: created.id, version: updated.after.version };
 }

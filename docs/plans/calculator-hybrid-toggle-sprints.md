@@ -47,7 +47,7 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 | **R1-S1** | แยก validator On-grid ออกจาก parser (ไม่เปลี่ยนพฤติกรรม) + ตำแหน่ง issue แบบกลาง | `nextjs-dev` | golden-output script (= reviewer) | ⏳ S0 | 0.75 d | done |
 | **R1-S2** | Schema R1 (`source` + ฟิลด์ไฟล์ nullable) + DDL asset + rollback SQL asset + ผู้อ่าน `fileName` | `nextjs-dev` | `deploy-verify` | ✅ ขนานกับ R1-S1 | 0.5 d | done — `deploy-verify` PASS, `audit-compliance-reviewer` PASS |
 | **R1-S3** | Export On-grid (สูตร + result) + route `/api/admin/calculator/export` + round-trip test | `nextjs-dev` | `audit-compliance-reviewer` (route auth/headers) | ⏳ R1-S1 · ✅ ขนานกับ R1-S2 | 1 d | done — Excel check ✓, `audit-compliance-reviewer` PASS |
-| **R1-S4** | Action `saveCalculatorTables` (On-grid) + preview/apply/reset รู้จัก `source` | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R1-S1, R1-S2 · ✅ ขนานกับ R1-S3 | 1 d | pending |
+| **R1-S4** | Action `saveCalculatorTables` (On-grid) + preview/apply/reset รู้จัก `source` | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R1-S1, R1-S2 · ✅ ขนานกับ R1-S3 | 1 d | done — e2e 4 กรณี ✓, รอ `audit-compliance-reviewer` |
 | **R1-S5** | แท็บ "ตารางขนาดระบบ": โครงหน้า, ย้ายแผงนำเข้า, กล่องที่ใช้อยู่ + ปุ่ม export, ประวัติ 2 แหล่ง, รายการ On-grid อ่านอย่างเดียว | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R1-S2, R1-S3 | 1 d | pending |
 | **R1-S6** | ตัวแก้แบบ B: Dialog, working copy, แถบบันทึก, Dialog ยืนยัน diff (+ warning Package), conflict + e2e | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R1-S4, R1-S5 | 1.5 d | pending |
 | **R1-S7** | Release R1: runbook → snapshot → DDL → deploy → smoke + rollback runbook (R2 ของ research-158) | `hosting-deploy-specialist` + human (`!`, phpMyAdmin) | `deploy-verify` (ก่อน upload) | ⏳ R1-S1…S6 | 0.5 d | pending |
@@ -320,7 +320,9 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback:** revert — ยังไม่มี UI เรียก
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้:** เพิ่ม `saveCalculatorTables({ onGrid, version })` ใน `src/actions/calculator-import.ts` — `requireRole("ADMIN")` → zod รูปข้อมูล (≤ 200 แถว) → `validateOnGridTable` (ไม่ผ่านคืน `{ ok:false, issues }` พร้อม `rowIndex`/`field`, ข้อความขึ้นต้น "On-grid {kw} kW:" ผ่าน `toManualLocation` ใหม่ใน `messages.ts`) → เช็ค `version` (ชน = `{ conflict:true }`) → สร้าง `CalculatorImport` MANUAL (ฟิลด์ไฟล์ null) → update config (+1 version) ผ่าน `auditedEntity` ทั้งคู่ → `{ ok, importId, version }`. `previewCalculatorImport` คืน `activeSource/activeSavedAt/activeSavedByName` เพิ่ม และสร้างแถวด้วย `source:"EXCEL"` ชัดเจน (dedupe เดิมกรอง EXCEL อยู่แล้ว). snapshot projection ของ import มี `source` อยู่แล้วจาก R1-S2 จึงไม่แก้. `resetCalculatorConfigToDefaults` ไม่แก้.
+- e2e: `scripts/e2e-save-calculator-tables.mts` (POST server action ตรงพร้อม session) — Next ลงทะเบียน action ในมานิเฟสต์เมื่อมี client อ้างถึงเท่านั้น ตอนนี้ยังไม่มี UI จึงสคริปต์ SKIP (exit 0) จนกว่า R1-S6 จะมาถึง; ตอนรันจริงใช้ harness ชั่วคราวใน card (ย้อนแล้ว ไม่ได้ commit) — Reject, save + public + audit + rollback, conflict, MARKETING ผ่านครบ
+- ข้อแตกต่างจากแผน: ไม่มี (ข้อ "ชื่อ field/คืน activeSource" ทำตามแผน)
 
 ---
 

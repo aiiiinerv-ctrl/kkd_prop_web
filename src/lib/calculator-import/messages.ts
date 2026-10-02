@@ -338,3 +338,13 @@ export function toExcelLocation(
       return issue_(issue.code, issue.message);
   }
 }
+
+/** Hand-edit flavour of a TableIssue: names the row by its size instead of an
+ * Excel row ("On-grid 5 kW: …") and keeps `rowIndex`/`field` so the editor can
+ * point at the cell. Whole-table issues (rowIndex -1) pass through unchanged. */
+export function toManualLocation(issue: TableIssue, kwByRow: readonly number[]): TableIssue {
+  const kw = kwByRow[issue.rowIndex];
+  if (kw === undefined) return issue;
+  const label = issue.table === "hybrid" ? "Hybrid" : "On-grid";
+  return { ...issue, message: `${label} ${kw} kW: ${issue.message}` };
+}
