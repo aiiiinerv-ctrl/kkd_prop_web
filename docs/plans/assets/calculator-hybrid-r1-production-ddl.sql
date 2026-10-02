@@ -26,6 +26,14 @@ SELECT TABLE_NAME, ENGINE FROM information_schema.TABLES
 SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE FROM information_schema.COLUMNS
  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'CalculatorImport' AND COLUMN_NAME = 'source';
 
+-- 0c. Pre-check: column-level collation (MODIFY without a charset clause resets a
+--     column to the table default). Expect utf8mb4_unicode_ci on id/fileName/fileKey/
+--     sha256/uploadedById and utf8mb4_bin on the JSON columns rows/warnings (not
+--     touched here). Checked read-only 2026-10-02: exactly that. If fileName/fileKey/
+--     sha256 differ from utf8mb4_unicode_ci, STOP and record it before running step 1.
+SELECT COLUMN_NAME, COLLATION_NAME FROM information_schema.COLUMNS
+ WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'CalculatorImport' AND COLLATION_NAME IS NOT NULL;
+
 -- 1. Alter (one statement = atomic on InnoDB).
 ALTER TABLE `CalculatorImport`
     ADD COLUMN IF NOT EXISTS `source` VARCHAR(10) NOT NULL DEFAULT 'EXCEL',
