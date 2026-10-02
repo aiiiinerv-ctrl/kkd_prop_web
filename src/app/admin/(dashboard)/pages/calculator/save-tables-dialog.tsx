@@ -169,7 +169,7 @@ export function SaveTablesDialog({
                 <TableHeader>
                   <TableRow>
                     <TableHead>บิล/เดือน</TableHead>
-                    <TableHead>On-grid ตอนนี้</TableHead>
+                    <TableHead className={conflictSummary !== null ? "text-muted-foreground/50" : undefined}>On-grid ตอนนี้</TableHead>
                     <TableHead>หลังบันทึก</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -179,7 +179,9 @@ export function SaveTablesDialog({
                     return (
                       <TableRow key={sample.bill} className={changed ? "bg-amber-50" : undefined}>
                         <TableCell>฿{th(sample.bill)}</TableCell>
-                        <TableCell>{outcomeText(sample.before)}</TableCell>
+                        <TableCell className={conflictSummary !== null ? "text-muted-foreground/50" : undefined}>
+                          {outcomeText(sample.before)}
+                        </TableCell>
                         <TableCell className={changed ? "font-semibold" : undefined}>
                           {changed && <span className="sr-only">เปลี่ยน: </span>}
                           {outcomeText(sample.after)}
@@ -258,7 +260,7 @@ export function SaveTablesDialog({
             )}
           </section>
 
-          {diff.warnings.length > 0 && (
+          {diff.warnings.length > 0 && conflictSummary === null && (
             <div
               id="calc-tables-warnings"
               role="group"
@@ -282,7 +284,7 @@ export function SaveTablesDialog({
           <span className="mr-auto text-xs text-muted-foreground">
             ลูกค้าเห็นทันทีหลังบันทึก ย้อนกลับได้จากประวัติ
           </span>
-          <Button type="button" id="calc-tables-confirm-back" variant="outline" disabled={saving} onClick={onBack}>
+          <Button type="button" id="calc-tables-confirm-back" variant="outline" disabled={saving || conflictSummary !== null} onClick={onBack}>
             กลับไปแก้
           </Button>
           <Button

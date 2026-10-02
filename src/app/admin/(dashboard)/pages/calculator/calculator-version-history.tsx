@@ -147,7 +147,7 @@ export function CalculatorVersionHistory({
                   <p className="text-xs text-muted-foreground">
                     {formatDateTime(item.createdAt)} · {item.uploadedByName} · On-grid {item.onGridCount} ขนาด ·{" "}
                     {item.warnings.length === 0 ? (
-                      "ไม่มีคำเตือน"
+                      <span className="whitespace-nowrap shrink-0">ไม่มีคำเตือน</span>
                     ) : (
                       <Button
                         type="button"
@@ -234,7 +234,7 @@ export function CalculatorVersionHistory({
                     <a
                       href={`/files/private/calculator-imports/${item.id}.xlsx`}
                       aria-label={`ดาวน์โหลดต้นฉบับ ${item.fileName}`}
-                      className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                      className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-sm text-primary hover:underline"
                     >
                       <Download className="size-3.5" />
                       ดาวน์โหลดต้นฉบับ

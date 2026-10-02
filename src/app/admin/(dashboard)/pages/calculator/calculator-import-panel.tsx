@@ -69,9 +69,12 @@ function allWarnings(result: Extract<PreviewResult, { ok: true }>): string[] {
 export function CalculatorImportPanel({
   data,
   onBusyChange,
+  onApplied,
 }: {
   data: CalculatorImportPanelData;
   onBusyChange: (busy: boolean) => void;
+  /** Called after an import was applied successfully (the host closes the panel). */
+  onApplied?: () => void;
 }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -92,6 +95,8 @@ export function CalculatorImportPanel({
   const busy = uploading || applying;
   useEffect(() => {
     onBusyChange(busy);
+    // The host may close the panel right after an apply: never leave it "busy".
+    return () => onBusyChange(false);
   }, [busy, onBusyChange]);
 
   useEffect(() => {
@@ -179,6 +184,7 @@ export function CalculatorImportPanel({
         setConflict(false);
         resetUploadUi();
         router.refresh();
+        onApplied?.();
       } else if ("conflict" in result && result.conflict) {
         toast.error("มีคนแก้ก่อนคุณ — รีเฟรชแล้วลองใหม่");
         setConflict(true);

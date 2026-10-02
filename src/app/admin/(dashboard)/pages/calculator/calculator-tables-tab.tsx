@@ -94,7 +94,7 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
   const lockReason = busy
     ? null
     : importOpen
-      ? "ปิดการนำเข้าไฟล์ก่อน จึงจะแก้ตารางในหน้านี้ได้"
+      ? 'กด "ปิดการนำเข้า" ด้านบน เพื่อแก้ตารางในหน้านี้'
       : null;
 
   // `beforeunload`: leaving with unsaved edits asks for confirmation.
@@ -156,7 +156,7 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
         router.refresh();
         setTimeout(() => headingRef.current?.focus(), 80);
       } else if ("conflict" in result && result.conflict) {
-        toast.error("มีคนแก้ก่อนคุณ — รีเฟรชแล้วลองใหม่");
+        toast.error('มีคนแก้ก่อนคุณ — กด "โหลดข้อมูลล่าสุด" แล้วลองใหม่');
         setConflictSummary(changedNames());
       } else if ("issues" in result) {
         // Server found something the client validator did not (T-7): point at
@@ -298,6 +298,7 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
             <CalculatorImportPanel
               data={{ activeImportId: active.versionId, configVersion: data.configVersion }}
               onBusyChange={onImportBusy}
+              onApplied={() => setImportOpen(false)}
             />
           )}
 

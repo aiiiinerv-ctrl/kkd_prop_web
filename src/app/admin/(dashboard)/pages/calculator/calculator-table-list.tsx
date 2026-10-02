@@ -109,6 +109,7 @@ export function OnGridList({
             {rows.map((row) => {
               const status = rowStatus(row);
               const deleted = status === "deleted";
+              const strike = deleted && "line-through";
               const rowIssues = issues.filter((i) => i.key === row.key);
               const diff = status === "changed" ? changedFields(row) : new Set<DraftField>();
               const resolved = resolveRow(row.current);
@@ -120,7 +121,7 @@ export function OnGridList({
                 <TableRow
                   key={row.key}
                   data-status={status}
-                  className={cn(deleted && "text-muted-foreground line-through")}
+                  className={cn(deleted && "text-muted-foreground")}
                 >
                   <TableCell
                     className={cn(
@@ -131,15 +132,14 @@ export function OnGridList({
                     )}
                   >
                     <div className="flex items-center gap-2 whitespace-nowrap">
-                      <span className="min-w-12">{mark("kw", kwLabel)}</span>
+                      <span className={cn("min-w-12", deleted && "line-through")}>{mark("kw", kwLabel)}</span>
                       {deleted ? (
                         <Button
                           type="button"
                           id={`calc-restore-on-grid-${isNum(c.kw) ? kwId(c.kw) : row.key}`}
                           variant="ghost"
                           size="sm"
-                          className="no-underline"
-                          disabled={editLocked}
+                                                    disabled={editLocked}
                           onClick={() => onRestore(row.key)}
                         >
                           คืนขนาดนี้
@@ -159,7 +159,7 @@ export function OnGridList({
                       )}
                     </div>
                     {(status !== "same" || rowIssues.length > 0) && (
-                      <div className="mt-1 flex flex-wrap gap-1 no-underline">
+                      <div className="mt-1 flex flex-wrap gap-1">
                         {status === "changed" && <Badge variant="outline">แก้แล้ว</Badge>}
                         {status === "new" && <Badge variant="secondary">ใหม่</Badge>}
                         {deleted && <Badge variant="secondary">จะลบ</Badge>}
@@ -169,25 +169,25 @@ export function OnGridList({
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap">
+                  <TableCell className={cn("whitespace-nowrap", strike)}>
                     {mark("phases", [...c.phases].sort().join(", ") || "—")}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums whitespace-nowrap">
+                  <TableCell className={cn("text-right tabular-nums whitespace-nowrap", strike)}>
                     {mark("billMin", show(c.billMin, th))}–{mark("billMax", show(c.billMax, th))}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{mark("sunHours", show(c.sunHours, String))}</TableCell>
-                  <TableCell className="text-right tabular-nums">{mark("days", show(c.days, String))}</TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className={cn("text-right tabular-nums", strike)}>{mark("sunHours", show(c.sunHours, String))}</TableCell>
+                  <TableCell className={cn("text-right tabular-nums", strike)}>{mark("days", show(c.days, String))}</TableCell>
+                  <TableCell className={cn("text-right tabular-nums", strike)}>
                     {mark("pricePerKwh", show(c.pricePerKwh, (n) => n.toFixed(2)))}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{mark("panels", show(c.panels, String))}</TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className={cn("text-right tabular-nums", strike)}>{mark("panels", show(c.panels, String))}</TableCell>
+                  <TableCell className={cn("text-right tabular-nums", strike)}>
                     {mark("roofM2", resolved ? resolved.roofM2.toFixed(1) : show(c.roofM2, (n) => n.toFixed(1)))}
                   </TableCell>
-                  <TableCell className="bg-muted/40 text-right tabular-nums text-muted-foreground">
+                  <TableCell className={cn("bg-muted/40 text-right tabular-nums text-muted-foreground", strike)}>
                     {resolved ? th(Math.round(sizeRowKwhPerMonth(resolved))) : "—"}
                   </TableCell>
-                  <TableCell className="bg-muted/40 text-right tabular-nums text-muted-foreground">
+                  <TableCell className={cn("bg-muted/40 text-right tabular-nums text-muted-foreground", strike)}>
                     {resolved ? `฿${th(Math.round(sizeRowMonthlySavingThb(resolved)))}` : "—"}
                   </TableCell>
                 </TableRow>

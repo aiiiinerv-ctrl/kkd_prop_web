@@ -387,6 +387,14 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 - ข้อแตกต่างจากแผน: (1) ปุ่ม "แก้ไข" + ป้ายสถานะอยู่ในเซลล์ขนาด แทนคอลัมน์ท้ายแถว (เหตุผลข้างบน); (2) ช่วงที่แผงนำเข้าเปิดอยู่ ปุ่มแก้ไข/เพิ่มขนาดถูก disabled พร้อมข้อความ "ปิดการนำเข้าไฟล์ก่อน…" (ไม่อยู่ในสเปก — กัน preview ที่เปิดอยู่ถูกแทนด้วยค่าที่แก้ค้าง); (3) `NumInput` ใช้ `flushSync` ตอน focus เพื่อสลับข้อความจัดรูปแบบ -> ค่าดิบและ select พร้อมกัน (ไม่งั้นการพิมพ์ทับ/automation ต่อท้ายตัวเลขเดิม); (4) แก้ช่องว่างที่ขาดในกล่อง "แทนที่ทั้งชุด" ("…KKD Adminค่าที่แก้ไว้") เป็นข้อความต่อเนื่องของ R1-S5; (5) ไม่มีคำเตือนระดับแถวสำหรับ On-grid (Q2: ใช้เฉพาะ Hybrid) — คำเตือนที่เหลือคือ Package/slider ใน Dialog ยืนยัน; (6) grep DoD `calculator-import"` พบเฉพาะ `@/actions/calculator-import` (server action module) ไม่ใช่ `src/lib/calculator-import` — ไม่มี import ของ exceljs/lib index ฝั่ง client.
 - หมายเหตุสถานะ: `e2e-admin.mts` บรรทัด `DASHBOARD: recent lead visible ✗` เป็น info เดิม (ค้นหา lead ทดสอบชื่อ "ทดสอบ นัดสำรวจ" ซึ่งไม่เกี่ยวกับงานนี้) ไม่ทำให้ script fail. ยังไม่ได้รัน `design-business-reviewer`.
 
+**สรุปหลังแก้ (review `design-business-reviewer`, 2026-10-03)** — แก้ก่อนเข้า R1-S7:
+- **M1 (blocker) แก้แล้ว:** `line-through` ย้ายจาก `<tr>` ไปที่ `<span>` kW + เซลล์ตัวเลขเท่านั้น (ปุ่ม "คืนขนาดนี้" และป้าย "จะลบ" ไม่ถูกขีด; ลบ `no-underline` ที่ไม่ได้ผล). e2e ตรวจ computed `text-decoration-line`: ปุ่ม/tr/เซลล์ขนาด/ป้าย = `none`, kW + ตัวเลข = `line-through`; ภาพ `r1s6-deleted-row-1280/820`.
+- **N2 แก้แล้ว:** apply นำเข้าสำเร็จ -> แผงนำเข้าปิดเอง (`onApplied`); ข้อความล็อก = `กด "ปิดการนำเข้า" ด้านบน เพื่อแก้ตารางในหน้านี้`. พบ bug ร่วม: แผงที่ถูกปิดทันทีหลัง apply ทิ้ง `busy=true` ค้าง (ปุ่มแก้ไขยัง disabled) -> เพิ่ม cleanup `onBusyChange(false)` ตอน unmount.
+- **N5 แก้แล้ว:** ตอน conflict "กลับไปแก้" disabled (ทางเดียวคือ "โหลดข้อมูลล่าสุด"), กล่องคำเตือนถูกแทนที่ด้วยกล่อง conflict, คอลัมน์ "On-grid ตอนนี้" จาง, toast ใช้คำ "โหลดข้อมูลล่าสุด".
+- **N7 แก้แล้ว:** `whitespace-nowrap shrink-0` กับ "ดาวน์โหลดต้นฉบับ" และ "ไม่มีคำเตือน" ในประวัติ.
+- lint ของ script ที่งานนี้สร้าง: `e2e-calculator-config.mts` prefer-const, `e2e-save-calculator-tables.mts` no-explicit-any (ไม่แตะ lint เดิมไฟล์อื่น).
+- **Follow-up (ยังไม่ทำ):** N1 รูปแบบปุ่มแก้ไข (ให้ `ux-ui-expert` ตัดสิน) · N3 validator ตรวจเป็นขั้น · N4 ลำดับช่องใน Dialog ที่ 820px · N6 ภาพของสถานะที่ยังไม่มี.
+
 ---
 
 ## R1-S7 — Release R1 (prod)
