@@ -53,6 +53,22 @@ const MAX_HEADER_SCAN_ROWS = 20;
 const MAX_ROW_COUNT = 1000;
 const MAX_COL_COUNT = 100;
 const HEADER_MARKER = "ผลิตพลังงานต่อวัน";
+
+/** Header labels this reader matches on (group row / sub row). The Excel
+ * export (export.ts) writes headers from the same constants so a changed
+ * label can never make export and import drift apart. `*Prefix` subs are
+ * matched with startsWith. */
+export const ON_GRID_HEADER = {
+  size: { group: "ขนาดกำลังผลิต", sub: "ขนาดกำลังผลิต" },
+  unit: { group: "หน่วย", sub: "หน่วย" },
+  phase: { group: "Phase", sub: "Phase" },
+  sunHours: { group: HEADER_MARKER, subPrefix: "จำนวนชั่วโมง" },
+  days: { group: "ผลิตพลังงานต่อเดือน", sub: "จำนวนวัน" },
+  panels: { group: "แผงโซล่าเซลล์", sub: "จำนวนติดตั้ง" },
+  roof: { group: "แผงโซล่าเซลล์", subPrefix: "พื้นที่หลังคา" },
+  bill: { group: "ค่าไฟ", sub: "ประมาณ" },
+  price: { group: "ค่าไฟ", sub: "ค่าไฟ/หน่วย" },
+} as const;
 const ROOF_M2_PER_PANEL = 2.7;
 
 export type ReadOnGridResult =
@@ -175,18 +191,18 @@ function findColumns(ws: ExcelJS.Worksheet, groupRow: number, subRow: number, co
     return matches;
   };
 
-  const sizeMatches = findOne("ขนาดกำลังผลิต", (_g, s) => s === "ขนาดกำลังผลิต");
+  const sizeMatches = findOne("ขนาดกำลังผลิต", (_g, s) => s === ON_GRID_HEADER.size.sub);
   if (sizeMatches.length === 0) return columnMissingIssue("ขนาดกำลังผลิต");
   if (sizeMatches.length > 1) {
     return columnAmbiguousIssue("ขนาดกำลังผลิต", columnLetter(sizeMatches[0]), columnLetter(sizeMatches[1]));
   }
   const size = sizeMatches[0];
   const unit = size + 1; // "คอลัมน์ถัดจาก size" — research-145 §2.3
-  if (unit > colCount || subs[unit - 1] !== "หน่วย") {
+  if (unit > colCount || subs[unit - 1] !== ON_GRID_HEADER.unit.sub) {
     return columnMissingIssue("หน่วย");
   }
 
-  const phaseMatches = findOne("Phase", (_g, s) => s === "Phase");
+  const phaseMatches = findOne("Phase", (_g, s) => s === ON_GRID_HEADER.phase.sub);
   if (phaseMatches.length === 0) return columnMissingIssue("Phase");
   if (phaseMatches.length > 1) {
     return columnAmbiguousIssue("Phase", columnLetter(phaseMatches[0]), columnLetter(phaseMatches[1]));
@@ -194,7 +210,7 @@ function findColumns(ws: ExcelJS.Worksheet, groupRow: number, subRow: number, co
 
   const sunMatches = findOne(
     "ผลิตพลังงานต่อวัน (จำนวนชั่วโมงที่ผลิตได้)",
-    (g, s) => g === "ผลิตพลังงานต่อวัน" && s.startsWith("จำนวนชั่วโมง")
+    (g, s) => g === ON_GRID_HEADER.sunHours.group && s.startsWith(ON_GRID_HEADER.sunHours.subPrefix)
   );
   if (sunMatches.length === 0) return columnMissingIssue("ผลิตพลังงานต่อวัน (จำนวนชั่วโมงที่ผลิตได้)");
   if (sunMatches.length > 1) {
@@ -207,7 +223,7 @@ function findColumns(ws: ExcelJS.Worksheet, groupRow: number, subRow: number, co
 
   const daysMatches = findOne(
     "ผลิตพลังงานต่อเดือน (จำนวนวัน)",
-    (g, s) => g === "ผลิตพลังงานต่อเดือน" && s === "จำนวนวัน"
+    (g, s) => g === ON_GRID_HEADER.days.group && s === ON_GRID_HEADER.days.sub
   );
   if (daysMatches.length === 0) return columnMissingIssue("ผลิตพลังงานต่อเดือน (จำนวนวัน)");
   if (daysMatches.length > 1) {
@@ -216,7 +232,7 @@ function findColumns(ws: ExcelJS.Worksheet, groupRow: number, subRow: number, co
 
   const panelsMatches = findOne(
     "แผงโซล่าเซลล์ (จำนวนติดตั้ง)",
-    (g, s) => g === "แผงโซล่าเซลล์" && s === "จำนวนติดตั้ง"
+    (g, s) => g === ON_GRID_HEADER.panels.group && s === ON_GRID_HEADER.panels.sub
   );
   if (panelsMatches.length === 0) return columnMissingIssue("แผงโซล่าเซลล์ (จำนวนติดตั้ง)");
   if (panelsMatches.length > 1) {
@@ -225,18 +241,18 @@ function findColumns(ws: ExcelJS.Worksheet, groupRow: number, subRow: number, co
 
   const roofMatches = findOne(
     "แผงโซล่าเซลล์ (พื้นที่หลังคา)",
-    (g, s) => g === "แผงโซล่าเซลล์" && s.startsWith("พื้นที่หลังคา")
+    (g, s) => g === ON_GRID_HEADER.roof.group && s.startsWith(ON_GRID_HEADER.roof.subPrefix)
   );
   // roof area is optional in the contract (research-145 §2.3) — never reject on it.
   const roof = roofMatches.length === 1 ? roofMatches[0] : null;
 
-  const billMatches = findOne("ค่าไฟ (ประมาณ)", (g, s) => g === "ค่าไฟ" && s === "ประมาณ").sort((a, b) => a - b);
+  const billMatches = findOne("ค่าไฟ (ประมาณ)", (g, s) => g === ON_GRID_HEADER.bill.group && s === ON_GRID_HEADER.bill.sub).sort((a, b) => a - b);
   if (billMatches.length < 2) return columnMissingIssue("ค่าไฟ (ประมาณ – สูงสุด)");
   if (billMatches.length > 2) {
     return columnAmbiguousIssue("ค่าไฟ (ประมาณ)", columnLetter(billMatches[0]), columnLetter(billMatches[billMatches.length - 1]));
   }
 
-  const priceMatches = findOne("ค่าไฟ (ค่าไฟ/หน่วย)", (g, s) => g === "ค่าไฟ" && s === "ค่าไฟ/หน่วย");
+  const priceMatches = findOne("ค่าไฟ (ค่าไฟ/หน่วย)", (g, s) => g === ON_GRID_HEADER.price.group && s === ON_GRID_HEADER.price.sub);
   if (priceMatches.length === 0) return columnMissingIssue("ค่าไฟ (ค่าไฟ/หน่วย)");
   if (priceMatches.length > 1) {
     return columnAmbiguousIssue("ค่าไฟ (ค่าไฟ/หน่วย)", columnLetter(priceMatches[0]), columnLetter(priceMatches[1]));
