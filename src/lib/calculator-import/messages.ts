@@ -21,12 +21,17 @@ export type ImportIssue = {
   /** 1-based Excel row this issue is about, when applicable — used to sort
    *  row-level issues before returning them. */
   row?: number;
+  /** Set for issues found on the Hybrid sheet (On-grid issues leave it unset) —
+   *  lets the admin UI group a reject list per sheet (design-162 §8.4). */
+  sheet?: "hybrid";
 };
 
 export type ImportWarning = {
   code: string;
   message: string;
   row?: number;
+  /** Set for warnings from the Hybrid sheet (message already carries the "ชีต Hybrid" prefix). */
+  sheet?: "hybrid";
 };
 
 /** Cell text can be arbitrarily long; anything echoed from the file into a
@@ -258,9 +263,14 @@ export type TableIssue = {
 
 export type TableWarning = {
   table: "onGrid" | "hybrid";
+  /** 0-based index into the validated array (-1 = whole table). */
   rowIndex: number;
   code: string;
+  /** Hand-edit flavour (no Excel position); the import flavour is built by
+   *  toHybridImportWarning() from `data`/`examples`. */
   message: string;
+  data?: Record<string, string | number>;
+  examples?: { rowIndex: number; kw: number; batteryKwh: number; brand: string }[];
 };
 
 export const outOfRangeTableIssue = (rowIndex: number, field: OutOfRangeField, value: string): TableIssue => {
@@ -347,4 +357,291 @@ export function toManualLocation(issue: TableIssue, kwByRow: readonly number[]):
   if (kw === undefined) return issue;
   const label = issue.table === "hybrid" ? "Hybrid" : "On-grid";
   return { ...issue, message: `${label} ${kw} kW: ${issue.message}` };
+}
+
+// ---- Hybrid sheet (R2-S2) ----
+//
+// Copy follows design-162 §8.4/§8.5 verbatim. Row-level issues shared with
+// On-grid reuse the builders above and get the "ชีต Hybrid " prefix via
+// asHybridIssue(); structure-level ones need their own wording because the
+// On-grid text names the sheet. Client-safe, like everything in this file.
+
+const HYBRID = "ชีต Hybrid";
+
+/** Row-level On-grid issue -> the same text prefixed "ชีต Hybrid " (messages start with "แถว "). */
+export function asHybridIssue(i: ImportIssue): ImportIssue {
+  const message = i.message.startsWith("แถว ") ? `${HYBRID} ${i.message}` : i.message;
+  return { ...i, message, sheet: "hybrid" };
+}
+
+export function asHybridWarning(w: ImportWarning): ImportWarning {
+  const message = w.message.startsWith("แถว ") ? `${HYBRID} ${w.message}` : `${HYBRID}: ${w.message}`;
+  return { ...w, message, sheet: "hybrid" };
+}
+
+export const hybridSheetTooLargeIssue = (): ImportIssue => ({
+  ...issue("sheet-too-large", "ชีต Hybrid ใหญ่ผิดปกติ (เกิน 1,000 แถว หรือ 100 คอลัมน์)", {
+    action: "ลบแถว/คอลัมน์ว่างที่ถูกจัดรูปแบบไว้ แล้วบันทึกใหม่",
+  }),
+  sheet: "hybrid",
+});
+
+export const hybridHeaderNotFoundIssue = (): ImportIssue => ({
+  ...issue("header-not-found", 'ไม่พบหัวตาราง "ผลิตพลังงานต่อวัน" ใน 20 แถวแรกของชีต Hybrid', {
+    action: "ตรวจว่าหัวตารางยังอยู่ด้านบนของชีต",
+  }),
+  sheet: "hybrid",
+});
+
+export const hybridColumnMissingIssue = (label: string): ImportIssue => ({
+  ...issue("column-missing", `ไม่พบคอลัมน์ "${label}" ในชีต Hybrid`, {
+    action: "ตรวจว่าหัวคอลัมน์ยังสะกดเหมือนไฟล์เดิม",
+  }),
+  sheet: "hybrid",
+});
+
+export const hybridColumnAmbiguousIssue = (label: string, c1: string, c2: string): ImportIssue => ({
+  ...issue("column-ambiguous", `พบคอลัมน์ "${label}" มากกว่า 1 คอลัมน์ในชีต Hybrid (${c1}, ${c2})`, {
+    action: "เหลือไว้คอลัมน์เดียว",
+  }),
+  sheet: "hybrid",
+});
+
+export const hybridNoRowsIssue = (): ImportIssue => ({
+  ...issue("no-rows", "ไม่พบแถวข้อมูลใต้หัวตารางในชีต Hybrid", { action: "ใส่ข้อมูลใต้หัวตารางโดยไม่เว้นแถวว่าง" }),
+  sheet: "hybrid",
+});
+
+export const hybridBrandGroupMissingIssue = (): ImportIssue => ({
+  ...issue("brand-group-missing", 'ไม่พบกลุ่มคอลัมน์ "ยี่ห้อ" ในชีต Hybrid', {
+    action: "ตรวจว่าหัวตารางยังสะกดเหมือนไฟล์เดิม",
+  }),
+  sheet: "hybrid",
+});
+
+export const hybridBrandInvalidIssue = (detail: string): ImportIssue => ({
+  ...issue("brand-invalid", `กลุ่มคอลัมน์ "ยี่ห้อ" ในชีต Hybrid ใช้ไม่ได้: ${detail}`, {
+    action: "ใช้ชื่อยี่ห้อไม่ซ้ำกัน ไม่เกิน 10 ยี่ห้อ ชื่อยาวไม่เกิน 50 ตัวอักษร",
+  }),
+  sheet: "hybrid",
+});
+
+export const hybridPhaseInvalidIssue = (row: number, col: string, value: string): ImportIssue =>
+  asHybridIssue(issue("phase-invalid", `แถว ${row}, คอลัมน์ ${col} (Phase): "${clip(value)}" → ใช้ได้เฉพาะ 1 หรือ 3`, { row }));
+
+export const hybridBatteryInvalidIssue = (row: number, col: string): ImportIssue =>
+  asHybridIssue(issue("battery-invalid", `แถว ${row}, คอลัมน์ ${col} (ขนาดแบตเตอรี่): ต้องเป็นตัวเลขตั้งแต่ 0`, { row }));
+
+export const hybridPriceNotNumberIssue = (row: number, col: string, brand: string, value: string): ImportIssue =>
+  asHybridIssue(
+    issue(
+      "price-not-number",
+      `แถว ${row}, คอลัมน์ ${col} (${clip(brand)}): "${clip(value)}" ไม่ใช่ตัวเลข → ใส่ราคาเป็นตัวเลข หรือเว้นว่างถ้าไม่มีราคา`,
+      { row }
+    )
+  );
+
+export const hybridDuplicateRowIssue = (r1: number, r2: number, kw: number, phase: number, battery: number): ImportIssue =>
+  asHybridIssue(
+    issue("duplicate-hybrid-row", `แถว ${r1} และ ${r2}: ขนาด ${kw} kW ${phase} เฟส แบต ${battery} kWh ซ้ำกัน → ลบแถวที่ซ้ำ`, {
+      row: Math.min(r1, r2),
+    })
+  );
+
+export const hybridSharedMismatchIssue = (
+  row: number,
+  col: string,
+  label: string,
+  kw: number,
+  a: string,
+  b: string
+): ImportIssue =>
+  asHybridIssue(
+    issue(
+      "shared-mismatch",
+      `แถว ${row}, คอลัมน์ ${col} (${label}): ${kw} kW มีค่าไม่ตรงกับแถวอื่นในขนาดเดียวกัน (${a} กับ ${b}) → แก้ให้ทุกแถวของ ${kw} kW ตรงกัน`,
+      { row }
+    )
+  );
+
+export const hybridMissingBaseIssue = (row: number, kw: number, phase: number): ImportIssue =>
+  asHybridIssue(
+    issue(
+      "missing-base-row",
+      `แถว ${row}: ไม่มีแถวไม่มีแบต (แบต 0) ของ ${kw} kW ${phase} เฟส → เพิ่มแถวแบต 0 ของ ${kw} kW`,
+      { row }
+    )
+  );
+
+export const hybridHiddenRowsWarning = (rows: string): ImportWarning => ({
+  ...warning("hidden-rows", `ชีต Hybrid มีแถวที่ซ่อนอยู่ (${rows}) — ระบบยังอ่านค่าในแถวเหล่านี้`),
+  sheet: "hybrid",
+});
+
+// Position-free table issues/warnings from validate-hybrid.ts (hand-edit flavour).
+
+export const SHARED_FIELD_LABELS = {
+  sunHours: "ชั่วโมงแดด/วัน",
+  days: "วันต่อเดือน",
+  pricePerKwh: "ค่าไฟ/หน่วย",
+  panels: "จำนวนแผง",
+  roofM2: "พื้นที่หลังคา",
+  billMin: "ค่าไฟต่ำสุด",
+  billMax: "ค่าไฟสูงสุด",
+} as const;
+export type SharedFieldName = keyof typeof SHARED_FIELD_LABELS;
+
+export const hybridDuplicateTableIssue = (rowIndex: number, otherRowIndex: number, kw: number, phase: number, battery: number): TableIssue => ({
+  table: "hybrid",
+  rowIndex,
+  field: "batteryKwh",
+  code: "duplicate-hybrid-row",
+  message: `ขนาด ${kw} kW ${phase} เฟส แบต ${battery} kWh ซ้ำกับแถวก่อนหน้า`,
+  data: { kw, phase, battery, otherRowIndex },
+});
+
+export const hybridSharedMismatchTableIssue = (
+  rowIndex: number,
+  field: SharedFieldName,
+  kw: number,
+  a: string,
+  b: string
+): TableIssue => ({
+  table: "hybrid",
+  rowIndex,
+  field,
+  code: "shared-mismatch",
+  message: `${SHARED_FIELD_LABELS[field]}: ${kw} kW มีค่าไม่ตรงกับแถวอื่นในขนาดเดียวกัน (${a} กับ ${b})`,
+  data: { kw, a, b },
+});
+
+export const hybridMissingBaseTableIssue = (rowIndex: number, kw: number, phase: number): TableIssue => ({
+  table: "hybrid",
+  rowIndex,
+  field: "batteryKwh",
+  code: "missing-base-row",
+  message: `ไม่มีแถวไม่มีแบต (แบต 0) ของ ${kw} kW ${phase} เฟส`,
+  data: { kw, phase },
+});
+
+export const hybridBatteryInvalidTableIssue = (rowIndex: number): TableIssue => ({
+  table: "hybrid",
+  rowIndex,
+  field: "batteryKwh",
+  code: "battery-invalid",
+  message: "ขนาดแบตเตอรี่ต้องเป็นตัวเลขตั้งแต่ 0",
+});
+
+export const hybridSchemaTableIssue = (rowIndex: number, message: string): TableIssue => ({
+  ...schemaTableIssue(rowIndex, message),
+  table: "hybrid",
+});
+
+const listKw = (values: number[]) => values.join(", ");
+
+export const hybridPanelsFormulaWarning = (rowIndex: number, kw: number, panels: number, expected: number): TableWarning => ({
+  table: "hybrid",
+  rowIndex,
+  code: "hybrid-panels-formula",
+  message: `Hybrid ${kw} kW: จำนวนแผง ${panels} ต่างจากที่สูตรคำนวณได้ (≈${expected}) เกิน 20%`,
+  data: { kw, panels, expected },
+});
+
+export const hybridBatteryPriceIgnoredWarning = (
+  count: number,
+  examples: NonNullable<TableWarning["examples"]>
+): TableWarning => ({
+  table: "hybrid",
+  rowIndex: -1,
+  code: "hybrid-battery-price-ignored",
+  message: `ราคาแบต ${count} ช่องไม่มีราคาชุดไม่มีแบตของยี่ห้อเดียวกัน จึงไม่นำมาคิด (เช่น ${examples
+    .map((e) => `Hybrid ${e.kw} kW ${clip(e.brand)} แบต ${e.batteryKwh}`)
+    .join(", ")})`,
+  data: { count },
+  examples,
+});
+
+export const hybridNoPriceWarning = (rowIndex: number, kw: number, batteries: number[], rowCount: number): TableWarning => ({
+  table: "hybrid",
+  rowIndex,
+  code: "hybrid-no-price",
+  message: `Hybrid ${kw} kW แบต ${listKw(batteries)} kWh ไม่มีราคา — หน้าเว็บจะไม่แสดงระยะคืนทุน`,
+  data: { kw, batteries: listKw(batteries), rowCount },
+});
+
+/** Rebuilds the Excel-flavoured ImportIssue for a hybrid TableIssue.
+ * `sourceRows[rowIndex]` = Excel row the hybrid row was read from. */
+export function toHybridExcelLocation(
+  tableIssue: TableIssue,
+  sourceRows: number[],
+  columns: Partial<Record<string, string>> = {}
+): ImportIssue {
+  const row = sourceRows[tableIssue.rowIndex] ?? 0;
+  const data = tableIssue.data ?? {};
+  switch (tableIssue.code) {
+    case "out-of-range":
+      return asHybridIssue(
+        outOfRangeIssue(row, columns[tableIssue.field ?? ""] ?? "", tableIssue.field as OutOfRangeField, String(data.value))
+      );
+    case "bill-min-gte-max":
+      return asHybridIssue(billMinGteMaxIssue(row, String(data.min), String(data.max)));
+    case "bill-max-not-increasing":
+      return asHybridIssue(
+        billMaxNotIncreasingIssue(row, Number(data.kw), String(data.max), Number(data.prevKw), String(data.prevMax))
+      );
+    case "duplicate-hybrid-row":
+      return hybridDuplicateRowIssue(
+        sourceRows[Number(data.otherRowIndex)] ?? 0,
+        row,
+        Number(data.kw),
+        Number(data.phase),
+        Number(data.battery)
+      );
+    case "shared-mismatch":
+      return hybridSharedMismatchIssue(
+        row,
+        columns[tableIssue.field ?? ""] ?? "",
+        SHARED_FIELD_LABELS[tableIssue.field as SharedFieldName] ?? "",
+        Number(data.kw),
+        String(data.a),
+        String(data.b)
+      );
+    case "missing-base-row":
+      return hybridMissingBaseIssue(row, Number(data.kw), Number(data.phase));
+    case "battery-invalid":
+      return hybridBatteryInvalidIssue(row, columns.batteryKwh ?? "");
+    default:
+      return { code: tableIssue.code, message: `${HYBRID}: ${tableIssue.message}`, sheet: "hybrid", ...(row ? { row } : {}) };
+  }
+}
+
+/** Import flavour of a hybrid TableWarning (design-162 §8.5, "ชีต Hybrid: " prefix). */
+export function toHybridImportWarning(w: TableWarning, sourceRows: number[]): ImportWarning {
+  const data = w.data ?? {};
+  const base = (code: string, message: string, row?: number): ImportWarning => ({ code, message, ...(row ? { row } : {}), sheet: "hybrid" });
+  switch (w.code) {
+    case "hybrid-panels-formula":
+      return base(
+        w.code,
+        `${HYBRID}: จำนวนแผงของ ${data.kw} kW ต่างจากสูตรเกิน 20% (เช่น ${data.kw} kW กรอก ${data.panels} แต่สูตรได้ ≈${data.expected})`,
+        sourceRows[w.rowIndex]
+      );
+    case "hybrid-battery-price-ignored": {
+      const examples = (w.examples ?? [])
+        .map((e) => `แถว ${sourceRows[e.rowIndex] ?? "?"} ${clip(e.brand)}`)
+        .join(", ");
+      return base(
+        w.code,
+        `${HYBRID}: ราคาแบต ${data.count} ช่องไม่มีราคาชุดไม่มีแบตของยี่ห้อเดียวกัน จึงไม่นำมาคิด (เช่น ${examples})`
+      );
+    }
+    case "hybrid-no-price":
+      return base(
+        w.code,
+        `${HYBRID}: ${data.kw} kW แบต ${data.batteries} kWh ไม่มีราคา — หน้าเว็บจะไม่แสดงระยะคืนทุน`,
+        sourceRows[w.rowIndex]
+      );
+    default:
+      return base(w.code, `${HYBRID}: ${w.message}`);
+  }
 }

@@ -6,6 +6,8 @@
 // size does this bill recommend" rule lives in exactly one place.
 import { recommendFromTable } from "../calculator";
 import type { SizeRow } from "../calculator-size-table";
+import { recommendHybrid, type HybridRow } from "../calculator-hybrid";
+import { toPublicHybridTable } from "../calculator-hybrid-projection";
 import { packageNotInTableWarning, sliderMaxWarning } from "./messages";
 import type { ImportWarning } from "./messages";
 
@@ -174,4 +176,142 @@ export function diffSizeTables(
   }));
 
   return { added, removed, changed, unchangedCount, warnings, sampleBills };
+}
+
+// ---- Hybrid (R2-S2) ----
+//
+// Same preview contract as the On-grid diff, keyed by (kW, phase, battery).
+// Used by the admin only (preview / save confirm): it sees raw brand prices,
+// which is fine in the back office — the public bundle never imports this file.
+
+export type HybridDiffFieldName = DiffFieldName | "brandPrices";
+
+export type HybridChangedRow = {
+  kw: number;
+  phase: 1 | 3;
+  batteryKwh: number;
+  current: HybridRow;
+  next: HybridRow;
+  changedFields: { field: HybridDiffFieldName; current: unknown; next: unknown }[];
+};
+
+export type HybridSampleOutcome = {
+  kw: number | null;
+  /** Battery the public toggle would start on (smallest > 0, #156). */
+  batteryKwh: number | null;
+  status: "ok" | "belowFirstRow" | "tooLarge" | "empty";
+  /** Payback is shown on the public page iff this is non-null ("แสดง ({x} ปี)" / "ไม่แสดง"). */
+  paybackYears: number | null;
+};
+
+export type HybridSampleBillDiff = {
+  bill: number;
+  before: HybridSampleOutcome;
+  after: HybridSampleOutcome;
+};
+
+export type HybridTableDiff = {
+  /** The live config has no Hybrid table (preview shows "เพิ่มใหม่ทั้งตาราง"). */
+  currentEmpty: boolean;
+  /** The incoming file has no Hybrid table (D3 — the live one will be removed). */
+  nextEmpty: boolean;
+  added: HybridRow[];
+  removed: HybridRow[];
+  changed: HybridChangedRow[];
+  unchangedCount: number;
+  sampleBills: HybridSampleBillDiff[];
+};
+
+function evaluateHybridBill(bill: number, rows: HybridRow[] | null, multiplier: number): HybridSampleOutcome {
+  const result = recommendHybrid(bill, rows ? toPublicHybridTable(rows) : [], null, multiplier);
+  if (result.kind === "empty") return { kw: null, batteryKwh: null, status: "empty", paybackYears: null };
+  if (result.kind === "tooLarge") return { kw: result.lastSize.kw, batteryKwh: null, status: "tooLarge", paybackYears: null };
+  return {
+    kw: result.size.kw,
+    batteryKwh: result.batteryKwh,
+    status: result.belowFirstRow ? "belowFirstRow" : "ok",
+    paybackYears: result.paybackYears,
+  };
+}
+
+function diffHybridFields(current: HybridRow, next: HybridRow): HybridChangedRow["changedFields"] {
+  const changes: HybridChangedRow["changedFields"] = [];
+  if (current.billMin !== next.billMin || current.billMax !== next.billMax) {
+    changes.push({
+      field: "billRange",
+      current: { billMin: current.billMin, billMax: current.billMax },
+      next: { billMin: next.billMin, billMax: next.billMax },
+    });
+  }
+  if (current.panels !== next.panels) changes.push({ field: "panels", current: current.panels, next: next.panels });
+  if (!roundEq(current.roofM2, next.roofM2, 1)) changes.push({ field: "roofM2", current: current.roofM2, next: next.roofM2 });
+  if (!roundEq(current.sunHours, next.sunHours, 1)) changes.push({ field: "sunHours", current: current.sunHours, next: next.sunHours });
+  if (current.days !== next.days) changes.push({ field: "days", current: current.days, next: next.days });
+  if (!roundEq(current.pricePerKwh, next.pricePerKwh, 2)) {
+    changes.push({ field: "pricePerKwh", current: current.pricePerKwh, next: next.pricePerKwh });
+  }
+  // Brand names or any per-brand price (null = no price).
+  if (JSON.stringify(current.brandPrices) !== JSON.stringify(next.brandPrices)) {
+    changes.push({ field: "brandPrices", current: current.brandPrices, next: next.brandPrices });
+  }
+  return changes;
+}
+
+/**
+ * Diffs the Hybrid table live today (`null` = none) against an incoming one
+ * (`null` = none): rows added / removed / changed by (kW, phase, battery) and
+ * the effect on the sample bills — including whether payback would still be
+ * shown, which is what the owner cares about (design-162 §8.3 item 7).
+ */
+export function diffHybridTables(
+  current: HybridRow[] | null,
+  next: HybridRow[] | null,
+  multiplier: number
+): HybridTableDiff {
+  const key = (r: HybridRow) => `${r.kw}|${r.phase}|${r.batteryKwh}`;
+  const currentRows = current ?? [];
+  const nextRows = next ?? [];
+  const currentByKey = new Map(currentRows.map((r) => [key(r), r]));
+  const nextByKey = new Map(nextRows.map((r) => [key(r), r]));
+  const order = (a: Pick<HybridRow, "kw" | "phase" | "batteryKwh">, b: Pick<HybridRow, "kw" | "phase" | "batteryKwh">) => a.kw - b.kw || a.phase - b.phase || a.batteryKwh - b.batteryKwh;
+
+  const added: HybridRow[] = [];
+  const changed: HybridChangedRow[] = [];
+  let unchangedCount = 0;
+  for (const [k, nextRow] of nextByKey) {
+    const currentRow = currentByKey.get(k);
+    if (!currentRow) {
+      added.push(nextRow);
+      continue;
+    }
+    const changedFields = diffHybridFields(currentRow, nextRow);
+    if (changedFields.length === 0) unchangedCount++;
+    else {
+      changed.push({
+        kw: nextRow.kw,
+        phase: nextRow.phase,
+        batteryKwh: nextRow.batteryKwh,
+        current: currentRow,
+        next: nextRow,
+        changedFields,
+      });
+    }
+  }
+  const removed = currentRows.filter((r) => !nextByKey.has(key(r))).sort(order);
+  added.sort(order);
+  changed.sort(order);
+
+  return {
+    currentEmpty: currentRows.length === 0,
+    nextEmpty: nextRows.length === 0,
+    added,
+    removed,
+    changed,
+    unchangedCount,
+    sampleBills: DIFF_SAMPLE_BILLS.map((bill) => ({
+      bill,
+      before: evaluateHybridBill(bill, current, multiplier),
+      after: evaluateHybridBill(bill, next, multiplier),
+    })),
+  };
 }
