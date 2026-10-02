@@ -45,8 +45,8 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 | **S0** | Gate On-grid S10 + live baseline prod/local | `nextjs-dev` (browser/curl + `pma-readonly-query`) | — | เริ่มก่อน | 0.25 d | done (baseline 3 = skip) |
 | **R1 — On-grid: แก้เอง + export + ประวัติรวม** | | | | | | |
 | **R1-S1** | แยก validator On-grid ออกจาก parser (ไม่เปลี่ยนพฤติกรรม) + ตำแหน่ง issue แบบกลาง | `nextjs-dev` | golden-output script (= reviewer) | ⏳ S0 | 0.75 d | done |
-| **R1-S2** | Schema R1 (`source` + ฟิลด์ไฟล์ nullable) + DDL asset + rollback SQL asset + ผู้อ่าน `fileName` | `nextjs-dev` | `deploy-verify` | ✅ ขนานกับ R1-S1 | 0.5 d | done (รอ `deploy-verify`) |
-| **R1-S3** | Export On-grid (สูตร + result) + route `/api/admin/calculator/export` + round-trip test | `nextjs-dev` | `audit-compliance-reviewer` (route auth/headers) | ⏳ R1-S1 · ✅ ขนานกับ R1-S2 | 1 d | committed (รอ review) |
+| **R1-S2** | Schema R1 (`source` + ฟิลด์ไฟล์ nullable) + DDL asset + rollback SQL asset + ผู้อ่าน `fileName` | `nextjs-dev` | `deploy-verify` | ✅ ขนานกับ R1-S1 | 0.5 d | done — `deploy-verify` PASS, `audit-compliance-reviewer` PASS |
+| **R1-S3** | Export On-grid (สูตร + result) + route `/api/admin/calculator/export` + round-trip test | `nextjs-dev` | `audit-compliance-reviewer` (route auth/headers) | ⏳ R1-S1 · ✅ ขนานกับ R1-S2 | 1 d | done — Excel check ✓, `audit-compliance-reviewer` PASS |
 | **R1-S4** | Action `saveCalculatorTables` (On-grid) + preview/apply/reset รู้จัก `source` | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R1-S1, R1-S2 · ✅ ขนานกับ R1-S3 | 1 d | pending |
 | **R1-S5** | แท็บ "ตารางขนาดระบบ": โครงหน้า, ย้ายแผงนำเข้า, กล่องที่ใช้อยู่ + ปุ่ม export, ประวัติ 2 แหล่ง, รายการ On-grid อ่านอย่างเดียว | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R1-S2, R1-S3 | 1 d | pending |
 | **R1-S6** | ตัวแก้แบบ B: Dialog, working copy, แถบบันทึก, Dialog ยืนยัน diff (+ warning Package), conflict + e2e | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R1-S4, R1-S5 | 1.5 d | pending |
@@ -117,7 +117,7 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 | # | ความเสี่ยง | โอกาส | ผลกระทบ | ลดความเสี่ยง | Sprint |
 |---|---|---|---|---|---|
 | R1 | ราคาแยกยี่ห้อ/ชื่อยี่ห้อหลุดไป browser (RSC payload) | กลาง | สูง (ต้นทุนคู่ค้า) | projection (Default #5) + test serialize ใน `verify-calculator.mts` + e2e grep HTML `/th|en/calculator` ว่าไม่มีชื่อยี่ห้อ fixture + `audit-compliance-reviewer` | R2-S1, R2-S4, R2-S9 |
-| R2 | Rollback code R1 หลังมีแถว MANUAL → Prisma client เก่า throw ที่ `fileName` null (หน้า admin calculator 500) | กลาง | กลาง | rollback SQL asset (Default #2) + ขั้นตอนใน R1-S7; ขอให้ save ด้วยมือครั้งแรกบน prod หลังผ่าน smoke เท่านั้น | R1-S2, R1-S7 |
+| R2 | Rollback code R1 หลังมีแถว MANUAL → โค้ดเก่าเจอ `fileName`/`fileKey` เป็น null (R1-S2 ทดสอบแล้ว: หน้า admin ยัง render 200 ได้ แต่ยังไม่ได้ทดสอบ upload/dedupe/apply และ interaction ฝั่ง client กับแถว NULL; `deploy-verify` ประเมินว่าเสี่ยงต่ำแต่ไม่ใช่ศูนย์) | ต่ำ | กลาง | rollback SQL asset (Default #2) + ขั้นตอนใน R1-S7; ขอให้ save ด้วยมือครั้งแรกบน prod หลังผ่าน smoke เท่านั้น | R1-S2, R1-S7 |
 | R3 | Refactor parser เปลี่ยนพฤติกรรม On-grid ที่ใช้อยู่บน prod | กลาง | สูง (ไฟล์เดิม reject/ตัวเลขเปลี่ยน) | golden output ก่อน/หลัง (ทุก fixture + ไฟล์จริงถ้ามี) ต้องเท่ากันทุกไบต์; `verify-calculator-import.mts` เดิมต้องเขียวก่อนเพิ่มอะไร | R1-S1 |
 | R4 | Export แล้ว import กลับไม่เท่าเดิม | กลาง | กลาง | round-trip test ทั้ง 2 ชีตใน verify script (deep-equal, 0 warning จากสูตร) + e2e ดาวน์โหลดแล้วอัปโหลดกลับ | R1-S3, R2-S5 |
 | R5 | Excel จริง/ราคาจริงเข้า repo PUBLIC | กลาง | สูง | fixture สังเคราะห์ (Default #16); `/stuffs/` ignored อยู่แล้ว; ทุก DoD มี `git diff --stat` ไม่มี `.xlsx` และ grep ชื่อยี่ห้อจริงในไฟล์ที่ commit = 0 | ทุก sprint |
@@ -284,14 +284,14 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 **DoD**
 - [ ] `npx tsx scripts/verify-calculator-import.mts` ✓ รวม round-trip
 - [ ] `npm run build` ✓ · `npm run start` → `npx tsx scripts/e2e-admin.mts` ✓ ทุกบรรทัด
-- [ ] เปิดไฟล์ที่ export ใน Excel/Numbers ด้วยตา: header 2 แถว, สูตรคำนวณใหม่ได้, ไม่มี error cell (screenshot ในเครื่อง)
+- [x] เปิดไฟล์ที่ export ใน Excel/Numbers ด้วยตา: header 2 แถว, สูตรคำนวณใหม่ได้, ไม่มี error cell — ตรวจ 2026-10-02 ด้วย Microsoft Excel (AppleScript `calculate full` แล้วอ่านทุก cell): 21 คอลัมน์ × 7 แถว สูตรคำนวณได้ทุกช่อง ไม่มี error, ค่าตรง (3 kW → 15 / 450 / หลังคา 16.2 / ประหยัด 2,025 / ปี 20,250)
 - [ ] `audit-compliance-reviewer`: route ตรวจ session + role ก่อนอ่าน DB, headers ครบ, ไม่มี stack ใน response
 - [ ] `git diff --stat` ไม่มี `.xlsx`
 - Commits: `feat(calculator): export active on-grid size table as template-faithful excel` · `test(calculator): prove on-grid excel export round-trips through import`
 
 **Rollback:** revert — ยังไม่มีปุ่มใน UI
 
-**สรุปหลังแก้:** เพิ่ม `export.ts` (`buildCalculatorWorkbook`, ชีต `On-grid` 21 คอลัมน์, header 2 แถว merge แบบไฟล์ต้นแบบ, ค่ากรอก = value, คอลัมน์คำนวณ = สูตร + `result`, ช่องหลังคาเป็นสูตร `จำนวนติดตั้ง*2.7` เฉพาะเมื่อค่าตรงสูตร ไม่งั้นคงเป็น value) · export `ON_GRID_HEADER` จาก `read-on-grid.ts` แล้วให้ `findColumns` ใช้ค่าชุดเดียวกัน (label ไม่ซ้ำ) · route `GET /api/admin/calculator/export` (`auth()` → 401, ไม่ใช่ ADMIN → 403, headers ตาม Default #7, 500 JSON ทั่วไป) · round-trip ใน `verify-calculator-import.mts` (`DEFAULT_SIZE_TABLE`, ตารางสังเคราะห์, ไฟล์จริงถ้ามี → deep-equal + 0 warning) · e2e-admin เพิ่ม anon 401 / FINANCE, MARKETING 403 / ADMIN 200 + headers. ต่างจากแผน: สูตร "จำนวนคำนวณ" ใช้ของไฟล์ต้นแบบ `((kW*0.15)+kW)/0.63` ไม่ใช่ `kW*1.2/0.63` ของ Default #12 (คอลัมน์นี้ importer ไม่อ่าน). ยังไม่ได้ทำ: เปิดไฟล์ใน Excel/Numbers ด้วยตา (DoD ข้อ 3) และ `audit-compliance-reviewer`
+**สรุปหลังแก้:** เพิ่ม `export.ts` (`buildCalculatorWorkbook`, ชีต `On-grid` 21 คอลัมน์, header 2 แถว merge แบบไฟล์ต้นแบบ, ค่ากรอก = value, คอลัมน์คำนวณ = สูตร + `result`, ช่องหลังคาเป็นสูตร `จำนวนติดตั้ง*2.7` เฉพาะเมื่อค่าตรงสูตร ไม่งั้นคงเป็น value) · export `ON_GRID_HEADER` จาก `read-on-grid.ts` แล้วให้ `findColumns` ใช้ค่าชุดเดียวกัน (label ไม่ซ้ำ) · route `GET /api/admin/calculator/export` (`auth()` → 401, ไม่ใช่ ADMIN → 403, headers ตาม Default #7, 500 JSON ทั่วไป) · round-trip ใน `verify-calculator-import.mts` (`DEFAULT_SIZE_TABLE`, ตารางสังเคราะห์, ไฟล์จริงถ้ามี → deep-equal + 0 warning) · e2e-admin เพิ่ม anon 401 / FINANCE, MARKETING 403 / ADMIN 200 + headers. ต่างจากแผน: สูตร "จำนวนคำนวณ" ใช้ของไฟล์ต้นแบบ `((kW*0.15)+kW)/0.63` ไม่ใช่ `kW*1.2/0.63` ของ Default #12 (คอลัมน์นี้ importer ไม่อ่าน). ตรวจเพิ่มหลัง commit: เปิดใน Microsoft Excel ผ่าน (DoD ข้อ 3) และ `audit-compliance-reviewer` PASS 4/4 (สิทธิ์ 401/403 ก่อนอ่าน DB, headers, ส่งออกแค่ On-grid, read-only)
 
 **Status:** code เสร็จ + verify ผ่าน (รอตาคน/reviewer ตาม DoD)
 
