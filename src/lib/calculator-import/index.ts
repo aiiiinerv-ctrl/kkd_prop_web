@@ -1,6 +1,6 @@
 // Server-only entry point for the calculator Excel import pipeline
 // (docs/plans/calculator-excel-import-sprints.md S2). Never import this
-// module (or validate-xlsx.ts / parse-on-grid.ts) from a client component —
+// module (or validate-xlsx.ts / read-on-grid.ts / parse-on-grid.ts) from a client component —
 // exceljs/jszip must stay out of the browser bundle. This module has no
 // callers yet outside scripts/verify-calculator-import.mts; the server
 // action that will call it lands in S5.
