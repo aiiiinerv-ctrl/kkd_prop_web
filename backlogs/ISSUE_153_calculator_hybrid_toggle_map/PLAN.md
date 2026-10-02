@@ -8,7 +8,7 @@
 |---|---|
 | GitHub | https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/153 |
 | Opened | 2026-10-02 |
-| Status (disk) | in progress — #154 done 2026-10-02; frontier: #162 — #161, #156, #155, #158, #163, #157 done 2026-10-02 (#160 closed — owner fills Excel per template, no confirmation wait) |
+| Status (disk) | in progress — #154 done 2026-10-02; frontier: #159 (sprint plan) — all decision tickets done 2026-10-02 (#160 closed — owner fills Excel per template, no confirmation wait) |
 | Triage labels | `wayfinder:map` |
 | Type | wayfinder |
 
@@ -59,10 +59,10 @@
 | 3 | [#156](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/156) Hybrid recommendation + battery choice rules (grilling) | user + agent | 1 | done 2026-10-02 — On-grid kW rule; cheaper-phase row; default smallest battery >0, nearest on kW change; cap at bill; belowFirstRow/tooLarge; one fixed-range slider; keep bill on mode switch |
 | 4 | [#157](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/157) Public UI prototype (toggle + battery) | user + `ux-ui-expert` | 2, 3 | done 2026-10-02 — Variant B chosen on real render ([spec](design-157-public-hybrid-toggle.md), local branch `prototype/157-calculator-hybrid-toggle`) |
 | 3b | [#161](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/161) Manual admin editing vs Excel import, On-grid + Hybrid (grilling) | user + agent | 1 | done 2026-10-02 — input-only edits + add/delete rows; save = version in shared history; import overwrites + template-faithful export with formulas (round-trip); shared validator; On-grid release before Hybrid |
-| 4b | [#162](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/162) Admin table editor + 2-sheet preview/diff prototype | user + `ux-ui-expert` | 3b | open (frontier) |
+| 4b | [#162](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/162) Admin table editor + 2-sheet preview/diff prototype | user + `ux-ui-expert` | 3b | done 2026-10-02 — variant B chosen on real render ([spec](design-162-admin-table-editor.md), local branch `prototype/162-admin-table-editor`) |
 | 5 | [#158](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/158) Data model / admin 2-sheet import / lead / impact (research) | agent | 1, 2, 3, 3b | done 2026-10-02 — [asset](research-158-data-model-impact.md) |
 | 5b | [#163](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/163) Confirm research proposals D3–D6 (grilling) | user + agent | 5 | done 2026-10-02 — all 4 confirmed; manual save shows diff confirm before applying |
-| 6 | [#159](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/159) Sprint plan | `pm-expert` | 4, 4b, 5, 5b | blocked |
+| 6 | [#159](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/159) Sprint plan | `pm-expert` | 4, 4b, 5, 5b | open (frontier) |
 
 ## Definition of Done
 
