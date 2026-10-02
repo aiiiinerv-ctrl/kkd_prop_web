@@ -8,7 +8,7 @@
 |---|---|
 | GitHub | https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/153 |
 | Opened | 2026-10-02 |
-| Status (disk) | in progress — #154 done 2026-10-02; frontier: #155, #156 (#160 closed — owner fills Excel per template, no confirmation wait) |
+| Status (disk) | in progress — #154 done 2026-10-02; frontier: #155, #156, #161 (#160 closed — owner fills Excel per template, no confirmation wait) |
 | Triage labels | `wayfinder:map` |
 | Type | wayfinder |
 
@@ -28,6 +28,7 @@
   - One upload reads both sheets.
   - Public page defaults to On-grid; the toggle stays hidden until a Hybrid table is imported.
   - Lead fields for system type and battery size.
+  - Owner can also edit the On-grid and Hybrid tables by hand in admin, using the same formulas and validation as import (decided 2026-10-02). This changes the On-grid admin that is already on prod.
   - TH/EN for all of the above.
 - **Out-of-scope**:
   - HUAWEI block (rows 57–79) as a calc table; it only supplies battery prices.
@@ -57,8 +58,10 @@
 | 2 | [#155](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/155) Meaning of "lowest Excel price" for payback (grilling) | user + agent | 1 | open (frontier) |
 | 3 | [#156](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/156) Hybrid recommendation + battery choice rules (grilling) | user + agent | 1 | open (frontier) |
 | 4 | [#157](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/157) Public UI prototype (toggle + battery) | user + `ux-ui-expert` | 2, 3 | blocked |
-| 5 | [#158](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/158) Data model / admin 2-sheet import / lead / impact (research) | agent | 1, 2, 3 | blocked |
-| 6 | [#159](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/159) Sprint plan | `pm-expert` | 4, 5 | blocked |
+| 3b | [#161](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/161) Manual admin editing vs Excel import, On-grid + Hybrid (grilling) | user + agent | 1 | open (frontier) |
+| 4b | [#162](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/162) Admin table editor + 2-sheet preview/diff prototype | user + `ux-ui-expert` | 3b | blocked |
+| 5 | [#158](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/158) Data model / admin 2-sheet import / lead / impact (research) | agent | 1, 2, 3, 3b | blocked |
+| 6 | [#159](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/159) Sprint plan | `pm-expert` | 4, 4b, 5 | blocked |
 
 ## Definition of Done
 
