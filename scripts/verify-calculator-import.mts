@@ -14,6 +14,8 @@ import path from "node:path";
 import { validateXlsxBuffer } from "../src/lib/calculator-import/validate-xlsx";
 import { importOnGridSizeTable } from "../src/lib/calculator-import/index";
 import { diffSizeTables, DIFF_SAMPLE_BILLS } from "../src/lib/calculator-import/diff";
+import { validateOnGridTable } from "../src/lib/calculator-import/validate-on-grid";
+import { toExcelLocation } from "../src/lib/calculator-import/messages";
 import { DEFAULT_SIZE_TABLE } from "../src/lib/calculator-size-table";
 import {
   buildOnGridFixture,
@@ -321,6 +323,67 @@ console.log("\n=== diffSizeTables ===");
     "slider max (8000) >= new last billMax (6000) -> slider warning",
     diff.warnings.some((w) => w.code === "slider-max"),
     `lastMax=${lastMax}`
+  );
+}
+
+// === shared validator (validate-on-grid.ts — client-safe, no Excel) ===
+console.log("\n=== shared validator: validateOnGridTable ===");
+{
+  const ok = validateOnGridTable(DEFAULT_SIZE_TABLE);
+  assert("DEFAULT_SIZE_TABLE -> 0 issues", ok.issues.length === 0, String(ok.issues.length));
+  assert("DEFAULT_SIZE_TABLE -> rows unchanged", JSON.stringify(ok.rows) === JSON.stringify(DEFAULT_SIZE_TABLE));
+}
+{
+  // billMax of 5 kW (index 1) no longer above 3 kW's
+  const t = DEFAULT_SIZE_TABLE.map((r, i) => (i === 1 ? { ...r, billMin: 0, billMax: 2500 } : r));
+  const v = validateOnGridTable(t);
+  const i = v.issues[0];
+  assert(
+    "billMax not increasing -> 1 issue at rowIndex 1 / field billMax",
+    v.issues.length === 1 && i?.code === "bill-max-not-increasing" && i.rowIndex === 1 && i.field === "billMax",
+    JSON.stringify(v.issues.map((x) => [x.code, x.rowIndex, x.field]))
+  );
+  assert("billMax not increasing -> position-free message", !!i && !i.message.includes("แถว"));
+  assert(
+    "billMax not increasing -> toExcelLocation adds Excel row",
+    !!i && toExcelLocation(i, [[10], [14], [18]]).message.startsWith("แถว 14: ค่าไฟสูงสุดของ 5 kW")
+  );
+}
+{
+  const t = [DEFAULT_SIZE_TABLE[0]!, { ...DEFAULT_SIZE_TABLE[1]!, kw: 3 }];
+  const v = validateOnGridTable(t);
+  assert(
+    "duplicate kW -> issue at the later row (rowIndex 1)",
+    v.issues.length === 1 && v.issues[0]?.code === "duplicate-kw" && v.issues[0].rowIndex === 1,
+    JSON.stringify(v.issues.map((x) => [x.code, x.rowIndex]))
+  );
+}
+{
+  const t = DEFAULT_SIZE_TABLE.map((r, idx) => (idx === 2 ? { ...r, sunHours: 13, panels: 1.5 } : r));
+  const v = validateOnGridTable(t);
+  assert(
+    "out-of-range sunHours + panels -> 2 issues at rowIndex 2",
+    v.issues.length === 2 &&
+      v.issues.every((x) => x.code === "out-of-range" && x.rowIndex === 2) &&
+      v.issues[0]?.field === "sunHours" &&
+      v.issues[1]?.field === "panels",
+    JSON.stringify(v.issues.map((x) => [x.code, x.rowIndex, x.field]))
+  );
+}
+{
+  const t = DEFAULT_SIZE_TABLE.map((r, idx) => (idx === 0 ? { ...r, billMin: r.billMax } : r));
+  const v = validateOnGridTable(t);
+  assert(
+    "billMin >= billMax -> issue at rowIndex 0",
+    v.issues.length === 1 && v.issues[0]?.code === "bill-min-gte-max" && v.issues[0].rowIndex === 0
+  );
+}
+{
+  const reversed = [...DEFAULT_SIZE_TABLE].reverse();
+  const v = validateOnGridTable(reversed);
+  assert(
+    "unsorted input -> 0 issues, rows returned sorted by kW",
+    v.issues.length === 0 && v.rows.map((r) => r.kw).join() === "3,5,10"
   );
 }
 
