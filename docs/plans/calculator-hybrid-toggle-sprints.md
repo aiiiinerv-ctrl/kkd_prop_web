@@ -46,7 +46,7 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 | **R1 — On-grid: แก้เอง + export + ประวัติรวม** | | | | | | |
 | **R1-S1** | แยก validator On-grid ออกจาก parser (ไม่เปลี่ยนพฤติกรรม) + ตำแหน่ง issue แบบกลาง | `nextjs-dev` | golden-output script (= reviewer) | ⏳ S0 | 0.75 d | done |
 | **R1-S2** | Schema R1 (`source` + ฟิลด์ไฟล์ nullable) + DDL asset + rollback SQL asset + ผู้อ่าน `fileName` | `nextjs-dev` | `deploy-verify` | ✅ ขนานกับ R1-S1 | 0.5 d | done (รอ `deploy-verify`) |
-| **R1-S3** | Export On-grid (สูตร + result) + route `/api/admin/calculator/export` + round-trip test | `nextjs-dev` | `audit-compliance-reviewer` (route auth/headers) | ⏳ R1-S1 · ✅ ขนานกับ R1-S2 | 1 d | pending |
+| **R1-S3** | Export On-grid (สูตร + result) + route `/api/admin/calculator/export` + round-trip test | `nextjs-dev` | `audit-compliance-reviewer` (route auth/headers) | ⏳ R1-S1 · ✅ ขนานกับ R1-S2 | 1 d | committed (รอ review) |
 | **R1-S4** | Action `saveCalculatorTables` (On-grid) + preview/apply/reset รู้จัก `source` | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R1-S1, R1-S2 · ✅ ขนานกับ R1-S3 | 1 d | pending |
 | **R1-S5** | แท็บ "ตารางขนาดระบบ": โครงหน้า, ย้ายแผงนำเข้า, กล่องที่ใช้อยู่ + ปุ่ม export, ประวัติ 2 แหล่ง, รายการ On-grid อ่านอย่างเดียว | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R1-S2, R1-S3 | 1 d | pending |
 | **R1-S6** | ตัวแก้แบบ B: Dialog, working copy, แถบบันทึก, Dialog ยืนยัน diff (+ warning Package), conflict + e2e | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R1-S4, R1-S5 | 1.5 d | pending |
@@ -291,7 +291,10 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback:** revert — ยังไม่มีปุ่มใน UI
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้:** เพิ่ม `export.ts` (`buildCalculatorWorkbook`, ชีต `On-grid` 21 คอลัมน์, header 2 แถว merge แบบไฟล์ต้นแบบ, ค่ากรอก = value, คอลัมน์คำนวณ = สูตร + `result`, ช่องหลังคาเป็นสูตร `จำนวนติดตั้ง*2.7` เฉพาะเมื่อค่าตรงสูตร ไม่งั้นคงเป็น value) · export `ON_GRID_HEADER` จาก `read-on-grid.ts` แล้วให้ `findColumns` ใช้ค่าชุดเดียวกัน (label ไม่ซ้ำ) · route `GET /api/admin/calculator/export` (`auth()` → 401, ไม่ใช่ ADMIN → 403, headers ตาม Default #7, 500 JSON ทั่วไป) · round-trip ใน `verify-calculator-import.mts` (`DEFAULT_SIZE_TABLE`, ตารางสังเคราะห์, ไฟล์จริงถ้ามี → deep-equal + 0 warning) · e2e-admin เพิ่ม anon 401 / FINANCE, MARKETING 403 / ADMIN 200 + headers. ต่างจากแผน: สูตร "จำนวนคำนวณ" ใช้ของไฟล์ต้นแบบ `((kW*0.15)+kW)/0.63` ไม่ใช่ `kW*1.2/0.63` ของ Default #12 (คอลัมน์นี้ importer ไม่อ่าน). ยังไม่ได้ทำ: เปิดไฟล์ใน Excel/Numbers ด้วยตา (DoD ข้อ 3) และ `audit-compliance-reviewer`
+
+**Status:** code เสร็จ + verify ผ่าน (รอตาคน/reviewer ตาม DoD)
+
 
 ---
 

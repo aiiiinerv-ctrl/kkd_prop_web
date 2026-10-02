@@ -17,6 +17,8 @@ import { diffSizeTables, DIFF_SAMPLE_BILLS } from "../src/lib/calculator-import/
 import { validateOnGridTable } from "../src/lib/calculator-import/validate-on-grid";
 import { toExcelLocation } from "../src/lib/calculator-import/messages";
 import { DEFAULT_SIZE_TABLE } from "../src/lib/calculator-size-table";
+import type { SizeRow } from "../src/lib/calculator-size-table";
+import { buildCalculatorWorkbook } from "../src/lib/calculator-import/export";
 import {
   buildOnGridFixture,
   goodRows,
@@ -387,6 +389,43 @@ console.log("\n=== shared validator: validateOnGridTable ===");
   );
 }
 
+// === Export round-trip: export -> importOnGridSizeTable (R1-S3) ===
+console.log("\n=== export round-trip ===");
+const SYNTHETIC_TABLE: SizeRow[] = [
+  { kw: 3.3, phases: [1], sunHours: 4.8, days: 30, pricePerKwh: 4.25, panels: 6, roofM2: 16.2, billMin: 1500, billMax: 2500 },
+  { kw: 5, phases: [1, 3], sunHours: 5, days: 30.5, pricePerKwh: 4.5, panels: 10, roofM2: 27, billMin: 2500, billMax: 4000 },
+  // roof area differs from panels x 2.7 -> must stay an entered value
+  { kw: 12.5, phases: [3], sunHours: 4.9, days: 31, pricePerKwh: 4.7, panels: 22, roofM2: 61, billMin: 4000, billMax: 9500 },
+  { kw: 99.9, phases: [1, 3], sunHours: 5.1, days: 30, pricePerKwh: 4.1, panels: 180, roofM2: 486, billMin: 9500, billMax: 120000 },
+  { kw: 1000, phases: [3], sunHours: 4.5, days: 30, pricePerKwh: 3.9, panels: 1800, roofM2: 4860, billMin: 120000, billMax: 900000 },
+];
+for (const [label, table] of [
+  ["DEFAULT_SIZE_TABLE", DEFAULT_SIZE_TABLE],
+  ["synthetic table (1φ/3φ, decimals, MW-scale, overridden roof)", SYNTHETIC_TABLE],
+] as const) {
+  const exported = await buildCalculatorWorkbook({ onGrid: [...table] });
+  const back = await importOnGridSizeTable(exported, "export.xlsx");
+  assert(`${label}: export re-imports ok`, back.ok);
+  if (back.ok) {
+    assert(`${label}: table deep-equals the original`, JSON.stringify(back.rows) === JSON.stringify(table));
+    assert(`${label}: 0 warnings`, back.warnings.length === 0, back.warnings.map((w) => w.code).join(","));
+    assert(`${label}: no other sheets`, back.skippedSheets.length === 0);
+    assert(`${label}: passes the shared table validator`, validateOnGridTable(back.rows).issues.length === 0);
+  } else {
+    console.log("  errors:", back.errors.slice(0, 5).map((e) => e.message));
+  }
+}
+{
+  const exported = await buildCalculatorWorkbook({ onGrid: SYNTHETIC_TABLE });
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(exported as unknown as Parameters<ExcelJS.Workbook["xlsx"]["load"]>[0]);
+  const ws = wb.getWorksheet("On-grid")!;
+  const f = ws.getRow(3).getCell(8).value as { formula?: string; result?: number };
+  assert("derived cell is a formula with cached result", typeof f === "object" && !!f.formula && typeof f.result === "number");
+  assert("entered cell (price) is a plain number", typeof ws.getRow(3).getCell(15).value === "number");
+  assert("2 header rows, data from row 3 (1φ/3φ split into 2 rows for kW 5)", ws.getRow(4).getCell(1).value === 5 && ws.getRow(5).getCell(1).value === 5);
+}
+
 // === Optional: real files (never committed — gitignored, S0) ===
 console.log("\n=== real files (optional, skipped when not present locally) ===");
 const repoRoot = path.resolve(import.meta.dirname, "..");
@@ -404,6 +443,11 @@ async function checkRealFile(label: string, relPath: string, expect: "accept" | 
   if (expect === "accept") {
     assert(`${label} -> accept`, result.ok);
     if (result.ok) {
+      const again = await importOnGridSizeTable(await buildCalculatorWorkbook({ onGrid: result.rows }), "export.xlsx");
+      assert(
+        `${label} -> export round-trip: same ${result.rows.length} rows, 0 warnings`,
+        again.ok && JSON.stringify(again.rows) === JSON.stringify(result.rows) && again.warnings.length === 0
+      );
       const kws = result.rows.map((r) => r.kw);
       assert(
         `${label} -> ${result.rows.length} rows after merge, read ${result.rowsRead} raw rows, kW ${Math.min(...kws)} → ${Math.max(...kws)}`,

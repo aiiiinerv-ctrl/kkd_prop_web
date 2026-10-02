@@ -120,6 +120,43 @@ try {
   await storage.delete(calcImportKey);
 }
 
+// Calculator Excel export (R1-S3): anon 401, non-ADMIN 403, ADMIN 200 + headers.
+{
+  const exportUrl = "http://localhost:3000/api/admin/calculator/export";
+  const anonCtx = await browser.newContext();
+  const anonExport = await anonCtx.request.get(exportUrl, { failOnStatusCode: false });
+  assertCheck(anonExport.status() === 401, "CALC EXPORT: anonymous 401");
+  await anonCtx.close();
+
+  for (const [label, email] of [
+    ["FINANCE", "finance.test@kkdproperty.local"],
+    ["MARKETING", "marketing.test@kkdproperty.local"],
+  ] as const) {
+    const ctx = await browser.newContext();
+    const p = await ctx.newPage();
+    await p.goto("http://localhost:3000/admin/login");
+    await p.fill('input[name="email"]', email);
+    await p.fill('input[name="password"]', "Test1234!");
+    await p.click('button[type="submit"]');
+    await p.waitForURL("**/admin", { timeout: 15000 });
+    const res = await p.request.get(exportUrl, { failOnStatusCode: false });
+    assertCheck(res.status() === 403, `CALC EXPORT: ${label} 403`);
+    await ctx.close();
+  }
+
+  const adminExport = await page.request.get(exportUrl, { failOnStatusCode: false });
+  const h = adminExport.headers();
+  assertCheck(adminExport.status() === 200, "CALC EXPORT: ADMIN 200");
+  assertCheck(h["content-disposition"]?.startsWith("attachment;") ?? false, "CALC EXPORT: Content-Disposition attachment");
+  assertCheck(h["x-content-type-options"] === "nosniff", "CALC EXPORT: X-Content-Type-Options nosniff");
+  assertCheck(h["cache-control"] === "no-store", "CALC EXPORT: Cache-Control no-store");
+  assertCheck(
+    h["content-type"]?.includes("spreadsheetml.sheet") ?? false,
+    "CALC EXPORT: xlsx content-type"
+  );
+  assertCheck((await adminExport.body()).subarray(0, 2).toString() === "PK", "CALC EXPORT: body is a zip/xlsx");
+}
+
 // Logout works
 await page.goto("http://localhost:3000/admin");
 await page.click("text=ออกจากระบบ");
