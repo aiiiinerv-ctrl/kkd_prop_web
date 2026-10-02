@@ -31,7 +31,7 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 
 ## Status
 
-**Status 2026-09-26**: S0–S9 ขึ้น prod แล้ว (default legacy table — ตัวเลขเท่าเดิม); **S10 ยังไม่เริ่ม** (รอ owner upload Excel จริง). ห้ามรัน migration DROP บน prod จนกว่า cleanup follow-up.
+**Status 2026-09-26**: S0–S9 ขึ้น prod แล้ว (default legacy table — ตัวเลขเท่าเดิม); **S10 (2026-10-02 บันทึกหลักฐาน)**: ตาราง 31 ขนาดใช้งานจริงบน prod แล้ว — หลักฐานอ่านอย่างเดียวใน "สรุปหลังแก้" ของ S10 (ข้อ 2/4 และการยืนยันจาก owner ยังไม่มีหลักฐาน). _(ข้อความเดิม 2026-09-26 "S10 ยังไม่เริ่ม" ขัดกับ audit ที่เห็น apply เมื่อ 2026-09-25 — ดูสรุป S10)_ ห้ามรัน migration DROP บน prod จนกว่า cleanup follow-up.
 
 ## Sprint tracker
 
@@ -48,7 +48,7 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 | **S7** | Public calculator ใช้ตาราง: ลบ tier markers, พิมพ์เกิน slider, tiles 3 ช่อง, สถานะพิเศษ, 100%, messages TH/EN | `nextjs-dev` | `i18n-parity-checker`, `design-business-reviewer` (TH/EN + mobile) | ⏳ S5 (✅ ขนานกับ S6 ได้ ถ้าคนละ agent) | 1.5 d | done 2026-09-26 — commits `7385a5c`…`32c3edd`; i18n PASS; public design specialist re-run optional when quota resets |
 | **S8** | Cleanup โค้ด legacy (`calculateSavings`, `systemKey`, threshold, sun/days/price ใน schema/zod/seed) | `nextjs-dev` | `audit-compliance-reviewer` (actions/zod) | ⏳ S6, S7 | 0.5 d | done 2026-09-26 — verify green; migration deferred on prod |
 | **S9** | Release prod: snapshot → DDL additive → deploy → smoke → ตัวเลขเท่า baseline S0 | `hosting-deploy-specialist` + human FTP (`!`) | `deploy-verify` (ก่อน upload) | ⏳ S8 | 0.5 d | done 2026-09-26 — BUILD_ID `NlSdPcM0nzGZsBzXWBOY1`; smoke ✓; default table |
-| **S10** | Post-deploy go-live ข้อมูล: ADMIN upload `คำนวณติดตั้ง.xlsx` บน prod → preview/diff → ยืนยัน | owner/ADMIN (human) + agent browser ตรวจ | `design-business-reviewer` (render หลังเปลี่ยนตัวเลข, optional) | ⏳ S9 + owner พร้อม | 0.25 d | pending |
+| **S10** | Post-deploy go-live ข้อมูล: ADMIN upload `คำนวณติดตั้ง.xlsx` บน prod → preview/diff → ยืนยัน | owner/ADMIN (human) + agent browser ตรวจ | `design-business-reviewer` (render หลังเปลี่ยนตัวเลข, optional) | ⏳ S9 + owner พร้อม | 0.25 d | done* (ข้อ 2,4 + owner confirm ค้าง) |
 
 **รวม ~8.5 dev-days** (critical path S0→S1→S2→S5→S6→S8→S9→S10 ≈ 6.5 d เมื่อ S3/S4/S6a/S7 ขนาน)
 
@@ -501,7 +501,43 @@ Precedent: [`calculator-config-sprints.md`](calculator-config-sprints.md) (map #
 
 **Rollback:** กด "คืนค่าเริ่มต้น" (sizeTable null → legacy) หรือ "ใช้ชุดนี้" กับชุดก่อนหน้า — มีผลทันที ไม่ต้อง deploy
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้** (บันทึก 2026-10-02 — อ่านอย่างเดียวจาก prod: public page + `pma-readonly-query.mts` SELECT; ไม่ login admin, ไม่กดอะไรใน admin)
+
+หลักฐานที่มี:
+- **ข้อ 3 — ตัวเลขบนหน้าเว็บ** (Playwright + system Chrome, `/th|en/calculator`, พิมพ์ค่าในช่อง `#monthly-bill` เท่านั้น). TH และ EN ได้ผลตรงกัน:
+
+| ค่าไฟ | ผลที่เห็นจริง | ตรงที่คาด |
+|---:|---|---|
+| 2,500 | 3 kW · คืนทุน ~4.9 ปี | ใช่ |
+| 3,000 | 5 kW (1 หรือ 3 เฟส) (ยอดนิยม) · ครอบคลุม 100% · คืนทุน ~5.2 ปี | ใช่ |
+| 4,500 | 6 kW · ไม่มีระยะคืนทุน · ข้อความ "ขอใบเสนอราคาเพื่อดูระยะคืนทุน" + ปุ่ม CTA | ใช่ (ขนาดไม่มี Package + CTA) |
+| 25,500 | 40 kW · ครอบคลุม 100% · ไม่มีระยะคืนทุน + CTA | ใช่ |
+| 3,000,000 (พิมพ์) | TH "ระบบเกิน 3,000 kW ปรึกษาทีมงาน" / EN "System larger than 3,000 kW — talk to our team" | ข้อความเกินช่วงขึ้นถูก แต่รูปแบบเป็น "3,000 kW" (ไม่มีหน่วย MW) ต่างจากที่แผนเขียนคาดไว้ ("3000 kW/3 MW…") — รายงานตามจริง ไม่ได้ปรับ |
+
+- เพิ่มเติมที่เห็นบน prod: ตาราง 31 แถว (นับจาก `CalculatorImport.rows`), slider min/max/step = 500/8,000/100
+- **ข้อ 5 — audit (อ่านด้วย SELECT, ไม่ดึง rows/warnings/snapshot):**
+  - `CalculatorConfig` (1 แถว): `sizeTableImportId` = `y7254twnizpdfr0tvqc6aem6` (ไม่เป็น null), version 5, updatedAt 2026-09-25 20:01:35 (เวลา DB)
+  - `CalculatorImport` 3 แถว (ทุกแถวมี 31 แถวตาราง, fileName = ไฟล์ Excel ต้นฉบับ, uploader role ADMIN):
+
+| id (ย่อ) | sha256 12 ตัวแรก | createdAt (DB) | ใช้งานอยู่ |
+|---|---|---|---|
+| `y7254t…` | `644824c18d4e` | 2026-09-25 20:01:18 | **ใช่** |
+| `xir6mq…` | `4574e80bd938` | 2026-10-02 09:26:06 | ไม่ |
+| `kgkieq…` | `901324ecd89d` | 2026-10-02 09:27:28 | ไม่ |
+
+  - `AuditLog` (CalculatorImport/CalculatorConfig, ล่าสุดก่อน): CREATE CalculatorImport ×2 (2026-10-02 09:27, 09:26), UPDATE CalculatorConfig (2026-09-25 20:01:35), CREATE CalculatorImport (2026-09-25 20:01:18), UPDATE CalculatorConfig ×3 (2026-08-28) — actor ทุกแถว role ADMIN
+  - ข้อ 5 ผ่านบางส่วน: มี CREATE `CalculatorImport` + UPDATE `CalculatorConfig` คู่กันจริง แต่คู่ที่ผูกกับตารางที่ใช้อยู่คือ **2026-09-25** ไม่ใช่ 2026-10-02
+
+ข้อสังเกตที่ต้องให้ owner/ผู้ตรวจดู (ไม่ได้สรุปเอง):
+1. Apply ที่ทำให้ตาราง 31 ขนาดขึ้นเว็บคือ 2026-09-25 20:01 — แต่ Status 2026-09-26 ด้านบน (เดิม) เขียนว่า S10 ยังไม่เริ่ม; ไม่ทราบว่าครั้งนั้นเป็น owner หรือผู้พัฒนาทดสอบ (audit บอกแค่ role ADMIN)
+2. วันที่ 2026-10-02 มีการอัปโหลดไฟล์ 2 ครั้ง (sha ต่างจากครั้งแรกและต่างกันเอง) แต่ **ไม่มี apply ตามหลัง** (config ยังชี้ import 09-25) — ตารางที่ลูกค้าเห็นจึงยังเป็นไฟล์ชุด 09-25 ไม่ใช่ไฟล์ล่าสุด ถ้า owner ตั้งใจให้ใช้ไฟล์ล่าสุดต้อง apply เอง
+3. ถ้าต้องการให้ไฟล์ที่ใช้อยู่ = ไฟล์ล่าสุดของ owner ให้ owner เทียบ sha กับไฟล์ในเครื่อง
+
+**ไม่มีหลักฐาน — ต้องให้ owner ยืนยัน** (ต้องใช้สิทธิ์ admin บน prod; ไม่ได้ login):
+- ข้อ 2: screenshot preview (จำนวนขนาด, warnings, diff บิลตัวอย่าง) และการอนุมัติก่อนกด
+- ข้อ 4: ดาวน์โหลดต้นฉบับจากประวัติแล้ว sha256 ตรงกับไฟล์ต้นทาง
+- การยืนยันของ owner ว่าตัวเลขที่เปลี่ยน (ช่วง ~4,000–6,999 ไม่มีคืนทุน → CTA) ยอมรับได้
+- ข้อ 6 (design-business-reviewer) ไม่ได้ทำ (optional)
 
 ---
 
