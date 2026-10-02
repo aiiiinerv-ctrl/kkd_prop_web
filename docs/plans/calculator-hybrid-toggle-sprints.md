@@ -53,7 +53,7 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 | **R1-S7** | Release R1: runbook → snapshot → DDL → deploy → smoke + rollback runbook (R2 ของ research-158) | `hosting-deploy-specialist` + human (`!`, phpMyAdmin) | `deploy-verify` (ก่อน upload) | ⏳ R1-S1…S6 | 0.5 d | pending |
 | **R2 — Hybrid** | | | | | | |
 | **R2-S0** | Gate R1 นิ่งบน prod + baseline หลัง R1 | `nextjs-dev` | — | ⏳ R1-S7 | 0.25 d | pending |
-| **R2-S1** | Pure lib Hybrid: `HybridRow`, schema, สูตร, ราคาที่ใช้ได้, `recommendHybrid` + projection | `nextjs-dev` | — (verify script = reviewer) | ⏳ R2-S0 | 1 d | pending |
+| **R2-S1** | Pure lib Hybrid: `HybridRow`, schema, สูตร, ราคาที่ใช้ได้, `recommendHybrid` + projection | `nextjs-dev` | — (verify script = reviewer) | ⏳ R2-S0 | 1 d | done — verify-calculator ✓ (76/76), `tsc` ✓; full `npm run build` รันตอน merge |
 | **R2-S2** | Reader + validator + diff + messages ชีต Hybrid + import ไฟล์เดียว 2 ชีต (D3/D4) + fixture สังเคราะห์ | `nextjs-dev` | `audit-compliance-reviewer` (guard review) | ⏳ R2-S1 | 1.5 d | pending |
 | **R2-S3** | Schema R2 (3 คอลัมน์) + DDL asset | `nextjs-dev` | `deploy-verify` | ✅ ขนานกับ R2-S1/S2 | 0.5 d | pending |
 | **R2-S4** | Actions + read path: preview/apply/save/reset รู้จัก Hybrid, `getCalculatorConfig` คืน projection + payload test | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R2-S2, R2-S3 | 1 d | pending |
@@ -459,7 +459,11 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback:** revert — ไม่มีผู้เรียก
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้:** (2026-10-03, branch `feat/r2-s1-hybrid-lib`, ทำใน worktree แยกขนานกับ R1-S6 — ยังไม่ merge เข้า main)
+- ไฟล์ใหม่ `src/lib/calculator-hybrid.ts` (client-safe: `HybridRow`, `hybridTableSchema`, `hybridMonthlySaving`, `usablePrices`, `PublicHybridSize`, `recommendHybrid`) และ `src/lib/calculator-hybrid-projection.ts` (`toPublicHybridTable`, comment "server-only"); `CONTEXT.md` เพิ่ม 3 ศัพท์
+- `verify-calculator.mts` เพิ่ม section Hybrid ตารางสังเคราะห์ BrandA…E: schema reject 5 กรณี (ซ้ำ, ไม่มีแบต 0 = C7, ค่าร่วมต่าง, billMax ไม่เพิ่ม, ชื่อยี่ห้อต่าง), E3, E4, 0 ฿ ไม่นับ, cheaper-phase (ทั้งสองทิศ), กติกา #156 (kW เล็กสุด `billMax > bill`, แบตเริ่ม >0, ใกล้สุด/เสมอ→เล็กกว่า, cap, payback จากยอดหลัง cap, tooLarge/belowFirstRow) และ projection JSON ไม่มี `brand`/BrandA…E/ราคาที่ไม่ใช่ min; ตัวเลข design-157 §7 (9,500 → 10 kW แบต 16 ประหยัด 8,910 หลังติดตั้ง 590 คืนทุน ≈4.0)
+- Verify: `npx tsx scripts/verify-calculator.mts` ✓ ทั้งหมด (434 ✓, On-grid equality sweep 76/76); `grep exceljs|jszip|prisma src/lib/calculator-hybrid.ts` ว่าง; `npx tsc --noEmit -p .` ✓
+- ที่ต่างจากแผน: `npm run build` เต็มรอบยังไม่ได้รันใน worktree (ไม่มี `.env`/DB, `node_modules` + `src/generated` เป็น symlink) — ไม่มีผู้เรียกจึงเสี่ยงต่ำ ให้รันตอน merge. `hybridTableSchema` ตรวจ billMax เพิ่มเคร่งครัดข้าม kW (ค่าเดียวต่อ kW) และ kW/phase ที่ไม่มีแถวแบต 0 = reject ตาม C7
 
 ---
 
