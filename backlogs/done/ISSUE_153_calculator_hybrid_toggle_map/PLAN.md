@@ -8,7 +8,7 @@
 |---|---|
 | GitHub | https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/153 |
 | Opened | 2026-10-02 |
-| Status (disk) | in progress — #154 done 2026-10-02; frontier: #159 (sprint plan) — all decision tickets done 2026-10-02 (#160 closed — owner fills Excel per template, no confirmation wait) |
+| Status (disk) | done 2026-10-02 — map closed; sprint plan → [`docs/plans/calculator-hybrid-toggle-sprints.md`](../../../docs/plans/calculator-hybrid-toggle-sprints.md) (blocked until On-grid S10) |
 | Triage labels | `wayfinder:map` |
 | Type | wayfinder |
 
@@ -62,20 +62,20 @@
 | 4b | [#162](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/162) Admin table editor + 2-sheet preview/diff prototype | user + `ux-ui-expert` | 3b | done 2026-10-02 — variant B chosen on real render ([spec](design-162-admin-table-editor.md), local branch `prototype/162-admin-table-editor`) |
 | 5 | [#158](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/158) Data model / admin 2-sheet import / lead / impact (research) | agent | 1, 2, 3, 3b | done 2026-10-02 — [asset](research-158-data-model-impact.md) |
 | 5b | [#163](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/163) Confirm research proposals D3–D6 (grilling) | user + agent | 5 | done 2026-10-02 — all 4 confirmed; manual save shows diff confirm before applying |
-| 6 | [#159](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/159) Sprint plan | `pm-expert` | 4, 4b, 5, 5b | open (frontier) |
+| 6 | [#159](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/159) Sprint plan | `pm-expert` | 4, 4b, 5, 5b | done 2026-10-02 — [plan](../../../docs/plans/calculator-hybrid-toggle-sprints.md) R1 6.25 d + R2 10.35 d |
 
 ## Definition of Done
 
-- [ ] All child tickets closed with resolution comments; map Decisions-so-far indexed
-- [ ] Sprint plan committed in `docs/plans/` and linked here
-- [ ] Plan per sprint has:
-  - [ ] สรุปก่อนแก้ / สรุปหลังแก้
-  - [ ] DoD with verify skill
-  - [ ] Implementer + independent reviewer
-  - [ ] Commit messages
-  - [ ] Rollback
-  - [ ] Risk table
-  - [ ] Release via runbook
-  - [ ] Prod upload step
-- [ ] No secrets in PLAN, INDEX, or GitHub comments
-- [ ] `backlogs/INDEX.md` updated
+- [x] All child tickets closed with resolution comments; map Decisions-so-far indexed
+- [x] Sprint plan committed in `docs/plans/` and linked here
+- [x] Plan per sprint has:
+  - [x] สรุปก่อนแก้ / สรุปหลังแก้
+  - [x] DoD with verify skill
+  - [x] Implementer + independent reviewer
+  - [x] Commit messages
+  - [x] Rollback
+  - [x] Risk table
+  - [x] Release via runbook
+  - [x] Prod upload step
+- [x] No secrets in PLAN, INDEX, or GitHub comments (brand prices redacted 2026-10-02 in `5d84a03`; still present in git history of `3e29483` — user chose not to rewrite history)
+- [x] `backlogs/INDEX.md` updated
