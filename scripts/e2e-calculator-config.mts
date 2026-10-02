@@ -77,6 +77,20 @@ async function openConfigTab(page: Page) {
   await page.waitForSelector("#calc-annual-mult", { state: "visible", timeout: 10000 });
 }
 
+/** R1-S5: the size table lives in its own tab; the import panel is collapsed by default. */
+async function openTablesTab(page: Page) {
+  await page.goto(`${BASE_URL}/admin/pages/calculator`);
+  await page.locator("#calculator-tab-size-table").click();
+  await page.waitForSelector("#calculator-tab-size-table[data-active]", { timeout: 10000 });
+  await page.waitForSelector("#calc-size-table-summary", { state: "visible", timeout: 10000 });
+}
+
+async function openImportPanel(page: Page) {
+  const toggle = page.locator("#calc-import-toggle");
+  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  await page.waitForSelector("#calc-import-file", { state: "visible", timeout: 10000 });
+}
+
 /** S7: set the public bill field and read the recommendation panel text. */
 async function publicCalcBody(page: Page, locale: "th" | "en", bill: number): Promise<string> {
   await page.goto(`${BASE_URL}/${locale}/calculator`);
@@ -104,7 +118,6 @@ await captureState(page, "reset-confirm");
 await page.click("#calc-reset-confirm");
 await page.waitForSelector("text=คืนค่าเริ่มต้นแล้ว");
 await openConfigTab(page);
-await page.locator("#calc-size-table-summary").filter({ hasText: "ค่าเริ่มต้น" }).waitFor();
 await page.waitForFunction(() => (document.querySelector("#calc-annual-mult") as HTMLInputElement)?.value === "10");
 
 // --- The old per-row / threshold fields are gone ---
@@ -143,11 +156,29 @@ await page.fill("#calc-step-bill", String(CALCULATOR_DEFAULTS.stepBill));
 await page.click("#calc-config-submit");
 await page.waitForSelector("text=บันทึกตัวเลขการคำนวณแล้ว", { timeout: 15000 });
 
-// --- Size table card: idle/default state ---
-await page.waitForSelector("#calc-size-table-summary", { timeout: 10000 });
+// --- Size table tab: idle/default state ---
+await openTablesTab(page);
 const summaryText = await page.locator("#calc-size-table-summary").innerText();
 if (!summaryText.includes("ค่าเริ่มต้น")) fail("CALC SIZE TABLE: default summary badge missing");
 pass("CALC SIZE TABLE: idle/default state visible");
+
+// Read-only list: one row per default size, edit/add buttons render disabled until R1-S6.
+const editButtons = page.locator('button[id^="calc-edit-on-grid-"]');
+if ((await editButtons.count()) !== 3) fail("CALC SIZE TABLE: default list should have 3 rows");
+if (!(await editButtons.first().isDisabled()) || !(await page.locator("#calc-add-on-grid").isDisabled()))
+  fail("CALC SIZE TABLE: edit/add buttons must be disabled in R1-S5");
+pass("CALC SIZE TABLE: read-only On-grid list (3 rows, edit/add disabled)");
+
+// Export link: ADMIN download with the R1-S3 route's filename.
+const [download] = await Promise.all([page.waitForEvent("download"), page.click("#calc-export")]);
+if (!/^kkd-calculator-tables-\d{8}\.xlsx$/.test(download.suggestedFilename()))
+  fail(`CALC SIZE TABLE: unexpected export filename ${download.suggestedFilename()}`);
+pass("CALC SIZE TABLE: export button downloads kkd-calculator-tables-<date>.xlsx");
+
+// Import panel is collapsed until the toggle is pressed.
+if ((await page.locator("#calc-import-file").count()) !== 0) fail("CALC SIZE TABLE: import panel should start collapsed");
+await openImportPanel(page);
+pass("CALC SIZE TABLE: import toggle opens the panel");
 
 // --- Upload: a good fixture that also produces a warning (drops the 10 kW
 // row — a published Package.sizeKw=10 then has no matching table row) ---
@@ -192,11 +223,11 @@ if (!appliedSummary.includes("warning-fixture.xlsx")) {
 pass("CALC SIZE TABLE: apply -> summary shows file");
 await captureState(page, "active-summary");
 
-// Admin must still be on the "ตัวเลขการคำนวณ" tab after apply (spec §9.3 —
+// Admin must still be on the "ตารางขนาดระบบ" tab after apply (spec §9.3 —
 // no shell remount back to the "เนื้อหา" tab).
-const stillOnConfigTab = await page.locator("#calculator-tab-config[data-active]").count();
-if (stillOnConfigTab === 0) fail("CALC SIZE TABLE: admin left the config tab after apply");
-pass("CALC SIZE TABLE: still on config tab after apply (remount bug fixed)");
+const stillOnTablesTab = await page.locator("#calculator-tab-size-table[data-active]").count();
+if (stillOnTablesTab === 0) fail("CALC SIZE TABLE: admin left the size-table tab after apply");
+pass("CALC SIZE TABLE: still on size-table tab after apply (remount bug fixed)");
 
 const firstAppliedRow = await prisma.calculatorConfig.findFirst();
 const firstImportId = firstAppliedRow?.sizeTableImportId ?? null;
@@ -271,7 +302,8 @@ const distinctRows: FixtureRow[] = [
 const distinctBuf = await buildOnGridFixture({ includeCategory: true, rows: distinctRows });
 const distinctFilePath = await writeTempXlsx(distinctBuf, "distinct-fixture.xlsx");
 
-await openConfigTab(page);
+await openTablesTab(page);
+await openImportPanel(page);
 await page.setInputFiles("#calc-import-file", distinctFilePath);
 await page.click("#calc-import-upload");
 await page.waitForSelector("#calc-import-preview", { timeout: 15000 });
@@ -314,6 +346,37 @@ if (!rolledBackRow || rolledBackRow.sizeTableImportId !== firstImportId) {
   fail("CALC SIZE TABLE: rollback did not restore the earlier import");
 }
 pass("CALC SIZE TABLE: rollback to a previous set from history");
+
+// --- History source badges: EXCEL shows "Excel: <file>" + original download;
+// MANUAL shows "แก้ในหลังบ้าน" and no download link ---
+const excelItem = page.locator("#calc-import-history li").filter({ hasText: "warning-fixture.xlsx" }).first();
+const excelText = await excelItem.innerText();
+if (!excelText.includes("Excel:") || !excelText.includes("ดาวน์โหลดต้นฉบับ"))
+  fail(`CALC SIZE TABLE: EXCEL history item needs "Excel: <file>" + download link, got: ${excelText}`);
+const adminUser = await prisma.adminUser.findFirstOrThrow({ where: { email: "admin@kkdproperty.com" } });
+const manualImport = await prisma.calculatorImport.create({
+  data: {
+    source: "MANUAL",
+    fileName: null,
+    fileKey: null,
+    sha256: null,
+    sizeBytes: null,
+    rows: [
+      { kw: 3, phases: [1], sunHours: 5, days: 30, pricePerKwh: 4.5, panels: 6, roofM2: 16.2, billMin: 2000, billMax: 3000 },
+    ],
+    warnings: [],
+    uploadedById: adminUser.id,
+  },
+});
+try {
+  await openTablesTab(page);
+  const manualItem = page.locator("#calc-import-history li").filter({ hasText: "แก้ในหลังบ้าน" }).first();
+  await manualItem.waitFor({ timeout: 10000 });
+  if ((await manualItem.locator("a").count()) !== 0) fail("CALC SIZE TABLE: MANUAL history item must not have a download link");
+  pass("CALC SIZE TABLE: history badges (Excel: <file> + download / แก้ในหลังบ้าน without download)");
+} finally {
+  await prisma.calculatorImport.delete({ where: { id: manualImport.id } });
+}
 
 // --- Reset: back to the default 3-row table ---
 await openConfigTab(page);
@@ -376,7 +439,10 @@ const configTabForMarketing = await pageMarketing.locator("#calculator-tab-confi
 if (configTabForMarketing !== 0) {
   fail("ROLE: MARKETING should not see the ตัวเลขการคำนวณ tab");
 }
-pass("ROLE: MARKETING does not see the config tab / Excel card");
+if ((await pageMarketing.locator("#calculator-tab-size-table").count()) !== 0) {
+  fail("ROLE: MARKETING should not see the ตารางขนาดระบบ tab");
+}
+pass("ROLE: MARKETING does not see the config tab / size-table tab");
 const beforeDeniedApply = await prisma.calculatorConfig.findFirst();
 const deniedApply = await pageMarketing.request.post(applyRequest.url(), {
   headers: {
