@@ -8,7 +8,7 @@
 |---|---|
 | GitHub | https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/153 |
 | Opened | 2026-10-02 |
-| Status (disk) | in progress — #154 done 2026-10-02; frontier: #157, #162, #163 — #161, #156, #155, #158 done 2026-10-02 (#160 closed — owner fills Excel per template, no confirmation wait) |
+| Status (disk) | in progress — #154 done 2026-10-02; frontier: #157, #162 — #161, #156, #155, #158, #163 done 2026-10-02 (#160 closed — owner fills Excel per template, no confirmation wait) |
 | Triage labels | `wayfinder:map` |
 | Type | wayfinder |
 
@@ -61,7 +61,7 @@
 | 3b | [#161](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/161) Manual admin editing vs Excel import, On-grid + Hybrid (grilling) | user + agent | 1 | done 2026-10-02 — input-only edits + add/delete rows; save = version in shared history; import overwrites + template-faithful export with formulas (round-trip); shared validator; On-grid release before Hybrid |
 | 4b | [#162](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/162) Admin table editor + 2-sheet preview/diff prototype | user + `ux-ui-expert` | 3b | open (frontier) |
 | 5 | [#158](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/158) Data model / admin 2-sheet import / lead / impact (research) | agent | 1, 2, 3, 3b | done 2026-10-02 — [asset](research-158-data-model-impact.md) |
-| 5b | [#163](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/163) Confirm research proposals D3–D6 (grilling) | user + agent | 5 | open (frontier) |
+| 5b | [#163](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/163) Confirm research proposals D3–D6 (grilling) | user + agent | 5 | done 2026-10-02 — all 4 confirmed; manual save shows diff confirm before applying |
 | 6 | [#159](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/159) Sprint plan | `pm-expert` | 4, 4b, 5, 5b | blocked |
 
 ## Definition of Done
