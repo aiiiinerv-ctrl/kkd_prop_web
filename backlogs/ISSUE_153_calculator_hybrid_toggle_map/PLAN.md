@@ -8,7 +8,7 @@
 |---|---|
 | GitHub | https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/153 |
 | Opened | 2026-10-02 |
-| Status (disk) | in progress — #154 done 2026-10-02; frontier: #155, #156, #161 (#160 closed — owner fills Excel per template, no confirmation wait) |
+| Status (disk) | in progress — #154 done 2026-10-02; frontier: #155, #156 — #161 done 2026-10-02 (#160 closed — owner fills Excel per template, no confirmation wait) |
 | Triage labels | `wayfinder:map` |
 | Type | wayfinder |
 
@@ -58,8 +58,8 @@
 | 2 | [#155](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/155) Meaning of "lowest Excel price" for payback (grilling) | user + agent | 1 | open (frontier) |
 | 3 | [#156](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/156) Hybrid recommendation + battery choice rules (grilling) | user + agent | 1 | open (frontier) |
 | 4 | [#157](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/157) Public UI prototype (toggle + battery) | user + `ux-ui-expert` | 2, 3 | blocked |
-| 3b | [#161](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/161) Manual admin editing vs Excel import, On-grid + Hybrid (grilling) | user + agent | 1 | open (frontier) |
-| 4b | [#162](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/162) Admin table editor + 2-sheet preview/diff prototype | user + `ux-ui-expert` | 3b | blocked |
+| 3b | [#161](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/161) Manual admin editing vs Excel import, On-grid + Hybrid (grilling) | user + agent | 1 | done 2026-10-02 — input-only edits + add/delete rows; save = version in shared history; import overwrites + template-faithful export with formulas (round-trip); shared validator; On-grid release before Hybrid |
+| 4b | [#162](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/162) Admin table editor + 2-sheet preview/diff prototype | user + `ux-ui-expert` | 3b | open (frontier) |
 | 5 | [#158](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/158) Data model / admin 2-sheet import / lead / impact (research) | agent | 1, 2, 3, 3b | blocked |
 | 6 | [#159](https://github.com/aiiiinerv-ctrl/kkd_prop_web/issues/159) Sprint plan | `pm-expert` | 4, 4b, 5 | blocked |
 
