@@ -1,3 +1,6 @@
+// R1-S6 (hand-edit On-grid table, confirm dialog, conflict, export round-trip)
+// is the "R1-S6" block after the public-after-reset checks below.
+//
 // E2E for the S6 admin calculator tab: the trimmed ×10/slider form and the
 // "ตารางขนาดระบบ (Excel)" card (upload → preview → apply/reject/duplicate →
 // rollback → reset), plus role restriction and audit trail — and S7 public
@@ -162,12 +165,13 @@ const summaryText = await page.locator("#calc-size-table-summary").innerText();
 if (!summaryText.includes("ค่าเริ่มต้น")) fail("CALC SIZE TABLE: default summary badge missing");
 pass("CALC SIZE TABLE: idle/default state visible");
 
-// Read-only list: one row per default size, edit/add buttons render disabled until R1-S6.
+// List: one row per default size; edit/add are live since R1-S6 and there is no save bar while idle.
 const editButtons = page.locator('button[id^="calc-edit-on-grid-"]');
 if ((await editButtons.count()) !== 3) fail("CALC SIZE TABLE: default list should have 3 rows");
-if (!(await editButtons.first().isDisabled()) || !(await page.locator("#calc-add-on-grid").isDisabled()))
-  fail("CALC SIZE TABLE: edit/add buttons must be disabled in R1-S5");
-pass("CALC SIZE TABLE: read-only On-grid list (3 rows, edit/add disabled)");
+if ((await editButtons.first().isDisabled()) || (await page.locator("#calc-add-on-grid").isDisabled()))
+  fail("CALC SIZE TABLE: edit/add buttons must be enabled when nothing is open");
+if ((await page.locator("#calc-tables-savebar").count()) !== 0) fail("CALC SIZE TABLE: no save bar while idle");
+pass("CALC SIZE TABLE: On-grid list (3 rows, edit/add enabled, no save bar while idle)");
 
 // Export link: ADMIN download with the R1-S3 route's filename.
 const [download] = await Promise.all([page.waitForEvent("download"), page.click("#calc-export")]);
@@ -407,6 +411,274 @@ for (const locale of ["th", "en"] as const) {
   pass(`PUBLIC ${locale}: reset → legacy 3/5/10 kW sizes`);
 }
 await publicAfterReset.close();
+
+// =====================================================================
+// R1-S6: hand-edit the On-grid table (starts from the default table the
+// reset above left behind). Every change goes through the UI -> server
+// action path; the DB is only READ here.
+// =====================================================================
+const r1Start = new Date();
+
+/** No horizontal overflow at 1280 and 820 (+ optional screenshots into SCREENSHOT_DIR). */
+async function checkLayout(p: Page, name: string, fullPage = false) {
+  for (const width of [1280, 820]) {
+    await p.setViewportSize({ width, height: 900 });
+    await p.waitForTimeout(150);
+    const dims = await p.evaluate(() => ({
+      sw: document.documentElement.scrollWidth,
+      cw: document.documentElement.clientWidth,
+    }));
+    if (dims.sw > dims.cw) fail(`LAYOUT ${name} @${width}: page overflows (scrollWidth ${dims.sw} > ${dims.cw})`);
+    if (process.env.SCREENSHOT_DIR) {
+      await fs.mkdir(process.env.SCREENSHOT_DIR, { recursive: true });
+      await p.screenshot({ path: path.join(process.env.SCREENSHOT_DIR, `r1s6-${name}-${width}.png`), fullPage });
+    }
+  }
+  await p.setViewportSize({ width: 1280, height: 720 });
+}
+
+async function openEdit(p: Page, kw: string) {
+  await p.click(`#calc-edit-on-grid-${kw}`);
+  await p.waitForSelector("#calc-size-dialog", { state: "visible" });
+}
+async function closeDialog(p: Page) {
+  await p.waitForSelector("#calc-size-dialog", { state: "detached", timeout: 10000 });
+}
+async function fillFields(p: Page, fields: Record<string, string>) {
+  for (const [id, value] of Object.entries(fields)) await p.fill(`#${id}`, value);
+}
+const rowOf = (p: Page, kw: string) => p.locator("tr", { has: p.locator(`#calc-edit-on-grid-${kw}, #calc-restore-on-grid-${kw}`) });
+const activeIdIsAny = (p: Page, id: string) => p.waitForFunction((x) => document.activeElement?.id === x, id);
+const configNow = () => prisma.calculatorConfig.findFirstOrThrow();
+const publicHas = async (p: Page, locale: "th" | "en", bill: number, re: RegExp) => re.test(await publicCalcBody(p, locale, bill));
+const SEVEN = /(?<![\d.])7\s*kW/;
+
+const pub = await browser.newPage();
+await openTablesTab(page);
+
+// --- 1. Edit one value -> save bar, locks, tab switch; edit back -> bar gone ---
+await openEdit(page, "3");
+if (!(await page.locator("#og-kw").evaluate((el) => (el as HTMLInputElement).readOnly))) fail("EDIT: kW of an existing size must be read-only");
+await page.fill("#og-bill-max", "3500");
+await page.locator("#calc-size-dialog-ok").click();
+await closeDialog(page);
+await page.waitForSelector("#calc-tables-savebar", { timeout: 5000 });
+if (!(await rowOf(page, "3").innerText()).includes("แก้แล้ว")) fail('EDIT: edited row needs the "แก้แล้ว" badge');
+if (!(await page.locator("#calc-import-toggle").isDisabled())) fail("LOCK: import button must be disabled while edits are pending");
+if (!(await page.locator("#calc-import-lock-hint").isVisible())) fail("LOCK: a visible hint must explain the disabled import button");
+await page.locator("#calculator-tab-config").click();
+await page.locator("#calculator-tab-size-table").click();
+if (!(await page.locator("#calc-tables-savebar").isVisible())) fail("EDIT: pending edits must survive switching tabs");
+pass("EDIT: dirty row badge, save bar, import locked with visible hint, edits survive a tab switch");
+await checkLayout(page, "dirty-list");
+
+await openEdit(page, "3");
+await page.fill("#og-bill-max", "3000");
+await page.locator("#calc-size-dialog-ok").click();
+await closeDialog(page);
+if ((await page.locator("#calc-tables-savebar").count()) !== 0) fail("EDIT: editing back to the original must remove the save bar");
+if (await page.locator("#calc-import-toggle").isDisabled()) fail("LOCK: import button must re-enable once nothing is pending");
+pass("EDIT: editing a value back to the original removes the save bar and unlocks import");
+
+// --- 2. Add a size with a bad bill range -> error pointing at the field ---
+await openEdit(page, "3");
+await page.fill("#og-bill-max", "3500");
+await page.locator("#calc-size-dialog-ok").click();
+await closeDialog(page);
+await page.click("#calc-add-on-grid");
+await page.waitForSelector("#calc-size-dialog", { state: "visible" });
+await fillFields(page, { "og-kw": "7", "og-panels": "13", "og-bill-min": "6000", "og-bill-max": "5000" });
+await page.locator("#og-bill-max").blur();
+await page.waitForSelector("#og-bill-min[aria-invalid='true']", { timeout: 5000 });
+const dialogErrors = await page.locator("#calc-size-dialog-errors").innerText();
+if (!dialogErrors.includes("ต้องแก้ 1 จุดก่อนบันทึก")) fail(`ERROR: dialog summary box missing, got: ${dialogErrors}`);
+if (!(await page.locator("#og-bill-min-error").innerText()).includes("ต้องน้อยกว่า")) fail("ERROR: message under the field missing");
+await page.locator('#calc-size-dialog-errors button').first().click();
+await activeIdIsAny(page, "og-bill-min");
+pass("ERROR: aria-invalid + message under the field + summary box whose link focuses the field");
+await checkLayout(page, "edit-dialog-error");
+await page.locator("#calc-size-dialog-ok").click(); // allowed with errors (design-162 §5.1)
+await closeDialog(page);
+await page.waitForSelector("#calc-tables-errline", { timeout: 5000 });
+if (!(await page.locator("#calc-tables-save").isDisabled())) fail("ERROR: save button must be disabled while there are errors");
+if (!(await rowOf(page, "7").innerText()).includes("ผิด 1")) fail('ERROR: row needs the "ผิด 1" badge');
+await page.click("#calc-tables-goto-error");
+await page.waitForSelector("#calc-size-dialog", { state: "visible" });
+await activeIdIsAny(page, "og-bill-min");
+pass('ERROR: save disabled, row badge "ผิด 1", "ไปที่จุดแรก" reopens the dialog on the bad field');
+await fillFields(page, { "og-bill-max": "8000" });
+await page.locator("#calc-size-dialog-ok").click();
+await closeDialog(page);
+if ((await page.locator("#calc-tables-errline").count()) !== 0 || (await page.locator("#calc-tables-save").isDisabled()))
+  fail("ERROR: fixing the field must re-enable save");
+
+// --- 3. Confirm dialog with diff, then save ---
+const before1 = await configNow();
+for (const locale of ["th", "en"] as const) {
+  if (await publicHas(pub, locale, 7000, SEVEN)) fail(`PUBLIC ${locale}: 7 kW must not be recommended before saving`);
+}
+await page.click("#calc-tables-save");
+await page.waitForSelector("#calc-tables-confirm", { state: "visible" });
+const confirmText = await page.locator("#calc-tables-confirm").innerText();
+for (const needle of ["ผลต่อบิลตัวอย่าง", "สิ่งที่เปลี่ยน", "เปลี่ยน", "เพิ่ม", "On-grid 7 kW", "ลูกค้าเห็นทันที"])
+  if (!confirmText.includes(needle)) fail(`CONFIRM: dialog missing "${needle}"`);
+if ((await configNow()).version !== before1.version) fail("CONFIRM: opening the dialog must not save anything");
+await checkLayout(page, "confirm-diff");
+await page.click("#calc-tables-confirm-save");
+await page.getByText("บันทึกแล้ว — หน้าเครื่องคำนวณอัปเดตแล้ว").first().waitFor({ timeout: 15000 });
+await page.waitForSelector("#calc-tables-confirm", { state: "detached", timeout: 10000 });
+await page.waitForFunction(() => document.activeElement?.id === "calc-tables-heading", null, { timeout: 5000 });
+const cfg1 = await configNow();
+if (cfg1.version !== before1.version + 1 || !cfg1.sizeTableImportId) fail("SAVE: config version must bump by 1 and point at the new import");
+const imp1 = await prisma.calculatorImport.findUniqueOrThrow({ where: { id: cfg1.sizeTableImportId } });
+if (imp1.source !== "MANUAL") fail("SAVE: new set must be a MANUAL import");
+const r1Rows = (cfg1.sizeTable as { kw: number; billMax: number }[]) ?? [];
+if (!r1Rows.some((r) => r.kw === 7 && r.billMax === 8000) || r1Rows.find((r) => r.kw === 3)?.billMax !== 3500) fail("SAVE: table in DB does not match the edits");
+const summary1 = await page.locator("#calc-size-table-summary").innerText();
+if (!summary1.includes("แก้ในหลังบ้าน") || !summary1.includes("ใช้อยู่")) fail("SAVE: summary must show the MANUAL source + ใช้อยู่");
+if ((await page.locator("#calc-tables-savebar").count()) !== 0) fail("SAVE: save bar must disappear after saving");
+pass("SAVE: confirm diff -> MANUAL import + config v+1, summary shows แก้ในหลังบ้าน, focus on heading, bar gone");
+await checkLayout(page, "active-manual-and-history", true);
+for (const locale of ["th", "en"] as const) {
+  if (!(await publicHas(pub, locale, 7000, SEVEN))) fail(`PUBLIC ${locale}: bill 7000 should recommend 7 kW after the save`);
+}
+pass("PUBLIC /th + /en: bill 7000 recommends the new 7 kW size");
+const histManual = page.locator("#calc-import-history li").first();
+if (!(await histManual.innerText()).includes("แก้ในหลังบ้าน")) fail('HISTORY: newest item must carry the "แก้ในหลังบ้าน" badge');
+pass("HISTORY: newest version is labelled แก้ในหลังบ้าน");
+
+// --- 4. Second save: mark delete + restore + delete; history locked while dirty ---
+const save1ImportId = cfg1.sizeTableImportId;
+await openEdit(page, "7");
+await page.click("#calc-size-dialog-delete");
+await closeDialog(page);
+let row7 = await rowOf(page, "7").innerText();
+if (!row7.includes("จะลบ") || !row7.includes("คืนขนาดนี้")) fail('DELETE: row must show "จะลบ" + "คืนขนาดนี้"');
+await page.click("#calc-restore-on-grid-7");
+if ((await page.locator("#calc-tables-savebar").count()) !== 0) fail("DELETE: restoring the size must clear the dirty state");
+await openEdit(page, "7");
+await page.click("#calc-size-dialog-delete");
+await closeDialog(page);
+if ((await page.locator("#calc-history-lock-hint").count()) !== 1) fail("LOCK: history needs a visible hint while edits are pending");
+for (const btn of await page.locator('button[id^="calc-import-use-"]').all()) {
+  if (!(await btn.isDisabled())) fail('LOCK: "ใช้ชุดนี้" must be disabled while edits are pending');
+}
+pass('DELETE: จะลบ/คืนขนาดนี้ round trip; "ใช้ชุดนี้" disabled with a visible hint while dirty');
+await page.click("#calc-tables-save");
+await page.waitForSelector("#calc-tables-confirm", { state: "visible" });
+if (!(await page.locator("#calc-tables-confirm").innerText()).includes("ขนาดนี้จะไม่ถูกแนะนำอีก")) fail("CONFIRM: removed size needs the explanatory line");
+await page.click("#calc-tables-confirm-save");
+await page.waitForSelector("#calc-tables-confirm", { state: "detached", timeout: 15000 });
+for (const locale of ["th", "en"] as const) {
+  if (await publicHas(pub, locale, 7000, SEVEN)) fail(`PUBLIC ${locale}: 7 kW must be gone after deleting it`);
+}
+pass("SAVE #2: deleting 7 kW removes it from /th + /en");
+
+// --- 5. "ใช้ชุดนี้" rolls back to the first manual version ---
+await page.waitForSelector(`#calc-import-use-${save1ImportId}`, { state: "visible", timeout: 10000 });
+await page.click(`#calc-import-use-${save1ImportId}`);
+await page.click(`#calc-import-use-confirm-${save1ImportId}`);
+await page.getByText("กลับไปใช้เวอร์ชันแก้ในหลังบ้าน").first().waitFor({ timeout: 15000 });
+if ((await configNow()).sizeTableImportId !== save1ImportId) fail("ROLLBACK: config must point at the first manual version");
+for (const locale of ["th", "en"] as const) {
+  if (!(await publicHas(pub, locale, 7000, SEVEN))) fail(`ROLLBACK ${locale}: 7 kW must be back after "ใช้ชุดนี้"`);
+}
+pass("ROLLBACK: ใช้ชุดนี้ on the first manual version restores 7 kW on /th + /en");
+
+// --- 6. Conflict: another admin saves while this draft is open ---
+const adminB = await browser.newPage();
+await login(adminB, "admin@kkdproperty.com", ADMIN_PASSWORD);
+await openTablesTab(adminB);
+await openEdit(adminB, "5");
+await adminB.fill("#og-sun", "5.5");
+await adminB.locator("#calc-size-dialog-ok").click();
+await closeDialog(adminB);
+await openTablesTab(page);
+await openEdit(page, "10");
+await page.fill("#og-panels", "19");
+await page.locator("#calc-size-dialog-ok").click();
+await closeDialog(page);
+await page.click("#calc-tables-save");
+await page.waitForSelector("#calc-tables-confirm", { state: "visible" });
+const saveRequestPromise = page.waitForRequest((r) => r.method() === "POST" && Boolean(r.headers()["next-action"]));
+await page.click("#calc-tables-confirm-save");
+const saveRequest = await saveRequestPromise;
+await page.waitForSelector("#calc-tables-confirm", { state: "detached", timeout: 15000 });
+const versionAfterA = (await configNow()).version;
+await adminB.click("#calc-tables-save");
+await adminB.waitForSelector("#calc-tables-confirm", { state: "visible" });
+await adminB.click("#calc-tables-confirm-save");
+await adminB.waitForSelector("#calc-tables-conflict", { timeout: 15000 });
+const conflictText = await adminB.locator("#calc-tables-conflict").innerText();
+if (!conflictText.includes("มีคนแก้ตารางก่อนคุณ") || !conflictText.includes("On-grid 5 kW")) fail(`CONFLICT: box text unexpected: ${conflictText}`);
+if (!(await adminB.locator("#calc-tables-confirm-save").isDisabled())) fail("CONFLICT: confirm button must be disabled");
+if ((await configNow()).version !== versionAfterA) fail("CONFLICT: the losing save must not change the config");
+pass("CONFLICT: stale draft -> conflict box listing the edited sizes, confirm disabled, nothing saved");
+await checkLayout(adminB, "conflict");
+await adminB.click("#calc-tables-conflict-reload");
+await adminB.waitForSelector("#calc-tables-confirm", { state: "detached", timeout: 10000 });
+await adminB.waitForSelector("#calc-tables-savebar", { state: "detached", timeout: 10000 });
+await adminB.waitForFunction(() => document.querySelector("tr:has(#calc-edit-on-grid-10)")?.querySelectorAll("td")[6]?.textContent === "19", null, { timeout: 15000 });
+pass("CONFLICT: โหลดข้อมูลล่าสุด drops the draft and shows the other admin's value (10 kW panels 19)");
+await adminB.close();
+
+// --- 7. Export -> import the same file -> same table (overwrite box over a MANUAL set) ---
+const preExport = (await configNow()).sizeTable;
+const [dl] = await Promise.all([page.waitForEvent("download"), page.click("#calc-export")]);
+const exportedPath = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "kkd-r1s6-")), "exported.xlsx");
+await dl.saveAs(exportedPath);
+await openImportPanel(page);
+await page.setInputFiles("#calc-import-file", exportedPath);
+await page.click("#calc-import-upload");
+await page.waitForSelector("#calc-import-preview", { timeout: 15000 });
+await page.waitForSelector("#calc-import-overwrite", { state: "visible", timeout: 5000 });
+if (!(await page.locator("#calc-import-overwrite").innerText()).includes("ไฟล์นี้จะแทนที่ตารางทั้งชุด")) fail("IMPORT: overwrite box text missing");
+await checkLayout(page, "import-overwrite");
+await page.click("#calc-import-apply");
+await page.click("#calc-import-apply-confirm");
+await page.getByText("ใช้ตารางใหม่แล้ว").first().waitFor({ timeout: 15000 });
+const norm = (t: unknown) =>
+  JSON.stringify(
+    (t as Record<string, unknown>[]).map((r) => [r.kw, [...(r.phases as number[])].sort(), r.sunHours, r.days, r.pricePerKwh, r.panels, r.roofM2, r.billMin, r.billMax])
+  );
+if (norm((await configNow()).sizeTable) !== norm(preExport)) fail("ROUND-TRIP: re-importing the exported file must give the same table");
+await page.locator("#calc-size-table-summary").filter({ hasText: "exported.xlsx" }).waitFor({ timeout: 10000 });
+pass("ROUND-TRIP: export -> import gives the same table; overwrite box shown over a MANUAL set; summary shows Excel: exported.xlsx");
+await checkLayout(page, "active-excel-and-history", true);
+
+// --- 8. Audit rows for the manual saves ---
+const audits = await prisma.auditLog.findMany({ where: { createdAt: { gte: r1Start }, entityType: { in: ["CalculatorImport", "CalculatorConfig"] } } });
+const manualCreates = audits.filter((a) => a.entityType === "CalculatorImport" && a.action === "CREATE" && JSON.stringify(a.after).includes('"source":"MANUAL"'));
+const cfgUpdates = audits.filter((a) => a.entityType === "CalculatorConfig" && a.action === "UPDATE");
+if (manualCreates.length < 3 || cfgUpdates.length < 3) fail(`AUDIT: expected >=3 MANUAL import CREATE + >=3 config UPDATE, got ${manualCreates.length}/${cfgUpdates.length}`);
+if (manualCreates.some((a) => /"rows"|fileKey/.test(JSON.stringify(a.after)))) fail("AUDIT: MANUAL import snapshots must not contain rows/fileKey");
+pass(`AUDIT: ${manualCreates.length} CalculatorImport CREATE (source MANUAL) + ${cfgUpdates.length} CalculatorConfig UPDATE, no rows blob`);
+
+// --- 9. Another role cannot call the save action ---
+const marketingR1 = await browser.newPage();
+await login(marketingR1, "marketing.test@kkdproperty.local", "Test1234!");
+const beforeDeniedSave = await configNow();
+const deniedSave = await marketingR1.request.post(saveRequest.url(), {
+  headers: { "next-action": saveRequest.headers()["next-action"], "content-type": saveRequest.headers()["content-type"], origin: BASE_URL },
+  data: saveRequest.postDataBuffer()!,
+});
+if (!deniedSave.headers()["x-action-redirect"]?.startsWith("/admin;")) fail("ROLE: direct save action must redirect MARKETING to /admin");
+if ((await configNow()).version !== beforeDeniedSave.version) fail("ROLE: denied direct save must not change config");
+pass("ROLE: direct saveCalculatorTables as MARKETING -> redirect, config unchanged");
+await marketingR1.close();
+
+// --- 10. Reset (UI) -> back to the baseline default table ---
+await openConfigTab(page);
+await page.click("#calc-reset");
+await page.click("#calc-reset-confirm");
+await page.waitForSelector("text=คืนค่าเริ่มต้นแล้ว", { timeout: 15000 });
+if ((await configNow()).sizeTable !== null) fail("RESET: size table must be cleared");
+for (const locale of ["th", "en"] as const) {
+  if (await publicHas(pub, locale, 7000, SEVEN)) fail(`RESET ${locale}: 7 kW must be gone`);
+  if (!(await publicHas(pub, locale, 7000, /(?<![\d.])10\s*kW/))) fail(`RESET ${locale}: bill 7000 must recommend 10 kW again (baseline)`);
+}
+await pub.close();
+pass("RESET: /th + /en back to the default table (bill 7000 -> 10 kW)");
 
 // --- Audit trail ---
 const importCreateAudit = await prisma.auditLog.findFirst({
