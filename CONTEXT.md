@@ -99,6 +99,18 @@ _Avoid_: upload, size table file
 `DEFAULT_SIZE_TABLE` — the fixed 3 kW / 5 kW / 10 kW rows matching production's numbers before any Excel Import exists, used as the calculator's fallback and as the equality baseline that proves the Size table model reproduces the old fixed-tier behavior exactly.
 _Avoid_: default table (ambiguous with `CalculatorConfig` defaults), old table
 
+**Table version (ชุดตาราง)**:
+One saved state of the Size table, stored as a `CalculatorImport` row and optionally the one currently applied to `CalculatorConfig`. A version comes from either an Excel Import or a hand edit in the back office; the history lists both.
+_Avoid_: snapshot, revision
+
+**Manual edit (MANUAL)**:
+A Table version created by an admin editing rows in the back office rather than uploading a file (`source = MANUAL`; Excel-derived versions are `EXCEL`). It never mutates an earlier version — saving always creates a new one. Planned in `docs/plans/calculator-hybrid-toggle-sprints.md` (R1-S2/S4); the term is reserved ahead of the schema.
+_Avoid_: draft, override
+
+**Shared validator**:
+`src/lib/calculator-import/validate-on-grid.ts` — the table-level rules for an On-grid Size table (field ranges, billMin < billMax, duplicate kW, billMax strictly increasing, zod schema). Client-safe (no Excel libraries), so the Excel Import and the back-office editor judge a table by the same code. Returns `TableIssue`s with a row index; `toExcelLocation()` in `messages.ts` turns them back into the Excel row/column wording. The 1φ/3φ merge stays on the import side (`read-on-grid.ts`) because the editor keeps phases as a set on one row.
+_Avoid_: import validator, parser
+
 ### Localized content
 
 **Paired locale columns**:

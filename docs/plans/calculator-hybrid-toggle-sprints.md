@@ -44,7 +44,7 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 |---:|---|---|---|---|---:|---|
 | **S0** | Gate On-grid S10 + live baseline prod/local | `nextjs-dev` (browser/curl + `pma-readonly-query`) | — | เริ่มก่อน | 0.25 d | done (baseline 3 = skip) |
 | **R1 — On-grid: แก้เอง + export + ประวัติรวม** | | | | | | |
-| **R1-S1** | แยก validator On-grid ออกจาก parser (ไม่เปลี่ยนพฤติกรรม) + ตำแหน่ง issue แบบกลาง | `nextjs-dev` | golden-output script (= reviewer) | ⏳ S0 | 0.75 d | pending |
+| **R1-S1** | แยก validator On-grid ออกจาก parser (ไม่เปลี่ยนพฤติกรรม) + ตำแหน่ง issue แบบกลาง | `nextjs-dev` | golden-output script (= reviewer) | ⏳ S0 | 0.75 d | done |
 | **R1-S2** | Schema R1 (`source` + ฟิลด์ไฟล์ nullable) + DDL asset + rollback SQL asset + ผู้อ่าน `fileName` | `nextjs-dev` | `deploy-verify` | ✅ ขนานกับ R1-S1 | 0.5 d | pending |
 | **R1-S3** | Export On-grid (สูตร + result) + route `/api/admin/calculator/export` + round-trip test | `nextjs-dev` | `audit-compliance-reviewer` (route auth/headers) | ⏳ R1-S1 · ✅ ขนานกับ R1-S2 | 1 d | pending |
 | **R1-S4** | Action `saveCalculatorTables` (On-grid) + preview/apply/reset รู้จัก `source` | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R1-S1, R1-S2 · ✅ ขนานกับ R1-S3 | 1 d | pending |
@@ -218,7 +218,12 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback:** revert — ไม่มีพฤติกรรมเปลี่ยน, ไม่มีผู้เรียกใหม่
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้ (2026-10-02)**
+- ไฟล์: `read-on-grid.ts` (ใหม่ — `git mv` จาก `parse-on-grid.ts`; อ่านชีต/merge 1φ/3φ → `{rows, sourceRows, warnings, rowsRead, skippedSheets}`), `validate-on-grid.ts` (ใหม่, import แค่ zod schema + `messages.ts`), `messages.ts` (+ `TableIssue`, `TableWarning`, builder, `toExcelLocation`), `parse-on-grid.ts` (เหลือ `parseOnGridSheet()` wrapper: read → `validateOnGridTable` → `toExcelLocation`), `index.ts` (แก้แค่ comment), `verify-calculator-import.mts` (+ section "shared validator" 8 assertions), `CONTEXT.md` (+ 3 ศัพท์)
+- **เลือกเก็บ wrapper ไม่ลบ**: `index.ts` เป็นผู้เรียกเดียว แต่ `export * from "./parse-on-grid"` ทำให้ `parseOnGridSheet`/`ParseOnGridResult` เป็น API สาธารณะของ module; เก็บไว้แล้ว `index.ts` ไม่ต้องแก้ logic และ R1-S4 มีจุดประกอบ pipeline จุดเดียว
+- **Golden (ก่อน/หลัง)**: เขียนด้วย throwaway wrapper ที่ดักทุกการเรียก `importOnGridSizeTable()` ของ `verify-calculator-import.mts` เดิม (HEAD) → 18 การเรียก (fixture สังเคราะห์ทุกตัว + `stuffs/คำนวณติดตั้ง.xlsx` + `docs/stuffs/…` เมื่อมีไฟล์) เก็บ rows/warnings/issues เต็มข้อความที่ `$TMPDIR/kkd-r1s1-golden.json`; หลังแก้ `cmp` = **เท่ากันทุก byte** (sha1 เหมือนกัน). golden ชุดนี้ไม่มี fixture ของ out-of-range / bill-min-gte-max / duplicate-same-phase / text-number / not-sorted จึงเพิ่มชุดเสริม 12 เคส (รวมเคสผสม range+bill-max-missing, range+gte) รันบน HEAD (stash) เทียบกับหลังแก้ = **เท่ากันทุก byte** เช่นกัน (ไม่ commit)
+- **ต่างจากแผน**: (1) ตรวจ range ต่อแถว + `billMin<billMax` อยู่ใน validator เป็นฟังก์ชันระดับแถว `validateOnGridRowRanges/Bill` ที่ reader เรียกระหว่างอ่าน เพื่อให้เคสผสม (range + bill-max-missing ในแถวเดียวกัน) รายงานครบเหมือนเดิม; `validateOnGridTable` เรียกชุดเดียวกันซ้ำสำหรับตารางที่แก้เอง (2) `TableIssue` เพิ่ม `code` และ `data?` (ต้องใช้สร้างข้อความ Excel เดิมกลับ) (3) `toExcelLocation(issue, sourceRows, columns?)` รับ map field→อักษรคอลัมน์ เพราะข้อความ out-of-range ระบุคอลัมน์ (4) roof fallback (× 2.7) ยังอยู่ใน reader เพราะ warning ระบุเลขแถว Excel; validator ตรวจ roof ผ่าน zod schema ด่านสุดท้าย (5) `rowIndex` ของ validator = index ใน array ที่ส่งเข้า (ไม่ใช่ลำดับหลังเรียง) (6) เพิ่มโค้ด `duplicate-kw` ใหม่สำหรับตารางที่แก้เอง — import ไปไม่ถึงเพราะ reader merge ซ้ำก่อน
+- Verify: golden เท่ากัน · `verify-calculator-import.mts` 72 ✓ · `verify-calculator.mts` ✓ · `tsc --noEmit` / `eslint` สะอาด · grep exceljs/jszip ใน validate-on-grid/diff/messages = ว่าง (import chain ของ validate-on-grid = zod + messages เท่านั้น; ไม่ได้ทดสอบ build ด้วย client component ชั่วคราว) · `npm run build` ✓ Compiled + Finished TypeScript · `e2e-calculator-config.mts` ✓ · `git diff --stat` ไม่มี `.xlsx`
 
 ---
 
