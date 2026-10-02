@@ -42,7 +42,7 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 
 | Sprint | เป้าหมาย | Implement | Reviewer อิสระ | ขนาน/รอ | Est. | Status |
 |---:|---|---|---|---|---:|---|
-| **S0** | Gate On-grid S10 + live baseline prod/local | `nextjs-dev` (browser/curl + `pma-readonly-query`) | — | เริ่มก่อน | 0.25 d | pending |
+| **S0** | Gate On-grid S10 + live baseline prod/local | `nextjs-dev` (browser/curl + `pma-readonly-query`) | — | เริ่มก่อน | 0.25 d | done (baseline 3 = skip) |
 | **R1 — On-grid: แก้เอง + export + ประวัติรวม** | | | | | | |
 | **R1-S1** | แยก validator On-grid ออกจาก parser (ไม่เปลี่ยนพฤติกรรม) + ตำแหน่ง issue แบบกลาง | `nextjs-dev` | golden-output script (= reviewer) | ⏳ S0 | 0.75 d | pending |
 | **R1-S2** | Schema R1 (`source` + ฟิลด์ไฟล์ nullable) + DDL asset + rollback SQL asset + ผู้อ่าน `fileName` | `nextjs-dev` | `deploy-verify` | ✅ ขนานกับ R1-S1 | 0.5 d | pending |
@@ -159,7 +159,33 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback:** ไม่มี (บันทึกอย่างเดียว)
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้** (2026-10-02 — prod อ่านอย่างเดียว: public page + SELECT ผ่าน `pma-readonly-query.mts`; ไม่ login admin)
+
+**Gate**
+1. ผ่านแบบมีเงื่อนไข — "สรุปหลังแก้" ของ On-grid S10 กรอกแล้ว (commit `docs(calculator): record excel size table go-live on production`) และ Status/tracker เป็น done* แต่หลักฐานข้อ 2/4 ของ S10 และการยืนยันจาก owner **ยังไม่มี** (ต้องใช้สิทธิ์ admin)
+2. ผ่าน — `CalculatorConfig`: `sizeTableImportId` = `y7254twnizpdfr0tvqc6aem6` (ไม่ null), version 5, updatedAt 2026-09-25 20:01:35
+3. ผ่าน — `CalculatorImport`: COUNT = 3, MIN createdAt 2026-09-25 20:01:18, MAX 2026-10-02 09:27:28 (ไฟล์ 2 ชุดล่าสุดยังไม่ถูก apply — ดูรายละเอียดใน S10 ของแผน On-grid)
+
+**Baseline**
+1. Public calculator (TH และ EN ได้ค่าตัวเลขเหมือนกัน). slider `min/max/step` = 500 / 8,000 / 100 (ค่าตั้งต้น 3,500)
+
+| ค่าไฟ/เดือน | ขนาดที่แนะนำ | ค่าไฟหลังติดตั้ง | ประหยัด/เดือน | คืนทุน |
+|---:|---|---:|---:|---|
+| 2,500 | 3 kW | 475 | 2,025 | ~4.9 ปี |
+| 3,000 | 5 kW (1 หรือ 3 เฟส), ยอดนิยม, ครอบคลุม 100% | — | 3,000 | ~5.2 ปี |
+| 4,500 | 6 kW | 450 | 4,050 | ไม่แสดง → "ขอใบเสนอราคาเพื่อดูระยะคืนทุน" |
+| 9,500 | 10 kW (1 หรือ 3 เฟส) | 2,750 | 6,750 | ~4.2 ปี |
+| 25,500 | 40 kW, ครอบคลุม 100% | — | 25,500 | ไม่แสดง → CTA |
+| 120,000 | 125 kW | 35,625 | 84,375 | ไม่แสดง → CTA |
+| 3,000,000 (พิมพ์) | TH "ระบบเกิน 3,000 kW ปรึกษาทีมงาน" / EN "System larger than 3,000 kW — talk to our team" | — | — | — |
+
+   (แถว 3,000 / 25,500 หน้าเว็บไม่แสดงตัวเลขค่าไฟหลังติดตั้ง แต่แสดงข้อความ "ครอบคลุมค่าไฟเต็ม 100%" แทน) Screenshot เก็บในเครื่องเท่านั้น (ไม่ commit): 28 ไฟล์ = 7 ค่าไฟ × TH/EN × desktop 1280px/375px (+ 2 ไฟล์ booking), ที่ scratchpad ของ session นี้ `shots/`
+2. Prod `/th|en/booking?tab=quote`: checkbox `interestedSystems` มี 3 ค่า (ON_GRID / HYBRID / OFF_GRID) ทั้ง TH และ EN; screenshot เก็บในเครื่อง (`shots/{th,en}-booking-quote.png`)
+3. Prod admin: **skip** — ต้องให้ owner login (ไม่ได้ login/กดอะไรใน admin บน prod)
+4. Local บน `main` (working tree หลัก, MySQL ใน docker ทำงานอยู่): `npm run build` — `✓ Compiled successfully` + `Finished TypeScript` ไม่มี error; `verify-calculator.mts` — All assertions passed; `verify-calculator-import.mts` — All assertions passed
+5. Content marker: `GET https://kkdproperty.co.th/api/admin/calculator/export` → **404** (ตามคาด ก่อน R1)
+
+สถานะ: S0 ทำครบตามที่ทำได้โดยไม่ใช้สิทธิ์ admin. ยังไม่เริ่ม R1-S1. ก่อนเริ่มควรให้ owner ยืนยันข้อค้างของ On-grid S10
 
 ---
 
