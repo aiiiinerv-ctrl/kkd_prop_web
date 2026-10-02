@@ -211,7 +211,8 @@ export function auditedEntity<
     async updateVersioned(
       id: string,
       expectedVersion: number,
-      data: UpdateData
+      // `& { version?: never }` (not Omit) so a Prisma XOR union stays intact.
+      data: UpdateData & { version?: never }
     ): Promise<{ before: Row; after: Row } | { conflict: true } | null> {
       const actorId = await resolveActorId();
       const result = await prisma.$transaction(async (tx) => {
@@ -228,7 +229,7 @@ export function auditedEntity<
         });
         if (count === 0) return { conflict: true as const };
 
-        const after = await delegate.update({ where: { id }, data });
+        const after = await delegate.update({ where: { id }, data: data as UpdateData });
         await writeAuditRow(tx, {
           actorId,
           action: "UPDATE",

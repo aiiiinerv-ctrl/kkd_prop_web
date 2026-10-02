@@ -30,7 +30,8 @@ const idOf = (name: string): string | undefined =>
   Object.entries<{ exportedName: string }>(manifest.node).find(([, v]) => v.exportedName === name)?.[0];
 const SAVE_ID = idOf("saveCalculatorTables");
 const APPLY_ID = idOf("applyCalculatorImport");
-if (!SAVE_ID || !APPLY_ID) {
+const CONFIG_ID = idOf("updateCalculatorConfig");
+if (!SAVE_ID || !APPLY_ID || !CONFIG_ID) {
   console.log("SKIP: saveCalculatorTables is not referenced by any client module yet (lands with R1-S6) — nothing to call");
   process.exit(0);
 }
@@ -54,6 +55,29 @@ async function callAction(page: Page, id: string, arg: unknown): Promise<Res> {
   const text = await r.text();
   const m = text.match(/^\d+:(\{"ok":.*\})$/m);
   return { status: r.status(), redirect, result: m ? JSON.parse(m[1]) : undefined };
+}
+
+// updateCalculatorConfig takes FormData, so it is posted as multipart in
+// Next's encoding ("0" = the arg list with a $K1 FormData reference).
+async function callConfigAction(page: Page, version: number, maxBill: number): Promise<Res> {
+  const B = "----e2eBoundary";
+  const fields: [string, string][] = [
+    ["_1_version", String(version)],
+    ["_1_annualSavingMonthsMultiplier", "10"],
+    ["_1_minBill", "500"],
+    ["_1_maxBill", String(maxBill)],
+    ["_1_stepBill", "100"],
+    ["0", '["$K1"]'], // must come last: Next starts the action once "0" arrives
+  ];
+  const body = fields.map(([k, v]) => `--${B}\r\nContent-Disposition: form-data; name="${k}"\r\n\r\n${v}\r\n`).join("") + `--${B}--\r\n`;
+  const r = await page.request.post(`${BASE}/admin/pages/calculator`, {
+    headers: { "next-action": CONFIG_ID!, "content-type": `multipart/form-data; boundary=${B}`, accept: "text/x-component", origin: BASE },
+    data: body,
+    maxRedirects: 0,
+  });
+  const text = await r.text();
+  const m = text.match(/^\d+:(\{"ok":.*\})$/m);
+  return { status: r.status(), result: m ? JSON.parse(m[1]) : undefined };
 }
 
 const row = (kw: number, over: Record<string, unknown> = {}) => ({
@@ -166,6 +190,24 @@ try {
   if ((await prisma.calculatorConfig.findFirstOrThrow()).version !== cv + 2) fail("CONCURRENT APPLY: version must be bumped exactly once");
   pass("CONCURRENT APPLY: 2 requests with the same version -> 1 ok + 1 conflict, version bumped once");
 
+  // --- Concurrency: config save vs table save / apply, same version ---
+  for (const kind of ["save", "apply"] as const) {
+    const cur = await prisma.calculatorConfig.findFirstOrThrow();
+    const v = cur.version;
+    const inactiveId = cur.sizeTableImportId === a.result.importId ? b.result.importId : a.result.importId;
+    const table = () =>
+      kind === "save"
+        ? callAction(admin, SAVE_ID!, { onGrid: [row(14)], version: v })
+        : callAction(admin, APPLY_ID!, { importId: inactiveId, version: v });
+    const [cfgRes, tblRes] = await Promise.all([callConfigAction(admin, v, 21000), table()]);
+    const ok = [cfgRes, tblRes].filter((r) => r.result?.ok === true);
+    const conf = [cfgRes, tblRes].filter((r) => r.result?.conflict === true);
+    if (ok.length !== 1 || conf.length !== 1)
+      fail(`CONCURRENT CONFIG+${kind.toUpperCase()}: expected 1 ok + 1 conflict, got ${JSON.stringify([cfgRes.result, tblRes.result])}`);
+    if ((await prisma.calculatorConfig.findFirstOrThrow()).version !== v + 1) fail(`CONCURRENT CONFIG+${kind.toUpperCase()}: version must be bumped exactly once`);
+    pass(`CONCURRENT CONFIG+${kind.toUpperCase()}: same version -> 1 ok + 1 conflict, version bumped once`);
+  }
+
   // --- Non-ADMIN ---
   const mk = await browser.newPage();
   await login(mk, "marketing.test@kkdproperty.local", "Test1234!");
@@ -183,6 +225,10 @@ try {
     data: {
       sizeTable: original.sizeTable ?? (await import("../src/generated/prisma/client.js")).Prisma.JsonNull,
       sizeTableImportId: original.sizeTableImportId,
+      minBill: original.minBill,
+      maxBill: original.maxBill,
+      stepBill: original.stepBill,
+      annualSavingMonthsMultiplier: original.annualSavingMonthsMultiplier,
       version: original.version,
     },
   });

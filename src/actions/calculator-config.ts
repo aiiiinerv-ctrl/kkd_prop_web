@@ -51,14 +51,21 @@ export async function updateCalculatorConfig(
     return { ok: false, conflict: true };
   }
 
-  const updated = await calculatorConfig.update(existing.id, {
-    annualSavingMonthsMultiplier: parsed.data.annualSavingMonthsMultiplier,
-    minBill: parsed.data.minBill,
-    maxBill: parsed.data.maxBill,
-    stepBill: parsed.data.stepBill,
-    version: existing.version + 1,
-  });
+  // The check above is only a fast path; the real guard is the conditional
+  // version increment inside the write's transaction.
+  let updated;
+  try {
+    updated = await calculatorConfig.updateVersioned(existing.id, expectedVersion, {
+      annualSavingMonthsMultiplier: parsed.data.annualSavingMonthsMultiplier,
+      minBill: parsed.data.minBill,
+      maxBill: parsed.data.maxBill,
+      stepBill: parsed.data.stepBill,
+    });
+  } catch {
+    return { ok: false, error: "บันทึกไม่สำเร็จ — ลองใหม่อีกครั้ง" };
+  }
   if (!updated) return { ok: false, error: "ไม่พบการตั้งค่า" };
+  if ("conflict" in updated) return { ok: false, conflict: true };
 
   return { ok: true };
 }
@@ -71,14 +78,23 @@ export async function resetCalculatorConfigToDefaults(): Promise<
   const existing = await prisma.calculatorConfig.findFirst();
   if (!existing) return { ok: false, error: "ไม่พบการตั้งค่า" };
 
+  // The reset button sends no version (the UI contract is unchanged), so the
+  // lock is against the version read just above: a table save/apply or config
+  // save that commits between this read and the write still conflicts
+  // atomically instead of being silently overwritten.
   const defaults = calculatorParamsToSeedData(CALCULATOR_DEFAULTS);
-  const updated = await calculatorConfig.update(existing.id, {
-    ...defaults,
-    sizeTable: Prisma.JsonNull,
-    sizeTableImportId: null,
-    version: existing.version + 1,
-  });
+  let updated;
+  try {
+    updated = await calculatorConfig.updateVersioned(existing.id, existing.version, {
+      ...defaults,
+      sizeTable: Prisma.JsonNull,
+      sizeTableImportId: null,
+    });
+  } catch {
+    return { ok: false, error: "คืนค่าไม่สำเร็จ — ลองใหม่อีกครั้ง" };
+  }
   if (!updated) return { ok: false, error: "ไม่พบการตั้งค่า" };
+  if ("conflict" in updated) return { ok: false, conflict: true };
 
   return { ok: true };
 }
