@@ -45,7 +45,7 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 | **S0** | Gate On-grid S10 + live baseline prod/local | `nextjs-dev` (browser/curl + `pma-readonly-query`) | — | เริ่มก่อน | 0.25 d | done (baseline 3 = skip) |
 | **R1 — On-grid: แก้เอง + export + ประวัติรวม** | | | | | | |
 | **R1-S1** | แยก validator On-grid ออกจาก parser (ไม่เปลี่ยนพฤติกรรม) + ตำแหน่ง issue แบบกลาง | `nextjs-dev` | golden-output script (= reviewer) | ⏳ S0 | 0.75 d | done |
-| **R1-S2** | Schema R1 (`source` + ฟิลด์ไฟล์ nullable) + DDL asset + rollback SQL asset + ผู้อ่าน `fileName` | `nextjs-dev` | `deploy-verify` | ✅ ขนานกับ R1-S1 | 0.5 d | pending |
+| **R1-S2** | Schema R1 (`source` + ฟิลด์ไฟล์ nullable) + DDL asset + rollback SQL asset + ผู้อ่าน `fileName` | `nextjs-dev` | `deploy-verify` | ✅ ขนานกับ R1-S1 | 0.5 d | done (รอ `deploy-verify`) |
 | **R1-S3** | Export On-grid (สูตร + result) + route `/api/admin/calculator/export` + round-trip test | `nextjs-dev` | `audit-compliance-reviewer` (route auth/headers) | ⏳ R1-S1 · ✅ ขนานกับ R1-S2 | 1 d | pending |
 | **R1-S4** | Action `saveCalculatorTables` (On-grid) + preview/apply/reset รู้จัก `source` | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R1-S1, R1-S2 · ✅ ขนานกับ R1-S3 | 1 d | pending |
 | **R1-S5** | แท็บ "ตารางขนาดระบบ": โครงหน้า, ย้ายแผงนำเข้า, กล่องที่ใช้อยู่ + ปุ่ม export, ประวัติ 2 แหล่ง, รายการ On-grid อ่านอย่างเดียว | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R1-S2, R1-S3 | 1 d | pending |
@@ -260,7 +260,13 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback (local):** `git revert` + `npx prisma migrate reset`. **Prod:** ยังไม่เกี่ยว (รันใน R1-S7)
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้ (2026-10-02)**
+- **เวอร์ชัน DB (เช็คก่อนเขียน SQL)**: prod = **MariaDB 10.6.24-cll-lve** (`@@version_comment` = MariaDB Server; `CalculatorImport` = InnoDB, `utf8mb4_unicode_ci`; อ่านผ่าน `pma-readonly-query.mts` SELECT อย่างเดียว) · local docker = **MySQL 8.0.46**. ต่างจากข้อสมมติในแผน/brief ที่ว่าอาจเป็น MySQL: prod เป็น MariaDB จึงใช้ `ADD COLUMN IF NOT EXISTS` ได้ (เหมือน asset DDL ก่อนหน้า) และ DDL asset ใส่คำเตือนห้ามรันบน MySQL 8 + ขั้น 0b เช็ค `information_schema.COLUMNS` ถ้าวันหนึ่งต้องรันบน MySQL
+- ไฟล์: `prisma/schema.prisma`, `prisma/migrations/20261002165047_calculator_import_source_manual/migration.sql` (จาก `migrate dev`; ก่อนหน้านั้นรัน `backup-db.mts`), `docs/plans/assets/calculator-hybrid-r1-production-ddl.sql`, `docs/plans/assets/calculator-hybrid-r1-rollback-manual-rows.sql`, `src/actions/calculator-import.ts` (snapshot + `source` ไม่มี rows/fileKey; dedupe `where {sha256, source:"EXCEL"}`; `fileName ?? ` ที่ return เพื่อให้ type เป็น string), `pages/calculator/page.tsx` (select `source`+`fileKey` แต่ส่งให้ client แค่ `hasSourceFile: boolean` — ไม่ส่ง storage key; MANUAL แสดงชื่อ "แก้ในหลังบ้าน"), `calculator-size-table-card.tsx` (ลิงก์ดาวน์โหลดเฉพาะ `hasSourceFile`), `src/lib/enum-labels.ts`, `scripts/e2e-calculator-config.mts` (บรรทัด 364 รอป้ายใหม่ — ป้ายเดิม "(Excel)" ถูก Default #15 เปลี่ยน e2e จึงต้องตามไปด้วย)
+- DDL asset: คอลัมน์/ชนิดคัดลอกจาก `migration.sql`; charset/collation ไม่ได้เขียนใหม่ (ตารางมี `utf8mb4_unicode_ci` อยู่แล้ว, ALTER ไม่เปลี่ยน); ไม่มี DROP, ไม่ใช้ stored procedure
+- Verify: `backup-db` → `migrate dev` ✓ → `db seed` ×2 ✓ · `tsc` / `eslint` สะอาด · `npm run build` ✓ Compiled + Finished TypeScript · `verify-storage-engine` ENGINE_GATE=GREEN · `restore-db` dry-run ✓ · `e2e-calculator-config` ✓ ทุกบรรทัด (รวม AUDIT ป้ายใหม่) · `e2e-admin` ✓ ทุกบรรทัด (calculator-imports ADMIN 200 / anon+FINANCE 401)
+- **ทดสอบ rollback SQL บน local**: แทรกแถว MANUAL (ฟิลด์ไฟล์ NULL) → รัน asset (แถวถูก backfill, verify COUNT = 0, รันซ้ำได้ 0 แถวถูกแก้) → worktree ชั่วคราวที่ `$TMPDIR` จาก `70d4dc6` (prisma generate จาก schema เก่า, build ✓, ชี้ DB เดียวกัน) → login ADMIN แล้ว `/admin/pages/calculator` = **200** และเห็น `manual-edit.xlsx` ในประวัติ → ลบ worktree + แถวทดสอบแล้ว (`git worktree list` เหลือของเดิม). **ข้อสังเกต**: control (ตั้งฟิลด์ไฟล์เป็น NULL, ไม่รัน asset) โค้ดเก่าก็ยัง render 200 เช่นกัน — Prisma 7 + driver adapter ไม่ throw ตอนอ่าน NULL ใน String field ที่หน้านี้ใช้ ดังนั้นความเสี่ยง R2 ที่ระบุ ("throw ที่ fileName null") ไม่เกิดบนเส้นทางนี้ในการทดสอบ; asset ยังมีประโยชน์ (ชื่อไฟล์/ลิงก์ในประวัติโค้ดเก่าไม่ว่าง) แต่เป็น defense-in-depth มากกว่า blocker. ไม่ได้ทดสอบเส้นทาง upload/dedupe ของโค้ดเก่ากับแถว NULL
+- ต่างจากแผน: เพิ่ม `hasSourceFile`/`source` ใน `SizeTableHistoryItem`; แก้ e2e 1 บรรทัด (ไม่อยู่ในรายการไฟล์ของแผน); ไม่แตะ `storage-engine-contract.ts`; ไม่แตะ prod (SELECT อย่างเดียว)
 
 ---
 
