@@ -361,7 +361,7 @@ pass("AUDIT: CalculatorImport CREATE + CalculatorConfig UPDATE recorded");
 await page.goto(`${BASE_URL}/admin/audit`);
 await page.waitForSelector("text=ประวัติการแก้ไข", { timeout: 10000 });
 const auditPageVisible = await page
-  .waitForSelector("text=ชุดตารางคำนวณ (Excel)", { timeout: 10000 })
+  .waitForSelector("text='ชุดตารางคำนวณ'", { timeout: 10000 })
   .then(() => true)
   .catch(() => false);
 if (!auditPageVisible) fail("AUDIT: CalculatorImport entity label not visible on /admin/audit");

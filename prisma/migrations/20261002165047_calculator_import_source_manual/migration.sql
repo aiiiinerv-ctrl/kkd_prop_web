@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE `CalculatorImport` ADD COLUMN `source` VARCHAR(10) NOT NULL DEFAULT 'EXCEL',
+    MODIFY `fileName` VARCHAR(120) NULL,
+    MODIFY `fileKey` VARCHAR(120) NULL,
+    MODIFY `sha256` CHAR(64) NULL,
+    MODIFY `sizeBytes` INTEGER NULL;

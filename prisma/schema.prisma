@@ -690,15 +690,18 @@ model CalculatorConfig {
   updatedAt                    DateTime @updatedAt
 }
 
-// History of Excel size-table uploads (preview drafts + applied versions).
+// History of size-table versions: Excel uploads (preview drafts + applied) and
+// versions edited by hand in the admin (source = MANUAL, no source file).
 // "currently active" = CalculatorConfig.sizeTableImportId; everything else
 // here is just history/rollback material — no status column, no dual-write.
+// File fields are null for MANUAL rows.
 model CalculatorImport {
   id           String    @id @default(cuid())
-  fileName     String    @db.VarChar(120)
-  fileKey      String    @db.VarChar(120)
-  sha256       String    @db.Char(64)
-  sizeBytes    Int
+  source       String    @default("EXCEL") @db.VarChar(10)
+  fileName     String?   @db.VarChar(120)
+  fileKey      String?   @db.VarChar(120)
+  sha256       String?   @db.Char(64)
+  sizeBytes    Int?
   rows         Json
   warnings     Json
   uploadedById String    @db.VarChar(40)

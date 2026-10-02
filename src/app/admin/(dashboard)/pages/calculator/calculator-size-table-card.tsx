@@ -41,7 +41,10 @@ const MAX_KW_LIST = 12;
 
 export type SizeTableHistoryItem = {
   id: string;
+  source: "EXCEL" | "MANUAL";
   fileName: string;
+  /** false for MANUAL versions — there is no original file to download. */
+  hasSourceFile: boolean;
   createdAt: string;
   uploadedByName: string;
   rowCount: number;
@@ -646,14 +649,16 @@ export function CalculatorSizeTableCard({
                         ใช้ชุดนี้
                       </Button>
                     )}
-                    <a
-                      href={`/files/private/calculator-imports/${item.id}.xlsx`}
-                      aria-label={`ดาวน์โหลดต้นฉบับ ${item.fileName}`}
-                      className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-                    >
-                      <Download className="size-3.5" />
-                      ดาวน์โหลดต้นฉบับ
-                    </a>
+                    {item.hasSourceFile && (
+                      <a
+                        href={`/files/private/calculator-imports/${item.id}.xlsx`}
+                        aria-label={`ดาวน์โหลดต้นฉบับ ${item.fileName}`}
+                        className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                      >
+                        <Download className="size-3.5" />
+                        ดาวน์โหลดต้นฉบับ
+                      </a>
+                    )}
                   </div>
                 </li>
               );

@@ -45,6 +45,7 @@ const calculatorImportEntity = auditedEntity({
   // key is an internal path, not something an auditor needs to see.
   snapshot: (row) => ({
     id: row.id,
+    source: row.source,
     fileName: row.fileName,
     sha256: row.sha256,
     sizeBytes: row.sizeBytes,
@@ -131,7 +132,7 @@ export async function previewCalculatorImport(formData: FormData): Promise<Previ
   // gets a fresh parse (only accepted files are ever persisted), but a
   // re-upload of a previously-accepted file skips straight to its draft.
   const duplicateRow = await prisma.calculatorImport.findFirst({
-    where: { sha256 },
+    where: { sha256, source: "EXCEL" },
     orderBy: { createdAt: "desc" },
     include: { uploadedBy: { select: { name: true } } },
   });
@@ -149,7 +150,7 @@ export async function previewCalculatorImport(formData: FormData): Promise<Previ
     return {
       ok: true,
       importId: duplicateRow.id,
-      fileName: duplicateRow.fileName,
+      fileName: duplicateRow.fileName ?? fileName,
       rows,
       warnings: Array.isArray(duplicateRow.warnings)
         ? (duplicateRow.warnings as string[])
@@ -208,7 +209,7 @@ export async function previewCalculatorImport(formData: FormData): Promise<Previ
     return {
       ok: true,
       importId: created.id,
-      fileName: created.fileName,
+      fileName: created.fileName ?? fileName,
       rows: parsed.rows,
       warnings: parsed.warnings.map((w) => w.message),
       rowsRead: parsed.rowsRead,

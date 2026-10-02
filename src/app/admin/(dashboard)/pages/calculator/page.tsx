@@ -8,6 +8,9 @@ import { storage } from "@/lib/storage";
 import { CalculatorAdminShell } from "./calculator-admin-shell";
 import type { SizeTableHistoryItem } from "./calculator-size-table-card";
 
+// Display name for versions saved from the admin editor (no source file).
+const MANUAL_VERSION_LABEL = "แก้ในหลังบ้าน";
+
 export default async function PagesCalculatorPage() {
   const session = await requireRole("ADMIN", "SALES", "MARKETING", "EDITOR");
   if (!canManageContent(session.user.role)) return null;
@@ -48,7 +51,9 @@ export default async function PagesCalculatorPage() {
           take: 20,
           select: {
             id: true,
+            source: true,
             fileName: true,
+            fileKey: true,
             createdAt: true,
             rows: true,
             warnings: true,
@@ -60,7 +65,9 @@ export default async function PagesCalculatorPage() {
 
   const history: SizeTableHistoryItem[] = historyRows.map((row) => ({
     id: row.id,
-    fileName: row.fileName,
+    source: row.source === "MANUAL" ? "MANUAL" : "EXCEL",
+    fileName: row.fileName ?? MANUAL_VERSION_LABEL,
+    hasSourceFile: row.fileKey !== null,
     createdAt: row.createdAt.toISOString(),
     uploadedByName: row.uploadedBy.name,
     rowCount: Array.isArray(row.rows) ? row.rows.length : 0,
@@ -138,7 +145,7 @@ export default async function PagesCalculatorPage() {
               source: sizeTableSource,
               activeTable,
               activeImportId: configRow?.sizeTableImportId ?? null,
-              activeFileName: activeImport?.fileName ?? null,
+              activeFileName: activeImport ? (activeImport.fileName ?? MANUAL_VERSION_LABEL) : null,
               activeUploadedByName: activeImport?.uploadedBy.name ?? null,
               configVersion: configRow?.version ?? 1,
               configUpdatedAt: (configRow?.updatedAt ?? new Date()).toISOString(),
