@@ -259,6 +259,8 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
+                {/* Plain <a>: route handler returns an xlsx attachment, not a page — <Link> would try client navigation. */}
+                {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
                 <a
                   id="calc-export"
                   href="/api/admin/calculator/export"
