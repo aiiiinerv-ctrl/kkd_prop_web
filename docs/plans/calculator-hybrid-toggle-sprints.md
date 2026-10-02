@@ -54,7 +54,7 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 | **R2 — Hybrid** | | | | | | |
 | **R2-S0** | Gate R1 นิ่งบน prod + baseline หลัง R1 | `nextjs-dev` | — | ⏳ R1-S7 | 0.25 d | pending |
 | **R2-S1** | Pure lib Hybrid: `HybridRow`, schema, สูตร, ราคาที่ใช้ได้, `recommendHybrid` + projection | `nextjs-dev` | — (verify script = reviewer) | ⏳ R2-S0 | 1 d | done — verify-calculator ✓ (76/76), `tsc` ✓; full `npm run build` รันตอน merge |
-| **R2-S2** | Reader + validator + diff + messages ชีต Hybrid + import ไฟล์เดียว 2 ชีต (D3/D4) + fixture สังเคราะห์ | `nextjs-dev` | `audit-compliance-reviewer` (guard review) | ⏳ R2-S1 | 1.5 d | pending |
+| **R2-S2** | Reader + validator + diff + messages ชีต Hybrid + import ไฟล์เดียว 2 ชีต (D3/D4) + fixture สังเคราะห์ | `nextjs-dev` | `audit-compliance-reviewer` (guard review) | ⏳ R2-S1 | 1.5 d | done — verify ✓ (fixture + ไฟล์จริง), รอ `audit-compliance-reviewer` |
 | **R2-S3** | Schema R2 (3 คอลัมน์) + DDL asset | `nextjs-dev` | `deploy-verify` | ✅ ขนานกับ R2-S1/S2 | 0.5 d | pending |
 | **R2-S4** | Actions + read path: preview/apply/save/reset รู้จัก Hybrid, `getCalculatorConfig` คืน projection + payload test | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R2-S2, R2-S3 | 1 d | pending |
 | **R2-S5** | Export ชีต Hybrid (merged block, กลุ่มยี่ห้อ) + round-trip 2 ชีต | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R2-S2 · ✅ ขนานกับ R2-S4 | 0.75 d | pending |
@@ -489,7 +489,14 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback:** revert — ยังไม่มีผู้เรียก
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้:** (2026-10-03, branch `feat/r2-s1-hybrid-lib` ต่อจาก R2-S1 — ยังไม่ merge เข้า main)
+- ไฟล์ใหม่ใต้ `src/lib/calculator-import/`: `read-hybrid.ts` (หาชีต/หัว/คอลัมน์จาก label, ราคาจาก group `ยี่ห้อ` เท่านั้น, หยุดที่แถวว่างแรก, ราคา 0/ว่าง = null, ไม่ออก `formula-cached` ให้คอลัมน์ราคา), `validate-hybrid.ts` (client-safe: E12 → E11 → E13 → billMax เพิ่มเคร่งครัด → zod; warning E3 ข้อเดียว (ตัวอย่าง ≤ 3), E5 ต่อ kW, E4 ต่อ kW), `parse-hybrid.ts` (ห่อ read + validate แล้วแปลงตำแหน่งเป็นแถว Excel เหมือน `parse-on-grid.ts`)
+- แก้ของเดิม: `messages.ts` (copy Hybrid ตาม design-162 §8.4/§8.5, `sheet?: "hybrid"` บน `ImportIssue`/`ImportWarning`, `data`/`examples` บน `TableWarning`), `diff.ts` (`diffHybridTables`: key = kW/phase/แบต, บิลตัวอย่าง + คืนทุน แสดง/ไม่แสดง), `index.ts` (`importCalculatorWorkbook` → On-grid บังคับ + Hybrid ถ้ามี; Hybrid ผิด = reject ทั้งไฟล์ D4; ไม่มีชีต = `hybrid: null` D3; Hybrid ไม่อยู่ใน `skippedSheets`), `read-on-grid.ts` (แค่ `export` helper ที่ใช้ร่วม ไม่เปลี่ยนพฤติกรรม), comment หัว `calculator-hybrid-projection.ts`
+- `importOnGridSizeTable` คงเดิมทุกอย่าง → `src/actions/calculator-import.ts` บน main ไม่พัง; **R2-S4 ต้องสลับ action ไปเรียก `importCalculatorWorkbook`**
+- Fixture สังเคราะห์ BrandA…E (`scripts/lib/calculator-import-fixtures.ts`: ชีต Hybrid merged block, header 2 แถว, กลุ่มคืนทุนชื่อซ้ำที่เป็นสูตร, บล็อกล่าง) และ section Hybrid ใน `verify-calculator-import.mts` (156 ✓: ไฟล์ดี, ไม่มีชีต, ไม่มีกลุ่มยี่ห้อ, ซ้ำ, ค่าร่วมไม่ตรง, ไม่มีแบต 0, แบตติดลบ/ไม่ใช่เลข, ราคาไม่ใช่เลข/0/สูตร, E3/E4/E5, หน่วยมี space, บล็อกล่างมี/ไม่มีแถวว่าง, D4 สามแบบ, validator, diff, import graph ของ validate-hybrid/diff ไม่มี exceljs/jszip/prisma)
+- ไฟล์จริง (`REAL_CALC_XLSX=… npx tsx scripts/verify-calculator-import.mts`, พิมพ์จำนวนเท่านั้น): Hybrid 52 แถว / 13 ขนาด, E3 = 1 warning (42 ช่อง), E5 = 20/30/50/99.9, E4 = 7 แถว (3 warning ต่อ kW), Hybrid ไม่อยู่ใน `skippedSheets`
+- Verify: `verify-calculator-import.mts` ✓ ทั้งหมด · `verify-calculator.mts` ✓ · `npx tsc --noEmit -p .` ✓ · grep `exceljs|jszip` ใน `validate-hybrid.ts` ว่าง · grep ชื่อยี่ห้อจริงใน `src/` `scripts/` ว่าง · ไม่มี `.xlsx` ใน diff
+- ที่ต่างจากแผน: (1) เพิ่ม `parse-hybrid.ts` (ตามรูปแบบ On-grid) (2) `importCalculatorWorkbook` คืน `errors` (ไม่ใช่ `issues`) พร้อม `groups: {onGrid, hybrid}` ให้ UI แบ่งหัวกลุ่มตาม §8.4 (3) E5 ใช้ copy §8.5 ที่ list เป็น kW เดียวต่อข้อ (ออกต่อ kW ตามที่สั่ง) (4) `diff.ts` import `toPublicHybridTable` (comment "server-only") — ใช้เฉพาะ bundle หลังบ้าน จึงแก้ comment หัวไฟล์ projection ให้ตรง (5) `npm run build` เต็มรอบยังไม่รัน (worktree ไม่มี `.env`) — ให้รันตอน merge; ยังเหลือ `audit-compliance-reviewer` (ไม่ได้รันใน sprint นี้)
 
 ---
 
