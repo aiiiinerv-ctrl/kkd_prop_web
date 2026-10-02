@@ -142,6 +142,30 @@ try {
   if ((await importCount()) !== nC) fail("CONFLICT: no import row may be created");
   pass("CONFLICT: stale version -> { conflict: true }, nothing persisted");
 
+  // --- Concurrency: same version sent twice at once -> exactly one wins ---
+  const cv = (await prisma.calculatorConfig.findFirstOrThrow()).version;
+  const [r1, r2] = await Promise.all([
+    callAction(admin, SAVE_ID!, { onGrid: [row(12)], version: cv }),
+    callAction(admin, SAVE_ID!, { onGrid: [row(13)], version: cv }),
+  ]);
+  const oks = [r1, r2].filter((r) => r.result?.ok === true);
+  const conflicts = [r1, r2].filter((r) => r.result?.conflict === true);
+  if (oks.length !== 1 || conflicts.length !== 1) fail(`CONCURRENT SAVE: expected 1 ok + 1 conflict, got ${JSON.stringify([r1.result, r2.result])}`);
+  const afterRace = await prisma.calculatorConfig.findFirstOrThrow();
+  if (afterRace.version !== cv + 1 || afterRace.sizeTableImportId !== oks[0].result.importId)
+    fail(`CONCURRENT SAVE: version must be v${cv + 1} pointing at the winner (got v${afterRace.version})`);
+  pass("CONCURRENT SAVE: 2 requests with the same version -> 1 ok + 1 conflict, version bumped once");
+
+  const [p1, p2] = await Promise.all([
+    callAction(admin, APPLY_ID!, { importId: a.result.importId, version: cv + 1 }),
+    callAction(admin, APPLY_ID!, { importId: b.result.importId, version: cv + 1 }),
+  ]);
+  const aOk = [p1, p2].filter((r) => r.result?.ok === true);
+  const aConflict = [p1, p2].filter((r) => r.result?.conflict === true);
+  if (aOk.length !== 1 || aConflict.length !== 1) fail(`CONCURRENT APPLY: expected 1 ok + 1 conflict, got ${JSON.stringify([p1.result, p2.result])}`);
+  if ((await prisma.calculatorConfig.findFirstOrThrow()).version !== cv + 2) fail("CONCURRENT APPLY: version must be bumped exactly once");
+  pass("CONCURRENT APPLY: 2 requests with the same version -> 1 ok + 1 conflict, version bumped once");
+
   // --- Non-ADMIN ---
   const mk = await browser.newPage();
   await login(mk, "marketing.test@kkdproperty.local", "Test1234!");

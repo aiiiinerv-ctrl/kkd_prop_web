@@ -295,12 +295,19 @@ export async function applyCalculatorImport({
     return { ok: false, error: "ชุดนี้ใช้อยู่แล้ว" };
   }
 
-  const updated = await calculatorConfigEntity.update(existing.id, {
-    sizeTable: parsedRows.data as unknown as Prisma.InputJsonValue,
-    sizeTableImportId: importId,
-    version: existing.version + 1,
-  });
+  // The version check above is only a fast path; the real guard is the
+  // conditional increment inside the write's transaction.
+  let updated;
+  try {
+    updated = await calculatorConfigEntity.updateVersioned(existing.id, version, {
+      sizeTable: parsedRows.data as unknown as Prisma.InputJsonValue,
+      sizeTableImportId: importId,
+    });
+  } catch {
+    return { ok: false, error: "บันทึกไม่สำเร็จ — ลองใหม่อีกครั้ง" };
+  }
   if (!updated) return { ok: false, error: "ไม่พบการตั้งค่า" };
+  if ("conflict" in updated) return { ok: false, conflict: true };
 
   return { ok: true };
 }
@@ -343,7 +350,8 @@ export type SaveTablesResult =
  * so the Hybrid table can be added later without changing callers.
  *
  * Two audited writes, not one transaction (Default #10): if the config update
- * loses a race, the MANUAL row stays in history as an unused version.
+ * loses a race, the MANUAL row stays in history as an unused version. The
+ * version guard itself is atomic (conditional increment in the update's tx).
  */
 export async function saveCalculatorTables(input: {
   onGrid: SizeRow[];
@@ -386,12 +394,17 @@ export async function saveCalculatorTables(input: {
     return { ok: false, error: "บันทึกไม่สำเร็จ — ลองใหม่อีกครั้ง" };
   }
 
-  const updated = await calculatorConfigEntity.update(existing.id, {
-    sizeTable: validation.rows as unknown as Prisma.InputJsonValue,
-    sizeTableImportId: created.id,
-    version: existing.version + 1,
-  });
+  let updated;
+  try {
+    updated = await calculatorConfigEntity.updateVersioned(existing.id, version, {
+      sizeTable: validation.rows as unknown as Prisma.InputJsonValue,
+      sizeTableImportId: created.id,
+    });
+  } catch {
+    return { ok: false, error: "บันทึกไม่สำเร็จ — ลองใหม่อีกครั้ง" };
+  }
   if (!updated) return { ok: false, error: "ไม่พบการตั้งค่า" };
+  if ("conflict" in updated) return { ok: false, conflict: true };
 
   return { ok: true, importId: created.id, version: updated.after.version };
 }

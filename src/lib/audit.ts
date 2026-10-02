@@ -57,6 +57,14 @@ type EntityDelegate<Row, CreateData, UpdateData> = {
   delete(args: { where: { id: string } }): Promise<Row>;
 };
 
+/** Optional on a model's delegate; `updateVersioned` throws if the model lacks it. */
+type VersionedUpdateDelegate = {
+  updateMany(args: {
+    where: { id: string; version: number };
+    data: { version: { increment: number } };
+  }): Promise<{ count: number }>;
+};
+
 type AuditClient = {
   auditLog: {
     create(args: { data: Prisma.AuditLogUncheckedCreateInput }): Promise<unknown>;
@@ -129,7 +137,9 @@ export function auditedEntity<
 >(config: {
   entityType: AuditEntityType;
   /** Resolved against the transaction client, so every write joins the tx. */
-  model: (client: Prisma.TransactionClient) => EntityDelegate<Row, CreateData, UpdateData>;
+  model: (
+    client: Prisma.TransactionClient
+  ) => EntityDelegate<Row, CreateData, UpdateData> & Partial<VersionedUpdateDelegate>;
   snapshot: Snapshot<Row>;
   revalidate: (row: Row) => readonly RevalidateTarget[];
 }) {
@@ -186,6 +196,52 @@ export function auditedEntity<
       });
 
       if (!result) return null;
+      refresh(config.revalidate(result.after));
+      return result;
+    },
+
+    /**
+     * `update` guarded by an optimistic `version` lock that is atomic at the
+     * DB: the conditional `updateMany({ where: { id, version } })` increments
+     * `version` itself and runs in the same transaction as the write and its
+     * audit row, so two writers holding the same version cannot both win (the
+     * loser gets `{ conflict: true }` with zero side effects). `data` must not
+     * set `version`. Returns null when no row has that id.
+     */
+    async updateVersioned(
+      id: string,
+      expectedVersion: number,
+      data: UpdateData
+    ): Promise<{ before: Row; after: Row } | { conflict: true } | null> {
+      const actorId = await resolveActorId();
+      const result = await prisma.$transaction(async (tx) => {
+        const delegate = config.model(tx);
+        if (!delegate.updateMany) {
+          throw new Error(`${config.entityType} has no updateMany for versioned update`);
+        }
+        const before = await delegate.findUnique({ where: { id } });
+        if (!before) return null;
+
+        const { count } = await delegate.updateMany({
+          where: { id, version: expectedVersion },
+          data: { version: { increment: 1 } },
+        });
+        if (count === 0) return { conflict: true as const };
+
+        const after = await delegate.update({ where: { id }, data });
+        await writeAuditRow(tx, {
+          actorId,
+          action: "UPDATE",
+          entityType: config.entityType,
+          entityId: after.id,
+          before: snap(before),
+          after: snap(after),
+        });
+        return { before, after };
+      });
+
+      if (!result) return null;
+      if ("conflict" in result) return result;
       refresh(config.revalidate(result.after));
       return result;
     },
