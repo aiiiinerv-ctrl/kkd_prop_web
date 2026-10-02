@@ -7,7 +7,7 @@ import type { PageBannerAdminData } from "@/components/admin/page-banner-panel";
 import { PagePropertiesPanel, type PageSeoFormData } from "../home/home-properties-panel";
 import { CalculatorConfigTab } from "./calculator-config-tab";
 import type { CalculatorConfigFormData } from "./calculator-config-client";
-import type { CalculatorSizeTableCardData } from "./calculator-size-table-card";
+import { CalculatorTablesTab, type CalculatorTablesTabData } from "./calculator-tables-tab";
 import {
   CalculatorPageContentClient,
   type CalculatorPageFormData,
@@ -27,14 +27,16 @@ export function CalculatorAdminShell({
   pageSeo: PageSeoFormData | null;
   pageContent: CalculatorPageFormData | null;
   calculatorConfig: CalculatorConfigFormData | null;
-  sizeTableData: CalculatorSizeTableCardData | null;
+  sizeTableData: CalculatorTablesTabData | null;
   bannerData: PageBannerAdminData;
 }) {
   const content = <CalculatorPageContentClient data={pageContent} />;
   const configTab =
-    canManageConfig && calculatorConfig && sizeTableData ? (
-      <CalculatorConfigTab configData={calculatorConfig} sizeTableData={sizeTableData} />
+    canManageConfig && calculatorConfig ? (
+      <CalculatorConfigTab configData={calculatorConfig} />
     ) : null;
+  const tablesTab =
+    canManageConfig && sizeTableData ? <CalculatorTablesTab data={sizeTableData} /> : null;
 
   if (!canMutateProperties || !pageSeo) {
     return (
@@ -50,6 +52,11 @@ export function CalculatorAdminShell({
                 ตัวเลขการคำนวณ
               </TabsTrigger>
             )}
+            {tablesTab && (
+              <TabsTrigger value="size-table" id="calculator-tab-size-table">
+                ตารางขนาดระบบ
+              </TabsTrigger>
+            )}
           </TabsList>
           <TabsContent value="content" className="pt-4">
             {content}
@@ -58,6 +65,11 @@ export function CalculatorAdminShell({
           {configTab && (
             <TabsContent value="config" className="pt-4">
               {configTab}
+            </TabsContent>
+          )}
+          {tablesTab && (
+            <TabsContent value="size-table" keepMounted className="pt-4">
+              {tablesTab}
             </TabsContent>
           )}
         </Tabs>
@@ -69,7 +81,7 @@ export function CalculatorAdminShell({
     <PageShell
       pageKey="calculator"
       title="เครื่องคำนวณ (Pages)"
-      description="เนื้อหาหน้า · แบนเนอร์ · ตัวเลขการคำนวณ · Properties (SEO)"
+      description="เนื้อหาหน้า · แบนเนอร์ · ตัวเลขการคำนวณ · ตารางขนาดระบบ · Properties (SEO)"
     >
       <Tabs defaultValue="content">
         <TabsList>
@@ -80,6 +92,11 @@ export function CalculatorAdminShell({
           {configTab && (
             <TabsTrigger value="config" id="calculator-tab-config">
               ตัวเลขการคำนวณ
+            </TabsTrigger>
+          )}
+          {tablesTab && (
+            <TabsTrigger value="size-table" id="calculator-tab-size-table">
+              ตารางขนาดระบบ
             </TabsTrigger>
           )}
           <TabsTrigger value="properties" id="calculator-tab-properties">
@@ -93,6 +110,11 @@ export function CalculatorAdminShell({
         {configTab && (
           <TabsContent value="config" className="pt-4">
             {configTab}
+          </TabsContent>
+        )}
+        {tablesTab && (
+          <TabsContent value="size-table" keepMounted className="pt-4">
+            {tablesTab}
           </TabsContent>
         )}
         <TabsContent value="properties" className="pt-4">

@@ -50,6 +50,18 @@ export function calculateTheoreticalAnnualSavingThb(
   return calculateTheoreticalMonthlySavingThb(sizeKw) * multiplier;
 }
 
+/** kWh a row produces per month — the figure the public result shows. */
+export function sizeRowKwhPerMonth(row: Pick<SizeRow, "kw" | "sunHours" | "days">): number {
+  return row.kw * row.sunHours * row.days;
+}
+
+/** Uncapped monthly saving of a row (the public result caps it at the bill). */
+export function sizeRowMonthlySavingThb(
+  row: Pick<SizeRow, "kw" | "sunHours" | "days" | "pricePerKwh">
+): number {
+  return row.kw * row.sunHours * row.days * row.pricePerKwh;
+}
+
 export type CalcPackage = {
   sizeKw: number;
   priceThb: number;
@@ -93,11 +105,11 @@ export function recommendFromTable(
 
   const row = table.find((candidate) => candidate.billMax > bill) ?? lastRow;
 
-  const theoreticalMonthlySaving = row.kw * row.sunHours * row.days * row.pricePerKwh;
+  const theoreticalMonthlySaving = sizeRowMonthlySavingThb(row);
   const monthlySaving = Math.min(theoreticalMonthlySaving, bill);
   const afterBill = bill - monthlySaving;
   const coversFullBill = theoreticalMonthlySaving >= bill;
-  const kwhPerMonth = row.kw * row.sunHours * row.days;
+  const kwhPerMonth = sizeRowKwhPerMonth(row);
   const belowFirstRow = bill < table[0].billMin;
 
   const matchedPackage = packages.find((pkg) => pkg.sizeKw === row.kw);

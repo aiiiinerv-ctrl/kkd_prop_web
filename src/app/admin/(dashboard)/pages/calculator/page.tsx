@@ -6,10 +6,7 @@ import { rowToCalculatorParams } from "@/lib/calculator-config";
 import { prisma } from "@/lib/db";
 import { storage } from "@/lib/storage";
 import { CalculatorAdminShell } from "./calculator-admin-shell";
-import type { SizeTableHistoryItem } from "./calculator-size-table-card";
-
-// Display name for versions saved from the admin editor (no source file).
-const MANUAL_VERSION_LABEL = "แก้ในหลังบ้าน";
+import type { SizeTableHistoryItem } from "./calculator-version-history";
 
 export default async function PagesCalculatorPage() {
   const session = await requireRole("ADMIN", "SALES", "MARKETING", "EDITOR");
@@ -33,17 +30,17 @@ export default async function PagesCalculatorPage() {
     ? rowToCalculatorParams(configRow)
     : CALCULATOR_DEFAULTS;
 
-  // Size table card data (S6) — only fetched when the config tab itself is
-  // visible (ADMIN only, `canManageConfig`). `activeImport` resolves the
-  // uploader name for the "ยืนยันใช้เมื่อ" summary line; `history` selects
-  // `rows` only to compute a count server-side, never sending the JSON blob
-  // to the client (admin UI spec §9.6 / task guardrail).
+  // Size table tab data (S6, R1-S5) — only fetched for ADMIN
+  // (`canManageConfig`). `activeImport` resolves source + saver name for the
+  // "in use" summary; `history` selects `rows` only to compute a count
+  // server-side, never sending the JSON blob to the client (admin UI spec
+  // §9.6 / task guardrail).
   const [activeImport, historyRows] = canManageConfig
     ? await Promise.all([
         configRow?.sizeTableImportId
           ? prisma.calculatorImport.findUnique({
               where: { id: configRow.sizeTableImportId },
-              select: { fileName: true, uploadedBy: { select: { name: true } } },
+              select: { source: true, fileName: true, fileKey: true, uploadedBy: { select: { name: true } } },
             })
           : Promise.resolve(null),
         prisma.calculatorImport.findMany({
@@ -66,11 +63,11 @@ export default async function PagesCalculatorPage() {
   const history: SizeTableHistoryItem[] = historyRows.map((row) => ({
     id: row.id,
     source: row.source === "MANUAL" ? "MANUAL" : "EXCEL",
-    fileName: row.fileName ?? MANUAL_VERSION_LABEL,
+    fileName: row.fileName,
     hasSourceFile: row.fileKey !== null,
     createdAt: row.createdAt.toISOString(),
     uploadedByName: row.uploadedBy.name,
-    rowCount: Array.isArray(row.rows) ? row.rows.length : 0,
+    onGridCount: Array.isArray(row.rows) ? row.rows.length : 0,
     warnings: Array.isArray(row.warnings) ? (row.warnings as string[]) : [],
   }));
 
@@ -142,13 +139,21 @@ export default async function PagesCalculatorPage() {
       sizeTableData={
         canManageConfig
           ? {
-              source: sizeTableSource,
-              activeTable,
-              activeImportId: configRow?.sizeTableImportId ?? null,
-              activeFileName: activeImport ? (activeImport.fileName ?? MANUAL_VERSION_LABEL) : null,
-              activeUploadedByName: activeImport?.uploadedBy.name ?? null,
               configVersion: configRow?.version ?? 1,
               configUpdatedAt: (configRow?.updatedAt ?? new Date()).toISOString(),
+              active: {
+                source:
+                  sizeTableSource === "default"
+                    ? ("default" as const)
+                    : activeImport?.source === "MANUAL"
+                      ? ("MANUAL" as const)
+                      : ("EXCEL" as const),
+                versionId: configRow?.sizeTableImportId ?? null,
+                fileName: activeImport?.fileName ?? null,
+                savedByName: activeImport?.uploadedBy.name ?? null,
+                hasSourceFile: activeImport?.fileKey != null,
+              },
+              onGrid: activeTable,
               history,
             }
           : null

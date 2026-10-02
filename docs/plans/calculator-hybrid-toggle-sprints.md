@@ -48,7 +48,7 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 | **R1-S2** | Schema R1 (`source` + ฟิลด์ไฟล์ nullable) + DDL asset + rollback SQL asset + ผู้อ่าน `fileName` | `nextjs-dev` | `deploy-verify` | ✅ ขนานกับ R1-S1 | 0.5 d | done — `deploy-verify` PASS, `audit-compliance-reviewer` PASS |
 | **R1-S3** | Export On-grid (สูตร + result) + route `/api/admin/calculator/export` + round-trip test | `nextjs-dev` | `audit-compliance-reviewer` (route auth/headers) | ⏳ R1-S1 · ✅ ขนานกับ R1-S2 | 1 d | done — Excel check ✓, `audit-compliance-reviewer` PASS |
 | **R1-S4** | Action `saveCalculatorTables` (On-grid) + preview/apply/reset รู้จัก `source` | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R1-S1, R1-S2 · ✅ ขนานกับ R1-S3 | 1 d | done — e2e 4 กรณี ✓, รอ `audit-compliance-reviewer` |
-| **R1-S5** | แท็บ "ตารางขนาดระบบ": โครงหน้า, ย้ายแผงนำเข้า, กล่องที่ใช้อยู่ + ปุ่ม export, ประวัติ 2 แหล่ง, รายการ On-grid อ่านอย่างเดียว | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R1-S2, R1-S3 | 1 d | pending |
+| **R1-S5** | แท็บ "ตารางขนาดระบบ": โครงหน้า, ย้ายแผงนำเข้า, กล่องที่ใช้อยู่ + ปุ่ม export, ประวัติ 2 แหล่ง, รายการ On-grid อ่านอย่างเดียว | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R1-S2, R1-S3 | 1 d | done — e2e ✓, รอ `design-business-reviewer` |
 | **R1-S6** | ตัวแก้แบบ B: Dialog, working copy, แถบบันทึก, Dialog ยืนยัน diff (+ warning Package), conflict + e2e | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R1-S4, R1-S5 | 1.5 d | pending |
 | **R1-S7** | Release R1: runbook → snapshot → DDL → deploy → smoke + rollback runbook (R2 ของ research-158) | `hosting-deploy-specialist` + human (`!`, phpMyAdmin) | `deploy-verify` (ก่อน upload) | ⏳ R1-S1…S6 | 0.5 d | pending |
 | **R2 — Hybrid** | | | | | | |
@@ -352,7 +352,8 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback:** revert — action/schema ยังรองรับ UI เดิม
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้:** เพิ่มแท็บ "ตารางขนาดระบบ" (`value="size-table"`, ADMIN เท่านั้น, `TabsContent keepMounted`) ต่อจากแท็บตัวเลข, description ของ PageShell อัปเดต. `calculator-size-table-card.tsx` -> `calculator-import-panel.tsx` (git mv; เหลือ upload/reject/preview/apply + กล่อง "แทนที่ทั้งชุด" เมื่อชุดที่ใช้อยู่เป็น MANUAL + ข้อความ "แทนที่ตารางทั้งชุด"). ใหม่: `calculator-tables-tab.tsx` (กล่อง "ที่ใช้อยู่" + `#calc-export` -> route R1-S3 + `#calc-import-toggle` พับ/กางแผงนำเข้า), `calculator-table-list.tsx` (`OnGridList` อ่านอย่างเดียว, ปุ่ม แก้ไข/เพิ่มขนาด disabled), `calculator-version-history.tsx` (ป้าย "Excel: <ไฟล์>" / "แก้ในหลังบ้าน", ดาวน์โหลดต้นฉบับเฉพาะ `hasSourceFile`), `calculator-table-format.ts`. `calculator-config-tab.tsx` เอาการ์ดออก + บรรทัดชี้แท็บใหม่ + copy reset ("เวอร์ชันในประวัติ"). `page.tsx` ส่ง `active.source`/`hasSourceFile`, history `onGridCount` (นับฝั่ง server). e2e `e2e-calculator-config.mts` ตาม selector ใหม่ + เคส list/export/toggle/ป้ายประวัติ/MARKETING ไม่เห็นแท็บ. ผ่าน: build, `e2e-calculator-config`, `e2e-admin`, `e2e-admin-crud`, `verify-calculator`; `grep _proto…` ใน src ว่าง; real render 1280/820 ไม่ล้น (scrollWidth = clientWidth).
+- ข้อแตกต่างจากแผน: (1) `PageShell` เป็น `max-w-3xl` และห้ามแตะ จึง `max-w-5xl` บน container ของแท็บอย่างเดียวไม่ขยายจริง — ใช้ความกว้างชัดเจน `w-[min(64rem,calc(100vw-4rem))] md:w-[min(64rem,calc(100vw-19rem))]` (หัก sidebar w-60 + padding ของ main) ที่ระดับแท็บ; (2) เพิ่ม helper `sizeRowKwhPerMonth`/`sizeRowMonthlySavingThb` ใน `src/lib/calculator.ts` ให้ public (`recommendFromTable`) กับรายการใช้ร่วมกัน (นิพจน์เดิม); (3) "disabled นำเข้า/ใช้ชุดนี้ระหว่างมีค่าแก้ค้าง" ไม่ทำใน S5 — แผงของ S5 ไม่มี dirty state และแผนวางไว้ใน R1-S6; (4) ยังไม่ได้รัน `design-business-reviewer`.
 
 ---
 
