@@ -449,7 +449,7 @@ export function CalculatorClient({
     );
     footer = t("batteryTradeoffHint");
   } else if (isHybrid) {
-    header = "Hybrid";
+    header = t("modeHybrid");
     caption = t("modeHybridHint");
     track = <BatteryTrack options={idleOptions} optionLabel={full} optionText={short} />;
     footer =
@@ -464,12 +464,12 @@ export function CalculatorClient({
         {popular && popularChip}
       </>
     ) : (
-      "On-grid"
+      t("modeOnGrid")
     );
     caption = t("modeOnGridHint");
-    const current: CompareCell = { label: "On-grid", value: paybackValue(recommendation) };
+    const current: CompareCell = { label: t("modeOnGrid"), value: paybackValue(recommendation) };
     const other: CompareCell = {
-      label: hybridOk && hybridOk.batteryKwh > 0 ? t("compareHybrid", { kwh: hybridOk.batteryKwh.toLocaleString(locale) }) : "Hybrid",
+      label: hybridOk && hybridOk.batteryKwh > 0 ? t("compareHybrid", { kwh: hybridOk.batteryKwh.toLocaleString(locale) }) : t("modeHybrid"),
       value: paybackValue(hybridRecommendation ?? { kind: "empty" }),
     };
     track = <CompareTrack current={current} other={other} onSwitch={() => setSystemMode("hybrid")} />;
