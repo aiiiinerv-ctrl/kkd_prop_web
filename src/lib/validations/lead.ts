@@ -39,6 +39,13 @@ const baseLeadSchema = z.object({
     z.coerce.number().int().min(0).max(AVG_MONTHLY_BILL_MAX).optional()
   ),
   interestedSystems: z.array(z.enum(["ON_GRID", "HYBRID", "OFF_GRID"])).optional(),
+  // Battery size (kWh) the visitor is interested in — only shown on, and only
+  // saved by, the quote tab, and only when HYBRID is ticked (submit-quote.ts).
+  // Blank = "not answered", 0 = "no battery yet".
+  interestedBatteryKwh: z.preprocess(
+    (v) => (v === "" || v == null ? undefined : v),
+    z.coerce.number().int().min(0).max(10000).optional()
+  ),
 });
 
 // Shared across quote/survey: buildingTypeOtherText is required only when

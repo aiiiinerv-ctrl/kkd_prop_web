@@ -2,11 +2,12 @@
 
 // Root of the "ตารางขนาดระบบ" tab (R1-S5, design-162 §2.3 / §10): heading, the
 // "in use" summary with export + import buttons, the collapsible Excel import
-// panel, the On-grid list with its edit dialog, the sticky save bar + confirm
-// dialog (R1-S6) and the version history. R1 has no Hybrid sub-tab (Q6).
+// panel, the On-grid / Hybrid sub-tabs (R2-S6) each with its list and edit
+// dialog, the sticky save bar + confirm dialog (R1-S6) and the version history.
 //
-// The edit state is a client-side working copy (use-table-draft.ts): nothing
-// reaches the server until the owner confirms the diff dialog.
+// The edit state is a client-side working copy of BOTH tables
+// (use-table-draft.ts): nothing reaches the server until the owner confirms
+// the diff dialog, which saves them together through saveCalculatorTables.
 //
 // Width: PageShell is `max-w-3xl` and must stay that way for the other tabs
 // (it is not touched), so this tab breaks out of it with an explicit width —
@@ -19,6 +20,14 @@ import { toast } from "sonner";
 import { saveCalculatorTables } from "@/actions/calculator-import";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  hybridIssueText,
+  hybridSizeStatus,
+  toHybridField,
+  type HybridField,
+  dedupeHybridIssues,
+} from "@/hooks/admin/hybrid-draft";
 import {
   issueText,
   resolveRow,
@@ -30,9 +39,11 @@ import {
 import type { CalcPackageForDiff } from "@/lib/calculator-import/diff";
 import type { SizeRow } from "@/lib/calculator-size-table";
 import { CalculatorImportPanel } from "./calculator-import-panel";
-import { OnGridList } from "./calculator-table-list";
+import { HybridList, OnGridList } from "./calculator-table-list";
 import { formatDateTime } from "./calculator-table-format";
+import { HybridSizeDialog, type HybridDialogFocus } from "./hybrid-size-dialog";
 import { OnGridSizeDialog } from "./on-grid-size-dialog";
+import type { HybridRow } from "@/lib/calculator-hybrid";
 import { SaveTablesDialog, type ServerIssueView } from "./save-tables-dialog";
 import {
   CalculatorVersionHistory,
@@ -43,6 +54,8 @@ import {
 export type CalculatorTablesTabData = {
   configVersion: number;
   configUpdatedAt: string;
+  /** Annual saving multiplier of the live config (Hybrid payback in the editor). */
+  multiplier: number;
   active: {
     source: "default" | "EXCEL" | "MANUAL";
     versionId: string | null;
@@ -51,15 +64,25 @@ export type CalculatorTablesTabData = {
     hasSourceFile: boolean;
   };
   onGrid: SizeRow[];
+  /** Live Hybrid table (null = none). ADMIN-only data: carries brand prices. */
+  hybrid: HybridRow[] | null;
+  /** A Hybrid table is stored but fails schema parsing (treated as none elsewhere — tell the admin). */
+  hybridUnreadable: boolean;
+  /** Brand names of the live Hybrid table, in column order ([] when none). */
+  brands: string[];
   /** For the whole-table warnings in the save-confirm dialog. */
   packages: CalcPackageForDiff[];
   sliderMaxBill: number;
   history: SizeTableHistoryItem[];
 };
 
-type DialogState = { key: string | null; focus: DraftField | null; nonce: number };
+type DialogState =
+  | { table: "onGrid"; key: string | null; focus: DraftField | null; nonce: number }
+  | { table: "hybrid"; key: string | null; focus: HybridDialogFocus | null; nonce: number };
 
 const kwList = (kws: number[]) => kws.map((k) => k.toLocaleString("th-TH")).join(", ");
+const kwDomId = (kw: number) => String(kw).replace(".", "_");
+const isNum = (v: number | null): v is number => typeof v === "number" && Number.isFinite(v);
 
 export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData }) {
   const router = useRouter();
@@ -70,7 +93,13 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
   const onImportBusy = useCallback((v: boolean) => setImportBusy(v), []);
   const onHistoryBusy = useCallback((v: boolean) => setHistoryBusy(v), []);
 
-  const draft = useTableDraft({ onGrid: data.onGrid, configVersion: data.configVersion });
+  const draft = useTableDraft({
+    onGrid: data.onGrid,
+    hybrid: data.hybrid,
+    brands: data.brands,
+    configVersion: data.configVersion,
+  });
+  const [subTab, setSubTab] = useState<"on-grid" | "hybrid">("on-grid");
   const [dlg, setDlg] = useState<DialogState | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -81,8 +110,12 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   const { active, onGrid } = data;
-  const { dirty, issues, rows } = draft;
-  const errorCount = issues.length;
+  const { dirty, issues, hybridIssues, rows, hybridSizes } = draft;
+  const hybridErrorCount = dedupeHybridIssues(hybridIssues).length;
+  const errorCount = issues.length + hybridErrorCount;
+  const liveOnGridCount = rows.filter((r) => !r.deleted).length;
+  const liveHybridCount = hybridSizes ? hybridSizes.filter((s) => !s.deleted).length : 0;
+  const hybridSizeCount = data.hybrid ? new Set(data.hybrid.map((r) => r.kw)).size : 0;
   const kws = onGrid.map((r) => r.kw);
   const minKw = kws.length ? Math.min(...kws) : null;
   const maxKw = kws.length ? Math.max(...kws) : null;
@@ -111,23 +144,47 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
     ? `แก้ไว้ ${draft.changedCount} ขนาด ยังไม่บันทึก${errorCount > 0 ? ` · มีข้อผิดพลาด ${errorCount} จุด` : ""}`
     : live;
 
-  const dlgRow = dlg?.key ? (rows.find((r) => r.key === dlg.key) ?? null) : null;
-  const firstIssue = issues.find((i) => i.key !== "");
+  const dlgRow = dlg?.table === "onGrid" && dlg.key ? (rows.find((r) => r.key === dlg.key) ?? null) : null;
+  const dlgSize =
+    dlg?.table === "hybrid" && dlg.key ? (hybridSizes?.find((s) => s.key === dlg.key) ?? null) : null;
+
+  // First problem to jump to: On-grid first, then Hybrid (whole-table issues have no row).
+  const firstOnGrid = issues.find((i) => i.key !== "");
+  const firstHybrid = hybridIssues.find((i) => i.key !== "");
+  const firstIssue = firstOnGrid
+    ? { table: "onGrid" as const, issue: firstOnGrid }
+    : firstHybrid
+      ? { table: "hybrid" as const, issue: firstHybrid }
+      : null;
+  const wholeTableIssue = [...issues, ...hybridIssues].find((i) => i.key === "");
 
   function focusAfter(id: string) {
     setTimeout(() => document.getElementById(id)?.focus(), 80);
   }
-  const editButtonId = (kw: number | null) =>
-    kw !== null && Number.isFinite(kw) ? `calc-edit-on-grid-${String(kw).replace(".", "_")}` : "calc-add-on-grid";
+  const editButtonId = (table: "onGrid" | "hybrid", kw: number | null) => {
+    const name = table === "onGrid" ? "on-grid" : "hybrid";
+    return kw !== null && Number.isFinite(kw) ? `calc-edit-${name}-${kwDomId(kw)}` : `calc-add-${name}`;
+  };
 
   function openDialog(key: string | null, focus: DraftField | null = null) {
     setConfirmOpen(false);
-    setDlg({ key, focus, nonce: Date.now() });
+    setDlg({ table: "onGrid", key, focus, nonce: Date.now() });
+  }
+  function openHybridDialog(key: string | null, focus: HybridDialogFocus | null = null) {
+    setConfirmOpen(false);
+    setDlg({ table: "hybrid", key, focus, nonce: Date.now() });
   }
 
   function changedNames(): string {
     const names = rows.filter((r) => rowStatus(r) !== "same").flatMap((r) => (r.current.kw ? [r.current.kw] : []));
-    return names.length ? `On-grid ${kwList(names)} kW` : "—";
+    const hybridNames = (hybridSizes ?? [])
+      .filter((s) => hybridSizeStatus(s, draft.brands) !== "same")
+      .flatMap((s) => (isNum(s.current.kw) ? [s.current.kw] : []));
+    const parts = [
+      names.length ? `On-grid ${kwList(names)} kW` : null,
+      hybridNames.length ? `Hybrid ${kwList(hybridNames)} kW` : null,
+    ].filter(Boolean);
+    return parts.length ? parts.join(" · ") : "—";
   }
 
   function openConfirm() {
@@ -145,11 +202,18 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
   async function doSave() {
     const sent = draft.table;
     if (!sent) return;
+    // Hybrid goes along only when it was edited; otherwise the server keeps the
+    // live table (Default #11) and the new MANUAL version carries it over.
+    const sentHybrid = draft.hybridSizes && draft.hybridDirty ? draft.hybridTable : null;
     setSaving(true);
     try {
-      const result = await saveCalculatorTables({ onGrid: sent, version: draft.baseVersion });
+      const result = await saveCalculatorTables({
+        onGrid: sent,
+        ...(sentHybrid ? { hybrid: sentHybrid } : {}),
+        version: draft.baseVersion,
+      });
       if ("ok" in result && result.ok) {
-        draft.rebase(sent, result.version);
+        draft.rebase(sent, sentHybrid ?? data.hybrid, result.version);
         closeConfirm();
         setLive("บันทึกแล้ว — หน้าเครื่องคำนวณอัปเดตแล้ว");
         toast.success("บันทึกแล้ว — หน้าเครื่องคำนวณอัปเดตแล้ว");
@@ -162,13 +226,23 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
         // Server found something the client validator did not (T-7): point at
         // the same fields. rowIndex indexes the payload we just sent.
         setServerIssues(
-          result.issues.map((issue) => {
+          result.issues.map((issue): ServerIssueView => {
+            if (issue.table === "hybrid") {
+              const kw = sentHybrid?.[issue.rowIndex]?.kw;
+              const size = hybridSizes?.find((s) => !s.deleted && s.current.kw === kw);
+              return {
+                message: issue.message,
+                table: "hybrid",
+                key: size?.key ?? "",
+                field: toHybridField(issue.field),
+              };
+            }
             const kw = sent[issue.rowIndex]?.kw;
             const row = rows.find((r) => {
               const resolved = resolveRow(r.current);
               return !r.deleted && resolved?.kw === kw;
             });
-            return { message: issue.message, key: row?.key ?? "", field: toDraftField(issue.field) };
+            return { message: issue.message, table: "onGrid", key: row?.key ?? "", field: toDraftField(issue.field) };
           })
         );
       } else {
@@ -210,6 +284,17 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
             </p>
           </div>
 
+          {data.hybridUnreadable && (
+            <div
+              role="alert"
+              className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              ตาราง Hybrid ที่ใช้อยู่อ่านไม่ได้ (ข้อมูลในระบบไม่ถูกต้อง) — หน้าเว็บจะไม่แสดงตัวเลือก Hybrid
+              และไฟล์ Excel ที่ดาวน์โหลดจะไม่มีชีต Hybrid การบันทึกแก้ไขในหน้านี้จะถูกปฏิเสธเพื่อไม่ให้ข้อมูลหาย
+              กรุณานำเข้าไฟล์ Excel ใหม่หรือติดต่อผู้ดูแลระบบ
+            </div>
+          )}
+
           <div
             id="calc-size-table-summary"
             className="rounded-lg border border-border/70 bg-muted/30 p-4 text-sm"
@@ -220,7 +305,7 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
                   <>
                     <p className="flex flex-wrap items-center gap-2">
                       <Badge variant="secondary">ค่าเริ่มต้น</Badge>
-                      <span>ตารางเริ่มต้น 3 ขนาด (3, 5, 10 kW)</span>
+                      <span>ตารางเริ่มต้น 3 ขนาด (3, 5, 10 kW) · ไม่มี Hybrid</span>
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {data.history.length
@@ -235,7 +320,10 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
                       <SourceBadge source={active.source} fileName={active.fileName} />
                       <span>
                         On-grid {onGrid.length} ขนาด ({minKw?.toLocaleString("th-TH")} –{" "}
-                        {maxKw?.toLocaleString("th-TH")} kW)
+                        {maxKw?.toLocaleString("th-TH")} kW) ·{" "}
+                        {data.hybrid
+                          ? `Hybrid ${hybridSizeCount} ขนาด (${data.hybrid.length} แถว)`
+                          : "ไม่มี Hybrid"}
                       </span>
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
@@ -284,7 +372,9 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
               </div>
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
-              ไฟล์ที่ดาวน์โหลดมีชีต On-grid ตามแบบไฟล์เดิม แก้แล้วนำเข้ากลับได้
+              {data.hybrid
+                ? "ไฟล์ที่ดาวน์โหลดมี 2 ชีต (On-grid, Hybrid) ตามแบบไฟล์เดิม แก้แล้วนำเข้ากลับได้"
+                : "ไฟล์ที่ดาวน์โหลดมีชีต On-grid ตามแบบไฟล์เดิม แก้แล้วนำเข้ากลับได้"}
               {dirty ? " · ไม่รวมการแก้ที่ยังไม่บันทึก" : ""}
             </p>
             {dirty && (
@@ -296,21 +386,52 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
 
           {importOpen && (
             <CalculatorImportPanel
-              data={{ activeImportId: active.versionId, configVersion: data.configVersion }}
+              data={{ activeImportId: active.versionId, configVersion: data.configVersion, multiplier: data.multiplier }}
               onBusyChange={onImportBusy}
               onApplied={() => setImportOpen(false)}
             />
           )}
 
-          <OnGridList
-            rows={rows}
-            issues={issues}
-            editLocked={editLocked}
-            lockReason={lockReason}
-            onAdd={() => openDialog(null)}
-            onEdit={(key) => openDialog(key)}
-            onRestore={draft.restore}
-          />
+          <Tabs value={subTab} onValueChange={(value) => setSubTab(value as "on-grid" | "hybrid")}>
+            <TabsList variant="line" aria-label="ตารางขนาดระบบ" className="w-full justify-start border-b border-border/70 pb-[7px]">
+              <TabsTrigger value="on-grid" id="calc-tables-tab-on-grid">
+                On-grid <span className="text-muted-foreground">({liveOnGridCount})</span>
+                {issues.length > 0 && <Badge variant="destructive">ผิด {issues.length}</Badge>}
+              </TabsTrigger>
+              <TabsTrigger value="hybrid" id="calc-tables-tab-hybrid">
+                Hybrid{" "}
+                <span className="text-muted-foreground">
+                  {hybridSizes === null ? "(ไม่มี)" : `(${liveHybridCount} ขนาด)`}
+                </span>
+                {hybridErrorCount > 0 && <Badge variant="destructive">ผิด {hybridErrorCount}</Badge>}
+              </TabsTrigger>
+            </TabsList>
+            {/* keepMounted on both panels: unsaved edits and dialogs must survive switching sub-tabs (AGENTS.md). */}
+            <TabsContent value="on-grid" keepMounted className="pt-3">
+              <OnGridList
+                rows={rows}
+                issues={issues}
+                editLocked={editLocked}
+                lockReason={lockReason}
+                onAdd={() => openDialog(null)}
+                onEdit={(key) => openDialog(key)}
+                onRestore={draft.restore}
+              />
+            </TabsContent>
+            <TabsContent value="hybrid" keepMounted className="pt-3">
+              <HybridList
+                sizes={hybridSizes}
+                brands={draft.brands}
+                multiplier={data.multiplier}
+                issues={hybridIssues}
+                editLocked={editLocked}
+                lockReason={lockReason}
+                onAdd={() => openHybridDialog(null)}
+                onEdit={(key) => openHybridDialog(key)}
+                onRestore={draft.restoreHybrid}
+              />
+            </TabsContent>
+          </Tabs>
 
           {dirty && (
             <div
@@ -321,24 +442,42 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
             >
               <div className="min-w-0 space-y-0.5">
                 <p className="text-sm">
-                  <strong>แก้ไว้ {draft.changedCount} ขนาด</strong> (On-grid {draft.changedCount}) — ยังไม่บันทึก
+                  <strong>แก้ไว้ {draft.changedCount} ขนาด</strong> (On-grid {draft.onGridChangedCount} · Hybrid{" "}
+                  {draft.hybridChangedCount}) — ยังไม่บันทึก
                 </p>
                 {errorCount > 0 && (
                   <p id="calc-tables-errline" className="text-xs text-destructive">
                     มีข้อผิดพลาด {errorCount} จุด ต้องแก้ก่อนบันทึก
-                    {firstIssue && (
+                    {firstIssue ? (
                       <>
                         {" · "}
                         <button
                           type="button"
                           id="calc-tables-goto-error"
                           className="underline-offset-2 hover:underline"
-                          onClick={() => openDialog(firstIssue.key, firstIssue.field === "table" ? null : firstIssue.field)}
+                          onClick={() => {
+                            if (firstIssue.table === "hybrid") {
+                              const { issue } = firstIssue;
+                              setSubTab("hybrid");
+                              openHybridDialog(issue.key, issue.field === "table" ? null : { field: issue.field, rowKey: issue.rowKey });
+                            } else {
+                              const { issue } = firstIssue;
+                              setSubTab("on-grid");
+                              openDialog(issue.key, issue.field === "table" ? null : issue.field);
+                            }
+                          }}
                         >
-                          ไปที่จุดแรก ({issueText(firstIssue, rows).split(":")[0]})
+                          ไปที่จุดแรก (
+                          {(firstIssue.table === "hybrid"
+                            ? hybridIssueText(firstIssue.issue, hybridSizes ?? [])
+                            : issueText(firstIssue.issue, rows)
+                          ).split(":")[0]}
+                          )
                         </button>
                       </>
-                    )}
+                    ) : wholeTableIssue ? (
+                      <> · {wholeTableIssue.message}</>
+                    ) : null}
                   </p>
                 )}
               </div>
@@ -391,6 +530,7 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
         >
           <CalculatorVersionHistory
             history={data.history}
+            activeHasHybrid={data.hybrid !== null}
             activeImportId={active.versionId}
             configVersion={data.configVersion}
             locked={dirty}
@@ -403,7 +543,7 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
         {liveText}
       </p>
 
-      {dlg && (
+      {dlg?.table === "onGrid" && (
         <OnGridSizeDialog
           key={dlg.nonce}
           row={dlgRow}
@@ -412,12 +552,12 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
           onClose={() => {
             const kw = dlgRow?.current.kw ?? null;
             setDlg(null);
-            focusAfter(editButtonId(kw));
+            focusAfter(editButtonId("onGrid", kw));
           }}
           onCommit={(values) => {
             draft.commit(dlg.key, values);
             setDlg(null);
-            focusAfter(editButtonId(values.kw));
+            focusAfter(editButtonId("onGrid", values.kw));
           }}
           onDelete={() => {
             if (dlg.key && dlgRow) {
@@ -436,10 +576,48 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
         />
       )}
 
-      {confirmOpen && draft.table && (
+      {dlg?.table === "hybrid" && hybridSizes && (
+        <HybridSizeDialog
+          key={dlg.nonce}
+          size={dlgSize}
+          others={hybridSizes.filter((s) => s.key !== dlg.key)}
+          brands={draft.brands}
+          multiplier={data.multiplier}
+          focus={dlg.focus}
+          onClose={() => {
+            const kw = dlgSize?.current.kw ?? null;
+            setDlg(null);
+            focusAfter(editButtonId("hybrid", kw));
+          }}
+          onCommit={(values) => {
+            draft.commitHybrid(dlg.key, values);
+            setDlg(null);
+            focusAfter(editButtonId("hybrid", values.kw));
+          }}
+          onDelete={() => {
+            if (dlg.key && dlgSize) {
+              const kw = dlgSize.current.kw;
+              draft.markDeleteHybrid(dlg.key);
+              const label = isNum(kw) ? `${kw.toLocaleString("th-TH")} kW` : "ขนาดใหม่";
+              toast(
+                dlgSize.original
+                  ? `ทำเครื่องหมายลบ ${label} (Hybrid) แล้ว — กด "คืนขนาดนี้" ได้ถ้าเปลี่ยนใจ`
+                  : `เอาขนาด ${label} (Hybrid) ที่เพิ่มไว้ออกแล้ว`
+              );
+            }
+            setDlg(null);
+            focusAfter("calc-add-hybrid");
+          }}
+        />
+      )}
+
+      {confirmOpen && draft.table && (hybridSizes === null || draft.hybridTable) && (
         <SaveTablesDialog
           before={rows.flatMap((r) => (r.original ? [r.original] : [])).sort((a, b) => a.kw - b.kw)}
           after={draft.table}
+          hybridBefore={data.hybrid}
+          hybridAfter={draft.hybridTable}
+          multiplier={data.multiplier}
           packages={data.packages}
           sliderMaxBill={data.sliderMaxBill}
           saving={saving}
@@ -451,7 +629,13 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
           onGoTo={(issue) => {
             if (!issue.key) return closeConfirm();
             setServerIssues(null);
-            openDialog(issue.key, issue.field as DraftField);
+            if (issue.table === "hybrid") {
+              setSubTab("hybrid");
+              openHybridDialog(issue.key, { field: issue.field as HybridField, rowKey: issue.rowKey });
+            } else {
+              setSubTab("on-grid");
+              openDialog(issue.key, issue.field as DraftField);
+            }
           }}
         />
       )}

@@ -23,6 +23,7 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 
 > "ประหยัด/เดือน = (ผลิตต่อวัน kWh + ขนาดแบต kWh) × 4.5 × 30 แม้สูตรนี้นับแบตเป็นพลังงานที่เพิ่มขึ้น" — #153 ข้อ 2 (โค้ดใช้ `(kw × sunHours + batteryKwh) × pricePerKwh × days` จากค่าที่ import, research-154 E7)
 > "ประหยัด = min(…, ค่าไฟ) … คิดระยะคืนทุนจากยอดที่ cap แล้ว" — #156 ข้อ 4
+> การตัดสินใจเจ้าของ 2026-10-04 (#156 แบตใกล้สุด): เมื่อแบตที่เลือกไว้ไม่มีในขนาดระบบใหม่และระยะห่างเท่ากัน → "ปัดขึ้น" เลือกตัวที่ใหญ่กว่า (เฉพาะแบตที่เลือก > 0; ไม่เอาแบต 0 คงเป็น 0)
 > "หน้าเว็บเริ่มต้นที่ On-grid และซ่อน toggle ถ้ายังไม่มีตาราง Hybrid ตัวเลขหลัง deploy จึงเหมือนเดิม" — #153 ข้อ 6
 > "server คำนวณราคาที่ใช้ได้ต่ำสุดต่อแถว แล้วส่งให้ browser แค่ตัวเลขเดียว ไม่มีชื่อยี่ห้อและไม่มีราคาแยกยี่ห้อ" — #155 ข้อ 5
 > "CTA ส่ง `system` ตามโหมดที่ลูกค้าดูอยู่ทั้ง 2 โหมด … `battery` ส่งเฉพาะ Hybrid" — #157
@@ -37,6 +38,8 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 **2026-10-02**: แผนร่าง — ยังไม่เริ่ม implement. **เงื่อนไขก่อนเริ่ม: On-grid S10 (`calculator-excel-import-sprints.md` §S10 — ADMIN อัปโหลด `คำนวณติดตั้ง.xlsx` บน prod แล้วยืนยัน) ต้องเสร็จก่อน** ณ วันที่เขียน On-grid S10 ยัง `pending` (ดู S0)
 
 **2026-10-04**: Release 1 (On-grid แก้ตาราง + export) ขึ้น production แล้ว (R1-S7 done) — R1 soak 2–3 วันทำการก่อน R2-S0; R2 พัฒนาล่วงหน้าบน branch `feat/r2-s1-hybrid-lib` (ยังไม่ merge).
+
+**2026-10-04 (กติกาใหม่)**: R2 ทำให้เสร็จทั้งหมดบน local และให้ผู้ใช้รีวิวบน localhost ก่อน แล้วค่อย release production ครั้งเดียว — R1 soak เป็นเงื่อนไขของ deploy เท่านั้น ไม่ block การพัฒนา. สถานะ branch: R2-S1/S2/S3/S4/S5/S6/S7 เสร็จ (merge main @ 8e20fae แล้ว).
 
 ## Sprint tracker
 
@@ -55,15 +58,15 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 | **R1-S7** | Release R1: runbook → snapshot → DDL → deploy → smoke + rollback runbook (R2 ของ research-158) | `hosting-deploy-specialist` + human (`!`, phpMyAdmin) | `deploy-verify` (ก่อน upload) | ⏳ R1-S1…S6 | 0.5 d | done (ข้อ 10 = optional, ยังไม่ทำ) |
 | **R2 — Hybrid** | | | | | | |
 | **R2-S0** | Gate R1 นิ่งบน prod + baseline หลัง R1 | `nextjs-dev` | — | ⏳ R1-S7 | 0.25 d | pending |
-| **R2-S1** | Pure lib Hybrid: `HybridRow`, schema, สูตร, ราคาที่ใช้ได้, `recommendHybrid` + projection | `nextjs-dev` | — (verify script = reviewer) | ⏳ R2-S0 | 1 d | pending |
-| **R2-S2** | Reader + validator + diff + messages ชีต Hybrid + import ไฟล์เดียว 2 ชีต (D3/D4) + fixture สังเคราะห์ | `nextjs-dev` | `audit-compliance-reviewer` (guard review) | ⏳ R2-S1 | 1.5 d | pending |
-| **R2-S3** | Schema R2 (3 คอลัมน์) + DDL asset | `nextjs-dev` | `deploy-verify` | ✅ ขนานกับ R2-S1/S2 | 0.5 d | pending |
-| **R2-S4** | Actions + read path: preview/apply/save/reset รู้จัก Hybrid, `getCalculatorConfig` คืน projection + payload test | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R2-S2, R2-S3 | 1 d | pending |
-| **R2-S5** | Export ชีต Hybrid (merged block, กลุ่มยี่ห้อ) + round-trip 2 ชีต | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R2-S2 · ✅ ขนานกับ R2-S4 | 0.75 d | pending |
-| **R2-S6** | หลังบ้าน: แท็บย่อย On-grid/Hybrid, รายการ + Dialog Hybrid, save 2 ตาราง | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R2-S4 | 1.25 d | pending |
-| **R2-S7** | หลังบ้าน: preview นำเข้า 2 ชีต, กล่อง "Hybrid จะถูกลบ", reject แยกชีต, ประวัติ/reset copy | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R2-S4 · ✅ ขนานกับ R2-S6 (คนละไฟล์) | 0.75 d | pending |
-| **R2-S8** | Lead fields: `interestedBatteryKwh`, booking `system`/`battery`, ช่องแบตในแท็บ quote, lead detail, แจ้งเตือน, export รายงาน | `nextjs-dev` | `audit-compliance-reviewer`, `i18n-parity-checker`, `design-business-reviewer` (booking form) | ⏳ R2-S3 · ✅ ขนานกับ R2-S1/S2/S4–S7 | 1 d | pending |
-| **R2-S9** | หน้า public Variant B: tab หัวการ์ด, segmented แบต, phase pill, CTA | `nextjs-dev` | `i18n-parity-checker`, `design-business-reviewer` (TH/EN × desktop/375px) | ⏳ R2-S4, R2-S8 · ✅ ขนานกับ R2-S6/S7 | 1.5 d | pending |
+| **R2-S1** | Pure lib Hybrid: `HybridRow`, schema, สูตร, ราคาที่ใช้ได้, `recommendHybrid` + projection | `nextjs-dev` | — (verify script = reviewer) | ⏳ R2-S0 | 1 d | done — verify-calculator ✓ (76/76), `tsc` ✓; full `npm run build` รันตอน merge; audit follow-up (clip/BRAND_FORBIDDEN_CHARS/.max(50)) ปิดแล้วใน a71233f |
+| **R2-S2** | Reader + validator + diff + messages ชีต Hybrid + import ไฟล์เดียว 2 ชีต (D3/D4) + fixture สังเคราะห์ | `nextjs-dev` | `audit-compliance-reviewer` (guard review) | ⏳ R2-S1 | 1.5 d | done — verify ✓ (fixture + ไฟล์จริง), รอ `audit-compliance-reviewer` |
+| **R2-S3** | Schema R2 (3 คอลัมน์) + DDL asset | `nextjs-dev` | `deploy-verify` | ✅ ขนานกับ R2-S1/S2 | 0.5 d | done |
+| **R2-S4** | Actions + read path: preview/apply/save/reset รู้จัก Hybrid, `getCalculatorConfig` คืน projection + payload test | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R2-S2, R2-S3 | 1 d | done (branch `feat/r2-s1-hybrid-lib`) — build ✓, verify-calculator ✓, verify-calculator-import ✓, e2e-calculator-config ✓ (+R2-S4 block), e2e-admin-crud ✓, รอ `audit-compliance-reviewer` |
+| **R2-S5** | Export ชีต Hybrid (merged block, กลุ่มยี่ห้อ) + round-trip 2 ชีต | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R2-S2 · ✅ ขนานกับ R2-S4 | 0.75 d | done — round-trip ✓ (fixture + ไฟล์จริง), Excel check ✓, route wiring ทำใน R2-S4 แล้ว, รอ `audit-compliance-reviewer` |
+| **R2-S6** | หลังบ้าน: แท็บย่อย On-grid/Hybrid, รายการ + Dialog Hybrid, save 2 ตาราง | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R2-S4 | 1.25 d | done (local) — build ✓, e2e-calculator-config ✓ (+R2-S6 block), e2e-save-calculator-tables ✓, e2e-admin-crud ✓, รอ `design-business-reviewer` |
+| **R2-S7** | หลังบ้าน: preview นำเข้า 2 ชีต, กล่อง "Hybrid จะถูกลบ", reject แยกชีต, ประวัติ/reset copy | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R2-S4 · ✅ ขนานกับ R2-S6 (คนละไฟล์) | 0.75 d | done (local) — build ✓, e2e-calculator-config ✓ (+R2-S7 block), รอ `design-business-reviewer` |
+| **R2-S8** | Lead fields: `interestedBatteryKwh`, booking `system`/`battery`, ช่องแบตในแท็บ quote, lead detail, แจ้งเตือน, export รายงาน | `nextjs-dev` | `audit-compliance-reviewer`, `i18n-parity-checker`, `design-business-reviewer` (booking form) | ⏳ R2-S3 · ✅ ขนานกับ R2-S1/S2/S4–S7 | 1 d | done (local) — build ✓, e2e-booking ✓ (+ battery th/en), e2e-admin-crud ✓, e2e-admin ✓, รอ `audit-compliance-reviewer` / `design-business-reviewer` |
+| **R2-S9** | หน้า public Variant B: tab หัวการ์ด, segmented แบต, phase pill, CTA | `nextjs-dev` | `i18n-parity-checker`, `design-business-reviewer` (TH/EN × desktop/375px) | ⏳ R2-S4, R2-S8 · ✅ ขนานกับ R2-S6/S7 | 1.5 d | done (local) — build ✓, e2e-calculator-config ✓ (R2-S9), verify-calculator ✓, e2e-booking ✓; การ์ดสูงคงที่ 0 px; รอ reviewer. **สรุปหลังแก้ (revision, design-business-reviewer FAIL → rebalance Option A):** ช่อง Output/เดือนไม่นับแบต (panels-only, assert ใน verify-calculator) · เฉพาะเมื่อมีตาราง Hybrid: กล่องระบบย้ายไปคอลัมน์ซ้าย, callout + footnote ใต้ป้ายทองฝั่งขวา, On-grid มีปุ่ม compare สลับไป Hybrid, ปุ่มแบต wrap 2 แถวเสมอ <640px (cell ≥56×44), tab ขาว + radio dot; ไม่มีตาราง Hybrid → DOM การ์ดเท่าเดิมทุกตัวอักษร (8/8 เทียบ baseline). วัดบน prod build: การ์ด 567 px @1280 (th/en) คงที่ทุก bill/โหมด/แบต, ซ้าย 502 / ขวา 508, ช่องว่างในกล่อง 6 px |
 | **R2-S10** | Release R2: runbook → snapshot → DDL → deploy → smoke + write-path lead | `hosting-deploy-specialist` + human | `deploy-verify` | ⏳ R2-S1…S9 | 0.5 d | pending |
 | **R2-S11** | Post-deploy: ADMIN อัปโหลดไฟล์ 2 ชีตจริงบน prod → ตรวจ toggle + lead | owner/ADMIN (human) + agent browser | `design-business-reviewer` (prod render) | ⏳ R2-S10 | 0.25 d | pending |
 | **R2-S12** | Cleanup: ลบ prototype worktree/branch #157/#162 + ปิด backlog | main session (หลัง user ยืนยัน) | — | ⏳ R2-S11 | 0.1 d | pending |
@@ -456,7 +459,11 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback:** ไม่มี
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้ (2026-10-04, branch `feat/r2-s1-hybrid-lib`, local เท่านั้น)**
+- ไฟล์: `calculator-tables-tab.tsx` (แท็บย่อย controlled + keepMounted ทั้งสอง, working copy 2 ตาราง, save bar นับ On-grid/Hybrid, "ไปที่จุดแรก" สลับแท็บ, ส่ง `hybrid` เฉพาะเมื่อแก้), `calculator-table-list.tsx` (`HybridList` + empty state ไม่มีปุ่มเพิ่ม), `hybrid-size-dialog.tsx` (ใหม่), `save-tables-dialog.tsx` (คอลัมน์ Hybrid, diff ราคา/แถวแบต, คำเตือนเรียง Package → ไม่มีราคา → แผง → E3), `calculator-hybrid-diff-view.tsx` (ใหม่, ใช้ร่วมกับ R2-S7), `use-table-draft.ts` + `hybrid-draft.ts` (ใหม่, โมเดล Hybrid บริสุทธิ์ client-safe), `page.tsx` (+`multiplier`), `lib/calculator-import/diff.ts` (+`currentKws`/`nextKws` บน `HybridTableDiff` เพื่อแยกขนาดใหม่/ถูกลบ), `scripts/e2e-calculator-config.mts`
+- ต่างจากแผน: (1) แยกโมเดล Hybrid เป็น `src/hooks/admin/hybrid-draft.ts` แทนยัดใน use-table-draft.ts (ไฟล์เดียวจะเกิน 800 บรรทัด) (2) Dialog Hybrid ใช้ `sm:max-w-4xl` (5 ยี่ห้อพอดีที่ 1280) (3) draft เก็บ `brands` ใน state — พบ deadlock จริงจาก e2e: หลัง refresh ที่ Hybrid หาย props.brands เปลี่ยนก่อน state ทำให้ draft "dirty" ค้างและไม่ reset (4) `design-business-reviewer` ยังไม่ได้รัน; ตรวจ real render 1280/820 เองแล้ว (screenshot ใน scratchpad r2-admin)
+- DoD: `npm run build` ✓ · `e2e-calculator-config` ✓ (port 3002) · `e2e-save-calculator-tables` ✓ · `e2e-admin-crud` ✓ (สำเนา port 3002) · `verify-calculator` ✓ · `verify-calculator-import` ✓ · grep `_proto|_prototype|variant-switcher|load-hybrid` src = 0 · ไม่มี client component import `calculator-import/index`
+
 
 ---
 
@@ -471,7 +478,7 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
     - `hybridMonthlySaving(row)` = `(kw × sunHours + batteryKwh) × pricePerKwh × days`
     - `usablePrices(rows)` — ราคา > 0 และแถวแบต > 0 ใช้ได้เมื่อยี่ห้อเดียวกันใน kW/phase เดียวกันมีราคาแถวแบต 0 > 0 (E3); คืนราคาต่ำสุด + ยี่ห้อ (ยี่ห้อใช้เฉพาะหลังบ้าน)
     - `type PublicHybridSize` ตาม research-158 §3
-    - `recommendHybrid(bill, table: PublicHybridSize[], preferredBatteryKwh: number | null, multiplier)` → union เดียวกับ `recommendFromTable` + `batteryKwh` (derive), `batteryOptions`, `phases`: kW เล็กสุดที่ `billMax > bill`; แบต null → เล็กสุด > 0; ไม่มีในตัวเลือก → ใกล้สุด (เสมอ → เล็กกว่า); cap ที่ค่าไฟ; payback จากยอดหลัง cap, null เมื่อไม่มีราคา; `belowFirstRow`/`tooLarge`
+    - `recommendHybrid(bill, table: PublicHybridSize[], preferredBatteryKwh: number | null, multiplier)` → union เดียวกับ `recommendFromTable` + `batteryKwh` (derive), `batteryOptions`, `phases`: kW เล็กสุดที่ `billMax > bill`; แบต null → เล็กสุด > 0; ไม่มีในตัวเลือก → ใกล้สุด (เสมอ → **ใหญ่กว่า** ตามเจ้าของ 2026-10-04 "ปัดขึ้น" เฉพาะเมื่อแบตที่เลือกไว้ > 0; 0 คงเป็น 0); cap ที่ค่าไฟ; payback จากยอดหลัง cap, null เมื่อไม่มีราคา; `belowFirstRow`/`tooLarge`
   - `src/lib/calculator-hybrid-projection.ts` (ใหม่, comment "server-only") — `toPublicHybridTable(rows: HybridRow[]): PublicHybridSize[]`: รวม phase ต่อ kW, แบตแต่ละตัวใช้ phase ที่ราคาต่ำกว่า (#156 ข้อ 2), `minPriceThb` ไม่มียี่ห้อ
   - `scripts/verify-calculator.mts` — section Hybrid (ตารางสังเคราะห์ BrandA…E): ทุกกติกา #156 ข้อ 1–7 ที่ทดสอบได้ในฟังก์ชัน pure, E3 (ราคาแบตอย่างเดียวไม่นับ), E4 (ไม่มีราคา → payback null), cheaper-phase, **`JSON.stringify(toPublicHybridTable(rows))` ไม่มี `"brand"` และไม่มีชื่อ BrandA…E และไม่มีราคาที่ไม่ใช่ min**; ตัวเลข design-157 §7 กับตารางสังเคราะห์ที่ตั้งค่าร่วมเท่าไฟล์จริง (ค่าไฟ 9,500 → 10 kW แบต 16 ประหยัด 8,910 หลังติดตั้ง 590)
   - `CONTEXT.md` — ศัพท์ "Hybrid row", "ราคาที่ใช้ได้", "Public Hybrid table (projection)"
@@ -484,7 +491,11 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback:** revert — ไม่มีผู้เรียก
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้:** (2026-10-03, branch `feat/r2-s1-hybrid-lib`, ทำใน worktree แยกขนานกับ R1-S6 — ยังไม่ merge เข้า main)
+- ไฟล์ใหม่ `src/lib/calculator-hybrid.ts` (client-safe: `HybridRow`, `hybridTableSchema`, `hybridMonthlySaving`, `usablePrices`, `PublicHybridSize`, `recommendHybrid`) และ `src/lib/calculator-hybrid-projection.ts` (`toPublicHybridTable`, comment "server-only"); `CONTEXT.md` เพิ่ม 3 ศัพท์
+- `verify-calculator.mts` เพิ่ม section Hybrid ตารางสังเคราะห์ BrandA…E: schema reject 5 กรณี (ซ้ำ, ไม่มีแบต 0 = C7, ค่าร่วมต่าง, billMax ไม่เพิ่ม, ชื่อยี่ห้อต่าง), E3, E4, 0 ฿ ไม่นับ, cheaper-phase (ทั้งสองทิศ), กติกา #156 (kW เล็กสุด `billMax > bill`, แบตเริ่ม >0, ใกล้สุด/เสมอ→ใหญ่กว่า (แก้ 2026-10-04), cap, payback จากยอดหลัง cap, tooLarge/belowFirstRow) และ projection JSON ไม่มี `brand`/BrandA…E/ราคาที่ไม่ใช่ min; ตัวเลข design-157 §7 (9,500 → 10 kW แบต 16 ประหยัด 8,910 หลังติดตั้ง 590 คืนทุน ≈4.0)
+- Verify: `npx tsx scripts/verify-calculator.mts` ✓ ทั้งหมด (434 ✓, On-grid equality sweep 76/76); `grep exceljs|jszip|prisma src/lib/calculator-hybrid.ts` ว่าง; `npx tsc --noEmit -p .` ✓
+- ที่ต่างจากแผน: `npm run build` เต็มรอบยังไม่ได้รันใน worktree (ไม่มี `.env`/DB, `node_modules` + `src/generated` เป็น symlink) — ไม่มีผู้เรียกจึงเสี่ยงต่ำ ให้รันตอน merge. `hybridTableSchema` ตรวจ billMax เพิ่มเคร่งครัดข้าม kW (ค่าเดียวต่อ kW) และ kW/phase ที่ไม่มีแถวแบต 0 = reject ตาม C7
 
 ---
 
@@ -510,7 +521,14 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback:** revert — ยังไม่มีผู้เรียก
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้:** (2026-10-03, branch `feat/r2-s1-hybrid-lib` ต่อจาก R2-S1 — ยังไม่ merge เข้า main)
+- ไฟล์ใหม่ใต้ `src/lib/calculator-import/`: `read-hybrid.ts` (หาชีต/หัว/คอลัมน์จาก label, ราคาจาก group `ยี่ห้อ` เท่านั้น, หยุดที่แถวว่างแรก, ราคา 0/ว่าง = null, ไม่ออก `formula-cached` ให้คอลัมน์ราคา), `validate-hybrid.ts` (client-safe: E12 → E11 → E13 → billMax เพิ่มเคร่งครัด → zod; warning E3 ข้อเดียว (ตัวอย่าง ≤ 3), E5 ต่อ kW, E4 ต่อ kW), `parse-hybrid.ts` (ห่อ read + validate แล้วแปลงตำแหน่งเป็นแถว Excel เหมือน `parse-on-grid.ts`)
+- แก้ของเดิม: `messages.ts` (copy Hybrid ตาม design-162 §8.4/§8.5, `sheet?: "hybrid"` บน `ImportIssue`/`ImportWarning`, `data`/`examples` บน `TableWarning`), `diff.ts` (`diffHybridTables`: key = kW/phase/แบต, บิลตัวอย่าง + คืนทุน แสดง/ไม่แสดง), `index.ts` (`importCalculatorWorkbook` → On-grid บังคับ + Hybrid ถ้ามี; Hybrid ผิด = reject ทั้งไฟล์ D4; ไม่มีชีต = `hybrid: null` D3; Hybrid ไม่อยู่ใน `skippedSheets`), `read-on-grid.ts` (แค่ `export` helper ที่ใช้ร่วม ไม่เปลี่ยนพฤติกรรม), comment หัว `calculator-hybrid-projection.ts`
+- `importOnGridSizeTable` คงเดิมทุกอย่าง → `src/actions/calculator-import.ts` บน main ไม่พัง; **R2-S4 ต้องสลับ action ไปเรียก `importCalculatorWorkbook`**
+- Fixture สังเคราะห์ BrandA…E (`scripts/lib/calculator-import-fixtures.ts`: ชีต Hybrid merged block, header 2 แถว, กลุ่มคืนทุนชื่อซ้ำที่เป็นสูตร, บล็อกล่าง) และ section Hybrid ใน `verify-calculator-import.mts` (156 ✓: ไฟล์ดี, ไม่มีชีต, ไม่มีกลุ่มยี่ห้อ, ซ้ำ, ค่าร่วมไม่ตรง, ไม่มีแบต 0, แบตติดลบ/ไม่ใช่เลข, ราคาไม่ใช่เลข/0/สูตร, E3/E4/E5, หน่วยมี space, บล็อกล่างมี/ไม่มีแถวว่าง, D4 สามแบบ, validator, diff, import graph ของ validate-hybrid/diff ไม่มี exceljs/jszip/prisma)
+- ไฟล์จริง (`REAL_CALC_XLSX=… npx tsx scripts/verify-calculator-import.mts`, พิมพ์จำนวนเท่านั้น): Hybrid 52 แถว / 13 ขนาด, E3 = 1 warning (42 ช่อง), E5 = 20/30/50/99.9, E4 = 7 แถว (3 warning ต่อ kW), Hybrid ไม่อยู่ใน `skippedSheets`
+- Verify: `verify-calculator-import.mts` ✓ ทั้งหมด · `verify-calculator.mts` ✓ · `npx tsc --noEmit -p .` ✓ · grep `exceljs|jszip` ใน `validate-hybrid.ts` ว่าง · grep ชื่อยี่ห้อจริงใน `src/` `scripts/` ว่าง · ไม่มี `.xlsx` ใน diff
+- ที่ต่างจากแผน: (1) เพิ่ม `parse-hybrid.ts` (ตามรูปแบบ On-grid) (2) `importCalculatorWorkbook` คืน `errors` (ไม่ใช่ `issues`) พร้อม `groups: {onGrid, hybrid}` ให้ UI แบ่งหัวกลุ่มตาม §8.4 (3) E5 ใช้ copy §8.5 ที่ list เป็น kW เดียวต่อข้อ (ออกต่อ kW ตามที่สั่ง) (4) `diff.ts` import `toPublicHybridTable` (comment "server-only") — ใช้เฉพาะ bundle หลังบ้าน จึงแก้ comment หัวไฟล์ projection ให้ตรง (5) `npm run build` เต็มรอบยังไม่รัน (worktree ไม่มี `.env`) — ให้รันตอน merge; ยังเหลือ `audit-compliance-reviewer` (ไม่ได้รันใน sprint นี้)
 
 ---
 
@@ -532,7 +550,16 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback (local):** revert + `prisma migrate reset`
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้:**
+- Migration `20261004050912_add_hybrid_calculator_tables_and_lead_battery` (3 ADD COLUMN nullable: `CalculatorConfig.hybridSizeTable JSON`, `CalculatorImport.hybridRows JSON`, `Lead.interestedBatteryKwh INTEGER`) — backup ก่อน, ไม่ reset DB
+- DDL asset `docs/plans/assets/calculator-hybrid-r2-production-ddl.sql`: หัวไฟล์เตือนลำดับ (DDL + `SHOW COLUMNS` ก่อน restart ไม่งั้น quote submit 500), 0a InnoDB 3 ตาราง, 0b เช็คคอลัมน์, 0c ไม่ต้อง (ไม่มี string col), ALTER `IF NOT EXISTS` ×3, verify + gate COUNT = 3, ไม่มี DROP
+- Verify: `migrate dev` ✓ · `db seed` ×2 ✓ · `verify-storage-engine` ENGINE_GATE=GREEN · `restore-db` dry-run ✓ · `tsc --noEmit` ✓ · `npm run build` ✓ (Compiled + Finished TypeScript)
+- ยังไม่ทำ: `npm run start` + `verify-all.mts`, `deploy-verify` review (ไม่ได้รันใน worktree) — ให้ทำตอน merge/R2-S4
+- worktree: `src/generated` เลิก symlink (generate เอง), `.env` copy มา (gitignored)
+
+**Status:** done (ยกเว้นข้อที่ระบุข้างบน)
+
+
 
 ---
 
@@ -540,6 +567,7 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **สรุปก่อนแก้**
 - ไฟล์:
+  - `src/app/api/admin/calculator/export/route.ts` — **ย้ายมาจาก R2-S5**: ส่ง `hybridSizeTable` เข้า `buildCalculatorWorkbook`
   - `src/actions/calculator-import.ts`
     - `previewCalculatorImport` → `importCalculatorWorkbook`; create `{ source: "EXCEL", rows, hybridRows }`; คืน diff 2 ตาราง + `hasHybridSheet` + `activeHybridCounts`; **dedupe ตาม Default #3**; snapshot projection + `hybridRowCount`
     - `applyCalculatorImport` — `hybridSizeTable: imp.hybridRows ?? Prisma.JsonNull` + `hybridTableSchema.safeParse` ซ้ำ
@@ -559,7 +587,17 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback:** revert — public ยังไม่อ่าน `hybridTable`
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้ (2026-10-04, branch `feat/r2-s1-hybrid-lib`, local เท่านั้น — ยังไม่ deploy)**
+- ไฟล์: `src/actions/calculator-import.ts` (preview/apply/save), `src/actions/calculator-config.ts` (reset ล้าง `hybridSizeTable`), `src/lib/calculator-config.ts` (`calculatorConfigAuditView`), `src/lib/content/index.ts` (`getCalculatorConfig` + `hybridTable`), `src/app/api/admin/calculator/export/route.ts` (ส่ง Hybrid เข้า builder), หน้า admin `page.tsx` + types ของ tab/history, `scripts/e2e-calculator-config.mts`
+- preview ใช้ `importCalculatorWorkbook`: คืน `hybridRows`, `hasHybridSheet`, `hybridDiff`, `activeHybridCounts {sizes, rows, brands}`; reject คืน `messages` เดิม + `groups {onGrid, hybrid}` (D4: issue ชีตไหนก็ reject ทั้งไฟล์ ไม่มีอะไรถูกบันทึก)
+- Default #3: ถ้าแถว sha256 เดิมมี `hybridRows` ให้ reuse; ถ้าเป็นแถวก่อน R2 (null) จะ parse ใหม่ก่อน — มีชีต Hybrid → สร้างแถว EXCEL ใหม่, ไม่มี → reuse แถวเดิม
+- apply: `hybridSizeTable = imp.hybridRows` (ผ่าน `hybridTableSchema.safeParse` ซ้ำ) หรือ `Prisma.JsonNull` เมื่อเวอร์ชันนั้นไม่มี Hybrid (D3)
+- save (Default #11): `hybrid` เป็น optional — ไม่ส่ง/null = คง Hybrid ที่ใช้อยู่ไว้ (เวอร์ชัน MANUAL ใหม่พกตารางเดิมไปด้วย); ส่งมาแต่ยังไม่มี Hybrid → reject; ชุด/ลำดับชื่อยี่ห้อต้องตรงของเดิม; cap 500 แถว/10 ยี่ห้อ; ผ่าน `validateHybridTable`
+- Audit: snapshot ของ `CalculatorImport` เพิ่ม `hybridRowCount` (ไม่มี rows); snapshot ของ `CalculatorConfig` เปลี่ยนจาก `"full"` เป็น `calculatorConfigAuditView` (แทน `hybridSizeTable` ด้วยจำนวนแถว) ในทั้ง 2 entity
+- `getCalculatorConfig` คืน `hybridTable` ผ่าน safeParse → `toPublicHybridTable` (parse ไม่ผ่าน → null + console.error); หน้า public ยังไม่ส่งต่อ
+- ไม่ต้องแก้ `storage-engine-contract.ts` (ไม่มีตารางใหม่ — มีเฉพาะคอลัมน์ Json nullable บนตารางที่ลงทะเบียนไว้แล้ว)
+- DoD: `npm run build` ✓ · `verify-calculator` ✓ · `verify-calculator-import` ✓ · `npm run start` (port 3002) → `e2e-calculator-config` ✓ (บล็อก R2-S4: Default #3, apply, HTML public ไม่มี BrandA/brandPrices ทั้ง /th + /en, export มีชีต Hybrid, forged save 3 แบบ, audit ไม่มียี่ห้อ/ราคา, D4, D3, ใช้ชุดนี้, reset ล้าง Hybrid) · `e2e-save-calculator-tables` ✓ · `e2e-admin-crud` ✓ (ใช้สำเนา script ที่แทน port เพราะ hardcode 3000)
+- **ต่างจากแผน/ค้าง:** (1) `audit-compliance-reviewer` ยังไม่ได้รัน; (2) UI preview 2 ชีต/กล่องเตือน D3 อยู่ R2-S7 — e2e จึงตรวจผ่าน DB; (3) แก้ assertion เดิมของ e2e ที่ bill 500 (callout "ต่ำกว่าช่วงของระบบเล็กสุด" มาก่อน "ครอบคลุม 100%" ตั้งแต่ 79b1fad)
 
 ---
 
@@ -579,7 +617,13 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback:** revert — export กลับเป็น On-grid อย่างเดียว
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้ (2026-10-04)**
+- ไฟล์: `export.ts` (`buildCalculatorWorkbook({ onGrid, hybrid? })` + `writeHybridSheet`; ชีต `Hybrid` สร้างเฉพาะเมื่อ `hybrid` มีแถว — undefined/null/[] ไม่สร้าง), `scripts/verify-calculator-import.mts` (round-trip 2 ชีต)
+- ชีต: header 2 แถวใช้ `HYBRID_HEADER` ของ reader; ค่าร่วมต่อ kW (ขนาด/หน่วย/ชั่วโมง/วัน/แผง/หลังคา/บิล/ค่าไฟ + ช่องคำนวณ) เขียนที่แถวแรกของบล็อกแล้ว merge ลงทั้งบล็อก; Phase+แบตกรอกทุกแถว; ช่องประหยัดค่าไฟเป็นสูตร `(kW*ชม.+แบต)*ค่าไฟ*วัน` + result; ยี่ห้อเรียงตาม brands, ราคาเป็นตัวเลข (ว่าง = ไม่มีราคา) ไม่มีสูตรราคาแบต ไม่มีบล็อก HUAWEI (D6); กลุ่มคืนทุนไม่ export (reader ไม่อ่าน)
+- Round-trip: fixture สังเคราะห์ (BrandA-D, ราคา null, 1φ/3φ ชุดแบตต่างกัน, หลังคา override, วันทศนิยม) → On-grid และ Hybrid deep-equal, ไม่มี warning สูตร; ไม่มี Hybrid -> ไม่มีชีต -> `hybrid: null`; ไฟล์จริง On-grid 31 แถว / Hybrid 52 แถว round-trip equal (พิมพ์เฉพาะจำนวน)
+- Excel (AppleScript, `calculate full`): สูตรทุก cell คำนวณได้ ไม่มี error, merged block ถูกที่ (5 kW = แถว 3-7, 10 kW = 8-9, 20 kW = 10-11), ค่า cached ตรงกับค่าที่ Excel คำนวณ
+- **ต่างจากแผน:** ยัง **ไม่แก้ `src/app/api/admin/calculator/export/route.ts`** (ต้องรอคอลัมน์ `hybridSizeTable` จาก R2-S3) -> ย้ายไปทำใน **R2-S4** (ส่ง `hybridSizeTable` เข้า builder; ADMIN-only + `no-store` คงเดิม)
+
 
 ---
 
@@ -603,7 +647,25 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback:** revert — action ยังรับ `hybrid: null` ได้
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้ (2026-10-04, local เท่านั้น)**
+- ไฟล์: `calculator-import-panel.tsx` (กล่องอธิบาย 2 ชีต + รายการคอลัมน์ On-grid 9 / Hybrid 11, meta line, กล่อง "แทนที่ทั้ง 2 ชุด", กล่อง `calc-import-hybrid-removed`, ส่วนชีต On-grid / Hybrid เรียงต่อกัน, confirm destructive, reject แยกกลุ่มชีต + "ทั้งไฟล์ไม่ผ่าน แม้ชีต On-grid จะถูกต้อง"), `calculator-version-history.tsx` (Hybrid {k} ขนาด / ไม่มี Hybrid, confirm เตือนและ `border-destructive` เมื่อเวอร์ชันไม่มี Hybrid), `calculator-config-tab.tsx` (copy reset R2), `scripts/e2e-calculator-config.mts` (บล็อก R2-S7)
+- ต่างจากแผน: bullet "ไม่อ่านราคา ยี่ห้อ…" ปรับให้ระบุว่าเป็นชีต On-grid (ชีต Hybrid อ่านราคา); reject ที่ผิดเฉพาะ On-grid คงรายการแบน (พฤติกรรม R1) ใช้หัวกลุ่มเฉพาะเมื่อมี issue ชีต Hybrid; ปุ่ม "ดูคอลัมน์ที่ระบบอ่าน" ไม่มีตัวเลขท้ายแล้ว; `design-business-reviewer` ยังไม่ได้รัน
+- DoD: `npm run build` ✓ · `e2e-calculator-config` ✓ (assert removal box, reject แยกชีต, history counts/คำเตือน)
+
+
+**แก้ตามรีวิว `design-business-reviewer` (R2-S6/S7 admin polish, 2026-10-04, local)**
+- M1 Dialog On-grid/Hybrid เปิดพร้อมแสดง error เดิมของขนาดนั้น (ไม่ต้องแตะช่อง); error ของค่าร่วมที่ validator รายงานทีละแถวแบต แสดงครั้งเดียวใต้ช่องนั้น
+- M2 กติกาปัดแผงเดียว `Math.ceil(kW x 1.2 / 0.63)` (ตรง On-grid) ทั้ง helper, warning ใน Dialog, ข้อความ preview/save-confirm (`validate-hybrid.ts`, `hybrid-draft.ts`, `verify-calculator-import.mts` ปรับคาดหวัง)
+- m1 รายการ Hybrid ใช้ `table-fixed` + `colgroup` เปอร์เซ็นต์ + ตัดบรรทัดได้: 820px (sidebar 240) พอดีไม่ scroll (scrollWidth 464 = clientWidth 464), 1280px ไม่มีช่องว่างก้อนเดียวกลางตาราง
+- m2 ตารางราคาใน Dialog: ยี่ห้อ `min-w-[5.5rem]`, หัวคอลัมน์ตัดบรรทัด, คอลัมน์ปุ่มลบ sticky-right → 820px พอดีไม่ scroll (5 ยี่ห้อ); **คง `sm:max-w-4xl`** (ตัดสินใจ: กว้างพอที่ 1280 โดยไม่ทำให้ตารางลอยห่างฟอร์มค่าร่วม; ถ้ามี >5 ยี่ห้อจะ scroll ได้ แต่ปุ่มลบยังเห็นเพราะ sticky)
+- m3 Badge amber "เตือน {n}" ในแถวรายการ Hybrid (คำนวณจาก `validateHybridTable` ของแถวนั้น). **On-grid ไม่มีกติกา warning ต่อแถว** (design-162 Q2: แผงเป็นข้อมูลช่วยตรวจ ไม่เตือน) จึงไม่มีป้ายใน On-grid — ถ้ามีกติกาในอนาคตให้ใช้ `WARN_BADGE_CLASS` ใน `calculator-table-list.tsx`
+- m4 ไฮไลต์ทำเฉพาะเซลล์ที่ค่าที่แสดงเปลี่ยนจริง (เทียบข้อความที่แสดง) รวม "ยี่ห้อที่มีราคา" และ "คืนทุน"; หลังคา On-grid ไม่ไฮไลต์เมื่อค่าที่แสดงเท่าเดิม
+- m5 เฟสสุดท้ายแสดงข้อความ "ต้องมีอย่างน้อย 1 เฟส" (`aria-describedby`); แถวแบต 0 แทนปุ่มลบที่ disabled ด้วยไอคอนล็อกและข้อความอธิบายใต้ตาราง
+- Nit: บรรทัด diff ใน save-confirm/preview `text-sm`; ตารางอ่านอย่างเดียวของ import preview เพิ่ม "ประหยัด/ด." และ "คืนทุน (ปี)" ให้ตรง Dialog (§8.3); คอลัมน์ "คืนทุนบนหน้าเว็บ" ของตัวอย่างบิล On-grid **คงไว้** (เป็นพฤติกรรม R1 ที่ผูกกับ Package และมีข้อความ "ขนาดที่ไม่มี Package")
+- `MAX_HYBRID_ROWS` ใน `hybrid-draft.ts` import จาก `@/lib/calculator-hybrid` (ไฟล์ pure ใช้ zod อย่างเดียว ปลอดภัยกับ client)
+- ภาพ: 1280/820 ของรายการ Hybrid/On-grid, Dialog (50 kW, error เดิม, warning, hint เฟส), preview 2 ชีต, reject ทั้ง 2 ชีต, confirm "ใช้ชุดนี้" ของเวอร์ชันไม่มี Hybrid (§9)
+- **ต่างจากแผน:** ไม่ได้ทำ 375/768 ของหลังบ้าน — หลังบ้านใช้บนเดสก์ท็อป และ 820 ครอบคลุม tablet
+- e2e เพิ่ม: M1 (เปิดขนาดที่มี error → เห็นกล่อง error ทันที), M2/M3 (แผง 5 ที่ 10 kW → "≈20" ทั้งสองที่ + ป้าย "เตือน"); เพิ่ม `scripts/seed-synthetic-hybrid.mts` (ข้อมูลสังเคราะห์ ใส่ผ่าน UI นำเข้าเพื่อให้ toggle ขึ้นบน localhost)
 
 ---
 
@@ -656,7 +718,10 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback:** revert — คอลัมน์ `interestedBatteryKwh` ว่างไม่กระทบโค้ดเดิม
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้:** (local, ยังไม่ push)
+- ทำตามแผน: `bookingLinkParamsSchema` + `system`/`battery`; `page.tsx` ให้ `system` ชนะ service-derived และส่ง `initialBatteryKwh` เฉพาะ `system=hybrid` (<= 10000); `BillAndSystemsFields` + `showBatteryField` (QuoteForm เท่านั้น) render ใต้ checkbox HYBRID เมื่อติ๊ก; `interestedBatteryKwh` ใน `baseLeadSchema` (preprocess "" -> undefined, int 0-10000); `submit-quote.ts` ล้างเป็น null เมื่อไม่มี HYBRID; lead detail, `format.ts`, export-rows ทั้ง 2 ชีต; keys `fieldBatteryKwh*` ใน th/en
+- ทดสอบ: `npm run build` ✓ · e2e-booking (port 3002 ผ่านสำเนาชั่วคราว) ผ่านทุกบรรทัด + BATTERY th/en 4 กรณีต่อภาษา · e2e-admin-crud ✓ (header export ตรงกับ field list) · e2e-admin ✓ · server log "no providers configured, skipping" · formatter กับ lead แบต 16 -> `แบตเตอรี่ที่สนใจ: 16 kWh` · screenshot 375/1280 x TH/EN x ติ๊ก/ไม่ติ๊ก
+- ต่างจากแผน: (1) e2e ส่ง `x-forwarded-for` แยกต่อภาษาในบล็อก BATTERY เพราะ rate limit 5 ครั้ง/10 นาที/IP เต็มเมื่อเพิ่ม submit; (2) error ของช่องแบตใช้ `errInvalid` เดิม (ไม่เพิ่ม key); (3) `i18n-parity-checker`, `audit-compliance-reviewer`, `design-business-reviewer` และ content marker R2-S10 ยังไม่ได้รัน
 
 ---
 
@@ -690,7 +755,15 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback:** revert — `hybridTable` ไม่ถูกส่งให้ client, หน้าเป็น On-grid อย่างเดียว
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้ (2026-10-04, local เท่านั้น)**
+- ไฟล์: `page.tsx` (ส่ง `hybridTable`), `use-calculator-store.ts` (`systemMode`, `preferredBatteryKwh`, ไม่ persist), `calculator-client.tsx`, ใหม่ `system-mode-tabs.tsx` (radiogroup), `battery-picker.tsx` (`BatteryPicker` + `ModeInfoBox`), `phase-pill.tsx`, `messages/{th,en}.json` (key §5 ของ B + `modeOnGridHint`, `modeHybridHint`, `modeOnGridNoBattery`), `scripts/e2e-calculator-config.mts` (บล็อก R2-S9)
+- ข้อควรระวัง #1 (On-grid เหมือนเดิม): เมื่อไม่มี Hybrid ไม่ render tab/กล่องแบต — เทียบ `outerHTML` ของการ์ดก่อน/หลังแก้ที่ 4 ค่าไฟ × TH/EN = **เหมือนกันทั้ง 8 ไฟล์** (ตรวจที่ build จริง); e2e ยืนยันไม่มี `calc-mode`/`calc-battery` หลัง reset
+- ข้อควรระวัง #2 (แบตบนมือถือ): ปรับจากแผน — ตัวเลือกแบตเป็นตัวเลขล้วน (หน่วย kWh อยู่ที่ caption `… (kWh)`; segment "ไม่มีแบต" เต็มข้อความ) แถวเดียวไม่ scroll แม้ 7 ตัวเลือก ที่ 375px (ภาพ 50/60 kW TH/EN); ยังมี `overflow-x-auto` เป็นทางหนีถ้า admin ใส่แบตเกิน 7 ตัว; segment `min-h-11`
+- **ความสูงการ์ดคงที่ (ข้อกำหนดจาก main 79b1fad/8e20fae):** กล่องบนสุดฝั่งผลมีทั้งสองโหมด — Hybrid = `BatteryPicker`, On-grid/ไม่มีขนาด = `ModeInfoBox` (ชื่อ + เฟส + คำอธิบาย + แผงข้อความ "ไม่มีแบตเตอรี่ — …") ใช้ ghost ที่สร้างจาก kW ใหญ่สุด/แบตมากสุดเป็นตัวจองพื้นที่ กล่องจริงยืด `h-full` เติมเต็มพอดี ไม่มีพื้นที่โล่ง; caption `batteryAutoAdjusted` ใช้ที่เดียวกับ `batteryFor` (aria-live polite) จึงไม่เพิ่มบรรทัด; EN `batteryAutoAdjusted` ย่อเป็น "Adjusted to {kwh} for {kw} kW" ให้อยู่ 1 บรรทัดที่ 375px
+- วัดความสูงการ์ด (71 สถานะต่อความกว้าง: 12 ค่าไฟ On-grid + Hybrid × ทุกแบต, ข้ามโหมด): TH 1280/1024/768/375 = 675/675/1095/1239 px, EN = 675/751/1115/1355 px — **ส่วนต่างสูงสุด 0 px ทุกชุด**
+- ต่างจากแผน: (1) กล่องฝั่งขวามีใน On-grid ด้วย (ModeInfoBox) เพื่อให้ความสูงคงที่ — ขัดกับ "On-grid เหมือนเดิมนอกจากหัวการ์ด" เฉพาะเมื่อมี Hybrid; (2) เพิ่ม 3 key นอก §5 (`modeOnGridHint`, `modeHybridHint`, `modeOnGridNoBattery`); (3) CTA On-grid ส่ง `system=on-grid` ตามแผน (ฟอร์มติ๊ก On-grid ให้เอง — design-157 §0 ขอให้ user ตัดสิน); (4) ฝั่งซ้ายที่ ≥ lg ว่างท้ายคอลัมน์ ~200px เมื่อกล่องแบตอยู่ฝั่งขวา (ผลของ Variant B; ทางเลือก: ย้ายกล่องแบตไปฝั่งซ้ายแบบ A); (5) `PublicHybridSize` ที่ส่งให้ browser มี `minPriceThb` ต่อแบตตาม #155 (ต้องใช้คิดคืนทุน) — ไม่มีชื่อยี่ห้อ/ราคาต่อยี่ห้อ (e2e grep `BrandA|brandPrices|hybridSizeTable` = ไม่พบ)
+- ไม่ครอบคลุมใน e2e: แถวที่ไม่มีราคา (`noPaybackCta`) — ครอบคลุมโดย `verify-calculator.mts` (`recommendHybrid`) และดูด้วยตาจาก 60 kW ในข้อมูลสังเคราะห์ (ภาพ); reviewer (`design-business-reviewer`, `i18n-parity-checker`) ยังไม่ได้รัน
+- ข้อมูลสังเคราะห์: `scripts/seed-synthetic-hybrid.mts` (On-grid 3–50 kW + Hybrid 5–60 kW, 50/60 kW มีแบต 6 ตัวเลือก, 60 kW ไม่มีราคา)
 
 ---
 

@@ -41,7 +41,175 @@ export type BuildOptions = {
   /** Drop this 0-based column index from the header + every data row —
    * simulates a required column going missing. */
   dropColumnIndex?: number;
+  /** Also write a "Hybrid" sheet (R2-S2). Synthetic data only. */
+  hybrid?: HybridSheetOptions;
 };
+
+// ---- Hybrid sheet (R2-S2) ----
+// Layout mirrors the real sheet's shape (research-154 §2): column A blank,
+// 2 header rows (group row 2, sub row 3, groups merged across their columns),
+// the "ขนาดกำลังผลิต" group spans size/unit/phase/battery/battery-unit, shared
+// per-kW values merged down their block, a payback group that REUSES the brand
+// names (so a reader that picks the wrong group reads different numbers), the
+// "ยี่ห้อ" price group last, a blank row, then a second header block below.
+// Brand names are BrandA…BrandE and every price is made up.
+
+export type HybridFixtureRow = {
+  kw: FixtureCell;
+  phase: FixtureCell;
+  battery: FixtureCell;
+  /** Defaults to " kW" (leading space, like the real file — E15). */
+  unit?: string | null;
+  sunHours?: FixtureCell;
+  days?: FixtureCell;
+  pricePerKwh?: FixtureCell;
+  panels: FixtureCell;
+  roof?: FixtureCell;
+  billMin: FixtureCell;
+  billMax: FixtureCell;
+  /** One cell per brand column, in `brands` order. */
+  prices: FixtureCell[];
+};
+
+export type HybridSheetOptions = {
+  rows: HybridFixtureRow[];
+  brands?: string[];
+  /** Merge the per-kW shared cells down each block (like the real sheet). Default true. */
+  mergeBlocks?: boolean;
+  /** Header text of the brand group is replaced so no "ยี่ห้อ" group exists. */
+  omitBrandGroup?: boolean;
+  /** Second table below the first: after a blank row (default) or directly beneath (no blank). */
+  blockBelow?: "blank" | "none";
+  /** Sheet name (default "Hybrid"). */
+  sheetName?: string;
+  /** Write the header rows but not the "ผลิตพลังงานต่อวัน" marker. */
+  omitHeaderMarker?: boolean;
+};
+
+export const FIXTURE_BRANDS = ["BrandA", "BrandB", "BrandC", "BrandD", "BrandE"];
+const HYBRID_FIRST_COL = 2; // B
+
+function hybridLayout(brands: string[], omitBrandGroup: boolean) {
+  const fixed = [
+    { key: "kw", group: "ขนาดกำลังผลิต", sub: "ขนาด" },
+    { key: "unit", group: "ขนาดกำลังผลิต", sub: "หน่วย" },
+    { key: "phase", group: "ขนาดกำลังผลิต", sub: "Phase" },
+    { key: "battery", group: "ขนาดกำลังผลิต", sub: "ขนาดแบตเตอรี่" },
+    { key: "batteryUnit", group: "ขนาดกำลังผลิต", sub: "" },
+    { key: "sunHours", group: "ผลิตพลังงานต่อวัน", sub: "จำนวนชั่วโมงที่ผลิตได้" },
+    { key: "days", group: "ผลิตพลังงานต่อเดือน", sub: "จำนวนวัน" },
+    { key: "panelsCalc", group: "แผงโซล่าเซลล์", sub: "จำนวนคำนวณ" },
+    { key: "panels", group: "แผงโซล่าเซลล์", sub: "จำนวนติดตั้ง" },
+    { key: "roof", group: "แผงโซล่าเซลล์", sub: "พื้นที่หลังคาที่ต้องใช้" },
+    { key: "billMin", group: "ค่าไฟ", sub: "ประมาณ" },
+    { key: "billMax", group: "ค่าไฟ", sub: "ประมาณ" },
+    { key: "pricePerKwh", group: "ค่าไฟ", sub: "ค่าไฟ/หน่วย" },
+  ];
+  const payback = brands.map((b, i) => ({ key: `payback${i}`, group: "ระยะเวลาคืนทุน(ปี)", sub: b }));
+  const brandGroup = omitBrandGroup ? "ราคาอุปกรณ์" : "ยี่ห้อ";
+  const prices = brands.map((b, i) => ({ key: `price${i}`, group: brandGroup, sub: b }));
+  return [...fixed, ...payback, ...prices].map((c, i) => ({ ...c, col: HYBRID_FIRST_COL + i }));
+}
+
+function addHybridSheet(workbook: ExcelJS.Workbook, opts: HybridSheetOptions) {
+  const brands = opts.brands ?? FIXTURE_BRANDS;
+  const ws = workbook.addWorksheet(opts.sheetName ?? "Hybrid");
+  const layout = hybridLayout(brands, opts.omitBrandGroup ?? false);
+  const colOf = (key: string) => layout.find((c) => c.key === key)!.col;
+
+  const writeHeader = (groupRowNo: number) => {
+    const groupRow = ws.getRow(groupRowNo);
+    const subRow = ws.getRow(groupRowNo + 1);
+    for (const c of layout) {
+      const group = opts.omitHeaderMarker ? c.group.replace("ผลิตพลังงานต่อวัน", "x") : c.group;
+      groupRow.getCell(c.col).value = group;
+      if (c.sub !== "") subRow.getCell(c.col).value = c.sub;
+    }
+    // Group cells merge across their columns, like the real sheet.
+    let start = 0;
+    for (let i = 1; i <= layout.length; i++) {
+      if (i === layout.length || layout[i].group !== layout[start].group) {
+        if (i - 1 > start) ws.mergeCells(groupRowNo, layout[start].col, groupRowNo, layout[i - 1].col);
+        start = i;
+      }
+    }
+  };
+
+  writeHeader(2);
+
+  const dataStart = 4;
+  opts.rows.forEach((r, i) => {
+    const row = ws.getRow(dataStart + i);
+    const put = (key: string, v: FixtureCell | undefined) => setCell(row, colOf(key), v === undefined ? null : v);
+    put("kw", r.kw);
+    put("unit", r.unit === undefined ? " kW" : r.unit);
+    put("phase", r.phase);
+    put("battery", r.battery);
+    put("batteryUnit", "kWh");
+    put("sunHours", r.sunHours === undefined ? 5 : r.sunHours);
+    put("days", r.days === undefined ? 30 : r.days);
+    put("panelsCalc", typeof r.kw === "number" ? { formula: `(B${dataStart + i}*1.2)/0.63`, result: (r.kw * 1.2) / 0.63 } : null);
+    put("panels", r.panels);
+    put("roof", r.roof);
+    put("billMin", r.billMin);
+    put("billMax", r.billMax);
+    put("pricePerKwh", r.pricePerKwh === undefined ? 4.5 : r.pricePerKwh);
+    r.prices.forEach((p, b) => {
+      put(`price${b}`, p);
+      // Payback group: formulas with cached numbers that must never be read as prices.
+      put(`payback${b}`, { formula: `AD${dataStart + i}/1`, result: 777.77 + b });
+    });
+  });
+
+  if (opts.mergeBlocks ?? true) {
+    const mergeKeys = ["kw", "unit", "sunHours", "days", "panelsCalc", "panels", "roof", "billMin", "billMax", "pricePerKwh"];
+    let blockStart = 0;
+    for (let i = 1; i <= opts.rows.length; i++) {
+      if (i === opts.rows.length || opts.rows[i].kw !== opts.rows[blockStart].kw) {
+        if (i - 1 > blockStart) {
+          for (const key of mergeKeys) {
+            ws.mergeCells(dataStart + blockStart, colOf(key), dataStart + i - 1, colOf(key));
+          }
+        }
+        blockStart = i;
+      }
+    }
+  }
+
+  if (opts.blockBelow) {
+    // A second table (same headers, bogus data) — the reader must stop before it
+    // when a blank row separates them, and reject cleanly when it does not.
+    const gap = opts.blockBelow === "blank" ? 1 : 0;
+    const headerRow = dataStart + opts.rows.length + gap;
+    writeHeader(headerRow);
+    const extra = ws.getRow(headerRow + 2);
+    setCell(extra, colOf("kw"), 999);
+    setCell(extra, colOf("unit"), "kW");
+    setCell(extra, colOf("phase"), 3);
+    setCell(extra, colOf("battery"), 0);
+  }
+}
+
+/** Synthetic Hybrid rows: 5 kW (1φ+3φ), 10 kW (3φ), 20 kW (3φ). No warnings by
+ * design: panels follow (kW x 1.2)/0.63, every battery row's brand also has a
+ * base price, every row has at least one price. BrandC has no base price on the
+ * 5 kW 1φ row only in the E3 fixtures below. */
+export function goodHybridRows(): HybridFixtureRow[] {
+  const b5 = { panels: 10, roof: 27, billMin: 3000, billMax: 6000 };
+  const b10 = { panels: 19, roof: 51.3, billMin: 6000, billMax: 12000 };
+  const b20 = { panels: 38, roof: 102.6, billMin: 13000, billMax: 20000 };
+  return [
+    { kw: 5, phase: 1, battery: 0, ...b5, prices: [100000, 110000, null, null, null] },
+    { kw: 5, phase: 1, battery: 16, ...b5, prices: [160000, 170000, null, null, null] },
+    { kw: 5, phase: 3, battery: 0, ...b5, prices: [106000, 116000, null, null, null] },
+    { kw: 5, phase: 3, battery: 16, ...b5, prices: [166000, 176000, null, null, null] },
+    { kw: 10, phase: 3, battery: 0, ...b10, prices: [150000, 155000, 160000, null, null] },
+    { kw: 10, phase: 3, battery: 16, ...b10, prices: [210000, 215000, 220000, null, null] },
+    { kw: 10, phase: 3, battery: 32, ...b10, prices: [270000, 275000, 280000, null, null] },
+    { kw: 20, phase: 3, battery: 0, ...b20, prices: [250000, 255000, null, 260000, null] },
+    { kw: 20, phase: 3, battery: 16, ...b20, prices: [310000, 315000, null, 320000, null] },
+  ];
+}
 
 function setCell(row: ExcelJS.Row, col: number, value: FixtureCell) {
   if (value === null) return; // leave the cell empty
@@ -149,6 +317,8 @@ async function buildWorkbookBuffer(opts: BuildOptions): Promise<Buffer> {
   for (const name of opts.extraSheetNames ?? []) {
     workbook.addWorksheet(name);
   }
+
+  if (opts.hybrid) addHybridSheet(workbook, opts.hybrid);
 
   const buffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(buffer);

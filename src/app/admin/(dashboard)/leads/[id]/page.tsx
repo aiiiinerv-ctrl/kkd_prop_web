@@ -76,6 +76,7 @@ export default async function LeadDetailPage({
         interestedSystems: Array.isArray(lead.interestedSystems)
           ? (lead.interestedSystems as string[])
           : null,
+        interestedBatteryKwh: lead.interestedBatteryKwh,
         interestedPackageSlug: lead.interestedPackageSlug,
         interestedServiceSlug: lead.interestedServiceSlug,
         locale: lead.locale,

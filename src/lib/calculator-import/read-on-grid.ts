@@ -47,12 +47,12 @@ import type { ImportIssue, ImportWarning } from "./messages";
 // conflicts with @types/node's generic Buffer<T> in this TS/Node version —
 // extract exceljs's actual expected parameter type instead of fighting the
 // ambient merge with a hand-written one.
-type ExcelJsLoadBuffer = Parameters<ExcelJS.Workbook["xlsx"]["load"]>[0];
+export type ExcelJsLoadBuffer = Parameters<ExcelJS.Workbook["xlsx"]["load"]>[0];
 
-const MAX_HEADER_SCAN_ROWS = 20;
-const MAX_ROW_COUNT = 1000;
-const MAX_COL_COUNT = 100;
-const HEADER_MARKER = "ผลิตพลังงานต่อวัน";
+export const MAX_HEADER_SCAN_ROWS = 20;
+export const MAX_ROW_COUNT = 1000;
+export const MAX_COL_COUNT = 100;
+export const HEADER_MARKER = "ผลิตพลังงานต่อวัน";
 
 /** Header labels this reader matches on (group row / sub row). The Excel
  * export (export.ts) writes headers from the same constants so a changed
@@ -69,7 +69,7 @@ export const ON_GRID_HEADER = {
   bill: { group: "ค่าไฟ", sub: "ประมาณ" },
   price: { group: "ค่าไฟ", sub: "ค่าไฟ/หน่วย" },
 } as const;
-const ROOF_M2_PER_PANEL = 2.7;
+export const ROOF_M2_PER_PANEL = 2.7;
 
 export type ReadOnGridResult =
   | {
@@ -84,7 +84,7 @@ export type ReadOnGridResult =
     }
   | { ok: false; errors: ImportIssue[] };
 
-function columnLetter(index: number): string {
+export function columnLetter(index: number): string {
   let n = index;
   let out = "";
   while (n > 0) {
@@ -107,7 +107,7 @@ function richTextToString(v: ExcelJS.CellValue): string | null {
 }
 
 /** Text of a cell, resolving merged ranges to their master cell's value. */
-function cellText(ws: ExcelJS.Worksheet, row: number, col: number): string {
+export function cellText(ws: ExcelJS.Worksheet, row: number, col: number): string {
   const cell = ws.getRow(row).getCell(col);
   const master = cell.isMerged ? cell.master : cell;
   const raw = master.value;
@@ -121,13 +121,13 @@ function cellText(ws: ExcelJS.Worksheet, row: number, col: number): string {
   return normalizeWhitespace(String(raw));
 }
 
-type NumericCellRead =
+export type NumericCellRead =
   | { ok: true; value: number; wasFormula: boolean; wasText: boolean; noCachedResult: false }
   | { ok: false; noCachedResult: boolean; rawText: string };
 
 /** Reads a cell that should hold a plain entered number — never evaluates
  * formulas, only reads their cached `result` (research-145 §2.4). */
-function cellNumber(ws: ExcelJS.Worksheet, row: number, col: number): NumericCellRead {
+export function cellNumber(ws: ExcelJS.Worksheet, row: number, col: number): NumericCellRead {
   const cell = ws.getRow(row).getCell(col);
   const raw = cell.value;
 
@@ -135,7 +135,7 @@ function cellNumber(ws: ExcelJS.Worksheet, row: number, col: number): NumericCel
     return { ok: true, value: raw, wasFormula: false, wasText: false, noCachedResult: false };
   }
 
-  if (raw && typeof raw === "object" && "formula" in raw) {
+  if (raw && typeof raw === "object" && ("formula" in raw || "sharedFormula" in raw)) {
     const result = (raw as { result?: unknown }).result;
     if (typeof result === "number") {
       return { ok: true, value: result, wasFormula: true, wasText: false, noCachedResult: false };
@@ -156,7 +156,7 @@ function cellNumber(ws: ExcelJS.Worksheet, row: number, col: number): NumericCel
   return { ok: false, noCachedResult: false, rawText: raw === null || raw === undefined ? "" : String(raw) };
 }
 
-function isCellEmpty(ws: ExcelJS.Worksheet, row: number, col: number): boolean {
+export function isCellEmpty(ws: ExcelJS.Worksheet, row: number, col: number): boolean {
   const cell = ws.getRow(row).getCell(col);
   const v = cell.value;
   return v === null || v === undefined || (typeof v === "string" && v.trim() === "");

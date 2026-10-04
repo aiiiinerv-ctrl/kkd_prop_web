@@ -111,6 +111,18 @@ _Avoid_: draft, override
 `src/lib/calculator-import/validate-on-grid.ts` — the table-level rules for an On-grid Size table (field ranges, billMin < billMax, duplicate kW, billMax strictly increasing, zod schema). Client-safe (no Excel libraries), so the Excel Import and the back-office editor judge a table by the same code. Returns `TableIssue`s with a row index; `toExcelLocation()` in `messages.ts` turns them back into the Excel row/column wording. The 1φ/3φ merge stays on the import side (`read-on-grid.ts`) because the editor keeps phases as a set on one row.
 _Avoid_: import validator, parser
 
+**Hybrid row** (`HybridRow`, `src/lib/calculator-hybrid.ts`):
+One line of the Hybrid table, keyed by (kW, phase, battery kWh) with one price per brand (`brandPrices`; 0/blank is stored as null). 1φ/3φ are separate rows (not merged); production params and bill range are identical across every row of the same kW; every kW/phase keeps a battery-0 row because it is the price base. Client-safe lib, no callers outside tests until R2-S2+.
+_Avoid_: hybrid package, system row
+
+**Usable price (ราคาที่ใช้ได้)**:
+A Hybrid price that may be shown or used for payback: it must be greater than 0, and a battery row's price counts only when the same brand has a price greater than 0 on the battery-0 row of the same kW/phase (otherwise the cell is just the battery cost, E3). `usablePrices()` returns the cheapest usable price per row with its brand (back-office only). A row with none has no price, so payback is null and the page shows a CTA instead.
+_Avoid_: valid price, min price (the minimum is what is picked from usable prices)
+
+**Public Hybrid table (projection)** (`PublicHybridSize[]`, `toPublicHybridTable()` in `src/lib/calculator-hybrid-projection.ts`):
+The only Hybrid shape the browser receives: 1φ/3φ merged per kW, each battery option carrying just `minPriceThb` — the cheapest usable price across the phases that offer it. No brand names and no per-brand prices (#155); the function is server-only and `scripts/verify-calculator.mts` proves the serialized output contains none. `recommendHybrid()` runs on this shape in the browser.
+_Avoid_: public table, hybrid config
+
 ### Localized content
 
 **Paired locale columns**:

@@ -26,6 +26,7 @@ export type ExportRow = {
   address: string;
   leadType: string;
   interestedSystems: string;
+  interestedBatteryKwh: string;
   channel: string;
   executive: string;
   sales: string;
@@ -49,6 +50,7 @@ export const EXPORT_COLUMNS: { key: keyof ExportRow; header: string; width: numb
   { key: "leadType", header: "ประเภท Lead", width: 16 },
   // Position per PDF §4.5: directly after "ประเภท Lead".
   { key: "interestedSystems", header: "ประเภทระบบ", width: 20 },
+  { key: "interestedBatteryKwh", header: "ขนาดแบตที่สนใจ (kWh)", width: 20 },
   { key: "channel", header: "ช่องทาง", width: 20 },
   { key: "executive", header: "ผู้ดำเนินการ", width: 20 },
   { key: "sales", header: "เซลส์", width: 18 },
@@ -79,6 +81,7 @@ export async function getExportRows(
       type: true,
       status: true,
       interestedSystems: true,
+      interestedBatteryKwh: true,
       createdAt: true,
       closedAt: true,
       sourceChannelId: true,
@@ -105,6 +108,7 @@ export async function getExportRows(
               .map((s) => INTERESTED_SYSTEM_LABELS_TH[s] ?? s)
               .join(", ")
           : "-",
+      interestedBatteryKwh: lead.interestedBatteryKwh != null ? String(lead.interestedBatteryKwh) : "-",
       channel: channel.name,
       executive: lead.autoSourceExecutive?.name ?? "-",
       sales: lead.assignedSales?.name ?? "-",
@@ -145,6 +149,7 @@ export type FullExportRow = {
   buildingType: string;
   avgMonthlyBill: string;
   interestedSystems: string;
+  interestedBatteryKwh: string;
   customerMessage: string;
   internalNotes: string;
   locale: string;
@@ -183,6 +188,7 @@ export const FULL_EXPORT_COLUMNS: { key: keyof FullExportRow; header: string; wi
   { key: "buildingType", header: "ประเภทอาคาร", width: 24 },
   { key: "avgMonthlyBill", header: "ค่าไฟเฉลี่ยต่อเดือน (บาท)", width: 20 },
   { key: "interestedSystems", header: "ประเภทระบบ", width: 20 },
+  { key: "interestedBatteryKwh", header: "ขนาดแบตที่สนใจ (kWh)", width: 20 },
   { key: "customerMessage", header: "ข้อความจากลูกค้า", width: 32 },
   { key: "internalNotes", header: "บันทึกภายใน", width: 32 },
   { key: "locale", header: "ภาษา", width: 10 },
@@ -231,6 +237,7 @@ export async function getFullExportRows(
       buildingTypeOtherText: true,
       avgMonthlyBill: true,
       interestedSystems: true,
+      interestedBatteryKwh: true,
       customerMessage: true,
       internalNotes: true,
       locale: true,
@@ -288,6 +295,7 @@ export async function getFullExportRows(
               .map((s) => INTERESTED_SYSTEM_LABELS_TH[s] ?? s)
               .join(", ")
           : "-",
+      interestedBatteryKwh: lead.interestedBatteryKwh != null ? String(lead.interestedBatteryKwh) : "-",
       customerMessage: lead.customerMessage ?? "-",
       internalNotes: lead.internalNotes ?? "-",
       locale: LOCALE_LABELS_TH[lead.locale] ?? lead.locale,

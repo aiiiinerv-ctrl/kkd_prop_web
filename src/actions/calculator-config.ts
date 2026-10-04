@@ -2,7 +2,7 @@
 
 import { auditedEntity } from "@/lib/audit";
 import { requireRole } from "@/lib/auth";
-import { calculatorParamsToSeedData } from "@/lib/calculator-config";
+import { calculatorConfigAuditView, calculatorParamsToSeedData } from "@/lib/calculator-config";
 import { CALCULATOR_DEFAULTS } from "@/lib/calculator";
 import { prisma } from "@/lib/db";
 import { calculatorConfigSchema } from "@/lib/validations/calculator-config";
@@ -12,7 +12,8 @@ import type { ActionResult } from "./users";
 const calculatorConfig = auditedEntity({
   entityType: "CalculatorConfig",
   model: (client) => client.calculatorConfig,
-  snapshot: "full",
+  // Hybrid rows hold per-brand prices — project to a row count (see calculatorConfigAuditView).
+  snapshot: calculatorConfigAuditView,
   revalidate: () => [
     "/admin/pages/calculator",
     "/th/calculator",
@@ -89,6 +90,7 @@ export async function resetCalculatorConfigToDefaults(): Promise<
       ...defaults,
       sizeTable: Prisma.JsonNull,
       sizeTableImportId: null,
+      hybridSizeTable: Prisma.JsonNull,
     });
   } catch {
     return { ok: false, error: "คืนค่าไม่สำเร็จ — ลองใหม่อีกครั้ง" };

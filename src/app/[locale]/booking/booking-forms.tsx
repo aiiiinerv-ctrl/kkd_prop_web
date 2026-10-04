@@ -154,6 +154,7 @@ export function BookingForms({
   initialPackageSlug,
   initialServiceSlug,
   initialInterestedSystems,
+  initialBatteryKwh,
   initialSourceChannelId,
   initialReferrerName,
   channels,
@@ -166,6 +167,7 @@ export function BookingForms({
   initialPackageSlug: string;
   initialServiceSlug: string;
   initialInterestedSystems: string[];
+  initialBatteryKwh: string;
   initialSourceChannelId: string;
   initialReferrerName: string;
   channels: Channel[];
@@ -266,6 +268,7 @@ export function BookingForms({
           initialPackageSlug={initialPackageSlug}
           initialServiceSlug={initialServiceSlug}
           initialInterestedSystems={initialInterestedSystems}
+          initialBatteryKwh={initialBatteryKwh}
           initialSourceChannelId={initialSourceChannelId}
           initialReferrerName={initialReferrerName}
           onSuccess={() => setSuccess("quote")}
@@ -427,17 +430,22 @@ function NotesField({
  */
 function BillAndSystemsFields({
   register,
+  errors,
   watch,
   setValue,
   t,
   billMode,
   setBillMode,
+  showBatteryField = false,
 }: BaseLeadFormApi & {
   t: Translator;
   billMode: "" | "bucket" | "other";
   setBillMode: (mode: "" | "bucket" | "other") => void;
+  /** Quote tab only — the survey action never stores the battery size. */
+  showBatteryField?: boolean;
 }) {
   const bill = watch("avgMonthlyBill");
+  const hybridTicked = (watch("interestedSystems") ?? []).includes("HYBRID");
 
   return (
     <>
@@ -490,15 +498,42 @@ function BillAndSystemsFields({
         <label className={labelCls}>{t("fieldInterestedSystems")}</label>
         <div className="flex flex-col gap-2">
           {INTERESTED_SYSTEMS.map((s) => (
-            <label key={s.value} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                value={s.value}
-                {...register("interestedSystems")}
-                className="size-4 rounded border-input"
-              />
-              {t(s.key)}
-            </label>
+            <div key={s.value}>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  value={s.value}
+                  {...register("interestedSystems")}
+                  className="size-4 rounded border-input"
+                />
+                {t(s.key)}
+              </label>
+              {/* Unticking HYBRID hides the field but keeps its value in form
+                  state (re-tick restores it); the server nulls it anyway. */}
+              {showBatteryField && s.value === "HYBRID" && hybridTicked && (
+                <div className="ml-6 mt-2 border-l-2 border-border pl-3">
+                  <label htmlFor="interestedBatteryKwh" className={labelCls}>
+                    {t("fieldBatteryKwh")}
+                  </label>
+                  <input
+                    id="interestedBatteryKwh"
+                    className={inputCls}
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={10000}
+                    step={1}
+                    placeholder={t("fieldBatteryKwhPlaceholder")}
+                    aria-describedby="interestedBatteryKwh-hint"
+                    {...register("interestedBatteryKwh")}
+                  />
+                  <p id="interestedBatteryKwh-hint" className="mt-1.5 text-xs text-muted-foreground">
+                    {t("fieldBatteryKwhHint")}
+                  </p>
+                  <FieldErrorText error={errors.interestedBatteryKwh as FieldError | undefined} t={t} />
+                </div>
+              )}
+            </div>
           ))}
         </div>
       </div>
@@ -577,6 +612,7 @@ function QuoteForm({
   initialPackageSlug,
   initialServiceSlug,
   initialInterestedSystems,
+  initialBatteryKwh,
   initialSourceChannelId,
   initialReferrerName,
   onSuccess,
@@ -587,6 +623,7 @@ function QuoteForm({
   initialPackageSlug: string;
   initialServiceSlug: string;
   initialInterestedSystems: string[];
+  initialBatteryKwh: string;
   initialSourceChannelId: string;
   initialReferrerName: string;
   onSuccess: () => void;
@@ -611,6 +648,7 @@ function QuoteForm({
     defaultValues: {
       avgMonthlyBill: initialBill,
       interestedSystems: initialInterestedSystems as QuoteFormInput["interestedSystems"],
+      interestedBatteryKwh: initialBatteryKwh,
       interestedPackageSlug: initialPackageSlug,
       interestedServiceSlug: initialServiceSlug,
       sourceChannelId: initialSourceChannelId,
@@ -634,6 +672,8 @@ function QuoteForm({
       interestedSystems: initialInterestedSystems.length
         ? (initialInterestedSystems as QuoteFormInput["interestedSystems"])
         : undefined,
+      // A hybrid hand-off's battery size also beats a stale draft.
+      interestedBatteryKwh: initialBatteryKwh || undefined,
     };
     const merged = mergeDraftForForm(base, tabDraft, urlParams);
     for (const [field, value] of Object.entries(merged)) {
@@ -685,6 +725,7 @@ function QuoteForm({
         t={t}
         billMode={billMode}
         setBillMode={setBillMode}
+        showBatteryField
       />
       <InterestSlugFields register={baseApi.register} />
       <SourceChannelField register={baseApi.register} channels={channels} t={t} />

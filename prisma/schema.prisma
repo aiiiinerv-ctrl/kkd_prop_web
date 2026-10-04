@@ -196,6 +196,8 @@ model Lead {
   // unrecognized slug is stored as null rather than the raw param. This is
   // link-click context, not something the customer typed in.
   interestedPackageSlug String?
+  // Hybrid: battery size (kWh) the customer is interested in; null = not stated.
+  interestedBatteryKwh  Int?
   interestedServiceSlug String?
   locale                String            @default("th")
   sourceChannelId       String?
@@ -686,6 +688,8 @@ model CalculatorConfig {
   // null = use the committed DEFAULT_SIZE_TABLE.
   sizeTable                    Json?
   sizeTableImportId            String?  @db.VarChar(40)
+  // Hybrid size table (HybridSizeRow[]); null = no Hybrid data imported yet.
+  hybridSizeTable              Json?
   version                      Int      @default(1)
   updatedAt                    DateTime @updatedAt
 }
@@ -703,6 +707,8 @@ model CalculatorImport {
   sha256       String?   @db.Char(64)
   sizeBytes    Int?
   rows         Json
+  // Hybrid rows of the same version; null for versions without Hybrid data.
+  hybridRows   Json?
   warnings     Json
   uploadedById String    @db.VarChar(40)
   uploadedBy   AdminUser @relation(fields: [uploadedById], references: [id])

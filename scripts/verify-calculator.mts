@@ -13,6 +13,14 @@ import {
   type CalcPackage,
 } from "../src/lib/calculator";
 import {
+  hybridMonthlySaving,
+  hybridTableSchema,
+  recommendHybrid,
+  usablePrices,
+  type HybridRow,
+} from "../src/lib/calculator-hybrid";
+import { toPublicHybridTable } from "../src/lib/calculator-hybrid-projection";
+import {
   DEFAULT_SIZE_TABLE,
   resolveSizeTable,
   type SizeRow,
@@ -254,6 +262,194 @@ for (const expected of s0Baseline) {
     expected.paybackYears
   );
 }
+
+console.log("\n=== R2-S1 Hybrid: usable price, projection, recommendHybrid (synthetic BrandA…E table) ===");
+const BRANDS = ["BrandA", "BrandB", "BrandC", "BrandD", "BrandE"];
+function hybridRow(
+  kw: number,
+  phase: 1 | 3,
+  batteryKwh: number,
+  prices: (number | null)[],
+  shared: { panels: number; roofM2: number; billMin: number; billMax: number }
+): HybridRow {
+  return {
+    kw,
+    phase,
+    batteryKwh,
+    sunHours: 5,
+    days: 30,
+    pricePerKwh: 4.5,
+    ...shared,
+    brandPrices: BRANDS.map((brand, i) => ({ brand, priceThb: prices[i] ?? null })),
+  };
+}
+const SH5 = { panels: 10, roofM2: 27, billMin: 3000, billMax: 6000 };
+const SH10 = { panels: 18, roofM2: 48.6, billMin: 6000, billMax: 10000 };
+const SH20 = { panels: 36, roofM2: 97.2, billMin: 10000, billMax: 20000 };
+const hybridRows: HybridRow[] = [
+  // 5 kW, 1φ only. 5 kWh: only a battery-only price exists (E4 -> no usable price).
+  hybridRow(5, 1, 0, [150000, 0, null, null, null], SH5),
+  hybridRow(5, 1, 5, [null, 41000, null, null, null], SH5),
+  // 10 kW 1φ: B is cheapest with a base. C/E 16 kWh prices are battery-only (E3).
+  hybridRow(10, 1, 0, [300000, 296000, 0, 310000, null], SH10),
+  hybridRow(10, 1, 8, [339000, 332000, 45000, 349000, 46000], SH10),
+  hybridRow(10, 1, 16, [362000, 356000, 61000, 371000, 62000], SH10),
+  hybridRow(10, 1, 32, [null, null, 120000, null, 125000], SH10),
+  // 10 kW 3φ: dearer for 16 kWh, cheaper for 8 kWh.
+  hybridRow(10, 3, 0, [320000, 318000, null, 330000, null], SH10),
+  hybridRow(10, 3, 8, [350000, 329000, null, 360000, null], SH10),
+  hybridRow(10, 3, 16, [383000, 375000, null, 391000, null], SH10),
+  // 20 kW 3φ only.
+  hybridRow(20, 3, 0, [560000, 555000, null, 570000, null], SH20),
+  hybridRow(20, 3, 16, [622000, 617000, null, 631000, null], SH20),
+];
+
+assert("hybridTableSchema accepts the synthetic table", hybridTableSchema.safeParse(hybridRows).success);
+assert(
+  "hybridTableSchema rejects duplicate (kw, phase, battery)",
+  !hybridTableSchema.safeParse([...hybridRows, hybridRows[2]]).success
+);
+assert(
+  "hybridTableSchema rejects a kW/phase without a battery-0 row (C7)",
+  !hybridTableSchema.safeParse(hybridRows.filter((r) => !(r.kw === 20 && r.batteryKwh === 0))).success
+);
+assert(
+  "hybridTableSchema rejects shared values that differ within a kW",
+  !hybridTableSchema.safeParse(hybridRows.map((r, i) => (i === 3 ? { ...r, pricePerKwh: 5 } : r))).success
+);
+assert(
+  "hybridTableSchema rejects non-increasing billMax across kW",
+  !hybridTableSchema.safeParse(
+    hybridRows.map((r) => (r.kw === 20 ? { ...r, billMin: 1000, billMax: 5000 } : r))
+  ).success
+);
+assert(
+  "hybridTableSchema rejects brand names that differ between rows",
+  !hybridTableSchema.safeParse(
+    hybridRows.map((r, i) =>
+      i === 1 ? { ...r, brandPrices: r.brandPrices.map((b) => ({ ...b, brand: b.brand + "x" })) } : r
+    )
+  ).success
+);
+
+assertEqual(
+  "hybridMonthlySaving(10 kW + 16 kWh) = (10×5+16)×4.5×30",
+  hybridMonthlySaving({ kw: 10, sunHours: 5, days: 30, pricePerKwh: 4.5, batteryKwh: 16 }),
+  8910
+);
+
+const usable = usablePrices(hybridRows);
+const usableOf = (kw: number, phase: number, batt: number) =>
+  usable.find((u) => u.kw === kw && u.phase === phase && u.batteryKwh === batt)!.min;
+assertEqual("usable: 0 THB is not a price (5 kW base, BrandB=0 ignored)", usableOf(5, 1, 0)?.priceThb ?? null, 150000);
+assertEqual("usable: battery-only price is not counted (E3, C/E ignored at 10 kW 1φ 16 kWh)", usableOf(10, 1, 16)?.brand ?? null, "BrandB");
+assertEqual("usable: 10 kW 1φ 16 kWh min", usableOf(10, 1, 16)?.priceThb ?? null, 356000);
+assertEqual("usable: battery-only brands give no price at all (10 kW 1φ 32 kWh)", usableOf(10, 1, 32)?.priceThb ?? null, null);
+assertEqual("usable: battery price without a base price is null (E4, 5 kW 5 kWh)", usableOf(5, 1, 5)?.priceThb ?? null, null);
+
+const pub = toPublicHybridTable(hybridRows);
+assertEqual("projection: sizes sorted", pub.map((s) => s.kw).join(","), "5,10,20");
+const pub10 = pub.find((s) => s.kw === 10)!;
+assertEqual("projection: 10 kW phases merged", pub10.phases.join(","), "1,3");
+assertEqual("projection: 10 kW battery options", pub10.batteries.map((b) => b.batteryKwh).join(","), "0,8,16,32");
+const pubBatt = (batt: number) => pub10.batteries.find((b) => b.batteryKwh === batt)!;
+assertEqual("projection: 16 kWh uses cheaper phase (1φ 356,000 < 3φ 375,000)", pubBatt(16).minPriceThb, 356000);
+assertEqual("projection: 8 kWh uses cheaper phase (3φ 329,000 < 1φ 332,000)", pubBatt(8).minPriceThb, 329000);
+assertEqual("projection: 32 kWh has no usable price", pubBatt(32).minPriceThb, null);
+assertEqual("projection: 32 kWh offered in 1φ only", pubBatt(32).phases.join(","), "1");
+
+const serialized = JSON.stringify(pub);
+assert('projection JSON has no "brand" key', !/brand/i.test(serialized));
+assert("projection JSON has no BrandA…E names", BRANDS.every((b) => !serialized.includes(b)));
+const minPrices = new Set(
+  pub.flatMap((s) => s.batteries.map((b) => b.minPriceThb)).filter((p): p is number => p !== null)
+);
+const nonMinPrices = [
+  ...new Set(
+    hybridRows
+      .flatMap((r) => r.brandPrices.map((b) => b.priceThb))
+      .filter((p): p is number => p !== null && p > 0 && !minPrices.has(p))
+  ),
+];
+const leaked = nonMinPrices.filter((p) => new RegExp(`(?<![\\d.])${p}(?![\\d.])`).test(serialized));
+assert(`projection JSON contains none of the ${nonMinPrices.length} non-min prices`, leaked.length === 0);
+
+// design-157 §7: bill 9,500 -> 10 kW, battery 16, saving 8,910, after 590
+const rec = recommendHybrid(9500, pub, 16, 10);
+if (rec.kind !== "ok") {
+  assert("recommendHybrid(9500, 16) is ok", false);
+} else {
+  assertEqual("design-157 §7: kW", rec.size.kw, 10);
+  assertEqual("design-157 §7: battery", rec.batteryKwh, 16);
+  assertEqual("design-157 §7: monthly saving", rec.monthlySaving, 8910);
+  assertEqual("design-157 §7: bill after install", rec.afterBill, 590);
+  assertEqual("design-157 §7: payback ≈ 4.0 years", Number((rec.paybackYears ?? 0).toFixed(1)), 4);
+  assertEqual("design-157 §7: phases 1,3", rec.phases.join(","), "1,3");
+  assertEqual("design-157 §0: kWh/month is panels only (no battery term)", rec.kwhPerMonth, 10 * 5 * 30);
+}
+// design-157 §0: the Output/month tile is panels only, so it is identical for every battery option
+// and equals On-grid for the same kW / sunHours / days.
+{
+  const probe = recommendHybrid(9500, pub, null, 10);
+  if (probe.kind !== "ok") {
+    assert("kWh/month probe is ok", false);
+  } else {
+    const kwhs = probe.batteryOptions.map((b) => {
+      const r = recommendHybrid(9500, pub, b, 10);
+      return r.kind === "ok" ? r.kwhPerMonth : -1;
+    });
+    assert(`kWh/month identical across ${kwhs.length} battery options (${kwhs.join(",")})`, new Set(kwhs).size === 1 && kwhs[0] > 0);
+    assertEqual("kWh/month = kW x sunHours x days (no battery term)", kwhs[0], probe.size.kw * probe.size.sunHours * probe.size.days);
+    const gridRow: SizeRow = { ...probe.size };
+    const grid = recommendFromTable(9500, [gridRow], [], 10);
+    if (grid.kind === "ok") assertEqual("kWh/month equals On-grid for the same kW/sunHours/days", kwhs[0], grid.kwhPerMonth);
+    else assert("On-grid comparison row is ok", false);
+  }
+}
+const batteryOf = (bill: number, preferred: number | null) => {
+  const r = recommendHybrid(bill, pub, preferred, 10);
+  return r.kind === "ok" ? r.batteryKwh : -1;
+};
+assertEqual("#156: initial battery = smallest > 0", batteryOf(9500, null), 8);
+assertEqual("#156: 12 not offered -> tie 8/16 resolves to larger", batteryOf(9500, 12), 16);
+assertEqual("#156: 24 not offered -> tie 16/32 resolves to larger", batteryOf(9500, 24), 32);
+assertEqual("#156: exact match unchanged (16)", batteryOf(9500, 16), 16);
+assertEqual("#156: non-tie nearest unchanged (10 -> 8)", batteryOf(9500, 10), 8);
+assertEqual("#156: 20 not offered -> nearest 16", batteryOf(9500, 20), 16);
+assertEqual("#156: preferred 0 (no battery) is honoured", batteryOf(9500, 0), 0);
+const rec32 = recommendHybrid(9500, pub, 32, 10);
+if (rec32.kind === "ok") {
+  assertEqual("#156: saving capped at the bill (32 kWh)", rec32.monthlySaving, 9500);
+  assertEqual("#156: capped -> after bill 0", rec32.afterBill, 0);
+  assertEqual("#156: capped -> coversFullBill", String(rec32.coversFullBill), "true");
+  assertEqual("E4: no usable price -> payback null", rec32.paybackYears, null);
+} else {
+  assert("recommendHybrid(9500, 32) is ok", false);
+}
+const rec5 = recommendHybrid(4000, pub, null, 10);
+assertEqual("E4: 5 kW 5 kWh has no usable price -> payback null", rec5.kind === "ok" ? rec5.paybackYears : "x", null);
+const capped = recommendHybrid(6000, pub, 16, 10);
+if (capped.kind === "ok") {
+  assertEqual("#156: bill 6000 -> 10 kW (billMax > bill)", capped.size.kw, 10);
+  assertEqual(
+    "#156: payback uses the capped saving",
+    Number((capped.paybackYears ?? 0).toFixed(3)),
+    Number((356000 / (6000 * 10)).toFixed(3))
+  );
+} else {
+  assert("recommendHybrid(6000, 16) is ok", false);
+}
+const kwOf = (bill: number) => {
+  const r = recommendHybrid(bill, pub, null, 10);
+  return r.kind === "ok" ? r.size.kw : -1;
+};
+assertEqual("kW boundary: bill 5999 -> 5 kW", kwOf(5999), 5);
+assertEqual("kW boundary: bill 10000 -> 20 kW", kwOf(10000), 20);
+assertEqual("tooLarge at last billMax", recommendHybrid(20000, pub, null, 10).kind, "tooLarge");
+assertEqual("empty for bill 0", recommendHybrid(0, pub, null, 10).kind, "empty");
+assertEqual("empty for empty table", recommendHybrid(5000, [], null, 10).kind, "empty");
+const below = recommendHybrid(1000, pub, null, 10);
+assertEqual("belowFirstRow flagged, still recommends first size", below.kind === "ok" ? `${below.belowFirstRow}/${below.size.kw}` : "x", "true/5");
 
 console.log(failed ? "\nFAILED — see ✗ above" : "\nAll assertions passed ✓");
 process.exit(failed ? 1 : 0);

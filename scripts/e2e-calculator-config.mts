@@ -20,8 +20,12 @@ import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { chromium, type Page } from "playwright";
 import { PrismaClient } from "../src/generated/prisma/client.js";
 import { CALCULATOR_DEFAULTS } from "../src/lib/calculator.js";
+import ExcelJS from "exceljs";
+import { createHash } from "node:crypto";
 import {
+  FIXTURE_BRANDS,
   buildOnGridFixture,
+  goodHybridRows,
   goodRows,
   withMacroEntry,
   type FixtureRow,
@@ -249,9 +253,12 @@ for (const locale of ["th", "en"] as const) {
   const at2500 = await publicCalcBody(publicPage, locale, 2500);
   if (!/3\s*kW/i.test(at2500)) fail(`PUBLIC ${locale}: bill 2500 should recommend 3 kW after apply`);
   const at500 = await publicCalcBody(publicPage, locale, 500);
+  // Since 79b1fad the below-first-row note takes precedence over "covers 100%" in the callout.
   const covers =
-    locale === "th" ? at500.includes("ครอบคลุมค่าไฟเต็ม 100%") : at500.includes("Covers 100% of your electricity bill");
-  if (!covers) fail(`PUBLIC ${locale}: bill 500 should show covers-full-bill after apply`);
+    locale === "th"
+      ? at500.includes("ครอบคลุมค่าไฟเต็ม 100%") || at500.includes("ต่ำกว่าช่วงของระบบเล็กสุด")
+      : at500.includes("Covers 100% of your electricity bill") || at500.includes("below the range for our smallest system");
+  if (!covers) fail(`PUBLIC ${locale}: bill 500 should show covers-full-bill / below-first-row note after apply`);
   const atTooLarge = await publicCalcBody(publicPage, locale, 10000);
   const tooLarge =
     locale === "th" ? atTooLarge.includes("ระบบเกิน") : atTooLarge.includes("System larger than");
@@ -656,7 +663,7 @@ await page.setInputFiles("#calc-import-file", exportedPath);
 await page.click("#calc-import-upload");
 await page.waitForSelector("#calc-import-preview", { timeout: 15000 });
 await page.waitForSelector("#calc-import-overwrite", { state: "visible", timeout: 5000 });
-if (!(await page.locator("#calc-import-overwrite").innerText()).includes("ไฟล์นี้จะแทนที่ตารางทั้งชุด")) fail("IMPORT: overwrite box text missing");
+if (!(await page.locator("#calc-import-overwrite").innerText()).includes("ไฟล์นี้จะแทนที่ตารางทั้ง 2 ชุด")) fail("IMPORT: overwrite box text missing");
 await checkLayout(page, "import-overwrite");
 await page.click("#calc-import-apply");
 await page.click("#calc-import-apply-confirm");
@@ -691,18 +698,407 @@ if ((await configNow()).version !== beforeDeniedSave.version) fail("ROLE: denied
 pass("ROLE: direct saveCalculatorTables as MARKETING -> redirect, config unchanged");
 await marketingR1.close();
 
+// --- R2-S4: two-sheet import (On-grid + Hybrid), D3 removal, D4 reject, Default #3, forged saves, reset ---
+{
+  const r2Start = new Date();
+  const hybridFixture = async (tweak: number, mutate?: (rows: ReturnType<typeof goodHybridRows>) => void) => {
+    const hybridRows = goodHybridRows();
+    hybridRows[0] = { ...hybridRows[0], prices: [100000 + tweak, 110000, null, null, null] };
+    mutate?.(hybridRows);
+    return buildOnGridFixture({ includeCategory: true, rows: goodRows(), hybrid: { rows: hybridRows, brands: FIXTURE_BRANDS } });
+  };
+  const uniq = Date.now() % 100000; // keep the sha256 unique per run (re-runs must not dedupe)
+  const twoSheetBuf = await hybridFixture(uniq);
+  const twoSheetPath = await writeTempXlsx(twoSheetBuf, "two-sheet-fixture.xlsx");
+  const twoSheetSha = createHash("sha256").update(twoSheetBuf).digest("hex");
+  const countImports = () => prisma.calculatorImport.count();
+  const hybridLen = (v: unknown) => (Array.isArray(v) ? v.length : 0);
+
+  // Default #3: a pre-R2 EXCEL row with the same sha256 and no Hybrid must not shadow the file's Hybrid sheet.
+  const legacy = await prisma.calculatorImport.create({
+    data: {
+      source: "EXCEL",
+      fileName: "legacy-two-sheet.xlsx",
+      sha256: twoSheetSha,
+      sizeBytes: twoSheetBuf.length,
+      rows: [],
+      warnings: [],
+      uploadedById: adminUser.id,
+    },
+  });
+  await openTablesTab(page);
+  await openImportPanel(page);
+  await page.setInputFiles("#calc-import-file", twoSheetPath);
+  await page.click("#calc-import-upload");
+  await page.waitForSelector("#calc-import-preview", { timeout: 15000 });
+  if ((await page.locator("#calc-import-preview").innerText()).includes("เคย upload แล้ว")) fail("R2-S4 #3: legacy no-Hybrid row must not be reused as a duplicate");
+  const created2 = await prisma.calculatorImport.findFirst({ where: { sha256: twoSheetSha, id: { not: legacy.id } } });
+  if (!created2 || hybridLen(created2.hybridRows) !== 9) fail("R2-S4 #3: a new EXCEL row with 9 hybrid rows must be created");
+  await prisma.calculatorImport.delete({ where: { id: legacy.id } });
+  pass("R2-S4 Default #3: same sha256 as a pre-R2 row without Hybrid -> re-parsed, new row carries 9 hybrid rows");
+
+  await page.click("#calc-import-apply");
+  await page.click("#calc-import-apply-confirm");
+  await page.getByText("ใช้ตารางใหม่แล้ว").first().waitFor({ timeout: 15000 });
+  const withHybrid = await configNow();
+  if (hybridLen(withHybrid.hybridSizeTable) !== 9 || withHybrid.sizeTableImportId !== created2.id) fail("R2-S4 apply: config must hold the 9-row Hybrid table of the applied version");
+  pass("R2-S4 apply: two-sheet file -> config.hybridSizeTable has 9 rows, import id points at the new row");
+
+  // Public pages must not expose brand names or per-brand prices (R2-S9 passes only the projected
+  // table: kW, phases, battery sizes and the minimum usable price per battery).
+  for (const locale of ["th", "en"] as const) {
+    const html = await (await fetch(`${BASE_URL}/${locale}/calculator`)).text();
+    if (/BrandA|BrandB|brandPrices|hybridSizeTable/.test(html)) fail(`R2-S4 PUBLIC ${locale}: HTML leaks Hybrid brand/price data`);
+  }
+  pass("R2-S4 PUBLIC: /th + /en calculator HTML contains no brand names / brandPrices after applying a 2-sheet file");
+
+  // Export route carries the Hybrid sheet (ADMIN only).
+  const exportRes = await page.context().request.get(`${BASE_URL}/api/admin/calculator/export`);
+  if (exportRes.status() !== 200) fail(`R2-S4 export: expected 200, got ${exportRes.status()}`);
+  const exportWb = new ExcelJS.Workbook();
+  await exportWb.xlsx.load((await exportRes.body()) as unknown as ArrayBuffer);
+  if (!exportWb.worksheets.some((w) => w.name === "Hybrid")) fail("R2-S4 export: workbook must contain a Hybrid sheet when a Hybrid table is live");
+  pass("R2-S4 export: /api/admin/calculator/export includes the Hybrid sheet");
+
+  // Forged save payloads (replaying the captured server action id): Default #11.
+  const replay = async (payload: unknown) => {
+    const res = await page.context().request.post(saveRequest.url(), {
+      headers: { "next-action": saveRequest.headers()["next-action"], "content-type": "text/plain;charset=UTF-8", origin: BASE_URL },
+      data: JSON.stringify([payload]),
+    });
+    return res.text();
+  };
+  const liveNow = await configNow();
+  const liveOnGrid = (liveNow.sizeTable as Record<string, unknown>[]) ?? [];
+  const liveHybrid = (liveNow.hybridSizeTable as Record<string, unknown>[]) ?? [];
+  const importsBeforeForged = await countImports();
+  const forgedRenamed = liveHybrid.map((r) => ({ ...r, brandPrices: (r.brandPrices as { brand: string; priceThb: number | null }[]).map((b, i) => (i === 0 ? { ...b, brand: "Renamed" } : b)) }));
+  const outRenamed = await replay({ onGrid: liveOnGrid, hybrid: forgedRenamed, version: liveNow.version });
+  if (!outRenamed.includes("ชื่อหรือลำดับยี่ห้อไม่ตรง")) fail(`R2-S4 forged: renamed brand must be rejected, got: ${outRenamed.slice(0, 200)}`);
+  const tooMany = Array.from({ length: 501 }, () => liveHybrid[0]);
+  const outCap = await replay({ onGrid: liveOnGrid, hybrid: tooMany, version: liveNow.version });
+  if (!outCap.includes("ข้อมูลตารางไม่ถูกต้อง")) fail(`R2-S4 forged: >500 hybrid rows must be rejected, got: ${outCap.slice(0, 200)}`);
+  if ((await configNow()).version !== liveNow.version || (await countImports()) !== importsBeforeForged) fail("R2-S4 forged: rejected payloads must not create versions");
+  pass("R2-S4 forged saves: renamed brand and >500 hybrid rows rejected, no version created");
+
+  // Audit: no brand names / per-brand prices in snapshots written since the block started.
+  const audits2 = await prisma.auditLog.findMany({ where: { createdAt: { gte: r2Start }, entityType: { in: ["CalculatorImport", "CalculatorConfig"] } } });
+  if (audits2.length === 0) fail("R2-S4 audit: expected audit rows");
+  if (audits2.some((a) => /BrandA|brandPrices|priceThb/.test(JSON.stringify(a.before) + JSON.stringify(a.after)))) fail("R2-S4 audit: snapshots must not contain brand names or per-brand prices");
+  pass(`R2-S4 audit: ${audits2.length} snapshots, none contain brand names / per-brand prices`);
+
+  // D4: a bad Hybrid sheet rejects the whole file (On-grid fine), nothing persisted.
+  const badBuf = await hybridFixture(uniq + 1, (rows) => rows.push({ ...rows[0] }));
+  const badPath = await writeTempXlsx(badBuf, "bad-hybrid-fixture.xlsx");
+  const importsBeforeBad = await countImports();
+  const versionBeforeBad = (await configNow()).version;
+  await openTablesTab(page);
+  await openImportPanel(page);
+  await page.setInputFiles("#calc-import-file", badPath);
+  await page.click("#calc-import-upload");
+  await page.waitForSelector("#calc-import-reject", { timeout: 15000 });
+  if (!(await page.locator("#calc-import-reject").innerText()).includes("ชีต Hybrid")) fail("R2-S4 D4: reject list must name the Hybrid sheet");
+  if ((await countImports()) !== importsBeforeBad || (await configNow()).version !== versionBeforeBad) fail("R2-S4 D4: rejected file must persist nothing");
+  pass("R2-S4 D4: bad Hybrid sheet rejects the whole file, nothing persisted");
+
+  // D3: applying an On-grid-only version removes the live Hybrid table.
+  await page.setInputFiles("#calc-import-file", warningFilePath);
+  await page.click("#calc-import-upload");
+  await page.waitForSelector("#calc-import-preview", { timeout: 15000 });
+  await page.click("#calc-import-apply");
+  await page.click("#calc-import-apply-confirm");
+  await page.getByText("ใช้ตารางใหม่แล้ว").first().waitFor({ timeout: 15000 });
+  if (hybridLen((await configNow()).hybridSizeTable) !== 0) fail("R2-S4 D3: applying an On-grid-only file must remove the Hybrid table");
+  pass("R2-S4 D3: On-grid-only file applied -> Hybrid table removed");
+
+  // Forged Hybrid payload while no Hybrid is live -> rejected (cannot create one by hand).
+  const noHybridNow = await configNow();
+  const outCreate = await replay({ onGrid: noHybridNow.sizeTable, hybrid: liveHybrid, version: noHybridNow.version });
+  if (!outCreate.includes("ยังไม่มีตาราง Hybrid")) fail(`R2-S4 forged: hybrid payload without a live Hybrid must be rejected, got: ${outCreate.slice(0, 200)}`);
+  if ((await configNow()).version !== noHybridNow.version) fail("R2-S4 forged: create-by-hand must not change config");
+  pass("R2-S4 forged saves: Hybrid payload while none is live -> rejected");
+
+  // Re-apply the two-sheet version from history so the reset below has a Hybrid table to clear.
+  await page.waitForSelector(`#calc-import-use-${created2.id}`, { state: "visible", timeout: 10000 });
+  await page.click(`#calc-import-use-${created2.id}`);
+  await page.click(`#calc-import-use-confirm-${created2.id}`);
+  await page.waitForTimeout(1500);
+  if (hybridLen((await configNow()).hybridSizeTable) !== 9) fail("R2-S4 history: 'ใช้ชุดนี้' on the two-sheet version must restore the Hybrid table");
+  pass("R2-S4 history: ใช้ชุดนี้ on the two-sheet version restores the 9-row Hybrid table");
+}
+
+// --- R2-S6: hand-edit the Hybrid table (sub-tabs, dialog, E3 label, save both tables) ---
+{
+  const hybridLen = (v: unknown) => (Array.isArray(v) ? v.length : 0);
+  const hyKey = (rows: unknown, kw: number, phase: number, battery: number) =>
+    (rows as { kw: number; phase: number; batteryKwh: number; brandPrices: { priceThb: number | null }[] }[]).find(
+      (r) => r.kw === kw && r.phase === phase && r.batteryKwh === battery
+    );
+  await openTablesTab(page);
+  const hybridTrigger = page.locator("#calc-tables-tab-hybrid");
+  if (!(await hybridTrigger.innerText()).includes("3 ขนาด")) fail("R2-S6: Hybrid sub-tab label must show the size count");
+  await hybridTrigger.click();
+  await page.waitForSelector("#calc-edit-hybrid-10", { state: "visible", timeout: 10000 });
+  if ((await page.locator("#calc-add-hybrid").count()) !== 1) fail("R2-S6: Hybrid list needs an add-size button when a table exists");
+
+  // keepMounted: both sub-tab panels stay in the DOM.
+  if ((await page.locator("#calc-edit-on-grid-5").count()) !== 1) fail("R2-S6: On-grid panel must stay mounted while Hybrid is open (keepMounted)");
+
+  await page.click("#calc-edit-hybrid-10");
+  await page.waitForSelector("#calc-size-dialog", { state: "visible" });
+  await page.fill("#hy-price-0-3-16", "213000");
+  await page.fill("#hy-price-2-3-0", "0");
+  await page.locator("#hy-price-2-3-0").blur();
+  await page.waitForFunction(() => (document.getElementById("hy-price-2-3-0") as HTMLInputElement).value === "");
+  const dialogText = await page.locator("#calc-size-dialog").innerText();
+  if (!dialogText.includes("ไม่นำมาคิด")) fail('R2-S6: a battery price without a no-battery price must show "ไม่นำมาคิด"');
+  if (!dialogText.includes("BrandA")) fail("R2-S6: brand names must be visible (read-only) in the admin dialog");
+  await page.locator("#calc-size-dialog-ok").click();
+  await closeDialog(page);
+  await page.waitForSelector("#calc-tables-savebar", { timeout: 5000 });
+  if (!(await page.locator("#calc-tables-savebar").innerText()).includes("Hybrid 1")) fail("R2-S6: save bar must count the Hybrid edit");
+  await page.click("#calc-tables-save");
+  await page.waitForSelector("#calc-tables-confirm");
+  const confirmText = await page.locator("#calc-tables-confirm").innerText();
+  if (!confirmText.includes("Hybrid 10 kW") || !confirmText.includes("213,000")) fail("R2-S6: confirm dialog must list the Hybrid price change");
+  const importsBeforeSave = await prisma.calculatorImport.count();
+  await page.click("#calc-tables-confirm-save");
+  await page.getByText("บันทึกแล้ว").first().waitFor({ timeout: 15000 });
+  const savedCfg = await configNow();
+  if (hyKey(savedCfg.hybridSizeTable, 10, 3, 16)?.brandPrices[0].priceThb !== 213000) fail("R2-S6: saved config must hold the edited Hybrid price");
+  if (hyKey(savedCfg.hybridSizeTable, 10, 3, 0)?.brandPrices[2].priceThb !== null) fail("R2-S6: a price cleared with 0 must be saved as no price");
+  const manual = await prisma.calculatorImport.findFirstOrThrow({ orderBy: { createdAt: "desc" } });
+  if ((await prisma.calculatorImport.count()) !== importsBeforeSave + 1 || manual.source !== "MANUAL" || hybridLen(manual.hybridRows) !== 9) {
+    fail("R2-S6: save must add one MANUAL version that carries the 9-row Hybrid table");
+  }
+  pass("R2-S6: Hybrid price edit -> confirm lists it -> saved with the On-grid table into one MANUAL version (9 Hybrid rows)");
+
+  // Error in the inactive sub-tab shows a badge; "ไปที่จุดแรก" switches tab and opens the dialog.
+  await openTablesTab(page);
+  await page.click("#calc-tables-tab-hybrid");
+  await page.click("#calc-edit-hybrid-20");
+  await page.fill("#hy-bill-max", "5000");
+  await page.locator("#hy-bill-max").blur();
+  await page.locator("#calc-size-dialog-ok").click();
+  await closeDialog(page);
+  // Admin polish M1: re-opening a size that already has a problem shows it at once (no touch needed).
+  await page.click("#calc-edit-hybrid-20");
+  await page.waitForSelector("#calc-size-dialog-errors", { state: "visible", timeout: 5000 });
+  // Error counts: ONE wrong bill range = 1 everywhere (dialog summary, inline once, row badge, tab badge, save bar).
+  const dlgErrText = await page.locator("#calc-size-dialog-errors").innerText();
+  if (!/ต้องแก้ 1 จุด/.test(dlgErrText)) fail(`counts: dialog summary must say 1 for a single bad bill range, got: ${dlgErrText.slice(0, 80)}`);
+  if ((await page.locator("#calc-size-dialog-errors li").count()) !== 1) fail("counts: shared-field error must be listed once in the dialog summary");
+  const errMsg = (await page.locator("#calc-size-dialog-errors li").first().innerText()).trim();
+  if ((await page.locator("#calc-size-dialog").getByText(errMsg, { exact: true }).count()) !== 2) fail(`counts: error "${errMsg}" must appear exactly twice in the dialog (inline under the field + once in the summary)`);
+  await page.locator("#calc-size-dialog-cancel").click();
+  await closeDialog(page);
+  const badgeNum = (t: string) => Number(/ผิด\s*(\d+)/.exec(t)?.[1] ?? NaN);
+  const rowBadge = badgeNum(await page.locator("#calc-edit-hybrid-20").locator("xpath=ancestor::tr").innerText());
+  const tabBadge = badgeNum(await page.locator("#calc-tables-tab-hybrid").innerText());
+  const barCount = Number(/ข้อผิดพลาด\s*(\d+)\s*จุด/.exec(await page.locator("#calc-tables-savebar").innerText())?.[1] ?? NaN);
+  if (rowBadge !== 1 || tabBadge !== 1 || barCount !== 1) fail(`counts: row/tab/save bar must all be 1, got ${rowBadge}/${tabBadge}/${barCount}`);
+  pass("counts: single bad bill range -> row badge = tab badge = save bar = dialog = 1");
+  pass("M1: re-opening a Hybrid size with an error shows the error list immediately");
+  await page.click("#calc-tables-tab-on-grid");
+  if (!(await page.locator("#calc-tables-tab-hybrid").innerText()).includes("ผิด")) fail('R2-S6: Hybrid sub-tab must show a "ผิด n" badge while on the On-grid tab');
+  if (!(await page.locator("#calc-tables-save").isDisabled())) fail("R2-S6: save must be disabled while the Hybrid table has an error");
+  await page.click("#calc-tables-goto-error");
+  await page.waitForSelector("#calc-size-dialog", { state: "visible" });
+  if ((await page.locator("#calc-tables-tab-hybrid").getAttribute("data-active")) === null) fail("R2-S6: goto-error must switch to the Hybrid sub-tab");
+  await page.fill("#hy-bill-max", "20000");
+  await page.locator("#hy-bill-max").blur();
+  await page.locator("#calc-size-dialog-ok").click();
+  await closeDialog(page);
+  // Admin polish M3: a size with a (non-blocking) warning gets an amber "เตือน n" badge; M2: one panel rounding rule.
+  await page.click("#calc-edit-hybrid-10");
+  await page.fill("#hy-panels", "5");
+  await page.locator("#hy-panels").blur();
+  const panelsText = await page.locator("#calc-size-dialog").innerText();
+  if (!panelsText.includes("ต่างจากสูตร (≈20)") || !panelsText.includes("สูตร ≈20")) fail("M2: panels warning and helper must both say ≈20 for 10 kW");
+  await page.locator("#calc-size-dialog-ok").click();
+  await closeDialog(page);
+  if (!/เตือน \d/.test(await page.locator("#calc-edit-hybrid-10").locator("xpath=ancestor::tr").innerText())) fail('M3: Hybrid row with a warning must show the "เตือน n" badge');
+  await page.click("#calc-edit-hybrid-10");
+  await page.fill("#hy-panels", "19");
+  await page.locator("#hy-panels").blur();
+  await page.locator("#calc-size-dialog-ok").click();
+  await closeDialog(page);
+  pass("M2/M3: panels warning rounds like the helper (≈20) and the Hybrid row shows an amber warning badge");
+  if ((await page.locator("#calc-tables-savebar").count()) !== 0) fail("R2-S6: fixing the field back to the original must clear the save bar");
+  pass("R2-S6: error badge on the inactive Hybrid sub-tab, goto-error switches tab + opens dialog, fix clears the bar");
+  await checkLayout(page, "hybrid-list");
+
+  // Delete + restore a Hybrid size; deleting everything is blocked.
+  await page.click("#calc-tables-tab-hybrid");
+  await page.click("#calc-edit-hybrid-20");
+  await page.click("#calc-size-dialog-delete");
+  await closeDialog(page);
+  if (!(await page.locator("#calc-restore-hybrid-20").isVisible())) fail('R2-S6: deleted Hybrid size must offer "คืนขนาดนี้"');
+  await page.click("#calc-restore-hybrid-20");
+  if ((await page.locator("#calc-tables-savebar").count()) !== 0) fail("R2-S6: restoring a deleted size must clear the save bar");
+  pass("R2-S6: delete + restore a Hybrid size leaves nothing dirty");
+}
+
+// --- R2-S9: public Hybrid toggle (Variant B). Config now holds the two-sheet fixture:
+// 5 kW (1+3 phase; 0/16 kWh, bill 3000-6000), 10 kW (3 phase; 0/16/32, 6000-12000), 20 kW (0/16, 13000-20000). ---
+{
+  const cardHeight = (p: Page) => p.locator("#monthly-bill").evaluate((el) => Math.round(el.closest(".overflow-hidden")!.getBoundingClientRect().height));
+  for (const locale of ["th", "en"] as const) {
+    for (const width of [1280, 375]) {
+      const p = await browser.newPage({ viewport: { width, height: 900 } });
+      await p.goto(`${BASE_URL}/${locale}/calculator`);
+      await p.waitForSelector("#monthly-bill", { timeout: 15000 });
+      const setBill = async (v: number) => { await p.fill("#monthly-bill", String(v)); await p.waitForTimeout(120); };
+      const tag = `R2-S9 ${locale}@${width}`;
+      if ((await p.locator('input[name="calc-mode"]').count()) !== 2) fail(`${tag}: toggle (radiogroup, 2 radios) must show when a Hybrid table exists`);
+      if (!(await p.locator('input[name="calc-mode"][value="onGrid"]').isChecked())) fail(`${tag}: page must start in On-grid`);
+      {
+        // An empty bill stays empty on blur / tab switch (it must not snap to the minimum bill).
+        const input = p.locator("#monthly-bill");
+        for (const mode of ["onGrid", "hybrid", "onGrid"]) {
+          await p.locator(`label:has(input[name="calc-mode"][value="${mode}"])`).click();
+          await p.fill("#monthly-bill", "");
+          await input.blur();
+          await p.waitForTimeout(120);
+          if ((await input.inputValue()) !== "") fail(`${tag}: empty bill must stay empty after blur (${mode}), got "${await input.inputValue()}"`);
+          if (!/—/.test(await input.locator("xpath=ancestor::div[contains(@class,'overflow-hidden')][1]").innerText())) fail(`${tag}: empty bill must show the empty state (${mode})`);
+        }
+        // Non-empty values are still clamped on blur (1 -> minimum, not left as typed).
+        await p.fill("#monthly-bill", "1");
+        await input.blur();
+        if (Number(await input.inputValue()) <= 1) fail(`${tag}: a below-minimum bill must still be clamped up on blur`);
+        await p.fill("#monthly-bill", "");
+        await input.blur();
+      }
+      const heights: number[] = [];
+      await setBill(9500);
+      heights.push(await cardHeight(p));
+      const cta = () => p.locator("#monthly-bill").locator("xpath=ancestor::div[contains(@class,'overflow-hidden')][1]").locator("a.btn-pill").getAttribute("href");
+      const ogHref = (await cta()) ?? "";
+      if (!/system=on-grid/.test(ogHref) || /battery=/.test(ogHref)) fail(`${tag}: On-grid CTA must carry system=on-grid and no battery, got ${ogHref}`);
+      const card = p.locator("#monthly-bill").locator("xpath=ancestor::div[contains(@class,'overflow-hidden')][1]");
+      if (!/ในช่วงกลางวัน|during daytime/.test(await card.innerText())) fail(`${tag}: On-grid footnote missing under the gold badge`);
+      // Rebalanced layout: the system box lives in the left (input) column; On-grid shows a non-interactive FactTrack
+      // (no compare button / no focusable element), and switching tabs must not change the card height.
+      const systemBox = card.locator("ul:has(> li)").first();
+      if ((await systemBox.count()) !== 1) fail(`${tag}: On-grid FactTrack (ul with 2 facts) missing`);
+      if ((await systemBox.locator("li").count()) !== 2) fail(`${tag}: FactTrack must show exactly 2 facts`);
+      if ((await systemBox.locator("a, button, input, [tabindex]").count()) !== 0) fail(`${tag}: FactTrack must contain no focusable element`);
+      if ((await card.locator("button:has-text('→')").count()) !== 0) fail(`${tag}: On-grid must not have a compare button`);
+      const ogHeight = await cardHeight(p);
+      await p.locator('label:has(input[name="calc-mode"][value="hybrid"])').click();
+      await p.waitForSelector('input[name="calc-battery"]');
+      if (!(await p.locator('input[name="calc-mode"][value="hybrid"]').isChecked())) fail(`${tag}: mode tab must switch to Hybrid`);
+      if ((await p.locator("#monthly-bill").inputValue()) !== "9500") fail(`${tag}: tab switch must keep the bill`);
+      if ((await cardHeight(p)) - ogHeight !== 0) fail(`${tag}: tab switch On-grid -> Hybrid must change card height by 0px`);
+      heights.push(await cardHeight(p));
+      if (!/คิดจากแบต|one full battery charge/.test(await card.innerText())) fail(`${tag}: battery assumption must sit under the gold badge`);
+      {
+        // Battery control: always exactly 2 rows below 640px, one row from 640px; cells >= 56 x 44.
+        const cells = await p.locator('label:has(input[name="calc-battery"])').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { w: r.width, h: r.height, top: Math.round(r.top) }; }));
+        const rows = new Set(cells.map((c) => c.top)).size;
+        if (rows !== (width < 640 ? 2 : 1)) fail(`${tag}: battery cells must form ${width < 640 ? 2 : 1} row(s), got ${rows}`);
+        if (cells.some((c) => c.w < 56 || c.h < 44)) fail(`${tag}: battery cells must be >= 56x44, got ${JSON.stringify(cells)}`);
+      }
+      await p.locator('label:has(input[name="calc-battery"][value="0"])').click();
+      if (!/ไม่มีแบต: |No battery: /.test(await card.innerText())) fail(`${tag}: no-battery footnote missing`);
+      await p.locator('label:has(input[name="calc-battery"][value="16"])').click();
+      if (!(await p.locator('input[name="calc-battery"][value="16"]').isChecked())) fail(`${tag}: first battery shown must be the smallest > 0 (16)`);
+      if (!/system=hybrid/.test((await cta()) ?? "") || !/battery=16/.test((await cta()) ?? "")) fail(`${tag}: Hybrid CTA must carry system=hybrid&battery=16, got ${await cta()}`);
+      await p.locator('label:has(input[name="calc-battery"][value="32"])').click();
+      heights.push(await cardHeight(p));
+      if (!/battery=32/.test((await cta()) ?? "")) fail(`${tag}: CTA must follow the battery choice`);
+      // Drag across kW: 5 kW only offers 0/16 -> nearest to 32 is 16 + note; back on 10 kW -> 32 returns.
+      await setBill(3500);
+      heights.push(await cardHeight(p));
+      if (!(await p.locator('input[name="calc-battery"][value="16"]').isChecked())) fail(`${tag}: 5 kW must show the nearest battery (16)`);
+      if (!/ปรับเป็น|Adjusted/.test(await p.locator("#calc-battery-label").innerText())) fail(`${tag}: auto-adjust note missing`);
+      if ((await p.locator("#calc-battery-label").getAttribute("aria-live")) !== "polite") fail(`${tag}: note must be aria-live=polite`);
+      await setBill(9500);
+      if (!(await p.locator('input[name="calc-battery"][value="32"]').isChecked())) fail(`${tag}: the earlier choice (32) must come back at 10 kW`);
+      // Bill below the first row / above the last row; the bill is untouched by switching modes.
+      await setBill(1000);
+      heights.push(await cardHeight(p));
+      if (!/ต่ำกว่าช่วง|below the range|lower than/i.test(await p.locator("body").innerText())) fail(`${tag}: belowFirstRow note missing at bill 1000`);
+      await setBill(25000);
+      heights.push(await cardHeight(p));
+      if ((await p.locator('input[name="calc-battery"]').count()) !== 0) fail(`${tag}: tooLarge must hide the battery choice`);
+      if ((await p.locator('[aria-disabled="true"]').count()) < 1) fail(`${tag}: tooLarge must show the battery track as aria-disabled`);
+      if (!/20 kW/.test(await p.locator("body").innerText())) fail(`${tag}: tooLarge must name the last Hybrid size (20 kW)`);
+      await setBill(9500);
+      await p.locator('label:has(input[name="calc-mode"][value="onGrid"])').click();
+      if ((await p.locator("#monthly-bill").inputValue()) !== "9500") fail(`${tag}: switching mode must not change the bill`);
+      heights.push(await cardHeight(p));
+      if (new Set(heights).size !== 1) fail(`${tag}: card height must stay constant across modes/batteries/bills, got ${heights.join(",")}`);
+      await p.close();
+    }
+  }
+  pass("R2-S9 public: toggle, FactTrack (no focusable, tab-switch height delta 0), 2-row battery wrap, footnotes, smallest battery first, nearest + note + restore, CTA params, below/tooLarge, constant card height (th/en x 1280/375)");
+  for (const locale of ["th", "en"] as const) {
+    const html = await (await fetch(`${BASE_URL}/${locale}/calculator`)).text();
+    if (/BrandA|BrandB|brandPrices|hybridSizeTable/.test(html)) fail(`R2-S9 PUBLIC ${locale}: HTML leaks brand names / per-brand prices`);
+  }
+  pass("R2-S9 public: HTML has no brand names / brandPrices");
+}
+
+// --- R2-S7: import preview with the removal box, reject grouped per sheet, history copy ---
+{
+  await openTablesTab(page);
+  await openImportPanel(page);
+  await page.setInputFiles("#calc-import-file", warningFilePath);
+  await page.click("#calc-import-upload");
+  await page.waitForSelector("#calc-import-preview", { timeout: 15000 });
+  const box = page.locator("#calc-import-hybrid-removed");
+  await box.waitFor({ state: "visible", timeout: 5000 });
+  if (!(await box.innerText()).includes("ไฟล์นี้ไม่มีชีต Hybrid")) fail("R2-S7: removal box text missing");
+  if (!((await box.getAttribute("class")) ?? "").includes("border-destructive")) fail("R2-S7: removal box must use the destructive border");
+  if (!(await page.locator("#calc-import-meta").innerText()).includes("ไม่มีชีต Hybrid")) fail("R2-S7: meta line must say the file has no Hybrid sheet");
+  await page.click("#calc-import-apply");
+  if (!(await page.locator("#calc-import-apply-confirm").innerText()).includes("ลบ Hybrid")) fail("R2-S7: confirm button must say it removes Hybrid");
+  await checkLayout(page, "import-removal", true);
+  pass("R2-S7: On-grid-only file -> destructive removal box, meta line, destructive confirm (not applied)");
+
+  const badHy = goodHybridRows();
+  badHy.push({ ...badHy[0] });
+  const badHyPath = await writeTempXlsx(
+    await buildOnGridFixture({ includeCategory: true, rows: goodRows(), hybrid: { rows: badHy, brands: FIXTURE_BRANDS } }),
+    "bad-hybrid-s7.xlsx"
+  );
+  await page.setInputFiles("#calc-import-file", badHyPath);
+  await page.click("#calc-import-upload");
+  await page.waitForSelector("#calc-import-reject", { timeout: 15000 });
+  const rejectText = await page.locator("#calc-import-reject").innerText();
+  if (!/ชีต Hybrid \(\d+ ข้อ\)/.test(rejectText) || !rejectText.includes("ทั้งไฟล์ไม่ผ่าน แม้ชีต On-grid จะถูกต้อง")) fail("R2-S7: reject must group by sheet and say the whole file failed");
+  pass("R2-S7: bad Hybrid sheet -> reject grouped under 'ชีต Hybrid (n ข้อ)' with the whole-file note");
+
+  // History: version without Hybrid shows the count copy and warns before replacing a live Hybrid table.
+  const noHybridItem = page.locator("#calc-import-history li", { hasText: "ไม่มี Hybrid" }).first();
+  await noHybridItem.locator('button:has-text("ใช้ชุดนี้")').click();
+  const useText = await noHybridItem.innerText();
+  if (!useText.includes("เวอร์ชันนี้ไม่มีตาราง Hybrid")) fail("R2-S7: using a version without Hybrid must warn that Hybrid disappears");
+  await noHybridItem.locator('button:has-text("ยกเลิก")').click();
+  if (!(await page.locator("#calc-import-history li", { hasText: "Hybrid 3 ขนาด" }).first().isVisible())) fail("R2-S7: history must show 'Hybrid n ขนาด'");
+  pass("R2-S7: history shows Hybrid counts; 'ใช้ชุดนี้' on a no-Hybrid version warns before removal");
+}
+
 // --- 10. Reset (UI) -> back to the baseline default table ---
 await openConfigTab(page);
 await page.click("#calc-reset");
 await page.click("#calc-reset-confirm");
 await page.waitForSelector("text=คืนค่าเริ่มต้นแล้ว", { timeout: 15000 });
 if ((await configNow()).sizeTable !== null) fail("RESET: size table must be cleared");
+if (Array.isArray((await configNow()).hybridSizeTable)) fail("RESET: Hybrid table must be cleared");
 for (const locale of ["th", "en"] as const) {
   if (await publicHas(pub, locale, 7000, SEVEN)) fail(`RESET ${locale}: 7 kW must be gone`);
   if (!(await publicHas(pub, locale, 7000, /(?<![\d.])10\s*kW/))) fail(`RESET ${locale}: bill 7000 must recommend 10 kW again (baseline)`);
 }
+for (const locale of ["th", "en"] as const) {
+  await pub.goto(`${BASE_URL}/${locale}/calculator`);
+  await pub.waitForSelector("#monthly-bill");
+  if ((await pub.locator('input[name="calc-mode"], input[name="calc-battery"]').count()) !== 0) fail(`RESET ${locale}: no Hybrid table -> no toggle / battery controls`);
+}
 await pub.close();
-pass("RESET: /th + /en back to the default table (bill 7000 -> 10 kW)");
+pass("RESET: /th + /en back to the default table (bill 7000 -> 10 kW), no toggle without a Hybrid table");
 
 // --- Audit trail ---
 const importCreateAudit = await prisma.auditLog.findFirst({

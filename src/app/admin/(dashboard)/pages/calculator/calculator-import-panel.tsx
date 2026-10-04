@@ -1,7 +1,11 @@
 "use client";
 
 // Excel import panel (upload -> reject/preview -> apply) of the "ตารางขนาดระบบ"
-// tab — R1-S5; was the whole card in S6. Layout/copy/states follow
+// tab — R1-S5; was the whole card in S6. R2-S7: one workbook, two sheets
+// (On-grid required, Hybrid optional) — the preview shows both tables one after
+// the other (no sub-tabs: a hidden sheet would get overlooked), warns loudly
+// when the file would remove the live Hybrid table, and a reject groups the
+// issues per sheet. Layout/copy/states follow
 // docs/plans/calculator-excel-import-admin-ui-spec.md §2-§7 and
 // backlogs/done/ISSUE_153_calculator_hybrid_toggle_map/design-162 §8. Summary
 // box + version history now live in calculator-tables-tab.tsx /
@@ -32,7 +36,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
+import { cn } from "@/lib/utils";
+import {
+  buildHybridDiffGroups,
+  HybridDiffItem,
+  HybridPriceTableReadonly,
+  hybridOutcomeText,
+  hybridPaybackText,
+  hybridSampleChanged,
+} from "./calculator-hybrid-diff-view";
 import {
   FIELD_LABELS,
   formatDateTime,
@@ -49,11 +61,20 @@ const MAX_LIST_ITEMS = 10;
 export type CalculatorImportPanelData = {
   activeImportId: string | null;
   configVersion: number;
+  /** Annual saving multiplier of the live config (payback column of the Hybrid table). */
+  multiplier?: number;
 };
 
 type Screen =
   | { kind: "idle" }
-  | { kind: "reject"; fileName: string; heading: string; messages: string[] }
+  | {
+      kind: "reject";
+      fileName: string;
+      heading: string;
+      messages: string[];
+      /** Messages split per sheet (D4: any issue on either sheet rejects the whole file). */
+      groups?: { onGrid: string[]; hybrid: string[] };
+    }
   | { kind: "preview"; result: Extract<PreviewResult, { ok: true }> };
 
 /** All warnings shown in the preview warning box: `diff.warnings` (Package /
@@ -65,6 +86,8 @@ type Screen =
 function allWarnings(result: Extract<PreviewResult, { ok: true }>): string[] {
   return [...result.diff.warnings.map((w) => w.message), ...result.warnings];
 }
+
+const hybridSizes = (rows: { kw: number }[] | null) => (rows ? new Set(rows.map((r) => r.kw)).size : 0);
 
 export function CalculatorImportPanel({
   data,
@@ -155,6 +178,7 @@ export function CalculatorImportPanel({
             fileName,
             heading: result.error,
             messages: result.messages,
+            groups: result.groups,
           });
           setShowAllRejects(false);
         }
@@ -206,7 +230,9 @@ export function CalculatorImportPanel({
         {uploading
           ? "กำลังอ่านและตรวจไฟล์…"
           : screen.kind === "preview"
-            ? `ตรวจไฟล์เสร็จ: ${screen.result.rows.length} ขนาด คำเตือน ${allWarnings(screen.result).length} ข้อ`
+            ? `ตรวจไฟล์เสร็จ: On-grid ${screen.result.rows.length} ขนาด ${
+                screen.result.hasHybridSheet ? `Hybrid ${hybridSizes(screen.result.hybridRows)} ขนาด` : "ไม่มีชีต Hybrid"
+              } คำเตือน ${allWarnings(screen.result).length} ข้อ`
             : screen.kind === "reject"
               ? `${screen.heading}`
               : ""}
@@ -216,11 +242,17 @@ export function CalculatorImportPanel({
       <div className="rounded-md border border-border/70 bg-muted/50 px-4 py-3 text-sm space-y-2">
         <p className="font-semibold">ระบบอ่านอะไรจากไฟล์</p>
         <ul className="list-disc space-y-1 pl-5">
-          <li>อ่านเฉพาะ sheet On-grid — sheet อื่น (เช่น Hybrid) ระบบข้าม</li>
-          <li>นำเข้าแล้วจะแทนที่ตารางทั้งชุด รวมถึงค่าที่แก้ในหลังบ้าน</li>
-          <li>อ่านตารางแรกใต้หัวตาราง &quot;ผลิตพลังงานต่อวัน&quot; ลงไปจนถึงแถวแรกที่ช่องขนาดว่าง</li>
+          <li>อ่าน sheet On-grid (ต้องมี) และ Hybrid (ถ้ามี) — sheet อื่นข้าม</li>
+          <li>นำเข้าแล้วจะแทนที่ตารางทั้ง 2 ชุด รวมถึงค่าที่แก้ในหลังบ้าน</li>
+          <li>ถ้าไม่มี sheet Hybrid ตาราง Hybrid จะถูกลบ และตัวเลือก Hybrid บนหน้าเว็บจะถูกซ่อน</li>
+          <li>ชีต On-grid: อ่านตารางแรกใต้หัวตาราง &quot;ผลิตพลังงานต่อวัน&quot; ลงไปจนถึงแถวแรกที่ช่องขนาดว่าง</li>
           <li>
-            ไม่อ่านราคา ยี่ห้อ เงินประหยัด และระยะคืนทุนในไฟล์ — ระยะคืนทุนบนหน้าเว็บคำนวณจากราคา Package
+            ชีต Hybrid: อ่านตารางแรกถึงแถวว่างแรก (บล็อกราคาแบตด้านล่างไม่ได้อ่าน) ราคาแต่ละยี่ห้ออ่านจากกลุ่มคอลัมน์
+            &quot;ยี่ห้อ&quot;
+          </li>
+          <li>
+            ชีต On-grid ไม่อ่านราคา ยี่ห้อ เงินประหยัด และระยะคืนทุนในไฟล์ — ระยะคืนทุนของ On-grid
+            บนหน้าเว็บคำนวณจากราคา Package
           </li>
           <li>
             ไม่ต้องใช้แบบฟอร์มพิเศษ แก้ไฟล์ Excel ของฝ่ายขายแล้วอัปโหลดได้เลย — ห้ามแก้หัวตาราง 2 แถวบน
@@ -239,10 +271,12 @@ export function CalculatorImportPanel({
           aria-controls="calc-import-columns"
           onClick={() => setShowColumns((v) => !v)}
         >
-          {showColumns ? "ซ่อนคอลัมน์" : "ดูคอลัมน์ที่ระบบอ่าน (9)"}
+          {showColumns ? "ซ่อนคอลัมน์" : "ดูคอลัมน์ที่ระบบอ่าน"}
         </Button>
         {showColumns && (
-          <ul id="calc-import-columns" className="list-disc space-y-1 pl-5 text-xs">
+          <div id="calc-import-columns" className="space-y-2 text-xs">
+          <p className="font-semibold">ชีต On-grid (9)</p>
+          <ul className="list-disc space-y-1 pl-5">
             <li>ขนาดกำลังผลิต + หน่วย (kW / MW) — ขนาดระบบ (MW แปลงเป็น kW)</li>
             <li>Phase — 1 เฟส / 3 เฟส (ขนาดเดียวกันที่ค่าตรงกันรวมเป็นแถวเดียว)</li>
             <li>ผลิตพลังงานต่อวัน › จำนวนชั่วโมง… — ชั่วโมงแดดต่อวัน</li>
@@ -258,6 +292,20 @@ export function CalculatorImportPanel({
               กติกาแนะนำ: เลือกขนาดเล็กที่สุดที่ค่าไฟสูงสุดมากกว่าบิลของลูกค้า
             </li>
           </ul>
+          <p className="font-semibold">ชีต Hybrid (11)</p>
+          <ul className="list-disc space-y-1 pl-5">
+            <li>ขนาดกำลังผลิต › ขนาด + หน่วย (kW / MW)</li>
+            <li>ขนาดกำลังผลิต › Phase — 1 เฟส / 3 เฟส</li>
+            <li>ขนาดกำลังผลิต › ขนาดแบตเตอรี่ (kWh) — 0 = ชุดไม่มีแบต ต้องมีทุกขนาดและเฟส</li>
+            <li>ผลิตพลังงานต่อวัน › จำนวนชั่วโมง… — ชั่วโมงแดดต่อวัน</li>
+            <li>ผลิตพลังงานต่อเดือน › จำนวนวัน — จำนวนวันต่อเดือน</li>
+            <li>แผงโซล่าเซลล์ › จำนวนติดตั้ง — จำนวนแผง</li>
+            <li>แผงโซล่าเซลล์ › พื้นที่หลังคา… — พื้นที่หลังคา (ถ้าว่าง ใช้ จำนวนแผง × 2.7 ตร.ม.)</li>
+            <li>ค่าไฟ › ประมาณ (ต่ำสุด–สูงสุด) — ช่วงค่าไฟที่เหมาะกับขนาดนี้</li>
+            <li>ค่าไฟ › ค่าไฟ/หน่วย — ราคาค่าไฟต่อหน่วย</li>
+            <li>ยี่ห้อ › ชื่อยี่ห้อ — ราคาอุปกรณ์ของแต่ละยี่ห้อ (ว่างหรือ 0 = ไม่มีราคา)</li>
+          </ul>
+          </div>
         )}
       </div>
 
@@ -318,38 +366,18 @@ export function CalculatorImportPanel({
           >
             {screen.heading}
           </h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">{screen.fileName} · ไม่มีอะไรถูกบันทึก</p>
-          {screen.messages.length > 0 && (
-            <ol className="mt-2 list-disc space-y-1 pl-5 text-sm text-foreground">
-              {(showAllRejects ? screen.messages : screen.messages.slice(0, MAX_LIST_ITEMS)).map(
-                (msg, i) => {
-                  const [main, action] = msg.split("\n→ ");
-                  return (
-                    <li key={i}>
-                      <div>{main}</div>
-                      {action && <div className="text-muted-foreground">→ {action}</div>}
-                    </li>
-                  );
-                }
-              )}
-            </ol>
-          )}
-          {screen.messages.length > MAX_LIST_ITEMS && (
-            <div className="mt-2 flex items-center gap-2 text-xs">
-              {!showAllRejects && (
-                <span>และอีก {screen.messages.length - MAX_LIST_ITEMS} ข้อ</span>
-              )}
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                aria-expanded={showAllRejects}
-                onClick={() => setShowAllRejects((v) => !v)}
-              >
-                {showAllRejects ? "แสดงน้อยลง" : "แสดงทั้งหมด"}
-              </Button>
-            </div>
-          )}
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {screen.fileName} · ไม่มีอะไรถูกบันทึก
+            {screen.groups && screen.groups.hybrid.length > 0 && screen.groups.onGrid.length === 0
+              ? " · ทั้งไฟล์ไม่ผ่าน แม้ชีต On-grid จะถูกต้อง"
+              : ""}
+          </p>
+          <RejectList
+            messages={screen.messages}
+            groups={screen.groups}
+            showAll={showAllRejects}
+            onToggleAll={() => setShowAllRejects((v) => !v)}
+          />
           <p className="mt-2 text-xs text-muted-foreground">แก้ไฟล์ใน Excel แล้วอัปโหลดใหม่</p>
         </div>
       )}
@@ -359,6 +387,7 @@ export function CalculatorImportPanel({
         <PreviewPanel
           result={screen.result}
           activeImportId={data.activeImportId}
+          multiplier={data.multiplier}
           previewHeadingRef={previewHeadingRef}
           showAllTable={showAllTable}
           setShowAllTable={setShowAllTable}
@@ -379,9 +408,68 @@ export function CalculatorImportPanel({
   );
 }
 
+/** Issue list of a rejected file. Issues on the Hybrid sheet get their own group (design-162 §8.4);
+ * a file that fails on On-grid only keeps the flat list. */
+function RejectList({
+  messages,
+  groups,
+  showAll,
+  onToggleAll,
+}: {
+  messages: string[];
+  groups?: { onGrid: string[]; hybrid: string[] };
+  showAll: boolean;
+  onToggleAll: () => void;
+}) {
+  if (messages.length === 0) return null;
+  const grouped = groups && groups.hybrid.length > 0;
+  const sections: { title: string | null; items: string[] }[] = grouped
+    ? [
+        ...(groups.onGrid.length > 0 ? [{ title: `ชีต On-grid (${groups.onGrid.length} ข้อ)`, items: groups.onGrid }] : []),
+        { title: `ชีต Hybrid (${groups.hybrid.length} ข้อ)`, items: groups.hybrid },
+      ]
+    : [{ title: null, items: messages }];
+  const total = sections.reduce((n, sec) => n + sec.items.length, 0);
+
+  return (
+    <>
+      {sections.map((section, si) => (
+        <div key={si} className="mt-2" data-reject-group={section.title ?? "all"}>
+          {section.title && <p className="text-sm font-semibold">{section.title}</p>}
+          <ol className="mt-1 list-disc space-y-1 pl-5 text-sm text-foreground">
+            {(showAll ? section.items : section.items.slice(0, MAX_LIST_ITEMS)).map((msg, i) => {
+              const [main, action] = msg.split("\n→ ");
+              return (
+                <li key={i}>
+                  <div>{main}</div>
+                  {action && <div className="text-muted-foreground">→ {action}</div>}
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      ))}
+      {sections.some((sec) => sec.items.length > MAX_LIST_ITEMS) && (
+        <div className="mt-2 flex items-center gap-2 text-xs">
+          {!showAll && (
+            <span>
+              และอีก {sections.reduce((n, sec) => n + Math.max(0, sec.items.length - MAX_LIST_ITEMS), 0)} ข้อ
+            </span>
+          )}
+          <Button type="button" variant="ghost" size="sm" aria-expanded={showAll} onClick={onToggleAll}>
+            {showAll ? "แสดงน้อยลง" : "แสดงทั้งหมด"}
+          </Button>
+        </div>
+      )}
+      <span className="sr-only">{total} ข้อ</span>
+    </>
+  );
+}
+
 function PreviewPanel({
   result,
   activeImportId,
+  multiplier,
   previewHeadingRef,
   showAllTable,
   setShowAllTable,
@@ -395,6 +483,7 @@ function PreviewPanel({
 }: {
   result: Extract<PreviewResult, { ok: true }>;
   activeImportId: string | null;
+  multiplier?: number;
   previewHeadingRef: React.RefObject<HTMLHeadingElement | null>;
   showAllTable: boolean;
   setShowAllTable: (v: (prev: boolean) => boolean) => void;
@@ -407,6 +496,7 @@ function PreviewPanel({
   onReloadLatest: () => void;
 }) {
   const [showAllWarnings, setShowAllWarnings] = useState(false);
+  const [showHybridTable, setShowHybridTable] = useState(false);
   useEffect(() => {
     if (confirmingApply) document.getElementById("calc-import-apply-confirm")?.focus();
   }, [confirmingApply]);
@@ -422,6 +512,16 @@ function PreviewPanel({
   const changedSamples = result.diff.sampleBills.filter(sampleChanged).length;
   const totalSamples = result.diff.sampleBills.length;
   const warnings = allWarnings(result);
+
+  // Hybrid (R2-S7).
+  const hybridRows = result.hybridRows;
+  const hybridSizeCount = hybridSizes(hybridRows);
+  const active = result.activeHybridCounts;
+  const removesHybrid = !result.hasHybridSheet && active.sizes > 0 && !isActiveSet;
+  const hybridDiff = result.hybridDiff;
+  const hybridGroups = result.hasHybridSheet ? buildHybridDiffGroups(hybridDiff) : [];
+  const changedHybridSamples = hybridDiff.sampleBills.filter(hybridSampleChanged).length;
+  const totalHybridSamples = hybridDiff.sampleBills.length;
 
   const missingPackageKws = Array.from(
     new Set(
@@ -452,8 +552,12 @@ function PreviewPanel({
         >
           ตรวจก่อนใช้: {result.fileName}
         </h3>
-        <p className="text-xs text-muted-foreground">
-          {result.rows.length} ขนาด ({minKw?.toLocaleString("th-TH")} – {maxKw?.toLocaleString("th-TH")} kW)
+        <p id="calc-import-meta" className="text-xs text-muted-foreground">
+          On-grid {result.rows.length} ขนาด ({minKw?.toLocaleString("th-TH")} – {maxKw?.toLocaleString("th-TH")} kW)
+          {" · "}
+          {result.hasHybridSheet
+            ? `Hybrid ${hybridSizeCount} ขนาด (${hybridRows?.length ?? 0} แถว)`
+            : "ไม่มีชีต Hybrid"}
           {warnings.length > 0 && ` · คำเตือน ${warnings.length} ข้อ`}
           {result.rowsRead > 0 && ` · อ่านถึงแถว ${result.rowsRead}`}
           {result.skippedSheets.length > 0 && ` · ข้าม sheet: ${result.skippedSheets.join(", ")}`}
@@ -477,7 +581,7 @@ function PreviewPanel({
         >
           <p id="calc-import-overwrite-heading" className="flex items-center gap-1.5 font-semibold">
             <AlertTriangle className="size-4" />
-            ไฟล์นี้จะแทนที่ตารางทั้งชุด
+            ไฟล์นี้จะแทนที่ตารางทั้ง 2 ชุด
           </p>
           <p className="mt-1">
             ชุดที่ใช้อยู่แก้ในหลังบ้านเมื่อ{" "}
@@ -486,6 +590,28 @@ function PreviewPanel({
             ค่าที่แก้ไว้จะถูกแทนด้วยค่าในไฟล์ ถ้าต้องการเก็บไว้ ให้กด
             &quot;ดาวน์โหลดเป็น Excel&quot; ก่อน (เวอร์ชันเดิมยังอยู่ในประวัติ กด &quot;ใช้ชุดนี้&quot;
             เพื่อย้อนกลับได้)
+          </p>
+        </div>
+      )}
+
+      {removesHybrid && (
+        <div
+          id="calc-import-hybrid-removed"
+          role="group"
+          aria-labelledby="calc-import-hybrid-removed-heading"
+          className="rounded-md border-2 border-destructive bg-destructive/10 px-4 py-3"
+        >
+          <p
+            id="calc-import-hybrid-removed-heading"
+            className="flex items-center gap-1.5 font-bold text-destructive"
+          >
+            <AlertTriangle className="size-4" />
+            ไฟล์นี้ไม่มีชีต Hybrid — ตาราง Hybrid จะถูกลบ
+          </p>
+          <p className="mt-1 text-sm text-foreground">
+            ตาราง Hybrid ที่ใช้อยู่ ({active.sizes} ขนาด · {active.rows} แถว) จะถูกลบเมื่อยืนยัน
+            และหน้าเครื่องคำนวณจะซ่อนตัวเลือก Hybrid ถ้าไม่ได้ตั้งใจ ให้ใช้ไฟล์ที่มีชีต Hybrid หรือกด
+            &quot;ดาวน์โหลดเป็น Excel&quot; เพื่อให้ได้ไฟล์ที่มีครบ 2 ชีต
           </p>
         </div>
       )}
@@ -514,8 +640,16 @@ function PreviewPanel({
         </div>
       )}
 
+      <section id="calc-import-on-grid" aria-labelledby="calc-import-on-grid-heading" className="space-y-4">
+      <h4 id="calc-import-on-grid-heading" className="border-b pb-1 text-sm font-semibold">
+        ชีต On-grid{" "}
+        <span className="text-xs font-normal text-muted-foreground">
+          เพิ่ม {result.diff.added.length} · ลบ {result.diff.removed.length} · เปลี่ยน{" "}
+          {result.diff.changed.length} · เหมือนเดิม {result.diff.unchangedCount}
+        </span>
+      </h4>
       <div>
-        <h4 className="text-sm font-semibold">ผลต่อบิลตัวอย่าง</h4>
+        <h5 className="text-sm font-semibold">ผลต่อบิลตัวอย่าง</h5>
         <div className="overflow-x-auto rounded-md border">
           <Table>
             <TableHeader>
@@ -554,13 +688,7 @@ function PreviewPanel({
       </div>
 
       <div>
-        <h4 className="text-sm font-semibold">
-          เทียบกับตารางที่ใช้อยู่{" "}
-          <span className="text-xs font-normal text-muted-foreground">
-            เพิ่ม {result.diff.added.length} · ลบ {result.diff.removed.length} · เปลี่ยน{" "}
-            {result.diff.changed.length} · เหมือนเดิม {result.diff.unchangedCount}
-          </span>
-        </h4>
+        <h5 className="text-sm font-semibold">เทียบกับตารางที่ใช้อยู่</h5>
         {result.diff.added.length === 0 &&
         result.diff.removed.length === 0 &&
         result.diff.changed.length === 0 ? (
@@ -651,6 +779,103 @@ function PreviewPanel({
           </div>
         )}
       </div>
+      </section>
+
+      <section id="calc-import-hybrid" aria-labelledby="calc-import-hybrid-heading" className="space-y-4">
+        <h4 id="calc-import-hybrid-heading" className="border-b pb-1 text-sm font-semibold">
+          ชีต Hybrid{" "}
+          {result.hasHybridSheet && !hybridDiff.currentEmpty && (
+            <span className="text-xs font-normal text-muted-foreground">
+              เพิ่ม {hybridGroups.filter((g) => g.kind === "added").length} · ลบ{" "}
+              {hybridGroups.filter((g) => g.kind === "removed").length} · เปลี่ยน{" "}
+              {hybridGroups.filter((g) => g.kind === "changed").length} ขนาด
+            </span>
+          )}
+        </h4>
+
+        {!result.hasHybridSheet ? (
+          <p className="text-sm text-muted-foreground">
+            ไฟล์นี้ไม่มีชีต Hybrid
+            {active.sizes > 0 ? " — ตาราง Hybrid ที่ใช้อยู่จะถูกลบ (ดูกล่องเตือนด้านบน)" : " และตอนนี้ยังไม่มีตาราง Hybrid"}
+          </p>
+        ) : (
+          <>
+            {hybridDiff.currentEmpty ? (
+              <p id="calc-import-hybrid-new" className="text-sm">
+                เพิ่มใหม่ทั้งตาราง {hybridSizeCount} ขนาด — หน้าเครื่องคำนวณจะเริ่มแสดงตัวเลือก Hybrid
+              </p>
+            ) : (
+              <>
+                <div>
+                  <h5 className="text-sm font-semibold">ผลต่อบิลตัวอย่าง</h5>
+                  <div className="overflow-x-auto rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>บิล/เดือน</TableHead>
+                          <TableHead>ตอนนี้</TableHead>
+                          <TableHead>หลังยืนยัน</TableHead>
+                          <TableHead>คืนทุนบนหน้าเว็บ</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {hybridDiff.sampleBills.map((sample) => {
+                          const changed = hybridSampleChanged(sample);
+                          return (
+                            <TableRow key={sample.bill} className={changed ? "bg-amber-50" : undefined}>
+                              <TableCell>฿{sample.bill.toLocaleString("th-TH")}</TableCell>
+                              <TableCell>{hybridOutcomeText(sample.before)}</TableCell>
+                              <TableCell className={changed ? "font-semibold" : undefined}>
+                                {changed && <span className="sr-only">เปลี่ยน: </span>}
+                                {hybridOutcomeText(sample.after)}
+                              </TableCell>
+                              <TableCell>{hybridPaybackText(sample)}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+
+                <div>
+                  <h5 className="text-sm font-semibold">เทียบกับตารางที่ใช้อยู่</h5>
+                  {hybridGroups.length === 0 ? (
+                    <p className="mt-2 text-sm text-muted-foreground">ตาราง Hybrid นี้เหมือนกับที่ใช้อยู่ทุกแถว</p>
+                  ) : (
+                    <ul id="calc-import-hybrid-diff" className="mt-2 divide-y rounded-md border">
+                      {hybridGroups.map((group) => (
+                        <HybridDiffItem key={`${group.kind}-${group.kw}`} group={group} />
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </>
+            )}
+
+            {hybridRows && (
+              <div>
+                <Button
+                  type="button"
+                  id="calc-import-hybrid-toggle"
+                  variant="ghost"
+                  size="sm"
+                  aria-expanded={showHybridTable}
+                  aria-controls="calc-import-hybrid-rows"
+                  onClick={() => setShowHybridTable((v) => !v)}
+                >
+                  {showHybridTable ? "ซ่อนตาราง" : `ดูตารางทั้งหมด (${hybridRows.length} แถว)`}
+                </Button>
+                {showHybridTable && (
+                  <div className="mt-2">
+                    <HybridPriceTableReadonly id="calc-import-hybrid-rows" rows={hybridRows} multiplier={multiplier} />
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </section>
 
       {conflict && (
         <div role="alert" id="calc-import-conflict" className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm">
@@ -681,11 +906,25 @@ function PreviewPanel({
           </Button>
         </div>
       ) : !conflict && confirmingApply ? (
-        <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+        <div
+          id="calc-import-apply-box"
+          className={cn(
+            "rounded-md border bg-muted/40 px-3 py-2 text-sm",
+            removesHybrid ? "border-destructive" : "border-border"
+          )}
+        >
           <p>
+            {removesHybrid ? "ยืนยันใช้ไฟล์นี้? ตาราง Hybrid จะถูกลบ และตัวเลือก Hybrid จะหายจากหน้าเว็บ · " : "ยืนยันใช้ไฟล์นี้บนหน้าเว็บจริง? "}
             {changedSamples === 0
-              ? "ยืนยันใช้ตารางนี้บนหน้าเว็บจริง? บิลตัวอย่างได้ขนาดเดิมทั้งหมด — ลูกค้าเห็นทันที"
-              : `ยืนยันใช้ตารางนี้บนหน้าเว็บจริง? ขนาดที่แนะนำจะเปลี่ยนใน ${changedSamples} จาก ${totalSamples} บิลตัวอย่าง — ลูกค้าเห็นทันที`}
+              ? "On-grid: บิลตัวอย่างได้ขนาดเดิมทั้งหมด"
+              : `On-grid: ขนาดที่แนะนำจะเปลี่ยนใน ${changedSamples} จาก ${totalSamples} บิลตัวอย่าง`}
+            {result.hasHybridSheet &&
+              (hybridDiff.currentEmpty
+                ? " · Hybrid: เพิ่มใหม่ทั้งตาราง"
+                : changedHybridSamples === 0
+                  ? " · Hybrid: บิลตัวอย่างได้ขนาดเดิมทั้งหมด"
+                  : ` · Hybrid: ${changedHybridSamples} จาก ${totalHybridSamples}`)}
+            {" — ลูกค้าเห็นทันที"}
           </p>
           <div className="mt-2 flex flex-wrap justify-end gap-2">
             <Button
@@ -700,11 +939,16 @@ function PreviewPanel({
             <Button
               id="calc-import-apply-confirm"
               type="button"
+              variant={removesHybrid ? "destructive" : "default"}
               className="h-8"
               disabled={applying}
               onClick={onApply}
             >
-              {applying ? "กำลังใช้ตาราง…" : "ยืนยัน ใช้ตารางนี้"}
+              {applying
+                ? "กำลังใช้ตาราง…"
+                : removesHybrid
+                  ? "ยืนยัน ใช้ไฟล์นี้และลบ Hybrid"
+                  : "ยืนยัน ใช้ตารางนี้"}
             </Button>
           </div>
         </div>

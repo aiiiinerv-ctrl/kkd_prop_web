@@ -15,6 +15,10 @@ export const bookingLinkParamsSchema = z
     bill: z.string().regex(/^\d+$/, "invalid_bill").optional(),
     package: z.string().trim().min(1).max(200).optional(),
     service: z.string().trim().min(1).max(200).optional(),
+    // Calculator hand-off (R2-S8): the system the visitor picked and, for
+    // hybrid only, the battery size in kWh — both pre-fill the quote form.
+    system: z.enum(["on-grid", "hybrid"]).optional(),
+    battery: z.string().regex(/^\d{1,4}$/, "invalid_battery").optional(),
   })
   .strict();
 
