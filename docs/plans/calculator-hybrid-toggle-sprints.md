@@ -65,7 +65,7 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 | **R2-S6** | หลังบ้าน: แท็บย่อย On-grid/Hybrid, รายการ + Dialog Hybrid, save 2 ตาราง | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R2-S4 | 1.25 d | done (local) — build ✓, e2e-calculator-config ✓ (+R2-S6 block), e2e-save-calculator-tables ✓, e2e-admin-crud ✓, รอ `design-business-reviewer` |
 | **R2-S7** | หลังบ้าน: preview นำเข้า 2 ชีต, กล่อง "Hybrid จะถูกลบ", reject แยกชีต, ประวัติ/reset copy | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R2-S4 · ✅ ขนานกับ R2-S6 (คนละไฟล์) | 0.75 d | done (local) — build ✓, e2e-calculator-config ✓ (+R2-S7 block), รอ `design-business-reviewer` |
 | **R2-S8** | Lead fields: `interestedBatteryKwh`, booking `system`/`battery`, ช่องแบตในแท็บ quote, lead detail, แจ้งเตือน, export รายงาน | `nextjs-dev` | `audit-compliance-reviewer`, `i18n-parity-checker`, `design-business-reviewer` (booking form) | ⏳ R2-S3 · ✅ ขนานกับ R2-S1/S2/S4–S7 | 1 d | done (local) — build ✓, e2e-booking ✓ (+ battery th/en), e2e-admin-crud ✓, e2e-admin ✓, รอ `audit-compliance-reviewer` / `design-business-reviewer` |
-| **R2-S9** | หน้า public Variant B: tab หัวการ์ด, segmented แบต, phase pill, CTA | `nextjs-dev` | `i18n-parity-checker`, `design-business-reviewer` (TH/EN × desktop/375px) | ⏳ R2-S4, R2-S8 · ✅ ขนานกับ R2-S6/S7 | 1.5 d | pending |
+| **R2-S9** | หน้า public Variant B: tab หัวการ์ด, segmented แบต, phase pill, CTA | `nextjs-dev` | `i18n-parity-checker`, `design-business-reviewer` (TH/EN × desktop/375px) | ⏳ R2-S4, R2-S8 · ✅ ขนานกับ R2-S6/S7 | 1.5 d | done (local) — build ✓, e2e-calculator-config ✓ (R2-S9), verify-calculator ✓, e2e-booking ✓; การ์ดสูงคงที่ 0 px; รอ reviewer |
 | **R2-S10** | Release R2: runbook → snapshot → DDL → deploy → smoke + write-path lead | `hosting-deploy-specialist` + human | `deploy-verify` | ⏳ R2-S1…S9 | 0.5 d | pending |
 | **R2-S11** | Post-deploy: ADMIN อัปโหลดไฟล์ 2 ชีตจริงบน prod → ตรวจ toggle + lead | owner/ADMIN (human) + agent browser | `design-business-reviewer` (prod render) | ⏳ R2-S10 | 0.25 d | pending |
 | **R2-S12** | Cleanup: ลบ prototype worktree/branch #157/#162 + ปิด backlog | main session (หลัง user ยืนยัน) | — | ⏳ R2-S11 | 0.1 d | pending |
@@ -754,7 +754,15 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback:** revert — `hybridTable` ไม่ถูกส่งให้ client, หน้าเป็น On-grid อย่างเดียว
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้ (2026-10-04, local เท่านั้น)**
+- ไฟล์: `page.tsx` (ส่ง `hybridTable`), `use-calculator-store.ts` (`systemMode`, `preferredBatteryKwh`, ไม่ persist), `calculator-client.tsx`, ใหม่ `system-mode-tabs.tsx` (radiogroup), `battery-picker.tsx` (`BatteryPicker` + `ModeInfoBox`), `phase-pill.tsx`, `messages/{th,en}.json` (key §5 ของ B + `modeOnGridHint`, `modeHybridHint`, `modeOnGridNoBattery`), `scripts/e2e-calculator-config.mts` (บล็อก R2-S9)
+- ข้อควรระวัง #1 (On-grid เหมือนเดิม): เมื่อไม่มี Hybrid ไม่ render tab/กล่องแบต — เทียบ `outerHTML` ของการ์ดก่อน/หลังแก้ที่ 4 ค่าไฟ × TH/EN = **เหมือนกันทั้ง 8 ไฟล์** (ตรวจที่ build จริง); e2e ยืนยันไม่มี `calc-mode`/`calc-battery` หลัง reset
+- ข้อควรระวัง #2 (แบตบนมือถือ): ปรับจากแผน — ตัวเลือกแบตเป็นตัวเลขล้วน (หน่วย kWh อยู่ที่ caption `… (kWh)`; segment "ไม่มีแบต" เต็มข้อความ) แถวเดียวไม่ scroll แม้ 7 ตัวเลือก ที่ 375px (ภาพ 50/60 kW TH/EN); ยังมี `overflow-x-auto` เป็นทางหนีถ้า admin ใส่แบตเกิน 7 ตัว; segment `min-h-11`
+- **ความสูงการ์ดคงที่ (ข้อกำหนดจาก main 79b1fad/8e20fae):** กล่องบนสุดฝั่งผลมีทั้งสองโหมด — Hybrid = `BatteryPicker`, On-grid/ไม่มีขนาด = `ModeInfoBox` (ชื่อ + เฟส + คำอธิบาย + แผงข้อความ "ไม่มีแบตเตอรี่ — …") ใช้ ghost ที่สร้างจาก kW ใหญ่สุด/แบตมากสุดเป็นตัวจองพื้นที่ กล่องจริงยืด `h-full` เติมเต็มพอดี ไม่มีพื้นที่โล่ง; caption `batteryAutoAdjusted` ใช้ที่เดียวกับ `batteryFor` (aria-live polite) จึงไม่เพิ่มบรรทัด; EN `batteryAutoAdjusted` ย่อเป็น "Adjusted to {kwh} for {kw} kW" ให้อยู่ 1 บรรทัดที่ 375px
+- วัดความสูงการ์ด (71 สถานะต่อความกว้าง: 12 ค่าไฟ On-grid + Hybrid × ทุกแบต, ข้ามโหมด): TH 1280/1024/768/375 = 675/675/1095/1239 px, EN = 675/751/1115/1355 px — **ส่วนต่างสูงสุด 0 px ทุกชุด**
+- ต่างจากแผน: (1) กล่องฝั่งขวามีใน On-grid ด้วย (ModeInfoBox) เพื่อให้ความสูงคงที่ — ขัดกับ "On-grid เหมือนเดิมนอกจากหัวการ์ด" เฉพาะเมื่อมี Hybrid; (2) เพิ่ม 3 key นอก §5 (`modeOnGridHint`, `modeHybridHint`, `modeOnGridNoBattery`); (3) CTA On-grid ส่ง `system=on-grid` ตามแผน (ฟอร์มติ๊ก On-grid ให้เอง — design-157 §0 ขอให้ user ตัดสิน); (4) ฝั่งซ้ายที่ ≥ lg ว่างท้ายคอลัมน์ ~200px เมื่อกล่องแบตอยู่ฝั่งขวา (ผลของ Variant B; ทางเลือก: ย้ายกล่องแบตไปฝั่งซ้ายแบบ A); (5) `PublicHybridSize` ที่ส่งให้ browser มี `minPriceThb` ต่อแบตตาม #155 (ต้องใช้คิดคืนทุน) — ไม่มีชื่อยี่ห้อ/ราคาต่อยี่ห้อ (e2e grep `BrandA|brandPrices|hybridSizeTable` = ไม่พบ)
+- ไม่ครอบคลุมใน e2e: แถวที่ไม่มีราคา (`noPaybackCta`) — ครอบคลุมโดย `verify-calculator.mts` (`recommendHybrid`) และดูด้วยตาจาก 60 kW ในข้อมูลสังเคราะห์ (ภาพ); reviewer (`design-business-reviewer`, `i18n-parity-checker`) ยังไม่ได้รัน
+- ข้อมูลสังเคราะห์: `scripts/seed-synthetic-hybrid.mts` (On-grid 3–50 kW + Hybrid 5–60 kW, 50/60 kW มีแบต 6 ตัวเลือก, 60 kW ไม่มีราคา)
 
 ---
 
