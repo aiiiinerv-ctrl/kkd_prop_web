@@ -159,7 +159,7 @@ export function validateHybridTable(input: HybridRow[]): HybridValidation {
     const expected = expectedPanels(kw);
     const panels = input[index].panels;
     if (Math.abs(panels - expected) / expected > PANEL_TOLERANCE) {
-      warnings.push(hybridPanelsFormulaWarning(index, kw, panels, Math.round(expected * 10) / 10));
+      warnings.push(hybridPanelsFormulaWarning(index, kw, panels, Math.ceil(expected)));
     }
   }
 

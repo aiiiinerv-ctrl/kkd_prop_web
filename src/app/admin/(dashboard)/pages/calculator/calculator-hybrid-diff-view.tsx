@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { HybridRow } from "@/lib/calculator-hybrid";
+import { hybridRowPaybacks } from "@/hooks/admin/hybrid-draft";
 import type { HybridSampleOutcome, HybridTableDiff } from "@/lib/calculator-import/diff";
 import type { DiffFieldName } from "@/lib/calculator-import/diff";
 import { FIELD_LABELS, formatFieldValue } from "./calculator-table-format";
@@ -125,13 +126,13 @@ export function HybridDiffItem({ group }: { group: HybridDiffGroup }) {
           </p>
           {group.lines.map((line, i) =>
             line.kind === "change" ? (
-              <p key={i} className="mt-0.5 pl-1 text-xs">
+              <p key={i} className="mt-0.5 pl-1 text-sm">
                 {line.label} <span className="sr-only">เดิม</span>
                 <s className="text-muted-foreground">{line.before}</s> → <span className="sr-only">ใหม่</span>
                 <mark className="rounded bg-amber-50 px-1 font-semibold text-foreground">{line.after}</mark>
               </p>
             ) : (
-              <p key={i} className="mt-0.5 pl-1 text-xs">
+              <p key={i} className="mt-0.5 pl-1 text-sm">
                 {line.text}
               </p>
             )
@@ -182,8 +183,18 @@ export function hybridPaybackText(s: { before: HybridSampleOutcome; after: Hybri
 }
 
 /** Read-only phase x battery x brand price table (design-162 §8.3 item 7, "ดูตารางทั้งหมด"). */
-export function HybridPriceTableReadonly({ rows, id }: { rows: HybridRow[]; id?: string }) {
+export function HybridPriceTableReadonly({
+  rows,
+  id,
+  multiplier,
+}: {
+  rows: HybridRow[];
+  id?: string;
+  /** Annual multiplier of the live config — adds the saving / payback columns of the editor dialog. */
+  multiplier?: number;
+}) {
   const brands = rows[0]?.brandPrices.map((b) => b.brand) ?? [];
+  const paybacks = multiplier === undefined ? null : hybridRowPaybacks(rows, multiplier);
   return (
     <div id={id} className="overflow-x-auto rounded-md border text-xs">
       <Table>
@@ -197,10 +208,12 @@ export function HybridPriceTableReadonly({ rows, id }: { rows: HybridRow[]; id?:
                 {b}
               </TableHead>
             ))}
+            {paybacks && <TableHead className="whitespace-nowrap text-right">ประหยัด/ด.*</TableHead>}
+            {paybacks && <TableHead className="whitespace-nowrap text-right">คืนทุน (ปี)*</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((r) => (
+          {rows.map((r, ri) => (
             <TableRow key={`${r.kw}|${r.phase}|${r.batteryKwh}`}>
               <TableCell className="sticky left-0 bg-card whitespace-nowrap font-medium">
                 {th(r.kw)} kW · {r.phase}φ · {th(r.batteryKwh)}
@@ -214,10 +227,25 @@ export function HybridPriceTableReadonly({ rows, id }: { rows: HybridRow[]; id?:
                   {bp.priceThb === null ? "—" : th(bp.priceThb)}
                 </TableCell>
               ))}
+              {paybacks && (
+                <TableCell className="bg-muted/40 text-right tabular-nums text-muted-foreground">
+                  ฿{th(Math.round(paybacks[ri].saving))}
+                </TableCell>
+              )}
+              {paybacks && (
+                <TableCell className="bg-muted/40 text-right tabular-nums text-muted-foreground">
+                  {paybacks[ri].paybackYears === null ? "—" : paybacks[ri].paybackYears!.toFixed(2)}
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </TableBody>
       </Table>
+      {paybacks && (
+        <p className="border-t px-3 py-2 text-xs text-muted-foreground">
+          * คืนทุน = ราคาต่ำสุดที่ใช้ได้ ÷ (ประหยัด/เดือน × {multiplier})
+        </p>
+      )}
     </div>
   );
 }

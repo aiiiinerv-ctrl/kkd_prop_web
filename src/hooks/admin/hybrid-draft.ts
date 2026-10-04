@@ -4,11 +4,10 @@
 // resolved to the flat `HybridRow[]` that `validateHybridTable` and
 // `saveCalculatorTables` use. CLIENT-SAFE: imports only the pure Hybrid model
 // and the shared validator — never the import lib's index (exceljs).
-import { hybridMonthlySaving, type HybridRow } from "@/lib/calculator-hybrid";
+import { hybridMonthlySaving, MAX_HYBRID_ROWS, type HybridRow } from "@/lib/calculator-hybrid";
 import { expectedPanels, validateHybridTable } from "@/lib/calculator-import/validate-hybrid";
 import type { TableIssue, TableWarning } from "@/lib/calculator-import/messages";
 
-export const MAX_HYBRID_ROWS = 500; // keep in step with savePayloadSchema
 export const ROOF_M2_PER_PANEL = 2.7;
 const PANEL_TOLERANCE = 0.2;
 
@@ -475,7 +474,7 @@ export function summarizeHybridRows(rows: HybridRow[], multiplier: number): Hybr
 export function panelsFormulaGap(kw: number | null, panels: number | null): { expected: number } | null {
   if (!isNum(kw) || kw <= 0 || !isNum(panels)) return null;
   const expected = expectedPanels(kw);
-  return Math.abs(panels - expected) / expected > PANEL_TOLERANCE ? { expected: Math.round(expected * 10) / 10 } : null;
+  return Math.abs(panels - expected) / expected > PANEL_TOLERANCE ? { expected: Math.ceil(expected) } : null;
 }
 
 /** E3 for one price cell: a battery row's price is ignored when the same brand

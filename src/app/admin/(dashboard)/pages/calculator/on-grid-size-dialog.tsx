@@ -110,7 +110,15 @@ export function OnGridSizeDialog({
   });
   const [values, setValues] = useState<DraftValues>(initial);
   const [touched, setTouched] = useState<Set<DraftField>>(new Set());
-  const [forceAll, setForceAll] = useState(!!focusFieldName);
+  // Editing a size that already has problems opens with those problems visible (M1).
+  const [forceAll, setForceAll] = useState(
+    () =>
+      !!focusFieldName ||
+      (row !== null &&
+        validateDraft([...others, { key: "__dialog__", original: row.original, current: initial, deleted: false }]).issues.some(
+          (i) => i.key === "__dialog__" && i.field !== "table"
+        ))
+  );
   const [discarding, setDiscarding] = useState(false);
 
   const changed = JSON.stringify(values) !== JSON.stringify(initial);

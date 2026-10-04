@@ -384,7 +384,7 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
 
           {importOpen && (
             <CalculatorImportPanel
-              data={{ activeImportId: active.versionId, configVersion: data.configVersion }}
+              data={{ activeImportId: active.versionId, configVersion: data.configVersion, multiplier: data.multiplier }}
               onBusyChange={onImportBusy}
               onApplied={() => setImportOpen(false)}
             />

@@ -296,7 +296,7 @@ export function SaveTablesDialog({
                             <span>On-grid {th(item.kw)} kW</span>
                           </p>
                           {item.changes.map((change) => (
-                            <p key={change.field} className="mt-0.5 pl-1 text-xs">
+                            <p key={change.field} className="mt-0.5 pl-1 text-sm">
                               {FIELD_LABELS[change.field]} <span className="sr-only">เดิม</span>
                               <s className="text-muted-foreground">
                                 {formatFieldValue(change.field, change.current)}

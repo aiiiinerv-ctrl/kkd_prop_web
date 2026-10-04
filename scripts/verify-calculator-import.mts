@@ -558,7 +558,7 @@ const hybridErrors = (r: Awaited<ReturnType<typeof importWith>>) => (r.ok ? [] :
   const r = await importWith({ rows });
   const e5 = hybridWarnings(r).filter((w) => w.code === "hybrid-panels-formula");
   assert("E5 -> one warning per kW (20 and 30; 40 within 20%)", e5.length === 2, String(e5.length));
-  assert("  copy names the kW, the filled count and the formula figure", e5.some((w) => w.message === "ชีต Hybrid: จำนวนแผงของ 20 kW ต่างจากสูตรเกิน 20% (เช่น 20 kW กรอก 28 แต่สูตรได้ ≈38.1)"), e5[0]?.message);
+  assert("  copy names the kW, the filled count and the formula figure", e5.some((w) => w.message === "ชีต Hybrid: จำนวนแผงของ 20 kW ต่างจากสูตรเกิน 20% (เช่น 20 kW กรอก 28 แต่สูตรได้ ≈39)"), e5[0]?.message);
   assert("  is a warning, file still accepted", r.ok);
 }
 {
@@ -678,7 +678,7 @@ console.log("\n=== hybrid validator + client safety ===");
   const badRange = validateHybridTable(rows.map((r, i) => (i === 0 ? { ...r, sunHours: 99 } : r)));
   assert("validator: out-of-range sunHours -> out-of-range, table 'hybrid'", badRange.issues[0]?.code === "out-of-range" && badRange.issues[0].table === "hybrid");
   const manual = validateHybridTable(rows.map((r) => (r.kw === 10 ? { ...r, panels: 5 } : r)));
-  assert("validator: E5 hand-edit copy", manual.warnings[0]?.message === "Hybrid 10 kW: จำนวนแผง 5 ต่างจากที่สูตรคำนวณได้ (≈19) เกิน 20%", manual.warnings[0]?.message);
+  assert("validator: E5 hand-edit copy", manual.warnings[0]?.message === "Hybrid 10 kW: จำนวนแผง 5 ต่างจากที่สูตรคำนวณได้ (≈20) เกิน 20%", manual.warnings[0]?.message);
   // R2-S4 hardening: import path enforces the same caps as the save schema (<=500 rows, <=10 brands)
   const wide = (n: number): HybridRow[] =>
     Array.from({ length: n }, (_, b) => ({ ...rows[0], batteryKwh: b, brandPrices: rows[0].brandPrices.map((p) => ({ ...p })) }));

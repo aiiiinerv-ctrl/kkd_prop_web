@@ -61,6 +61,8 @@ const MAX_LIST_ITEMS = 10;
 export type CalculatorImportPanelData = {
   activeImportId: string | null;
   configVersion: number;
+  /** Annual saving multiplier of the live config (payback column of the Hybrid table). */
+  multiplier?: number;
 };
 
 type Screen =
@@ -385,6 +387,7 @@ export function CalculatorImportPanel({
         <PreviewPanel
           result={screen.result}
           activeImportId={data.activeImportId}
+          multiplier={data.multiplier}
           previewHeadingRef={previewHeadingRef}
           showAllTable={showAllTable}
           setShowAllTable={setShowAllTable}
@@ -466,6 +469,7 @@ function RejectList({
 function PreviewPanel({
   result,
   activeImportId,
+  multiplier,
   previewHeadingRef,
   showAllTable,
   setShowAllTable,
@@ -479,6 +483,7 @@ function PreviewPanel({
 }: {
   result: Extract<PreviewResult, { ok: true }>;
   activeImportId: string | null;
+  multiplier?: number;
   previewHeadingRef: React.RefObject<HTMLHeadingElement | null>;
   showAllTable: boolean;
   setShowAllTable: (v: (prev: boolean) => boolean) => void;
@@ -863,7 +868,7 @@ function PreviewPanel({
                 </Button>
                 {showHybridTable && (
                   <div className="mt-2">
-                    <HybridPriceTableReadonly id="calc-import-hybrid-rows" rows={hybridRows} />
+                    <HybridPriceTableReadonly id="calc-import-hybrid-rows" rows={hybridRows} multiplier={multiplier} />
                   </div>
                 )}
               </div>

@@ -7,7 +7,7 @@
 // saved until the confirm dialog). Brand names are read-only here — they come
 // from the Excel file (Default #11).
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Lock, Plus, Trash2 } from "lucide-react";
+import { Lock, LockKeyhole, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -159,7 +159,16 @@ export function HybridSizeDialog({
   });
   const [values, setValues] = useState<HybridSizeValues>(initial);
   const [touched, setTouched] = useState<Set<string>>(new Set());
-  const [forceAll, setForceAll] = useState(!!focus);
+  // Editing a size that already has problems opens with those problems visible (M1).
+  const [forceAll, setForceAll] = useState(
+    () =>
+      !!focus ||
+      (size !== null &&
+        validateHybridDraft(
+          [...others, { key: "__dialog__", original: size.original, current: initial, deleted: false }],
+          brands
+        ).issues.some((i) => i.key === "__dialog__" && i.field !== "table"))
+  );
   const [discarding, setDiscarding] = useState(false);
   const [removePhase, setRemovePhase] = useState<1 | 3 | null>(null);
   // Remount a price input after it was cleared by "0 = no price" (NumInput keeps its typed text).
@@ -184,12 +193,17 @@ export function HybridSizeDialog({
     };
     return validateHybridDraft([...others, me], brands).issues.filter((i) => i.key === "__dialog__");
   }, [values, others, brands, size]);
+  const isRowField = (i: HybridIssue) => i.field === "batteryKwh" || i.field === "prices";
   const issueVisible = (i: HybridIssue) =>
-    forceAll || touched.has(i.rowKey ? `row:${i.rowKey}` : i.field);
+    forceAll || touched.has(isRowField(i) && i.rowKey ? `row:${i.rowKey}` : i.field);
   const visibleErrors = issues.filter((i) => i.field !== "table" && issueVisible(i));
+  // Only battery / price problems belong to one row; every other field is shared by all rows of the
+  // size, so the validator reports it once per row — show it once, under its own field.
+  const issueKey = (i: HybridIssue) => `${i.field}|${i.message}|${isRowField(i) ? (i.rowKey ?? "") : ""}`;
+  const summaryErrors = visibleErrors.filter((i, idx, all) => all.findIndex((o) => issueKey(o) === issueKey(i)) === idx);
   const errorsFor = (field: HybridField) =>
-    visibleErrors.filter((i) => i.field === field && !i.rowKey).map((i) => i.message);
-  const rowErrors = (rowKey: string) => visibleErrors.filter((i) => i.rowKey === rowKey);
+    summaryErrors.filter((i) => i.field === field && !isRowField(i)).map((i) => i.message);
+  const rowErrors = (rowKey: string) => visibleErrors.filter((i) => i.rowKey === rowKey && isRowField(i));
 
   const prev = useMemo(() => {
     const kw = isNum(values.kw) ? values.kw : Number.POSITIVE_INFINITY;
@@ -349,15 +363,15 @@ export function HybridSizeDialog({
         </DialogHeader>
 
         <div className="min-w-0 space-y-5">
-          {visibleErrors.length > 0 && (
+          {summaryErrors.length > 0 && (
             <div
               id="calc-size-dialog-errors"
               role="alert"
               className="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3"
             >
-              <p className="font-semibold text-destructive">ต้องแก้ {visibleErrors.length} จุดก่อนบันทึก</p>
+              <p className="font-semibold text-destructive">ต้องแก้ {summaryErrors.length} จุดก่อนบันทึก</p>
               <ul className="mt-1 list-disc space-y-0.5 pl-5">
-                {visibleErrors.map((issue, i) => (
+                {summaryErrors.map((issue, i) => (
                   <li key={i}>
                     <button
                       type="button"
@@ -398,6 +412,7 @@ export function HybridSizeDialog({
                           id={`hy-phase-${p}`}
                           checked={on}
                           disabled={on && phases.length === 1}
+                          aria-describedby={on && phases.length === 1 ? "hy-phase-only-hint" : undefined}
                           onChange={(event) => togglePhase(p, event.target.checked)}
                           className="size-4 accent-[var(--primary)]"
                         />
@@ -406,6 +421,11 @@ export function HybridSizeDialog({
                     );
                   })}
                 </div>
+                {phases.length === 1 && (
+                  <p id="hy-phase-only-hint" className="text-xs text-muted-foreground">
+                    ต้องมีอย่างน้อย 1 เฟส
+                  </p>
+                )}
                 {errorsFor("phases").map((message, i) => (
                   <p key={i} className="mt-1 text-xs text-destructive">
                     {message}
@@ -499,15 +519,15 @@ export function HybridSizeDialog({
               <Table id="hy-price-table" className="text-xs sm:text-sm">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="sticky left-0 z-[1] bg-card whitespace-nowrap">เฟส · แบต (kWh)</TableHead>
+                    <TableHead className="sticky left-0 z-[1] bg-card whitespace-nowrap">เฟส · แบต</TableHead>
                     {brands.map((brand) => (
-                      <TableHead key={brand} className="min-w-[6.5rem] whitespace-nowrap text-right">
+                      <TableHead key={brand} className="min-w-[5.5rem] text-right whitespace-normal break-words">
                         {brand}
                       </TableHead>
                     ))}
-                    <TableHead className="whitespace-nowrap text-right">ประหยัด/ด.*</TableHead>
-                    <TableHead className="whitespace-nowrap text-right">คืนทุน (ปี)*</TableHead>
-                    <TableHead className="w-10" />
+                    <TableHead className="text-right whitespace-normal">ประหยัด/ด.*</TableHead>
+                    <TableHead className="text-right whitespace-normal">คืนทุน (ปี)*</TableHead>
+                    <TableHead className="sticky right-0 z-[1] w-10 bg-card" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -629,7 +649,7 @@ export function HybridSizeDialog({
                             "—"
                           )}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="sticky right-0 z-[1] bg-card text-right shadow-[inset_1px_0_0_var(--border)]">
                           {row.deleted ? (
                             <Button
                               type="button"
@@ -640,17 +660,26 @@ export function HybridSizeDialog({
                               คืน
                             </Button>
                           ) : (
+                            isBase ? (
+                              <span
+                                className="inline-flex size-8 items-center justify-center text-muted-foreground"
+                                role="img"
+                                aria-label="ลบแถวไม่มีแบตไม่ได้ ถ้าไม่ใช้ขนาดนี้ ให้ลบทั้งขนาด"
+                                title="ลบแถวไม่มีแบตไม่ได้ ถ้าไม่ใช้ขนาดนี้ ให้ลบทั้งขนาด"
+                              >
+                                <LockKeyhole className="size-4" aria-hidden />
+                              </span>
+                            ) : (
                             <Button
                               type="button"
                               variant="ghost"
                               size="icon-sm"
-                              disabled={isBase}
-                              title={isBase ? "แถวไม่มีแบตต้องมีเสมอ ถ้าไม่ใช้ขนาดนี้ ให้ลบทั้งขนาด" : undefined}
                               aria-label={`ลบแถว ${row.phase} เฟส แบต ${isNum(row.batteryKwh) ? row.batteryKwh : "ใหม่"} kWh`}
                               onClick={() => removeRow(row)}
                             >
                               <Trash2 className="size-4" />
                             </Button>
+                            )
                           )}
                         </TableCell>
                       </TableRow>
@@ -666,7 +695,8 @@ export function HybridSizeDialog({
                 เพิ่มแถวแบต
               </Button>
               <p className="min-w-0 text-xs text-muted-foreground">
-                ช่องว่างหรือ 0 หมายถึงยี่ห้อนี้ไม่มีราคา · * คืนทุน = ราคาต่ำสุดที่ใช้ได้ ÷ (ประหยัด/เดือน × {multiplier})
+                <LockKeyhole className="mr-1 inline size-3.5 align-text-bottom" aria-hidden />
+                แถวไม่มีแบต (0 kWh) ลบไม่ได้ ถ้าไม่ใช้ขนาดนี้ ให้ลบทั้งขนาด · ช่องว่างหรือ 0 หมายถึงยี่ห้อนี้ไม่มีราคา · * คืนทุน = ราคาต่ำสุดที่ใช้ได้ ÷ (ประหยัด/เดือน × {multiplier})
               </p>
             </div>
           </section>
