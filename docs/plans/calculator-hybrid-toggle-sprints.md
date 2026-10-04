@@ -64,7 +64,7 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 | **R2-S5** | Export ชีต Hybrid (merged block, กลุ่มยี่ห้อ) + round-trip 2 ชีต | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R2-S2 · ✅ ขนานกับ R2-S4 | 0.75 d | done — round-trip ✓ (fixture + ไฟล์จริง), Excel check ✓, route wiring ทำใน R2-S4 แล้ว, รอ `audit-compliance-reviewer` |
 | **R2-S6** | หลังบ้าน: แท็บย่อย On-grid/Hybrid, รายการ + Dialog Hybrid, save 2 ตาราง | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R2-S4 | 1.25 d | done (local) — build ✓, e2e-calculator-config ✓ (+R2-S6 block), e2e-save-calculator-tables ✓, e2e-admin-crud ✓, รอ `design-business-reviewer` |
 | **R2-S7** | หลังบ้าน: preview นำเข้า 2 ชีต, กล่อง "Hybrid จะถูกลบ", reject แยกชีต, ประวัติ/reset copy | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R2-S4 · ✅ ขนานกับ R2-S6 (คนละไฟล์) | 0.75 d | done (local) — build ✓, e2e-calculator-config ✓ (+R2-S7 block), รอ `design-business-reviewer` |
-| **R2-S8** | Lead fields: `interestedBatteryKwh`, booking `system`/`battery`, ช่องแบตในแท็บ quote, lead detail, แจ้งเตือน, export รายงาน | `nextjs-dev` | `audit-compliance-reviewer`, `i18n-parity-checker`, `design-business-reviewer` (booking form) | ⏳ R2-S3 · ✅ ขนานกับ R2-S1/S2/S4–S7 | 1 d | pending |
+| **R2-S8** | Lead fields: `interestedBatteryKwh`, booking `system`/`battery`, ช่องแบตในแท็บ quote, lead detail, แจ้งเตือน, export รายงาน | `nextjs-dev` | `audit-compliance-reviewer`, `i18n-parity-checker`, `design-business-reviewer` (booking form) | ⏳ R2-S3 · ✅ ขนานกับ R2-S1/S2/S4–S7 | 1 d | done (local) — build ✓, e2e-booking ✓ (+ battery th/en), e2e-admin-crud ✓, e2e-admin ✓, รอ `audit-compliance-reviewer` / `design-business-reviewer` |
 | **R2-S9** | หน้า public Variant B: tab หัวการ์ด, segmented แบต, phase pill, CTA | `nextjs-dev` | `i18n-parity-checker`, `design-business-reviewer` (TH/EN × desktop/375px) | ⏳ R2-S4, R2-S8 · ✅ ขนานกับ R2-S6/S7 | 1.5 d | pending |
 | **R2-S10** | Release R2: runbook → snapshot → DDL → deploy → smoke + write-path lead | `hosting-deploy-specialist` + human | `deploy-verify` | ⏳ R2-S1…S9 | 0.5 d | pending |
 | **R2-S11** | Post-deploy: ADMIN อัปโหลดไฟล์ 2 ชีตจริงบน prod → ตรวจ toggle + lead | owner/ADMIN (human) + agent browser | `design-business-reviewer` (prod render) | ⏳ R2-S10 | 0.25 d | pending |
@@ -703,7 +703,10 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback:** revert — คอลัมน์ `interestedBatteryKwh` ว่างไม่กระทบโค้ดเดิม
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้:** (local, ยังไม่ push)
+- ทำตามแผน: `bookingLinkParamsSchema` + `system`/`battery`; `page.tsx` ให้ `system` ชนะ service-derived และส่ง `initialBatteryKwh` เฉพาะ `system=hybrid` (<= 10000); `BillAndSystemsFields` + `showBatteryField` (QuoteForm เท่านั้น) render ใต้ checkbox HYBRID เมื่อติ๊ก; `interestedBatteryKwh` ใน `baseLeadSchema` (preprocess "" -> undefined, int 0-10000); `submit-quote.ts` ล้างเป็น null เมื่อไม่มี HYBRID; lead detail, `format.ts`, export-rows ทั้ง 2 ชีต; keys `fieldBatteryKwh*` ใน th/en
+- ทดสอบ: `npm run build` ✓ · e2e-booking (port 3002 ผ่านสำเนาชั่วคราว) ผ่านทุกบรรทัด + BATTERY th/en 4 กรณีต่อภาษา · e2e-admin-crud ✓ (header export ตรงกับ field list) · e2e-admin ✓ · server log "no providers configured, skipping" · formatter กับ lead แบต 16 -> `แบตเตอรี่ที่สนใจ: 16 kWh` · screenshot 375/1280 x TH/EN x ติ๊ก/ไม่ติ๊ก
+- ต่างจากแผน: (1) e2e ส่ง `x-forwarded-for` แยกต่อภาษาในบล็อก BATTERY เพราะ rate limit 5 ครั้ง/10 นาที/IP เต็มเมื่อเพิ่ม submit; (2) error ของช่องแบตใช้ `errInvalid` เดิม (ไม่เพิ่ม key); (3) `i18n-parity-checker`, `audit-compliance-reviewer`, `design-business-reviewer` และ content marker R2-S10 ยังไม่ได้รัน
 
 ---
 
