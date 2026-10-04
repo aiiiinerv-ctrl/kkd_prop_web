@@ -68,6 +68,7 @@ export default async function CalculatorPage({
         <CalculatorClient
           packages={packages.map(({ sizeKw, priceThb, isPopular }) => ({ sizeKw, priceThb, isPopular }))}
           sizeTable={calculatorConfigResult.sizeTable}
+          hybridTable={calculatorConfigResult.hybridTable}
           panelTitle={usePages && hasRow ? pageContent?.panelTitle : undefined}
           panelIntro={usePages && hasRow ? pageContent?.panelIntro : undefined}
           config={calculatorConfig}

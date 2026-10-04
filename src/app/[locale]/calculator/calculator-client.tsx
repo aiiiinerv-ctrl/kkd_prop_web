@@ -9,9 +9,23 @@ import {
   type CalculatorParams,
 } from "@/lib/calculator";
 import { bookingHref } from "@/lib/booking-links";
+import { recommendHybrid, type PublicHybridSize } from "@/lib/calculator-hybrid";
 import type { SizeRow } from "@/lib/calculator-size-table";
 import { AVG_MONTHLY_BILL_MAX } from "@/lib/validations/lead";
 import { useCalculatorStore } from "@/store/use-calculator-store";
+import { BatteryPicker, ModeInfoBox } from "./battery-picker";
+import { SystemModeTabs } from "./system-mode-tabs";
+
+/** What the result box needs, whichever system produced it. */
+type ResultView = {
+  panels: number;
+  roofM2: number;
+  kwhPerMonth: number;
+  monthlySaving: number;
+  afterBill: number;
+  coversFullBill: boolean;
+  paybackYears: number | null;
+};
 
 export function CalculatorClient({
   packages,
@@ -19,19 +33,27 @@ export function CalculatorClient({
   panelTitle,
   panelIntro,
   config,
+  hybridTable,
 }: {
   packages: (CalcPackage & { isPopular: boolean })[];
   sizeTable: SizeRow[];
   panelTitle?: string | null;
   panelIntro?: string | null;
   config: CalculatorParams;
+  /** null / empty = no Hybrid table: no toggle, the card is the plain On-grid calculator. */
+  hybridTable?: PublicHybridSize[] | null;
 }) {
   const t = useTranslations("calculator");
   const tCommon = useTranslations("common");
   const locale = useLocale();
-  const { bill, setBill } = useCalculatorStore();
+  const { bill, setBill, systemMode, setSystemMode, preferredBatteryKwh, setPreferredBatteryKwh } =
+    useCalculatorStore();
+  const hasHybrid = Boolean(hybridTable && hybridTable.length > 0);
+  // The store may say "hybrid" while the table is gone (admin removed it): fall back to On-grid.
+  const mode = hasHybrid ? systemMode : "onGrid";
+  const isHybrid = mode === "hybrid";
 
-  const maxTypedBill = sizeTable.at(-1)?.billMax ?? config.maxBill;
+  const maxTypedBill = (isHybrid ? hybridTable?.at(-1)?.billMax : sizeTable.at(-1)?.billMax) ?? config.maxBill;
   const billValue = Number(bill);
   // Keep the raw input while typing; clamp only after the user leaves the field.
   const clampBill = () => {
@@ -42,10 +64,40 @@ export function CalculatorClient({
     () => recommendFromTable(billValue, sizeTable, packages, config.annualSavingMonthsMultiplier),
     [billValue, sizeTable, packages, config.annualSavingMonthsMultiplier]
   );
-  const displayedResult = recommendation.kind === "ok" ? recommendation : null;
+  const hybridRecommendation = useMemo(
+    () =>
+      hasHybrid
+        ? recommendHybrid(billValue, hybridTable!, preferredBatteryKwh, config.annualSavingMonthsMultiplier)
+        : null,
+    [hasHybrid, billValue, hybridTable, preferredBatteryKwh, config.annualSavingMonthsMultiplier]
+  );
+  const hybridOk = hybridRecommendation?.kind === "ok" ? hybridRecommendation : null;
+  const displayedResult = !isHybrid && recommendation.kind === "ok" ? recommendation : null;
   const popular = displayedResult && packages.some(
     (pkg) => pkg.sizeKw === displayedResult.row.kw && pkg.isPopular
   );
+  const resultView: ResultView | null = isHybrid
+    ? hybridOk && {
+        panels: hybridOk.size.panels,
+        roofM2: hybridOk.size.roofM2,
+        kwhPerMonth: hybridOk.kwhPerMonth,
+        monthlySaving: hybridOk.monthlySaving,
+        afterBill: hybridOk.afterBill,
+        coversFullBill: hybridOk.coversFullBill,
+        paybackYears: hybridOk.paybackYears,
+      }
+    : displayedResult && {
+        panels: displayedResult.row.panels,
+        roofM2: displayedResult.row.roofM2,
+        kwhPerMonth: displayedResult.kwhPerMonth,
+        monthlySaving: displayedResult.monthlySaving,
+        afterBill: displayedResult.afterBill,
+        coversFullBill: displayedResult.coversFullBill,
+        paybackYears: displayedResult.paybackYears,
+      };
+  const belowFirstRow = isHybrid ? Boolean(hybridOk?.belowFirstRow) : Boolean(displayedResult?.belowFirstRow);
+  const quoteSystem = hasHybrid ? (isHybrid ? "hybrid" : "on-grid") : undefined;
+  const quoteBattery = isHybrid && hybridOk ? String(hybridOk.batteryKwh) : undefined;
   const quoteBill = Number.isInteger(billValue) && billValue >= config.minBill && billValue <= AVG_MONTHLY_BILL_MAX
     ? String(billValue)
     : undefined;
@@ -53,8 +105,7 @@ export function CalculatorClient({
   // Slots always show real content (no slot toggles between content and nothing); the card
   // height stays constant because variants are designed to ~the same height and invisible
   // ghosts only absorb <=1-line differences inside a filled box.
-  type OkResult = Extract<ReturnType<typeof recommendFromTable>, { kind: "ok" }>;
-  const renderResult = (result: OkResult, bill: number) => {
+  const renderResult = (result: ResultView, bill: number) => {
     const years = (result.paybackYears ?? 9.9).toLocaleString(locale, {
       minimumFractionDigits: 1,
       maximumFractionDigits: 1,
@@ -90,8 +141,8 @@ export function CalculatorClient({
         </div>
         <div className="grid grid-cols-3 gap-2">
           {[
-            { label: t("tilePanels"), value: result.row.panels.toLocaleString(locale) },
-            { label: t("tileRoofArea"), value: `${result.row.roofM2.toLocaleString(locale)} ${t("unitSqm")}` },
+            { label: t("tilePanels"), value: result.panels.toLocaleString(locale) },
+            { label: t("tileRoofArea"), value: `${result.roofM2.toLocaleString(locale)} ${t("unitSqm")}` },
             { label: t("tileKwhPerMonth"), value: `${result.kwhPerMonth.toLocaleString(locale)} ${t("unitKwh")}` },
           ].map((tile) => (
             <div key={tile.label} className="min-w-0 rounded-xl border border-border bg-white px-2 py-3 text-center">
@@ -120,10 +171,10 @@ export function CalculatorClient({
       </div>
     );
   };
-  const calloutKind = displayedResult
-    ? displayedResult.belowFirstRow
+  const calloutKind = resultView
+    ? belowFirstRow
       ? "amber"
-      : displayedResult.coversFullBill
+      : resultView.coversFullBill
         ? "emerald"
         : "normal"
     : "normal";
@@ -142,20 +193,59 @@ export function CalculatorClient({
     ) : (
       t("coversFullBillSub")
     );
-  const sampleBill = Math.max(config.minBill, sizeTable[0]?.billMin ?? config.minBill);
+  const sampleBill = Math.max(config.minBill, (isHybrid ? hybridTable?.[0]?.billMin : sizeTable[0]?.billMin) ?? config.minBill);
   const sampleRecommendation = recommendFromTable(
     sampleBill,
     sizeTable,
     packages,
     config.annualSavingMonthsMultiplier
   );
-  const sampleResult = sampleRecommendation.kind === "ok" ? sampleRecommendation : null;
+  const sampleHybrid = hasHybrid
+    ? recommendHybrid(sampleBill, hybridTable!, null, config.annualSavingMonthsMultiplier)
+    : null;
+  const sampleResult: ResultView | null = isHybrid
+    ? sampleHybrid?.kind === "ok"
+      ? {
+          panels: sampleHybrid.size.panels,
+          roofM2: sampleHybrid.size.roofM2,
+          kwhPerMonth: sampleHybrid.kwhPerMonth,
+          monthlySaving: sampleHybrid.monthlySaving,
+          afterBill: sampleHybrid.afterBill,
+          coversFullBill: sampleHybrid.coversFullBill,
+          paybackYears: sampleHybrid.paybackYears,
+        }
+      : null
+    : sampleRecommendation.kind === "ok"
+      ? {
+          panels: sampleRecommendation.row.panels,
+          roofM2: sampleRecommendation.row.roofM2,
+          kwhPerMonth: sampleRecommendation.kwhPerMonth,
+          monthlySaving: sampleRecommendation.monthlySaving,
+          afterBill: sampleRecommendation.afterBill,
+          coversFullBill: sampleRecommendation.coversFullBill,
+          paybackYears: sampleRecommendation.paybackYears,
+        }
+      : null;
+
+  // The battery box is the biggest thing Hybrid adds to the result side. Its footprint is reserved
+  // from the Hybrid size with the most options (invisible ghost) in BOTH modes, so switching mode,
+  // size or battery never changes the card height.
+  const widestHybrid = hasHybrid
+    ? hybridTable!.reduce((best, size) => (size.batteries.length > best.batteries.length ? size : best), hybridTable![0])
+    : null;
+  const ghostKw = hasHybrid ? Math.max(...hybridTable!.map((size) => size.kw)) : 0;
 
   const resolvedPanelTitle = panelTitle ?? t("panelTitle");
   const resolvedPanelIntro = panelIntro ?? t("panelIntro");
 
   return (
     <div className="mx-auto max-w-[1140px] overflow-hidden rounded-[18px] border border-border bg-card text-left shadow-[0_18px_55px_rgba(13,71,161,0.08)]">
+      {hasHybrid && (
+        <SystemModeTabs
+          value={mode}
+          onChange={setSystemMode}
+        />
+      )}
       <div className="grid lg:grid-cols-[1.08fr_0.92fr]">
         <div className="bg-muted p-8 sm:p-10 lg:p-[30px]">
           <h2 className="text-2xl font-bold text-primary">{resolvedPanelTitle}</h2>
@@ -207,6 +297,7 @@ export function CalculatorClient({
                   {popular && ` ${t("popularSuffix")}`}
                 </>
               )}
+              {isHybrid && hybridOk && t("hybridResultSize", { kw: hybridOk.size.kw.toLocaleString(locale) })}
             </p>
             <div className="grid">
               <p aria-hidden className="invisible col-start-1 row-start-1 px-4 py-2.5 text-xs leading-5">
@@ -224,8 +315,41 @@ export function CalculatorClient({
 
         <div className="flex items-center bg-accent p-8 sm:p-10 lg:px-[30px]">
           <div className="w-full space-y-3">
-            {displayedResult ? (
-              renderResult(displayedResult, billValue)
+            {hasHybrid && widestHybrid && (
+              <div className="grid">
+                <div aria-hidden inert className="invisible col-start-1 row-start-1">
+                  <BatteryPicker
+                    ghost
+                    kw={ghostKw}
+                    phases={[1, 3]}
+                    options={widestHybrid.batteries.map((b) => b.batteryKwh)}
+                    value={Math.max(...widestHybrid.batteries.map((b) => b.batteryKwh))}
+                    preferred={null}
+                  />
+                </div>
+                <div className="col-start-1 row-start-1">
+                  <div className="h-full w-full">
+                    {isHybrid && hybridOk ? (
+                      <BatteryPicker
+                        kw={hybridOk.size.kw}
+                        phases={hybridOk.phases}
+                        options={hybridOk.batteryOptions}
+                        value={hybridOk.batteryKwh}
+                        preferred={preferredBatteryKwh}
+                        onChange={setPreferredBatteryKwh}
+                      />
+                    ) : (
+                      <ModeInfoBox
+                        mode={mode}
+                        phases={!isHybrid && displayedResult ? displayedResult.row.phases : undefined}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            {resultView ? (
+              renderResult(resultView, billValue)
             ) : (
               // Same footprint as a normal result: an invisible sample panel sizes the slot,
               // the message overlays it, so the card never jumps when the state changes.
@@ -236,10 +360,17 @@ export function CalculatorClient({
                   </div>
                 )}
                 <div className="col-start-1 row-start-1 flex items-center justify-center">
-                  {recommendation.kind === "tooLarge" ? (
+                  {(isHybrid ? hybridRecommendation?.kind : recommendation.kind) === "tooLarge" ? (
                     <div className="w-full rounded-xl border border-border bg-white p-6 text-center shadow-sm">
                       <h3 className="text-lg font-extrabold text-primary">
-                        {t("tooLargeTitle", { size: recommendation.lastRow.kw.toLocaleString(locale) })}
+                        {t("tooLargeTitle", {
+                          size: (isHybrid && hybridRecommendation?.kind === "tooLarge"
+                            ? hybridRecommendation.lastSize.kw
+                            : recommendation.kind === "tooLarge"
+                              ? recommendation.lastRow.kw
+                              : 0
+                          ).toLocaleString(locale),
+                        })}
                       </h3>
                       <p className="mt-2 text-sm leading-6 text-muted-foreground">{t("tooLargeBody")}</p>
                     </div>
@@ -254,7 +385,10 @@ export function CalculatorClient({
               <Link href={bookingHref({ tab: "survey" })} className="btn-pill-outline">
                 {tCommon("bookSurvey")}
               </Link>
-              <Link href={bookingHref({ tab: "quote", bill: quoteBill })} className="btn-pill">
+              <Link
+                href={bookingHref({ tab: "quote", bill: quoteBill, system: quoteSystem, battery: quoteBattery })}
+                className="btn-pill"
+              >
                 {tCommon("requestQuoteFree")}
               </Link>
             </div>
