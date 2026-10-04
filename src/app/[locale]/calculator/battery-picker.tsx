@@ -3,7 +3,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-const BOX = "flex h-full flex-col rounded-xl border border-border bg-white px-4 py-3.5 shadow-sm";
+const BOX = "flex h-full flex-col justify-between rounded-xl border border-border bg-white px-4 py-3.5 shadow-sm";
 
 /**
  * Shell of the "system" box on the input side of the Hybrid-toggle calculator
@@ -11,7 +11,9 @@ const BOX = "flex h-full flex-col rounded-xl border border-border bg-white px-4 
  * track, footer) whichever mode or state it shows, so the card never changes
  * height. Each row stacks invisible ghosts of every variant it can display in one
  * grid cell: a variant that wraps to a second line on a phone then reserves that
- * line in all the others.
+ * line in all the others. Header/footer text is centred in its reserved cell and the
+ * rows are spread (justify-between), so leftover height is split into small gaps
+ * instead of one hollow band.
  */
 export function SystemBox({
   header,
@@ -47,7 +49,7 @@ export function SystemBox({
             {ghost}
           </p>
         ))}
-        <p className={cn(headerCls, "col-start-1 row-start-1")}>{header}</p>
+        <p className={cn(headerCls, "col-start-1 row-start-1 self-center")}>{header}</p>
       </div>
       <div className="grid">
         {captionGhosts.map((ghost, i) => (
@@ -64,13 +66,13 @@ export function SystemBox({
         </p>
       </div>
       <div className="mt-2.5">{track}</div>
-      <div className="mt-auto grid">
+      <div className="grid">
         {footerGhosts.map((ghost, i) => (
           <p key={i} aria-hidden className={cn(footerCls, "invisible col-start-1 row-start-1")}>
             {ghost}
           </p>
         ))}
-        <p className={cn(footerCls, "col-start-1 row-start-1")}>{footer}</p>
+        <p className={cn(footerCls, "col-start-1 row-start-1 self-center")}>{footer}</p>
       </div>
     </div>
   );

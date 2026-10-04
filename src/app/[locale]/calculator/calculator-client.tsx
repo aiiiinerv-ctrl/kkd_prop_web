@@ -362,14 +362,16 @@ export function CalculatorClient({
       </div>
     </div>
   );
-  const ctas = (padding: string) => (
-    <div className={`flex flex-wrap justify-center gap-3 ${padding}`}>
-      <Link href={bookingHref({ tab: "survey" })} className="btn-pill-outline">
+  // `compact` (Hybrid-toggle layout): one row from lg up (tighter px) so the two-column card
+  // doesn't stretch the left System box when English labels would otherwise wrap to two rows.
+  const ctas = (padding: string, compact = false) => (
+    <div className={`flex flex-wrap justify-center gap-3 ${compact ? "lg:flex-nowrap " : ""}${padding}`}>
+      <Link href={bookingHref({ tab: "survey" })} className={compact ? "btn-pill-outline lg:px-5" : "btn-pill-outline"}>
         {tCommon("bookSurvey")}
       </Link>
       <Link
         href={bookingHref({ tab: "quote", bill: quoteBill, system: quoteSystem, battery: quoteBattery })}
-        className="btn-pill"
+        className={compact ? "btn-pill lg:px-5" : "btn-pill"}
       >
         {tCommon("requestQuoteFree")}
       </Link>
@@ -454,11 +456,12 @@ export function CalculatorClient({
   const popularChip = (
     <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">{tCommon("popular")}</span>
   );
-  const bothPhases: (1 | 3)[] = [1, 3];
   const phaseUnion = (rows: { phases: (1 | 3)[] }[]) =>
     ([1, 3] as const).filter((ph) => rows.some((r) => r.phases.includes(ph)));
   const onGridPhases = phaseUnion(sizeTable);
   const hybridPhases = phaseUnion(hybridTable!);
+  // Empty headers put the pill on its own row below sm: the reserved header (title + pill + chip)
+  // wraps to two rows there, so a one-row empty header would leave a hollow band.
   // What the battery track lists while Hybrid has nothing to price (disabled look).
   const idleSize =
     hybridRecommendation?.kind === "tooLarge" ? hybridRecommendation.lastSize : hybridTable![0];
@@ -498,7 +501,9 @@ export function CalculatorClient({
     header = (
       <>
         {t("modeHybrid")}
-        <PhasePill phases={hybridPhases} />
+        <div className="basis-full sm:basis-auto">
+          <PhasePill phases={hybridPhases} />
+        </div>
       </>
     );
     caption = t("modeHybridHint");
@@ -517,7 +522,9 @@ export function CalculatorClient({
     ) : (
       <>
         {t("modeOnGrid")}
-        <PhasePill phases={onGridPhases} />
+        <div className="basis-full sm:basis-auto">
+          <PhasePill phases={onGridPhases} />
+        </div>
       </>
     );
     caption = t("modeOnGridHint");
@@ -553,15 +560,19 @@ export function CalculatorClient({
             <SystemBox
               header={header}
               headerGhosts={[
-                <>
-                  {t("hybridResultSize", { kw: ghostKw.toLocaleString(locale) })}
-                  <PhasePill phases={bothPhases} />
-                </>,
-                <>
-                  {t("resultSystemSize", { kw: maxOnGridKw.toLocaleString(locale) })}
-                  <PhasePill phases={bothPhases} />
-                  {popularChip}
-                </>,
+                ...hybridTable!.map((size) => (
+                  <>
+                    {t("hybridResultSize", { kw: size.kw.toLocaleString(locale) })}
+                    <PhasePill phases={size.phases} />
+                  </>
+                )),
+                ...sizeTable.map((row) => (
+                  <>
+                    {t("resultSystemSize", { kw: row.kw.toLocaleString(locale) })}
+                    {row.phases.length > 0 && <PhasePill phases={row.phases} />}
+                    {packages.some((pkg) => pkg.sizeKw === row.kw && pkg.isPopular) && popularChip}
+                  </>
+                )),
               ]}
               caption={caption}
               captionId={isHybrid && hybridOk ? "calc-battery-label" : undefined}
@@ -593,7 +604,7 @@ export function CalculatorClient({
                 ? renderResult(sampleResult, sampleBill, null, true)
                 : renderUnavailable(true)}
             {calloutBlock}
-            {ctas("pt-1")}
+            {ctas("pt-1", true)}
           </div>
         </div>
       </div>
