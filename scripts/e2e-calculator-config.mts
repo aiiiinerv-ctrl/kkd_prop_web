@@ -744,10 +744,11 @@ await marketingR1.close();
   if (hybridLen(withHybrid.hybridSizeTable) !== 9 || withHybrid.sizeTableImportId !== created2.id) fail("R2-S4 apply: config must hold the 9-row Hybrid table of the applied version");
   pass("R2-S4 apply: two-sheet file -> config.hybridSizeTable has 9 rows, import id points at the new row");
 
-  // Public pages must not expose brands/prices (public page does not pass hybridTable yet).
+  // Public pages must not expose brand names or per-brand prices (R2-S9 passes only the projected
+  // table: kW, phases, battery sizes and the minimum usable price per battery).
   for (const locale of ["th", "en"] as const) {
     const html = await (await fetch(`${BASE_URL}/${locale}/calculator`)).text();
-    if (/BrandA|BrandB|brandPrices|hybridTable|hybridSizeTable/.test(html)) fail(`R2-S4 PUBLIC ${locale}: HTML leaks Hybrid brand/price data`);
+    if (/BrandA|BrandB|brandPrices|hybridSizeTable/.test(html)) fail(`R2-S4 PUBLIC ${locale}: HTML leaks Hybrid brand/price data`);
   }
   pass("R2-S4 PUBLIC: /th + /en calculator HTML contains no brand names / brandPrices after applying a 2-sheet file");
 
@@ -926,6 +927,65 @@ await marketingR1.close();
   pass("R2-S6: delete + restore a Hybrid size leaves nothing dirty");
 }
 
+// --- R2-S9: public Hybrid toggle (Variant B). Config now holds the two-sheet fixture:
+// 5 kW (1+3 phase; 0/16 kWh, bill 3000-6000), 10 kW (3 phase; 0/16/32, 6000-12000), 20 kW (0/16, 13000-20000). ---
+{
+  const cardHeight = (p: Page) => p.locator("#monthly-bill").evaluate((el) => Math.round(el.closest(".overflow-hidden")!.getBoundingClientRect().height));
+  for (const locale of ["th", "en"] as const) {
+    for (const width of [1280, 375]) {
+      const p = await browser.newPage({ viewport: { width, height: 900 } });
+      await p.goto(`${BASE_URL}/${locale}/calculator`);
+      await p.waitForSelector("#monthly-bill", { timeout: 15000 });
+      const setBill = async (v: number) => { await p.fill("#monthly-bill", String(v)); await p.waitForTimeout(120); };
+      const tag = `R2-S9 ${locale}@${width}`;
+      if ((await p.locator('input[name="calc-mode"]').count()) !== 2) fail(`${tag}: toggle (radiogroup, 2 radios) must show when a Hybrid table exists`);
+      if (!(await p.locator('input[name="calc-mode"][value="onGrid"]').isChecked())) fail(`${tag}: page must start in On-grid`);
+      const heights: number[] = [];
+      await setBill(9500);
+      heights.push(await cardHeight(p));
+      const cta = () => p.locator("#monthly-bill").locator("xpath=ancestor::div[contains(@class,'overflow-hidden')][1]").locator("a.btn-pill").getAttribute("href");
+      const ogHref = (await cta()) ?? "";
+      if (!/system=on-grid/.test(ogHref) || /battery=/.test(ogHref)) fail(`${tag}: On-grid CTA must carry system=on-grid and no battery, got ${ogHref}`);
+      await p.locator('label:has(input[name="calc-mode"][value="hybrid"])').click();
+      await p.waitForSelector('input[name="calc-battery"]');
+      heights.push(await cardHeight(p));
+      if (!(await p.locator('input[name="calc-battery"][value="16"]').isChecked())) fail(`${tag}: first battery shown must be the smallest > 0 (16)`);
+      if (!/system=hybrid/.test((await cta()) ?? "") || !/battery=16/.test((await cta()) ?? "")) fail(`${tag}: Hybrid CTA must carry system=hybrid&battery=16, got ${await cta()}`);
+      await p.locator('label:has(input[name="calc-battery"][value="32"])').click();
+      heights.push(await cardHeight(p));
+      if (!/battery=32/.test((await cta()) ?? "")) fail(`${tag}: CTA must follow the battery choice`);
+      // Drag across kW: 5 kW only offers 0/16 -> nearest to 32 is 16 + note; back on 10 kW -> 32 returns.
+      await setBill(3500);
+      heights.push(await cardHeight(p));
+      if (!(await p.locator('input[name="calc-battery"][value="16"]').isChecked())) fail(`${tag}: 5 kW must show the nearest battery (16)`);
+      if (!/ปรับเป็น|Adjusted/.test(await p.locator("#calc-battery-label").innerText())) fail(`${tag}: auto-adjust note missing`);
+      if ((await p.locator("#calc-battery-label").getAttribute("aria-live")) !== "polite") fail(`${tag}: note must be aria-live=polite`);
+      await setBill(9500);
+      if (!(await p.locator('input[name="calc-battery"][value="32"]').isChecked())) fail(`${tag}: the earlier choice (32) must come back at 10 kW`);
+      // Bill below the first row / above the last row; the bill is untouched by switching modes.
+      await setBill(1000);
+      heights.push(await cardHeight(p));
+      if (!/ต่ำกว่าช่วง|below the range|lower than/i.test(await p.locator("body").innerText())) fail(`${tag}: belowFirstRow note missing at bill 1000`);
+      await setBill(25000);
+      heights.push(await cardHeight(p));
+      if ((await p.locator('input[name="calc-battery"]').count()) !== 0) fail(`${tag}: tooLarge must hide the battery choice`);
+      if (!/20 kW/.test(await p.locator("body").innerText())) fail(`${tag}: tooLarge must name the last Hybrid size (20 kW)`);
+      await setBill(9500);
+      await p.locator('label:has(input[name="calc-mode"][value="onGrid"])').click();
+      if ((await p.locator("#monthly-bill").inputValue()) !== "9500") fail(`${tag}: switching mode must not change the bill`);
+      heights.push(await cardHeight(p));
+      if (new Set(heights).size !== 1) fail(`${tag}: card height must stay constant across modes/batteries/bills, got ${heights.join(",")}`);
+      await p.close();
+    }
+  }
+  pass("R2-S9 public: toggle, smallest battery first, nearest + note + restore, CTA params, below/tooLarge, constant card height (th/en x 1280/375)");
+  for (const locale of ["th", "en"] as const) {
+    const html = await (await fetch(`${BASE_URL}/${locale}/calculator`)).text();
+    if (/BrandA|BrandB|brandPrices|hybridSizeTable/.test(html)) fail(`R2-S9 PUBLIC ${locale}: HTML leaks brand names / per-brand prices`);
+  }
+  pass("R2-S9 public: HTML has no brand names / brandPrices");
+}
+
 // --- R2-S7: import preview with the removal box, reject grouped per sheet, history copy ---
 {
   await openTablesTab(page);
@@ -977,8 +1037,13 @@ for (const locale of ["th", "en"] as const) {
   if (await publicHas(pub, locale, 7000, SEVEN)) fail(`RESET ${locale}: 7 kW must be gone`);
   if (!(await publicHas(pub, locale, 7000, /(?<![\d.])10\s*kW/))) fail(`RESET ${locale}: bill 7000 must recommend 10 kW again (baseline)`);
 }
+for (const locale of ["th", "en"] as const) {
+  await pub.goto(`${BASE_URL}/${locale}/calculator`);
+  await pub.waitForSelector("#monthly-bill");
+  if ((await pub.locator('input[name="calc-mode"], input[name="calc-battery"]').count()) !== 0) fail(`RESET ${locale}: no Hybrid table -> no toggle / battery controls`);
+}
 await pub.close();
-pass("RESET: /th + /en back to the default table (bill 7000 -> 10 kW)");
+pass("RESET: /th + /en back to the default table (bill 7000 -> 10 kW), no toggle without a Hybrid table");
 
 // --- Audit trail ---
 const importCreateAudit = await prisma.auditLog.findFirst({
