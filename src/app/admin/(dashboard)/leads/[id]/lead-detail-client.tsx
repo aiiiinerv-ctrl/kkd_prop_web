@@ -52,6 +52,7 @@ type LeadDetail = {
   buildingType: BuildingType;
   buildingTypeOtherText: string | null;
   avgMonthlyBill: number | null;
+  interestedBatteryKwh: number | null;
   interestedSystems: string[] | null;
   interestedPackageSlug: string | null;
   interestedServiceSlug: string | null;
@@ -222,6 +223,12 @@ export function LeadDetailClient({
                   <dd className="font-medium">
                     {lead.avgMonthlyBill.toLocaleString()} บาท/เดือน
                   </dd>
+                </div>
+              )}
+              {lead.interestedBatteryKwh != null && (
+                <div>
+                  <dt className="text-muted-foreground">ขนาดแบตที่สนใจ</dt>
+                  <dd className="font-medium">{lead.interestedBatteryKwh.toLocaleString()} kWh</dd>
                 </div>
               )}
               {lead.interestedPackageSlug && (

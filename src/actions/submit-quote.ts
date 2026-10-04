@@ -53,6 +53,11 @@ export async function submitQuote(input: unknown): Promise<SubmitResult> {
       interestedSystems: data.interestedSystems?.length
         ? data.interestedSystems
         : Prisma.JsonNull,
+      // Only meaningful alongside HYBRID — a stale value from an un-ticked
+      // checkbox must never reach the row (R16).
+      interestedBatteryKwh: data.interestedSystems?.includes("HYBRID")
+        ? (data.interestedBatteryKwh ?? null)
+        : null,
       interestedPackageSlug,
       interestedServiceSlug,
       locale: data.locale,

@@ -30,7 +30,14 @@ export default async function BookingPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ tab?: string; bill?: string; package?: string; service?: string }>;
+  searchParams: Promise<{
+    tab?: string;
+    bill?: string;
+    package?: string;
+    service?: string;
+    system?: string;
+    battery?: string;
+  }>;
 }) {
   const { locale } = await params;
   // Parsed with the same contract the link-side helper (bookingHref) builds
@@ -39,7 +46,13 @@ export default async function BookingPage({
   // an unrecognized slug is never handed to the form.
   const rawParams = await searchParams;
   const parsedParams = bookingLinkParamsSchema.safeParse(rawParams);
-  const { bill, package: packageSlug, service: serviceSlug } = parsedParams.success
+  const {
+    bill,
+    package: packageSlug,
+    service: serviceSlug,
+    system: systemParam,
+    battery: batteryParam,
+  } = parsedParams.success
     ? parsedParams.data
     : {};
   setRequestLocale(locale);
@@ -83,9 +96,15 @@ export default async function BookingPage({
   // A system service card ("ขอใบเสนอราคา" on on-grid/hybrid/off-grid) pre-ticks
   // the matching "ระบบที่สนใจ" checkbox. Derived from the resolved (real) slug,
   // so an unknown/maintenance service pre-selects nothing.
-  const interestedSystem = serviceRow
-    ? SERVICE_SLUG_TO_INTERESTED_SYSTEM[serviceRow.slug]
-    : undefined;
+  // An explicit `?system=` (calculator hand-off) wins over the service-derived one.
+  const interestedSystem = systemParam
+    ? SERVICE_SLUG_TO_INTERESTED_SYSTEM[systemParam]
+    : serviceRow
+      ? SERVICE_SLUG_TO_INTERESTED_SYSTEM[serviceRow.slug]
+      : undefined;
+  // The battery size only means something for a hybrid quote (R16).
+  const initialBatteryKwh =
+    systemParam === "hybrid" && batteryParam && Number(batteryParam) <= 10000 ? batteryParam : "";
 
   const siteContact = resolveQuickContact(siteSettings);
 
@@ -105,6 +124,7 @@ export default async function BookingPage({
           initialPackageSlug={packageRow?.slug ?? ""}
           initialServiceSlug={serviceRow?.slug ?? ""}
           initialInterestedSystems={interestedSystem ? [interestedSystem] : []}
+          initialBatteryKwh={initialBatteryKwh}
           initialSourceChannelId={initialSourceChannelId}
           initialReferrerName={initialReferrerName}
           channels={channels}

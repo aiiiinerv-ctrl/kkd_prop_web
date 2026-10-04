@@ -56,6 +56,9 @@ export function formatLeadSummary(event: LeadNotification): {
             .join(", ")}`,
         ]
       : []),
+    ...(lead.interestedBatteryKwh != null
+      ? [`แบตเตอรี่ที่สนใจ: ${lead.interestedBatteryKwh.toLocaleString()} kWh`]
+      : []),
     ...(channelName ? [`ช่องทางที่รู้จักเรา: ${channelName}`] : []),
     ...(lead.customerMessage
       ? [`ข้อความจากลูกค้า: ${truncate(lead.customerMessage, CUSTOMER_MESSAGE_MAX_LENGTH)}`]
