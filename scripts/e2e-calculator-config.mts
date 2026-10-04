@@ -663,7 +663,7 @@ await page.setInputFiles("#calc-import-file", exportedPath);
 await page.click("#calc-import-upload");
 await page.waitForSelector("#calc-import-preview", { timeout: 15000 });
 await page.waitForSelector("#calc-import-overwrite", { state: "visible", timeout: 5000 });
-if (!(await page.locator("#calc-import-overwrite").innerText()).includes("ไฟล์นี้จะแทนที่ตารางทั้งชุด")) fail("IMPORT: overwrite box text missing");
+if (!(await page.locator("#calc-import-overwrite").innerText()).includes("ไฟล์นี้จะแทนที่ตารางทั้ง 2 ชุด")) fail("IMPORT: overwrite box text missing");
 await checkLayout(page, "import-overwrite");
 await page.click("#calc-import-apply");
 await page.click("#calc-import-apply-confirm");
@@ -824,6 +824,125 @@ await marketingR1.close();
   await page.waitForTimeout(1500);
   if (hybridLen((await configNow()).hybridSizeTable) !== 9) fail("R2-S4 history: 'ใช้ชุดนี้' on the two-sheet version must restore the Hybrid table");
   pass("R2-S4 history: ใช้ชุดนี้ on the two-sheet version restores the 9-row Hybrid table");
+}
+
+// --- R2-S6: hand-edit the Hybrid table (sub-tabs, dialog, E3 label, save both tables) ---
+{
+  const hybridLen = (v: unknown) => (Array.isArray(v) ? v.length : 0);
+  const hyKey = (rows: unknown, kw: number, phase: number, battery: number) =>
+    (rows as { kw: number; phase: number; batteryKwh: number; brandPrices: { priceThb: number | null }[] }[]).find(
+      (r) => r.kw === kw && r.phase === phase && r.batteryKwh === battery
+    );
+  await openTablesTab(page);
+  const hybridTrigger = page.locator("#calc-tables-tab-hybrid");
+  if (!(await hybridTrigger.innerText()).includes("3 ขนาด")) fail("R2-S6: Hybrid sub-tab label must show the size count");
+  await hybridTrigger.click();
+  await page.waitForSelector("#calc-edit-hybrid-10", { state: "visible", timeout: 10000 });
+  if ((await page.locator("#calc-add-hybrid").count()) !== 1) fail("R2-S6: Hybrid list needs an add-size button when a table exists");
+
+  // keepMounted: both sub-tab panels stay in the DOM.
+  if ((await page.locator("#calc-edit-on-grid-5").count()) !== 1) fail("R2-S6: On-grid panel must stay mounted while Hybrid is open (keepMounted)");
+
+  await page.click("#calc-edit-hybrid-10");
+  await page.waitForSelector("#calc-size-dialog", { state: "visible" });
+  await page.fill("#hy-price-0-3-16", "213000");
+  await page.fill("#hy-price-2-3-0", "0");
+  await page.locator("#hy-price-2-3-0").blur();
+  await page.waitForFunction(() => (document.getElementById("hy-price-2-3-0") as HTMLInputElement).value === "");
+  const dialogText = await page.locator("#calc-size-dialog").innerText();
+  if (!dialogText.includes("ไม่นำมาคิด")) fail('R2-S6: a battery price without a no-battery price must show "ไม่นำมาคิด"');
+  if (!dialogText.includes("BrandA")) fail("R2-S6: brand names must be visible (read-only) in the admin dialog");
+  await page.locator("#calc-size-dialog-ok").click();
+  await closeDialog(page);
+  await page.waitForSelector("#calc-tables-savebar", { timeout: 5000 });
+  if (!(await page.locator("#calc-tables-savebar").innerText()).includes("Hybrid 1")) fail("R2-S6: save bar must count the Hybrid edit");
+  await page.click("#calc-tables-save");
+  await page.waitForSelector("#calc-tables-confirm");
+  const confirmText = await page.locator("#calc-tables-confirm").innerText();
+  if (!confirmText.includes("Hybrid 10 kW") || !confirmText.includes("213,000")) fail("R2-S6: confirm dialog must list the Hybrid price change");
+  const importsBeforeSave = await prisma.calculatorImport.count();
+  await page.click("#calc-tables-confirm-save");
+  await page.getByText("บันทึกแล้ว").first().waitFor({ timeout: 15000 });
+  const savedCfg = await configNow();
+  if (hyKey(savedCfg.hybridSizeTable, 10, 3, 16)?.brandPrices[0].priceThb !== 213000) fail("R2-S6: saved config must hold the edited Hybrid price");
+  if (hyKey(savedCfg.hybridSizeTable, 10, 3, 0)?.brandPrices[2].priceThb !== null) fail("R2-S6: a price cleared with 0 must be saved as no price");
+  const manual = await prisma.calculatorImport.findFirstOrThrow({ orderBy: { createdAt: "desc" } });
+  if ((await prisma.calculatorImport.count()) !== importsBeforeSave + 1 || manual.source !== "MANUAL" || hybridLen(manual.hybridRows) !== 9) {
+    fail("R2-S6: save must add one MANUAL version that carries the 9-row Hybrid table");
+  }
+  pass("R2-S6: Hybrid price edit -> confirm lists it -> saved with the On-grid table into one MANUAL version (9 Hybrid rows)");
+
+  // Error in the inactive sub-tab shows a badge; "ไปที่จุดแรก" switches tab and opens the dialog.
+  await openTablesTab(page);
+  await page.click("#calc-tables-tab-hybrid");
+  await page.click("#calc-edit-hybrid-20");
+  await page.fill("#hy-bill-max", "5000");
+  await page.locator("#hy-bill-max").blur();
+  await page.locator("#calc-size-dialog-ok").click();
+  await closeDialog(page);
+  await page.click("#calc-tables-tab-on-grid");
+  if (!(await page.locator("#calc-tables-tab-hybrid").innerText()).includes("ผิด")) fail('R2-S6: Hybrid sub-tab must show a "ผิด n" badge while on the On-grid tab');
+  if (!(await page.locator("#calc-tables-save").isDisabled())) fail("R2-S6: save must be disabled while the Hybrid table has an error");
+  await page.click("#calc-tables-goto-error");
+  await page.waitForSelector("#calc-size-dialog", { state: "visible" });
+  if ((await page.locator("#calc-tables-tab-hybrid").getAttribute("data-active")) === null) fail("R2-S6: goto-error must switch to the Hybrid sub-tab");
+  await page.fill("#hy-bill-max", "20000");
+  await page.locator("#hy-bill-max").blur();
+  await page.locator("#calc-size-dialog-ok").click();
+  await closeDialog(page);
+  if ((await page.locator("#calc-tables-savebar").count()) !== 0) fail("R2-S6: fixing the field back to the original must clear the save bar");
+  pass("R2-S6: error badge on the inactive Hybrid sub-tab, goto-error switches tab + opens dialog, fix clears the bar");
+  await checkLayout(page, "hybrid-list");
+
+  // Delete + restore a Hybrid size; deleting everything is blocked.
+  await page.click("#calc-tables-tab-hybrid");
+  await page.click("#calc-edit-hybrid-20");
+  await page.click("#calc-size-dialog-delete");
+  await closeDialog(page);
+  if (!(await page.locator("#calc-restore-hybrid-20").isVisible())) fail('R2-S6: deleted Hybrid size must offer "คืนขนาดนี้"');
+  await page.click("#calc-restore-hybrid-20");
+  if ((await page.locator("#calc-tables-savebar").count()) !== 0) fail("R2-S6: restoring a deleted size must clear the save bar");
+  pass("R2-S6: delete + restore a Hybrid size leaves nothing dirty");
+}
+
+// --- R2-S7: import preview with the removal box, reject grouped per sheet, history copy ---
+{
+  await openTablesTab(page);
+  await openImportPanel(page);
+  await page.setInputFiles("#calc-import-file", warningFilePath);
+  await page.click("#calc-import-upload");
+  await page.waitForSelector("#calc-import-preview", { timeout: 15000 });
+  const box = page.locator("#calc-import-hybrid-removed");
+  await box.waitFor({ state: "visible", timeout: 5000 });
+  if (!(await box.innerText()).includes("ไฟล์นี้ไม่มีชีต Hybrid")) fail("R2-S7: removal box text missing");
+  if (!((await box.getAttribute("class")) ?? "").includes("border-destructive")) fail("R2-S7: removal box must use the destructive border");
+  if (!(await page.locator("#calc-import-meta").innerText()).includes("ไม่มีชีต Hybrid")) fail("R2-S7: meta line must say the file has no Hybrid sheet");
+  await page.click("#calc-import-apply");
+  if (!(await page.locator("#calc-import-apply-confirm").innerText()).includes("ลบ Hybrid")) fail("R2-S7: confirm button must say it removes Hybrid");
+  await checkLayout(page, "import-removal", true);
+  pass("R2-S7: On-grid-only file -> destructive removal box, meta line, destructive confirm (not applied)");
+
+  const badHy = goodHybridRows();
+  badHy.push({ ...badHy[0] });
+  const badHyPath = await writeTempXlsx(
+    await buildOnGridFixture({ includeCategory: true, rows: goodRows(), hybrid: { rows: badHy, brands: FIXTURE_BRANDS } }),
+    "bad-hybrid-s7.xlsx"
+  );
+  await page.setInputFiles("#calc-import-file", badHyPath);
+  await page.click("#calc-import-upload");
+  await page.waitForSelector("#calc-import-reject", { timeout: 15000 });
+  const rejectText = await page.locator("#calc-import-reject").innerText();
+  if (!/ชีต Hybrid \(\d+ ข้อ\)/.test(rejectText) || !rejectText.includes("ทั้งไฟล์ไม่ผ่าน แม้ชีต On-grid จะถูกต้อง")) fail("R2-S7: reject must group by sheet and say the whole file failed");
+  pass("R2-S7: bad Hybrid sheet -> reject grouped under 'ชีต Hybrid (n ข้อ)' with the whole-file note");
+
+  // History: version without Hybrid shows the count copy and warns before replacing a live Hybrid table.
+  const noHybridItem = page.locator("#calc-import-history li", { hasText: "ไม่มี Hybrid" }).first();
+  await noHybridItem.locator('button:has-text("ใช้ชุดนี้")').click();
+  const useText = await noHybridItem.innerText();
+  if (!useText.includes("เวอร์ชันนี้ไม่มีตาราง Hybrid")) fail("R2-S7: using a version without Hybrid must warn that Hybrid disappears");
+  await noHybridItem.locator('button:has-text("ยกเลิก")').click();
+  if (!(await page.locator("#calc-import-history li", { hasText: "Hybrid 3 ขนาด" }).first().isVisible())) fail("R2-S7: history must show 'Hybrid n ขนาด'");
+  pass("R2-S7: history shows Hybrid counts; 'ใช้ชุดนี้' on a no-Hybrid version warns before removal");
 }
 
 // --- 10. Reset (UI) -> back to the baseline default table ---
