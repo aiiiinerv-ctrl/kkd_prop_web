@@ -26,6 +26,7 @@ import {
   hybridSizeStatus,
   toHybridField,
   type HybridField,
+  dedupeHybridIssues,
 } from "@/hooks/admin/hybrid-draft";
 import {
   issueText,
@@ -110,7 +111,8 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
 
   const { active, onGrid } = data;
   const { dirty, issues, hybridIssues, rows, hybridSizes } = draft;
-  const errorCount = issues.length + hybridIssues.length;
+  const hybridErrorCount = dedupeHybridIssues(hybridIssues).length;
+  const errorCount = issues.length + hybridErrorCount;
   const liveOnGridCount = rows.filter((r) => !r.deleted).length;
   const liveHybridCount = hybridSizes ? hybridSizes.filter((s) => !s.deleted).length : 0;
   const hybridSizeCount = data.hybrid ? new Set(data.hybrid.map((r) => r.kw)).size : 0;
@@ -401,7 +403,7 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
                 <span className="text-muted-foreground">
                   {hybridSizes === null ? "(ไม่มี)" : `(${liveHybridCount} ขนาด)`}
                 </span>
-                {hybridIssues.length > 0 && <Badge variant="destructive">ผิด {hybridIssues.length}</Badge>}
+                {hybridErrorCount > 0 && <Badge variant="destructive">ผิด {hybridErrorCount}</Badge>}
               </TabsTrigger>
             </TabsList>
             {/* keepMounted on both panels: unsaved edits and dialogs must survive switching sub-tabs (AGENTS.md). */}

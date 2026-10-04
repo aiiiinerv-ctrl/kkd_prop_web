@@ -89,6 +89,24 @@ export type HybridIssue = {
   message: string;
 };
 
+/** Battery / price problems belong to one battery row; every other field is shared by all rows of a size. */
+export const isHybridRowField = (i: Pick<HybridIssue, "field">) => i.field === "batteryKwh" || i.field === "prices";
+
+/**
+ * The ONE way Hybrid errors are counted (row badge, sub-tab badge, save bar, dialog summary). The
+ * validator reports a shared-field problem (e.g. a bad bill range) once per battery row; the admin
+ * sees one problem, so collapse by size + field + message (+ rowKey for battery / price issues only).
+ */
+export function dedupeHybridIssues(issues: HybridIssue[]): HybridIssue[] {
+  const seen = new Set<string>();
+  return issues.filter((i) => {
+    const k = `${i.key}|${i.field}|${i.message}|${isHybridRowField(i) ? (i.rowKey ?? "") : ""}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
 const isNum = (v: number | null): v is number => typeof v === "number" && Number.isFinite(v);
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const kwId = (kw: number) => String(kw).replace(".", "_");

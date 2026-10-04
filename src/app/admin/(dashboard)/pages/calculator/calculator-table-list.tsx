@@ -31,6 +31,7 @@ import {
   type DraftHybridSize,
   type HybridIssue,
   type HybridSizeSummary,
+  dedupeHybridIssues,
 } from "@/hooks/admin/hybrid-draft";
 import type { HybridRow } from "@/lib/calculator-hybrid";
 import {
@@ -347,7 +348,7 @@ export function HybridList({
               const status = hybridSizeStatus(size, brands);
               const deleted = status === "deleted";
               const strike = deleted && "line-through";
-              const rowIssues = issues.filter((i) => i.key === size.key);
+              const rowIssues = dedupeHybridIssues(issues.filter((i) => i.key === size.key));
               const c = size.current;
               const resolved = deleted ? size.original : resolveHybridSize(c, brands);
               const summary = resolved ? summarizeHybridRows(resolved, multiplier) : null;

@@ -884,8 +884,20 @@ await marketingR1.close();
   // Admin polish M1: re-opening a size that already has a problem shows it at once (no touch needed).
   await page.click("#calc-edit-hybrid-20");
   await page.waitForSelector("#calc-size-dialog-errors", { state: "visible", timeout: 5000 });
+  // Error counts: ONE wrong bill range = 1 everywhere (dialog summary, inline once, row badge, tab badge, save bar).
+  const dlgErrText = await page.locator("#calc-size-dialog-errors").innerText();
+  if (!/ต้องแก้ 1 จุด/.test(dlgErrText)) fail(`counts: dialog summary must say 1 for a single bad bill range, got: ${dlgErrText.slice(0, 80)}`);
+  if ((await page.locator("#calc-size-dialog-errors li").count()) !== 1) fail("counts: shared-field error must be listed once in the dialog summary");
+  const errMsg = (await page.locator("#calc-size-dialog-errors li").first().innerText()).trim();
+  if ((await page.locator("#calc-size-dialog").getByText(errMsg, { exact: true }).count()) !== 2) fail(`counts: error "${errMsg}" must appear exactly twice in the dialog (inline under the field + once in the summary)`);
   await page.locator("#calc-size-dialog-cancel").click();
   await closeDialog(page);
+  const badgeNum = (t: string) => Number(/ผิด\s*(\d+)/.exec(t)?.[1] ?? NaN);
+  const rowBadge = badgeNum(await page.locator("#calc-edit-hybrid-20").locator("xpath=ancestor::tr").innerText());
+  const tabBadge = badgeNum(await page.locator("#calc-tables-tab-hybrid").innerText());
+  const barCount = Number(/ข้อผิดพลาด\s*(\d+)\s*จุด/.exec(await page.locator("#calc-tables-savebar").innerText())?.[1] ?? NaN);
+  if (rowBadge !== 1 || tabBadge !== 1 || barCount !== 1) fail(`counts: row/tab/save bar must all be 1, got ${rowBadge}/${tabBadge}/${barCount}`);
+  pass("counts: single bad bill range -> row badge = tab badge = save bar = dialog = 1");
   pass("M1: re-opening a Hybrid size with an error shows the error list immediately");
   await page.click("#calc-tables-tab-on-grid");
   if (!(await page.locator("#calc-tables-tab-hybrid").innerText()).includes("ผิด")) fail('R2-S6: Hybrid sub-tab must show a "ผิด n" badge while on the On-grid tab');
