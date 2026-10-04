@@ -53,12 +53,20 @@ export default async function CalculatorPage({
     <main className="bg-background">
       <PageBanner pageSlug="calculator" />
       <section className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6">
-        <Reveal className="mx-auto mb-8 max-w-3xl text-center">
+        <Reveal className="mx-auto mb-8 max-w-5xl text-center">
           <p className="text-sm font-bold text-accent-foreground">
             {pick(pageContent?.eyebrow, "eyebrow")}
           </p>
-          <h1 className="mt-4 text-3xl font-extrabold leading-tight tracking-[-0.01em] text-primary sm:text-4xl">
-            {pick(pageContent?.title, "title")}
+          <h1 className="mt-4 text-3xl font-extrabold text-balance leading-tight tracking-[-0.01em] text-primary sm:text-4xl">
+            {pick(pageContent?.title, "title")
+              .replace(/ ([—–-])(?= |$)/g, "\u00A0$1")
+              .split(" ")
+              .map((word, i) => (
+                <span key={i}>
+                  {i > 0 ? " " : null}
+                  <span className="whitespace-nowrap">{word}</span>
+                </span>
+              ))}
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
             {pick(pageContent?.subtitle, "subtitle")}
