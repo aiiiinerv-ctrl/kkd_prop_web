@@ -1,6 +1,7 @@
 import { canManageContent, canManageSiteSettings, requireRole } from "@/lib/auth";
 import { getPageBannerAdmin } from "@/lib/admin/page-banner-admin";
 import { CALCULATOR_DEFAULTS } from "@/lib/calculator";
+import { hybridTableSchema, type HybridRow } from "@/lib/calculator-hybrid";
 import { resolveSizeTable } from "@/lib/calculator-size-table";
 import { rowToCalculatorParams } from "@/lib/calculator-config";
 import { prisma } from "@/lib/db";
@@ -53,6 +54,7 @@ export default async function PagesCalculatorPage() {
             fileKey: true,
             createdAt: true,
             rows: true,
+            hybridRows: true,
             warnings: true,
             uploadedBy: { select: { name: true } },
           },
@@ -68,6 +70,10 @@ export default async function PagesCalculatorPage() {
     createdAt: row.createdAt.toISOString(),
     uploadedByName: row.uploadedBy.name,
     onGridCount: Array.isArray(row.rows) ? row.rows.length : 0,
+    hybridSizeCount: Array.isArray(row.hybridRows)
+      ? new Set((row.hybridRows as { kw: number }[]).map((r) => r.kw)).size
+      : 0,
+    hybridRowCount: Array.isArray(row.hybridRows) ? row.hybridRows.length : 0,
     warnings: Array.isArray(row.warnings) ? (row.warnings as string[]) : [],
   }));
 
@@ -80,6 +86,10 @@ export default async function PagesCalculatorPage() {
   const { table: activeTable, source: sizeTableSource } = resolveSizeTable(
     configRow?.sizeTable ?? null
   );
+
+  // Live Hybrid table for the ADMIN-only tab; unreadable = treated as none.
+  const parsedHybrid = canManageConfig ? hybridTableSchema.safeParse(configRow?.hybridSizeTable) : null;
+  const activeHybrid: HybridRow[] | null = parsedHybrid?.success ? (parsedHybrid.data as HybridRow[]) : null;
 
   return (
     <CalculatorAdminShell
@@ -160,6 +170,8 @@ export default async function PagesCalculatorPage() {
                 hasSourceFile: activeImport?.fileKey != null,
               },
               onGrid: activeTable,
+              hybrid: activeHybrid,
+              brands: activeHybrid?.[0]?.brandPrices.map((b) => b.brand) ?? [],
               packages,
               sliderMaxBill: params.maxBill,
               history,

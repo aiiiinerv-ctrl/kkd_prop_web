@@ -23,6 +23,9 @@ export type SizeTableHistoryItem = {
   createdAt: string;
   uploadedByName: string;
   onGridCount: number;
+  /** Distinct kW sizes / rows of the version's Hybrid table (0 = version has no Hybrid). */
+  hybridSizeCount: number;
+  hybridRowCount: number;
   warnings: string[];
 };
 

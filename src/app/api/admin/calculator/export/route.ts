@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { resolveSizeTable } from "@/lib/calculator-size-table";
+import { hybridTableSchema } from "@/lib/calculator-hybrid";
 import { buildCalculatorWorkbook } from "@/lib/calculator-import/export";
 
 // Read-only download of the active calculator size table as an Excel file
@@ -20,7 +21,13 @@ export async function GET() {
   try {
     const config = await prisma.calculatorConfig.findFirst();
     const { table } = resolveSizeTable(config?.sizeTable ?? null);
-    const buffer = await buildCalculatorWorkbook({ onGrid: table });
+    // Unreadable/absent Hybrid -> no Hybrid sheet (Default #8). Brand prices go
+    // into the file, which is why this route stays ADMIN-only.
+    const storedHybrid = hybridTableSchema.safeParse(config?.hybridSizeTable);
+    const buffer = await buildCalculatorWorkbook({
+      onGrid: table,
+      hybrid: storedHybrid.success ? storedHybrid.data : null,
+    });
     const date = new Date().toISOString().slice(0, 10).replaceAll("-", "");
 
     return new NextResponse(new Blob([new Uint8Array(buffer)]), {

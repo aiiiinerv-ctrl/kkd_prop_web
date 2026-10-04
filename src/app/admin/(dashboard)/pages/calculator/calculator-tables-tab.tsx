@@ -33,6 +33,7 @@ import { CalculatorImportPanel } from "./calculator-import-panel";
 import { OnGridList } from "./calculator-table-list";
 import { formatDateTime } from "./calculator-table-format";
 import { OnGridSizeDialog } from "./on-grid-size-dialog";
+import type { HybridRow } from "@/lib/calculator-hybrid";
 import { SaveTablesDialog, type ServerIssueView } from "./save-tables-dialog";
 import {
   CalculatorVersionHistory,
@@ -51,6 +52,10 @@ export type CalculatorTablesTabData = {
     hasSourceFile: boolean;
   };
   onGrid: SizeRow[];
+  /** Live Hybrid table (null = none). ADMIN-only data: carries brand prices. */
+  hybrid: HybridRow[] | null;
+  /** Brand names of the live Hybrid table, in column order ([] when none). */
+  brands: string[];
   /** For the whole-table warnings in the save-confirm dialog. */
   packages: CalcPackageForDiff[];
   sliderMaxBill: number;

@@ -1,6 +1,8 @@
 import { cache } from "react";
 import { CALCULATOR_DEFAULTS, type CalculatorParams } from "@/lib/calculator";
 import { rowToCalculatorParams } from "@/lib/calculator-config";
+import { hybridTableSchema, type PublicHybridSize } from "@/lib/calculator-hybrid";
+import { toPublicHybridTable } from "@/lib/calculator-hybrid-projection";
 import { resolveSizeTable, type SizeRow } from "@/lib/calculator-size-table";
 import { prisma } from "@/lib/db";
 import { CLOSED_LEAD_STATUSES } from "@/lib/reports/aggregate";
@@ -266,11 +268,19 @@ export const getCalculatorConfig = cache(
     params: CalculatorParams;
     sizeTable: SizeRow[];
     sizeTableSource: "default" | "import";
+    /** Brand-free, price-minimised Hybrid table; null = none (or unreadable) -> toggle stays hidden. */
+    hybridTable: PublicHybridSize[] | null;
   }> => {
     const row = await prisma.calculatorConfig.findFirst();
     const params = row ? rowToCalculatorParams(row) : CALCULATOR_DEFAULTS;
     const { table, source } = resolveSizeTable(row?.sizeTable ?? null);
-    return { params, sizeTable: table, sizeTableSource: source };
+    let hybridTable: PublicHybridSize[] | null = null;
+    if (row?.hybridSizeTable != null) {
+      const parsed = hybridTableSchema.safeParse(row.hybridSizeTable);
+      if (parsed.success) hybridTable = toPublicHybridTable(parsed.data);
+      else console.error("calculator: stored hybridSizeTable is invalid; hiding Hybrid", parsed.error.issues[0]);
+    }
+    return { params, sizeTable: table, sizeTableSource: source, hybridTable };
   }
 );
 
