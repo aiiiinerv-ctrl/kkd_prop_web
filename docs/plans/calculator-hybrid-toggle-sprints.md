@@ -36,6 +36,8 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 
 **2026-10-02**: แผนร่าง — ยังไม่เริ่ม implement. **เงื่อนไขก่อนเริ่ม: On-grid S10 (`calculator-excel-import-sprints.md` §S10 — ADMIN อัปโหลด `คำนวณติดตั้ง.xlsx` บน prod แล้วยืนยัน) ต้องเสร็จก่อน** ณ วันที่เขียน On-grid S10 ยัง `pending` (ดู S0)
 
+**2026-10-04**: Release 1 (On-grid แก้ตาราง + export) ขึ้น production แล้ว (R1-S7 done) — R1 soak 2–3 วันทำการก่อน R2-S0; R2 พัฒนาล่วงหน้าบน branch `feat/r2-s1-hybrid-lib` (ยังไม่ merge).
+
 ## Sprint tracker
 
 ชื่อ sprint ใช้ prefix `R1-` / `R2-` เพื่อไม่ให้ชนกับ "On-grid S10" ของแผนต้นแบบ
@@ -50,7 +52,7 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 | **R1-S4** | Action `saveCalculatorTables` (On-grid) + preview/apply/reset รู้จัก `source` | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R1-S1, R1-S2 · ✅ ขนานกับ R1-S3 | 1 d | done — e2e 4 กรณี ✓, รอ `audit-compliance-reviewer` |
 | **R1-S5** | แท็บ "ตารางขนาดระบบ": โครงหน้า, ย้ายแผงนำเข้า, กล่องที่ใช้อยู่ + ปุ่ม export, ประวัติ 2 แหล่ง, รายการ On-grid อ่านอย่างเดียว | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R1-S2, R1-S3 | 1 d | done — e2e ✓, รอ `design-business-reviewer` |
 | **R1-S6** | ตัวแก้แบบ B: Dialog, working copy, แถบบันทึก, Dialog ยืนยัน diff (+ warning Package), conflict + e2e | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R1-S4, R1-S5 | 1.5 d | done — e2e ✓, รอ `design-business-reviewer` |
-| **R1-S7** | Release R1: runbook → snapshot → DDL → deploy → smoke + rollback runbook (R2 ของ research-158) | `hosting-deploy-specialist` + human (`!`, phpMyAdmin) | `deploy-verify` (ก่อน upload) | ⏳ R1-S1…S6 | 0.5 d | pending |
+| **R1-S7** | Release R1: runbook → snapshot → DDL → deploy → smoke + rollback runbook (R2 ของ research-158) | `hosting-deploy-specialist` + human (`!`, phpMyAdmin) | `deploy-verify` (ก่อน upload) | ⏳ R1-S1…S6 | 0.5 d | done (ข้อ 10 = optional, ยังไม่ทำ) |
 | **R2 — Hybrid** | | | | | | |
 | **R2-S0** | Gate R1 นิ่งบน prod + baseline หลัง R1 | `nextjs-dev` | — | ⏳ R1-S7 | 0.25 d | pending |
 | **R2-S1** | Pure lib Hybrid: `HybridRow`, schema, สูตร, ราคาที่ใช้ได้, `recommendHybrid` + projection | `nextjs-dev` | — (verify script = reviewer) | ⏳ R2-S0 | 1 d | pending |
@@ -419,13 +421,24 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 - Release note: ฟิลด์ไฟล์ของ `CalculatorImport` เป็น NULL ได้แล้ว; แถว MANUAL ไม่มีไฟล์ต้นฉบับ
 
 **DoD**
-- [ ] หลักฐานข้อ 3, 4, 7, 8, 9, 10 ใน "สรุปหลังแก้" (output/screenshot — ไม่มีราคา)
-- [ ] อัปเดต Status ของแผนนี้
+- [x] หลักฐานข้อ 3, 4, 7, 8, 9, 10 ใน "สรุปหลังแก้" (output/screenshot — ไม่มีราคา) — ข้อ 8 = เทียบ baseline S0 ไม่ได้ (ดูเหตุผลใน "สรุปหลังแก้"); ข้อ 10 = optional ยังไม่ทำ
+- [x] อัปเดต Status ของแผนนี้
 - Commit: `docs(deploy): record calculator table editing release evidence`
 
 **Rollback:** ตามขั้น rollback R1 ข้างบน
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้ (2026-10-04)**
+- **Artifact:** `deploy/dist.zip` 29,034,295 bytes, BUILD_ID `Z5DuTs5XGh2_zJUCUz_p5`, build จาก `main` `a7bbfbe`; artifact ก่อนหน้า (สำหรับ rollback) เก็บไว้ในเครื่องที่ `backups/deploy-artifacts/dist-pre-r1-2026-09-26.zip` (28,982,352 bytes, ไม่ commit)
+- **Pre-state (read-only):** `CalculatorImport` ไม่มี `source`, 5 แถว, InnoDB; `CalculatorConfig` version 15; export marker 404
+- **ข้อ 3 Snapshot:** phpMyAdmin export (structure+data, DROP TABLE+CREATE+INSERT) ของ `CalculatorConfig` + `CalculatorImport` → `kkdprop1_calculator_pre-r1s7_2026-10-04.sql` 51,112 bytes, 5 แถว import; เก็บนอก server (ในเครื่อง, ไม่ commit)
+- **ข้อ 4 DDL:** pre-check 0a InnoDB / 0b 0 rows / 0c collation ตรง (unicode_ci + bin บน rows/warnings) ผ่านก่อนรัน; ALTER รันใน phpMyAdmin โดย human; ยืนยันซ้ำด้วย `pma-readonly-query.mts`: `source` varchar(10) NOT NULL DEFAULT 'EXCEL', `fileName`/`fileKey`/`sha256`/`sizeBytes` เป็น NULL ได้, collation คอลัมน์เดิมไม่เปลี่ยน, GROUP BY source = EXCEL | 5, `CalculatorConfig` version 15 + `sizeTableImportId` เดิม
+- **ข้อ 6:** upload โดย human (`226 File successfully transferred`, 29,034,295 bytes ตรง) → extract `File Extracted` → restart HTTP 302
+- **ข้อ 7:** `/api/admin/calculator/export` → 401 (เดิม 404); `/api/admin/leads` → 401; `smoke-test-production.mts` ผ่านทุกข้อรวม `/th/calculator` "คำนวณ" และ `/en/calculator` "How Much Is Your Bill"; warm หน้า public 20 route สองรอบ ทุก route 200
+- **ข้อ 8:** **เทียบตัวเลขกับ baseline S0 ไม่ได้** — S0 บันทึกตอน config version 5 / import ชุดเก่า แต่ก่อน release prod เป็น version 15 แล้ว (owner apply ชุดใหม่ระหว่างนั้น); release นี้ไม่แตะ `CalculatorConfig` (version/import id เท่าเดิมก่อน-หลัง) และหน้า `/th/calculator` render + คำนวณได้ปกติในเบราว์เซอร์จริง. ถือเป็น baseline ใหม่ใน R2-S0
+- **ข้อ 9:** owner login ยืนยันผ่าน (2026-10-04): แท็บ "ตารางขนาดระบบ" แสดงชุด Excel ที่ใช้อยู่, ประวัติ, export ดาวน์โหลดได้; ยังไม่มีการ save ด้วยมือ → ตอนนี้ rollback ใช้ขั้น "ก่อนมีแถว MANUAL"
+- **ข้อ 10:** ยังไม่ทำ (optional) — ครั้งแรกที่ save ด้วยมือบน prod ต้องเปลี่ยนไปใช้ rollback "หลังมีแถว MANUAL"
+- **หมายเหตุกระบวนการ:** auto-mode classifier บล็อก action เขียน prod จาก agent (กด Go ใน phpMyAdmin, extract) → human รันเองผ่าน `!`; host มี bot challenge ("One moment, please...") ถ้ายิง request ถี่
+- **ถัดไป:** R1 soak 2–3 วันทำการ แล้วจึง R2-S0
 
 ---
 
