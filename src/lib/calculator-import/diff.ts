@@ -218,6 +218,9 @@ export type HybridTableDiff = {
   currentEmpty: boolean;
   /** The incoming file has no Hybrid table (D3 — the live one will be removed). */
   nextEmpty: boolean;
+  /** kW sizes of the live / incoming table — lets the admin list tell a new or removed size from a changed one (unchanged rows are not listed). */
+  currentKws: number[];
+  nextKws: number[];
   added: HybridRow[];
   removed: HybridRow[];
   changed: HybridChangedRow[];
@@ -307,6 +310,8 @@ export function diffHybridTables(
   return {
     currentEmpty: currentRows.length === 0,
     nextEmpty: nextRows.length === 0,
+    currentKws: [...new Set(currentRows.map((r) => r.kw))].sort((a, b) => a - b),
+    nextKws: [...new Set(nextRows.map((r) => r.kw))].sort((a, b) => a - b),
     added,
     removed,
     changed,

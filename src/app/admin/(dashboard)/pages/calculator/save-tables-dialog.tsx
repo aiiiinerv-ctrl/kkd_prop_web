@@ -2,9 +2,10 @@
 
 // Confirm-with-diff dialog shown before a hand-edited table goes live
 // (R1-S6, design-162 §7, #163 D5). The diff is computed client-side with the
-// same `diffSizeTables` the Excel preview uses, so the sample-bill table, the
-// per-field changes and the whole-table warnings (Package first, then slider)
-// read identically to the import flow. Not an AlertDialog: nothing is deleted.
+// same `diffSizeTables` / `diffHybridTables` the Excel preview uses, so the
+// sample-bill table, the per-field changes and the whole-table warnings
+// (Package first, then Hybrid: no price, panels, ignored battery price) read
+// identically to the import flow. Not an AlertDialog: nothing is deleted.
 import { useMemo, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -24,12 +25,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
+import type { HybridRow } from "@/lib/calculator-hybrid";
 import {
+  diffHybridTables,
   diffSizeTables,
   type CalcPackageForDiff,
   type DiffFieldChange,
 } from "@/lib/calculator-import/diff";
+import { validateHybridTable } from "@/lib/calculator-import/validate-hybrid";
 import type { SizeRow } from "@/lib/calculator-size-table";
+import {
+  buildHybridDiffGroups,
+  countHybridGroups,
+  HybridDiffItem,
+  hybridOutcomeText,
+  hybridSampleChanged,
+} from "./calculator-hybrid-diff-view";
 import {
   FIELD_LABELS,
   formatFieldValue,
@@ -41,16 +53,29 @@ import {
 const th = (n: number) => n.toLocaleString("th-TH");
 const MAX_ITEMS = 10;
 
-export type ServerIssueView = { message: string; key: string; field: string };
+export type ServerIssueView = {
+  message: string;
+  table: "onGrid" | "hybrid";
+  key: string;
+  field: string;
+  rowKey?: string;
+};
 
 type DiffItem =
   | { kind: "changed"; kw: number; changes: DiffFieldChange[] }
   | { kind: "removed"; kw: number }
-  | { kind: "added"; row: SizeRow };
+  | { kind: "added"; row: SizeRow }
+  | { kind: "hybrid"; group: ReturnType<typeof buildHybridDiffGroups>[number] };
+
+/** Hybrid warnings in the order design-162 §7.1 item 4 asks for: no price, panels, ignored battery price. */
+const HYBRID_WARNING_ORDER = ["hybrid-no-price", "hybrid-panels-formula", "hybrid-battery-price-ignored"];
 
 export function SaveTablesDialog({
   before,
   after,
+  hybridBefore,
+  hybridAfter,
+  multiplier,
   packages,
   sliderMaxBill,
   saving,
@@ -63,6 +88,10 @@ export function SaveTablesDialog({
 }: {
   before: SizeRow[];
   after: SizeRow[];
+  /** Live Hybrid table (null = none) and the table after the edits (null = none). */
+  hybridBefore: HybridRow[] | null;
+  hybridAfter: HybridRow[] | null;
+  multiplier: number;
   packages: CalcPackageForDiff[];
   sliderMaxBill: number;
   saving: boolean;
@@ -80,25 +109,55 @@ export function SaveTablesDialog({
     () => diffSizeTables(before, after, packages, sliderMaxBill),
     [before, after, packages, sliderMaxBill]
   );
+  const hasHybrid = hybridBefore !== null || hybridAfter !== null;
+  const hybridDiff = useMemo(
+    () => (hasHybrid ? diffHybridTables(hybridBefore, hybridAfter, multiplier) : null),
+    [hasHybrid, hybridBefore, hybridAfter, multiplier]
+  );
+  const hybridGroups = useMemo(
+    () => (hybridDiff ? buildHybridDiffGroups(hybridDiff) : []),
+    [hybridDiff]
+  );
+  // Whole-table warnings of the table as the customer will see it (not only the edited rows).
+  const hybridWarnings = useMemo(() => {
+    if (!hybridAfter) return [];
+    const list = validateHybridTable(hybridAfter).warnings;
+    return [...list].sort(
+      (a, b) => HYBRID_WARNING_ORDER.indexOf(a.code) - HYBRID_WARNING_ORDER.indexOf(b.code)
+    );
+  }, [hybridAfter]);
+  const warnings = [...diff.warnings.map((w) => w.message), ...hybridWarnings.map((w) => w.message)];
 
   const items: DiffItem[] = [
     ...diff.changed.map((c) => ({ kind: "changed" as const, kw: c.kw, changes: c.changedFields })),
     ...diff.removed.map((r) => ({ kind: "removed" as const, kw: r.kw })),
     ...diff.added.map((row) => ({ kind: "added" as const, row })),
+    ...hybridGroups.map((group) => ({ kind: "hybrid" as const, group })),
   ];
   const shown = showAll ? items : items.slice(0, MAX_ITEMS);
 
-  const counts = [
-    diff.changed.length ? `เปลี่ยน ${diff.changed.length}` : null,
-    diff.added.length ? `เพิ่ม ${diff.added.length}` : null,
-    diff.removed.length ? `ลบ ${diff.removed.length}` : null,
-  ].filter(Boolean);
-  const description = [
-    `On-grid: ${counts.join(" · ") || "ไม่มีการเปลี่ยนแปลง"}`,
-    diff.warnings.length ? `คำเตือน ${diff.warnings.length} ข้อ` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const countText = (c: { changed: number; added: number; removed: number }) =>
+    [
+      c.changed ? `เปลี่ยน ${c.changed}` : null,
+      c.added ? `เพิ่ม ${c.added}` : null,
+      c.removed ? `ลบ ${c.removed}` : null,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  const onGridCounts = countText({
+    changed: diff.changed.length,
+    added: diff.added.length,
+    removed: diff.removed.length,
+  });
+  const hybridCounts = countText(countHybridGroups(hybridGroups));
+  const description =
+    [
+      onGridCounts ? `On-grid: ${onGridCounts}` : null,
+      hybridCounts ? `Hybrid: ${hybridCounts}` : null,
+      warnings.length ? `คำเตือน ${warnings.length} ข้อ` : null,
+    ]
+      .filter(Boolean)
+      .join(" · ") || "ไม่มีการเปลี่ยนแปลง";
 
   const blocked = saving || conflictSummary !== null || serverIssues !== null;
 
@@ -112,7 +171,7 @@ export function SaveTablesDialog({
       <DialogContent
         id="calc-tables-confirm"
         showCloseButton={false}
-        className="max-h-[90vh] w-full overflow-y-auto sm:max-w-2xl max-sm:h-dvh max-sm:max-h-dvh max-sm:max-w-none max-sm:rounded-none"
+        className={cn("max-h-[90vh] w-full overflow-y-auto max-sm:h-dvh max-sm:max-h-dvh max-sm:max-w-none max-sm:rounded-none", hasHybrid ? "sm:max-w-3xl" : "sm:max-w-2xl")}
       >
         <DialogHeader>
           <DialogTitle>ตรวจก่อนบันทึกและใช้บนหน้าเว็บ</DialogTitle>
@@ -171,13 +230,23 @@ export function SaveTablesDialog({
                     <TableHead>บิล/เดือน</TableHead>
                     <TableHead className={conflictSummary !== null ? "text-muted-foreground/50" : undefined}>On-grid ตอนนี้</TableHead>
                     <TableHead>หลังบันทึก</TableHead>
+                    {hybridDiff && (
+                      <>
+                        <TableHead className={conflictSummary !== null ? "text-muted-foreground/50" : undefined}>
+                          Hybrid ตอนนี้
+                        </TableHead>
+                        <TableHead>หลังบันทึก</TableHead>
+                      </>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {diff.sampleBills.map((sample) => {
+                  {diff.sampleBills.map((sample, index) => {
+                    const hybridSample = hybridDiff?.sampleBills[index];
                     const changed = sampleChanged(sample);
+                    const hybridChanged = hybridSample ? hybridSampleChanged(hybridSample) : false;
                     return (
-                      <TableRow key={sample.bill} className={changed ? "bg-amber-50" : undefined}>
+                      <TableRow key={sample.bill} className={changed || hybridChanged ? "bg-amber-50" : undefined}>
                         <TableCell>฿{th(sample.bill)}</TableCell>
                         <TableCell className={conflictSummary !== null ? "text-muted-foreground/50" : undefined}>
                           {outcomeText(sample.before)}
@@ -186,6 +255,17 @@ export function SaveTablesDialog({
                           {changed && <span className="sr-only">เปลี่ยน: </span>}
                           {outcomeText(sample.after)}
                         </TableCell>
+                        {hybridSample && (
+                          <>
+                            <TableCell className={cn("whitespace-normal", conflictSummary !== null && "text-muted-foreground/50")}>
+                              {hybridOutcomeText(hybridSample.before)}
+                            </TableCell>
+                            <TableCell className={cn("whitespace-normal", hybridChanged && "font-semibold")}>
+                              {hybridChanged && <span className="sr-only">เปลี่ยน: </span>}
+                              {hybridOutcomeText(hybridSample.after)}
+                            </TableCell>
+                          </>
+                        )}
                       </TableRow>
                     );
                   })}
@@ -201,7 +281,10 @@ export function SaveTablesDialog({
             ) : (
               <>
                 <ul id="calc-tables-diff-list" className="divide-y rounded-md border">
-                  {shown.map((item) => (
+                  {shown.map((item) =>
+                    item.kind === "hybrid" ? (
+                      <HybridDiffItem key={`hybrid-${item.group.kw}`} group={item.group} />
+                    ) : (
                     <li
                       key={`${item.kind}-${item.kind === "added" ? item.row.kw : item.kw}`}
                       className="px-3 py-2 text-sm"
@@ -242,7 +325,8 @@ export function SaveTablesDialog({
                         </p>
                       )}
                     </li>
-                  ))}
+                    )
+                  )}
                 </ul>
                 {items.length > MAX_ITEMS && (
                   <Button
@@ -260,7 +344,7 @@ export function SaveTablesDialog({
             )}
           </section>
 
-          {diff.warnings.length > 0 && conflictSummary === null && (
+          {warnings.length > 0 && conflictSummary === null && (
             <div
               id="calc-tables-warnings"
               role="group"
@@ -269,11 +353,11 @@ export function SaveTablesDialog({
             >
               <p id="calc-tables-warnings-heading" className="flex items-center gap-1.5 font-semibold">
                 <AlertTriangle className="size-4" />
-                คำเตือน {diff.warnings.length} ข้อ — บันทึกได้ แต่โปรดตรวจ
+                คำเตือน {warnings.length} ข้อ — บันทึกได้ แต่โปรดตรวจ
               </p>
               <ul className="mt-1 list-disc space-y-1 pl-5">
-                {diff.warnings.map((w, i) => (
-                  <li key={i}>{w.message}</li>
+                {warnings.map((message, i) => (
+                  <li key={i}>{message}</li>
                 ))}
               </ul>
             </div>

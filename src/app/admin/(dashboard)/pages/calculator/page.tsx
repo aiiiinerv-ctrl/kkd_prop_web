@@ -157,6 +157,7 @@ export default async function PagesCalculatorPage() {
           ? {
               configVersion: configRow?.version ?? 1,
               configUpdatedAt: (configRow?.updatedAt ?? new Date()).toISOString(),
+              multiplier: params.annualSavingMonthsMultiplier,
               active: {
                 source:
                   sizeTableSource === "default"

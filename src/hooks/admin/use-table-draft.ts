@@ -10,11 +10,21 @@
 // validate-on-grid.ts and messages.ts from the import lib, never its index
 // (which pulls in exceljs).
 import { useMemo, useReducer } from "react";
+import type { HybridRow } from "@/lib/calculator-hybrid";
 import { validateOnGridTable } from "@/lib/calculator-import/validate-on-grid";
 import type { SizeRow } from "@/lib/calculator-size-table";
+import {
+  hybridSizeStatus,
+  hybridSizesFromRows,
+  ROOF_M2_PER_PANEL,
+  validateHybridDraft,
+  type DraftHybridSize,
+  type HybridDraftStatus,
+  type HybridSizeValues,
+} from "./hybrid-draft";
 
 export const MAX_ON_GRID_ROWS = 200; // keep in step with savePayloadSchema
-export const ROOF_M2_PER_PANEL = 2.7;
+export { ROOF_M2_PER_PANEL };
 
 export type DraftField =
   | "kw"
@@ -263,23 +273,46 @@ export function issueText(issue: DraftIssue, rows: DraftRow[]): string {
 // `baseVersion` = the config version this draft is based on (the optimistic
 // lock sent on save). `propsVersion` = the server version last copied from
 // props, so a save's local rebase is not undone by stale props before the
-// router refresh lands.
-type State = { baseVersion: number; propsVersion: number; rows: DraftRow[]; seq: number };
+// router refresh lands. `hybrid` is null when the live config has no Hybrid
+// table (R2: one cannot be created by hand — brand names come from Excel).
+type State = {
+  baseVersion: number;
+  propsVersion: number;
+  rows: DraftRow[];
+  seq: number;
+  hybrid: DraftHybridSize[] | null;
+  hybridSeq: number;
+  /** Brand names the Hybrid draft was built with. Kept in state (not read from props) so a
+   * refresh that changes props can never be compared against a draft of the older table. */
+  brands: string[];
+};
 
 type Action =
-  | { type: "reset"; onGrid: SizeRow[]; version: number }
-  | { type: "rebase"; onGrid: SizeRow[]; version: number }
+  | { type: "reset"; onGrid: SizeRow[]; hybrid: HybridRow[] | null; brands: string[]; version: number }
+  | { type: "rebase"; onGrid: SizeRow[]; hybrid: HybridRow[] | null; brands: string[]; version: number }
   | { type: "commit"; key: string | null; values: DraftValues }
   | { type: "delete"; key: string }
-  | { type: "restore"; key: string };
+  | { type: "restore"; key: string }
+  | { type: "commitHybrid"; key: string | null; values: HybridSizeValues }
+  | { type: "deleteHybrid"; key: string }
+  | { type: "restoreHybrid"; key: string };
 
 const originalKey = (kw: number) => `og-${String(kw).replace(".", "_")}`;
 
-function init(onGrid: SizeRow[], baseVersion: number, propsVersion: number): State {
+function init(
+  onGrid: SizeRow[],
+  hybrid: HybridRow[] | null,
+  brands: string[],
+  baseVersion: number,
+  propsVersion: number
+): State {
   return {
+    brands,
     baseVersion,
     propsVersion,
     seq: 0,
+    hybridSeq: 0,
+    hybrid: hybridSizesFromRows(hybrid),
     rows: onGrid.map((row) => ({
       key: originalKey(row.kw),
       original: row,
@@ -292,9 +325,9 @@ function init(onGrid: SizeRow[], baseVersion: number, propsVersion: number): Sta
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "reset":
-      return init(action.onGrid, action.version, action.version);
+      return init(action.onGrid, action.hybrid, action.brands, action.version, action.version);
     case "rebase":
-      return init(action.onGrid, action.version, state.propsVersion);
+      return init(action.onGrid, action.hybrid, action.brands, action.version, state.propsVersion);
     case "commit": {
       if (action.key === null) {
         const seq = state.seq + 1;
@@ -319,6 +352,39 @@ function reducer(state: State, action: Action): State {
       };
     case "restore":
       return { ...state, rows: state.rows.map((r) => (r.key === action.key ? { ...r, deleted: false } : r)) };
+    case "commitHybrid": {
+      if (!state.hybrid) return state;
+      if (action.key === null) {
+        const hybridSeq = state.hybridSeq + 1;
+        return {
+          ...state,
+          hybridSeq,
+          hybrid: [
+            ...state.hybrid,
+            { key: `hy-new-${hybridSeq}`, original: null, current: action.values, deleted: false },
+          ],
+        };
+      }
+      return {
+        ...state,
+        hybrid: state.hybrid.map((s) => (s.key === action.key ? { ...s, current: action.values } : s)),
+      };
+    }
+    case "deleteHybrid":
+      if (!state.hybrid) return state;
+      return {
+        ...state,
+        hybrid: state.hybrid.flatMap((s) => {
+          if (s.key !== action.key) return [s];
+          return s.original ? [{ ...s, deleted: true }] : [];
+        }),
+      };
+    case "restoreHybrid":
+      if (!state.hybrid) return state;
+      return {
+        ...state,
+        hybrid: state.hybrid.map((s) => (s.key === action.key ? { ...s, deleted: false } : s)),
+      };
   }
 }
 
@@ -327,23 +393,51 @@ function sortRows(rows: DraftRow[]): DraftRow[] {
   return [...rows].sort((a, b) => kwOf(a) - kwOf(b));
 }
 
-export function useTableDraft(props: { onGrid: SizeRow[]; configVersion: number }) {
-  const [state, dispatch] = useReducer(reducer, undefined, () =>
-    init(props.onGrid, props.configVersion, props.configVersion)
-  );
+function sortHybrid(sizes: DraftHybridSize[]): DraftHybridSize[] {
+  const kwOf = (s: DraftHybridSize) => (isNum(s.current.kw) ? s.current.kw : Number.POSITIVE_INFINITY);
+  return [...sizes].sort((a, b) => kwOf(a) - kwOf(b));
+}
 
-  const dirty = useMemo(() => state.rows.some((r) => rowStatus(r) !== "same"), [state.rows]);
+export function useTableDraft(props: {
+  onGrid: SizeRow[];
+  /** Live Hybrid table (null = none) and its brand names in column order. */
+  hybrid: HybridRow[] | null;
+  brands: string[];
+  configVersion: number;
+}) {
+  const [state, dispatch] = useReducer(reducer, undefined, () =>
+    init(props.onGrid, props.hybrid, props.brands, props.configVersion, props.configVersion)
+  );
+  const { brands } = state;
+
+  const onGridDirty = useMemo(() => state.rows.some((r) => rowStatus(r) !== "same"), [state.rows]);
+  const hybridDirty = useMemo(
+    () => (state.hybrid ?? []).some((s) => hybridSizeStatus(s, brands) !== "same"),
+    [state.hybrid, brands]
+  );
+  const dirty = onGridDirty || hybridDirty;
 
   // While nothing is edited the draft simply follows the server data (after
   // router.refresh(), a reset/apply from another tab, ...). Once the owner has
   // started editing, `baseVersion` stays put so a stale save hits the
   // optimistic lock and shows the conflict box (design-162 §2.3, §7.4).
   if (!dirty && state.propsVersion !== props.configVersion) {
-    dispatch({ type: "reset", onGrid: props.onGrid, version: props.configVersion });
+    dispatch({
+      type: "reset",
+      onGrid: props.onGrid,
+      hybrid: props.hybrid,
+      brands: props.brands,
+      version: props.configVersion,
+    });
   }
 
   const rows = useMemo(() => sortRows(state.rows), [state.rows]);
+  const hybridSizes = useMemo(() => (state.hybrid ? sortHybrid(state.hybrid) : null), [state.hybrid]);
   const validation = useMemo(() => validateDraft(state.rows), [state.rows]);
+  const hybridValidation = useMemo(
+    () => (state.hybrid ? validateHybridDraft(state.hybrid, brands) : null),
+    [state.hybrid, brands]
+  );
   const counts = useMemo(() => {
     const c = { changed: 0, added: 0, removed: 0 };
     for (const r of state.rows) {
@@ -354,22 +448,57 @@ export function useTableDraft(props: { onGrid: SizeRow[]; configVersion: number 
     }
     return c;
   }, [state.rows]);
+  const hybridCounts = useMemo(() => {
+    const c = { changed: 0, added: 0, removed: 0 };
+    for (const s of state.hybrid ?? []) {
+      const st: HybridDraftStatus = hybridSizeStatus(s, brands);
+      if (st === "changed") c.changed++;
+      else if (st === "new") c.added++;
+      else if (st === "deleted") c.removed++;
+    }
+    return c;
+  }, [state.hybrid, brands]);
+
+  const onGridChangedCount = counts.changed + counts.added + counts.removed;
+  const hybridChangedCount = hybridCounts.changed + hybridCounts.added + hybridCounts.removed;
 
   return {
     rows,
+    hybridSizes,
+    brands,
     baseVersion: state.baseVersion,
     dirty,
+    onGridDirty,
+    hybridDirty,
     counts,
-    changedCount: counts.changed + counts.added + counts.removed,
+    hybridCounts,
+    onGridChangedCount,
+    hybridChangedCount,
+    changedCount: onGridChangedCount + hybridChangedCount,
     issues: validation.issues,
+    hybridIssues: hybridValidation?.issues ?? [],
     /** Resolved table to save; null while any issue is open. */
     table: validation.table,
+    /** Resolved Hybrid table; null while any Hybrid issue is open or there is no Hybrid table. */
+    hybridTable: hybridValidation?.table ?? null,
     commit: (key: string | null, values: DraftValues) => dispatch({ type: "commit", key, values }),
     markDelete: (key: string) => dispatch({ type: "delete", key }),
     restore: (key: string) => dispatch({ type: "restore", key }),
+    commitHybrid: (key: string | null, values: HybridSizeValues) =>
+      dispatch({ type: "commitHybrid", key, values }),
+    markDeleteHybrid: (key: string) => dispatch({ type: "deleteHybrid", key }),
+    restoreHybrid: (key: string) => dispatch({ type: "restoreHybrid", key }),
     /** Throw the edits away and re-read the server data. */
-    discard: () => dispatch({ type: "reset", onGrid: props.onGrid, version: props.configVersion }),
-    /** After a successful save: make `table` the new baseline at `version`. */
-    rebase: (table: SizeRow[], version: number) => dispatch({ type: "rebase", onGrid: table, version }),
+    discard: () =>
+      dispatch({
+        type: "reset",
+        onGrid: props.onGrid,
+        hybrid: props.hybrid,
+        brands: props.brands,
+        version: props.configVersion,
+      }),
+    /** After a successful save: make the saved tables the new baseline at `version`. */
+    rebase: (table: SizeRow[], hybrid: HybridRow[] | null, version: number) =>
+      dispatch({ type: "rebase", onGrid: table, hybrid, brands: state.brands, version }),
   };
 }
