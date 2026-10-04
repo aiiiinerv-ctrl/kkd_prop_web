@@ -20,8 +20,12 @@ import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { chromium, type Page } from "playwright";
 import { PrismaClient } from "../src/generated/prisma/client.js";
 import { CALCULATOR_DEFAULTS } from "../src/lib/calculator.js";
+import ExcelJS from "exceljs";
+import { createHash } from "node:crypto";
 import {
+  FIXTURE_BRANDS,
   buildOnGridFixture,
+  goodHybridRows,
   goodRows,
   withMacroEntry,
   type FixtureRow,
@@ -249,9 +253,12 @@ for (const locale of ["th", "en"] as const) {
   const at2500 = await publicCalcBody(publicPage, locale, 2500);
   if (!/3\s*kW/i.test(at2500)) fail(`PUBLIC ${locale}: bill 2500 should recommend 3 kW after apply`);
   const at500 = await publicCalcBody(publicPage, locale, 500);
+  // Since 79b1fad the below-first-row note takes precedence over "covers 100%" in the callout.
   const covers =
-    locale === "th" ? at500.includes("ครอบคลุมค่าไฟเต็ม 100%") : at500.includes("Covers 100% of your electricity bill");
-  if (!covers) fail(`PUBLIC ${locale}: bill 500 should show covers-full-bill after apply`);
+    locale === "th"
+      ? at500.includes("ครอบคลุมค่าไฟเต็ม 100%") || at500.includes("ต่ำกว่าช่วงของระบบเล็กสุด")
+      : at500.includes("Covers 100% of your electricity bill") || at500.includes("below the range for our smallest system");
+  if (!covers) fail(`PUBLIC ${locale}: bill 500 should show covers-full-bill / below-first-row note after apply`);
   const atTooLarge = await publicCalcBody(publicPage, locale, 10000);
   const tooLarge =
     locale === "th" ? atTooLarge.includes("ระบบเกิน") : atTooLarge.includes("System larger than");
@@ -691,12 +698,141 @@ if ((await configNow()).version !== beforeDeniedSave.version) fail("ROLE: denied
 pass("ROLE: direct saveCalculatorTables as MARKETING -> redirect, config unchanged");
 await marketingR1.close();
 
+// --- R2-S4: two-sheet import (On-grid + Hybrid), D3 removal, D4 reject, Default #3, forged saves, reset ---
+{
+  const r2Start = new Date();
+  const hybridFixture = async (tweak: number, mutate?: (rows: ReturnType<typeof goodHybridRows>) => void) => {
+    const hybridRows = goodHybridRows();
+    hybridRows[0] = { ...hybridRows[0], prices: [100000 + tweak, 110000, null, null, null] };
+    mutate?.(hybridRows);
+    return buildOnGridFixture({ includeCategory: true, rows: goodRows(), hybrid: { rows: hybridRows, brands: FIXTURE_BRANDS } });
+  };
+  const uniq = Date.now() % 100000; // keep the sha256 unique per run (re-runs must not dedupe)
+  const twoSheetBuf = await hybridFixture(uniq);
+  const twoSheetPath = await writeTempXlsx(twoSheetBuf, "two-sheet-fixture.xlsx");
+  const twoSheetSha = createHash("sha256").update(twoSheetBuf).digest("hex");
+  const countImports = () => prisma.calculatorImport.count();
+  const hybridLen = (v: unknown) => (Array.isArray(v) ? v.length : 0);
+
+  // Default #3: a pre-R2 EXCEL row with the same sha256 and no Hybrid must not shadow the file's Hybrid sheet.
+  const legacy = await prisma.calculatorImport.create({
+    data: {
+      source: "EXCEL",
+      fileName: "legacy-two-sheet.xlsx",
+      sha256: twoSheetSha,
+      sizeBytes: twoSheetBuf.length,
+      rows: [],
+      warnings: [],
+      uploadedById: adminUser.id,
+    },
+  });
+  await openTablesTab(page);
+  await openImportPanel(page);
+  await page.setInputFiles("#calc-import-file", twoSheetPath);
+  await page.click("#calc-import-upload");
+  await page.waitForSelector("#calc-import-preview", { timeout: 15000 });
+  if ((await page.locator("#calc-import-preview").innerText()).includes("เคย upload แล้ว")) fail("R2-S4 #3: legacy no-Hybrid row must not be reused as a duplicate");
+  const created2 = await prisma.calculatorImport.findFirst({ where: { sha256: twoSheetSha, id: { not: legacy.id } } });
+  if (!created2 || hybridLen(created2.hybridRows) !== 9) fail("R2-S4 #3: a new EXCEL row with 9 hybrid rows must be created");
+  await prisma.calculatorImport.delete({ where: { id: legacy.id } });
+  pass("R2-S4 Default #3: same sha256 as a pre-R2 row without Hybrid -> re-parsed, new row carries 9 hybrid rows");
+
+  await page.click("#calc-import-apply");
+  await page.click("#calc-import-apply-confirm");
+  await page.getByText("ใช้ตารางใหม่แล้ว").first().waitFor({ timeout: 15000 });
+  const withHybrid = await configNow();
+  if (hybridLen(withHybrid.hybridSizeTable) !== 9 || withHybrid.sizeTableImportId !== created2.id) fail("R2-S4 apply: config must hold the 9-row Hybrid table of the applied version");
+  pass("R2-S4 apply: two-sheet file -> config.hybridSizeTable has 9 rows, import id points at the new row");
+
+  // Public pages must not expose brands/prices (public page does not pass hybridTable yet).
+  for (const locale of ["th", "en"] as const) {
+    const html = await (await fetch(`${BASE_URL}/${locale}/calculator`)).text();
+    if (/BrandA|BrandB|brandPrices|hybridTable|hybridSizeTable/.test(html)) fail(`R2-S4 PUBLIC ${locale}: HTML leaks Hybrid brand/price data`);
+  }
+  pass("R2-S4 PUBLIC: /th + /en calculator HTML contains no brand names / brandPrices after applying a 2-sheet file");
+
+  // Export route carries the Hybrid sheet (ADMIN only).
+  const exportRes = await page.context().request.get(`${BASE_URL}/api/admin/calculator/export`);
+  if (exportRes.status() !== 200) fail(`R2-S4 export: expected 200, got ${exportRes.status()}`);
+  const exportWb = new ExcelJS.Workbook();
+  await exportWb.xlsx.load((await exportRes.body()) as unknown as ArrayBuffer);
+  if (!exportWb.worksheets.some((w) => w.name === "Hybrid")) fail("R2-S4 export: workbook must contain a Hybrid sheet when a Hybrid table is live");
+  pass("R2-S4 export: /api/admin/calculator/export includes the Hybrid sheet");
+
+  // Forged save payloads (replaying the captured server action id): Default #11.
+  const replay = async (payload: unknown) => {
+    const res = await page.context().request.post(saveRequest.url(), {
+      headers: { "next-action": saveRequest.headers()["next-action"], "content-type": "text/plain;charset=UTF-8", origin: BASE_URL },
+      data: JSON.stringify([payload]),
+    });
+    return res.text();
+  };
+  const liveNow = await configNow();
+  const liveOnGrid = (liveNow.sizeTable as Record<string, unknown>[]) ?? [];
+  const liveHybrid = (liveNow.hybridSizeTable as Record<string, unknown>[]) ?? [];
+  const importsBeforeForged = await countImports();
+  const forgedRenamed = liveHybrid.map((r) => ({ ...r, brandPrices: (r.brandPrices as { brand: string; priceThb: number | null }[]).map((b, i) => (i === 0 ? { ...b, brand: "Renamed" } : b)) }));
+  const outRenamed = await replay({ onGrid: liveOnGrid, hybrid: forgedRenamed, version: liveNow.version });
+  if (!outRenamed.includes("ชื่อหรือลำดับยี่ห้อไม่ตรง")) fail(`R2-S4 forged: renamed brand must be rejected, got: ${outRenamed.slice(0, 200)}`);
+  const tooMany = Array.from({ length: 501 }, () => liveHybrid[0]);
+  const outCap = await replay({ onGrid: liveOnGrid, hybrid: tooMany, version: liveNow.version });
+  if (!outCap.includes("ข้อมูลตารางไม่ถูกต้อง")) fail(`R2-S4 forged: >500 hybrid rows must be rejected, got: ${outCap.slice(0, 200)}`);
+  if ((await configNow()).version !== liveNow.version || (await countImports()) !== importsBeforeForged) fail("R2-S4 forged: rejected payloads must not create versions");
+  pass("R2-S4 forged saves: renamed brand and >500 hybrid rows rejected, no version created");
+
+  // Audit: no brand names / per-brand prices in snapshots written since the block started.
+  const audits2 = await prisma.auditLog.findMany({ where: { createdAt: { gte: r2Start }, entityType: { in: ["CalculatorImport", "CalculatorConfig"] } } });
+  if (audits2.length === 0) fail("R2-S4 audit: expected audit rows");
+  if (audits2.some((a) => /BrandA|brandPrices|priceThb/.test(JSON.stringify(a.before) + JSON.stringify(a.after)))) fail("R2-S4 audit: snapshots must not contain brand names or per-brand prices");
+  pass(`R2-S4 audit: ${audits2.length} snapshots, none contain brand names / per-brand prices`);
+
+  // D4: a bad Hybrid sheet rejects the whole file (On-grid fine), nothing persisted.
+  const badBuf = await hybridFixture(uniq + 1, (rows) => rows.push({ ...rows[0] }));
+  const badPath = await writeTempXlsx(badBuf, "bad-hybrid-fixture.xlsx");
+  const importsBeforeBad = await countImports();
+  const versionBeforeBad = (await configNow()).version;
+  await openTablesTab(page);
+  await openImportPanel(page);
+  await page.setInputFiles("#calc-import-file", badPath);
+  await page.click("#calc-import-upload");
+  await page.waitForSelector("#calc-import-reject", { timeout: 15000 });
+  if (!(await page.locator("#calc-import-reject").innerText()).includes("ชีต Hybrid")) fail("R2-S4 D4: reject list must name the Hybrid sheet");
+  if ((await countImports()) !== importsBeforeBad || (await configNow()).version !== versionBeforeBad) fail("R2-S4 D4: rejected file must persist nothing");
+  pass("R2-S4 D4: bad Hybrid sheet rejects the whole file, nothing persisted");
+
+  // D3: applying an On-grid-only version removes the live Hybrid table.
+  await page.setInputFiles("#calc-import-file", warningFilePath);
+  await page.click("#calc-import-upload");
+  await page.waitForSelector("#calc-import-preview", { timeout: 15000 });
+  await page.click("#calc-import-apply");
+  await page.click("#calc-import-apply-confirm");
+  await page.getByText("ใช้ตารางใหม่แล้ว").first().waitFor({ timeout: 15000 });
+  if (hybridLen((await configNow()).hybridSizeTable) !== 0) fail("R2-S4 D3: applying an On-grid-only file must remove the Hybrid table");
+  pass("R2-S4 D3: On-grid-only file applied -> Hybrid table removed");
+
+  // Forged Hybrid payload while no Hybrid is live -> rejected (cannot create one by hand).
+  const noHybridNow = await configNow();
+  const outCreate = await replay({ onGrid: noHybridNow.sizeTable, hybrid: liveHybrid, version: noHybridNow.version });
+  if (!outCreate.includes("ยังไม่มีตาราง Hybrid")) fail(`R2-S4 forged: hybrid payload without a live Hybrid must be rejected, got: ${outCreate.slice(0, 200)}`);
+  if ((await configNow()).version !== noHybridNow.version) fail("R2-S4 forged: create-by-hand must not change config");
+  pass("R2-S4 forged saves: Hybrid payload while none is live -> rejected");
+
+  // Re-apply the two-sheet version from history so the reset below has a Hybrid table to clear.
+  await page.waitForSelector(`#calc-import-use-${created2.id}`, { state: "visible", timeout: 10000 });
+  await page.click(`#calc-import-use-${created2.id}`);
+  await page.click(`#calc-import-use-confirm-${created2.id}`);
+  await page.waitForTimeout(1500);
+  if (hybridLen((await configNow()).hybridSizeTable) !== 9) fail("R2-S4 history: 'ใช้ชุดนี้' on the two-sheet version must restore the Hybrid table");
+  pass("R2-S4 history: ใช้ชุดนี้ on the two-sheet version restores the 9-row Hybrid table");
+}
+
 // --- 10. Reset (UI) -> back to the baseline default table ---
 await openConfigTab(page);
 await page.click("#calc-reset");
 await page.click("#calc-reset-confirm");
 await page.waitForSelector("text=คืนค่าเริ่มต้นแล้ว", { timeout: 15000 });
 if ((await configNow()).sizeTable !== null) fail("RESET: size table must be cleared");
+if (Array.isArray((await configNow()).hybridSizeTable)) fail("RESET: Hybrid table must be cleared");
 for (const locale of ["th", "en"] as const) {
   if (await publicHas(pub, locale, 7000, SEVEN)) fail(`RESET ${locale}: 7 kW must be gone`);
   if (!(await publicHas(pub, locale, 7000, /(?<![\d.])10\s*kW/))) fail(`RESET ${locale}: bill 7000 must recommend 10 kW again (baseline)`);
