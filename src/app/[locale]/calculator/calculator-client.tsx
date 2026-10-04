@@ -59,6 +59,8 @@ export function CalculatorClient({
   const billValue = Number(bill);
   // Keep the raw input while typing; clamp only after the user leaves the field.
   const clampBill = () => {
+    // An empty field stays empty (empty state), not snapped to the minimum bill.
+    if (bill.trim() === "") return;
     const value = Number.isFinite(billValue) ? billValue : config.minBill;
     setBill(String(Math.min(maxTypedBill, Math.max(config.minBill, value))));
   };

@@ -952,6 +952,24 @@ await marketingR1.close();
       const tag = `R2-S9 ${locale}@${width}`;
       if ((await p.locator('input[name="calc-mode"]').count()) !== 2) fail(`${tag}: toggle (radiogroup, 2 radios) must show when a Hybrid table exists`);
       if (!(await p.locator('input[name="calc-mode"][value="onGrid"]').isChecked())) fail(`${tag}: page must start in On-grid`);
+      {
+        // An empty bill stays empty on blur / tab switch (it must not snap to the minimum bill).
+        const input = p.locator("#monthly-bill");
+        for (const mode of ["onGrid", "hybrid", "onGrid"]) {
+          await p.locator(`label:has(input[name="calc-mode"][value="${mode}"])`).click();
+          await p.fill("#monthly-bill", "");
+          await input.blur();
+          await p.waitForTimeout(120);
+          if ((await input.inputValue()) !== "") fail(`${tag}: empty bill must stay empty after blur (${mode}), got "${await input.inputValue()}"`);
+          if (!/—/.test(await input.locator("xpath=ancestor::div[contains(@class,'overflow-hidden')][1]").innerText())) fail(`${tag}: empty bill must show the empty state (${mode})`);
+        }
+        // Non-empty values are still clamped on blur (1 -> minimum, not left as typed).
+        await p.fill("#monthly-bill", "1");
+        await input.blur();
+        if (Number(await input.inputValue()) <= 1) fail(`${tag}: a below-minimum bill must still be clamped up on blur`);
+        await p.fill("#monthly-bill", "");
+        await input.blur();
+      }
       const heights: number[] = [];
       await setBill(9500);
       heights.push(await cardHeight(p));
