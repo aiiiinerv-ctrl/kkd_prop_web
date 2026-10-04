@@ -38,8 +38,9 @@ export type ImportWarning = {
  * message (shown in the admin preview, later stored with the import) is capped. */
 const MAX_ECHO_CHARS = 40;
 export function clip(value: string): string {
-  // Strip control/format characters (bidi overrides, zero-width, NUL) before echoing a cell value.
-  const oneLine = value.replace(/[\p{Cc}\p{Cf}]/gu, "").replace(/\s+/g, " ").trim();
+  // Collapse whitespace first (so "kW\nMW" stays "kW MW"), then strip control/format characters
+  // (bidi overrides, zero-width, NUL) before echoing a cell value.
+  const oneLine = value.replace(/\s+/g, " ").replace(/[\p{Cc}\p{Cf}]/gu, "").trim();
   return oneLine.length > MAX_ECHO_CHARS ? `${oneLine.slice(0, MAX_ECHO_CHARS)}…` : oneLine;
 }
 

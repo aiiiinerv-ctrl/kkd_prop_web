@@ -6,9 +6,10 @@
 import { z } from "zod";
 import { CALCULATOR_DEFAULTS } from "./calculator";
 
-/** Control (Cc) and format (Cf) characters: NUL, bidi overrides/isolates,
- * zero-width — never valid in a brand name, which is echoed in admin UI. */
-export const BRAND_FORBIDDEN_CHARS = /[\p{Cc}\p{Cf}]/u;
+/** Control (Cc), format (Cf), private-use (Co) and unassigned (Cn) characters plus
+ * invisible fillers (Hangul fillers U+115F/U+1160/U+3164, Braille blank U+2800,
+ * combining grapheme joiner U+034F) — never valid in a brand name, which is echoed in admin UI. */
+export const BRAND_FORBIDDEN_CHARS = /[\p{Cc}\p{Cf}\p{Co}\p{Cn}\u3164\u115F\u1160\u2800\u034F]/u;
 /** Identity of a brand name for duplicate detection: NFC, trimmed, case-folded. */
 export const brandNameKey = (name: string): string => name.normalize("NFC").trim().toLowerCase();
 
@@ -46,6 +47,7 @@ const hybridRowSchema = z.object({
           .string()
           .trim()
           .min(1)
+          .max(50)
           .refine((v) => !BRAND_FORBIDDEN_CHARS.test(v), "ชื่อยี่ห้อมีอักขระควบคุมหรืออักขระซ่อนที่ใช้ไม่ได้"),
         priceThb: z.coerce.number().nonnegative().nullable(),
       })

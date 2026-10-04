@@ -18,7 +18,7 @@ import { validateOnGridTable } from "../src/lib/calculator-import/validate-on-gr
 import { validateHybridTable } from "../src/lib/calculator-import/validate-hybrid";
 import { hybridTableSchema } from "../src/lib/calculator-hybrid";
 import type { HybridRow } from "../src/lib/calculator-hybrid";
-import { toExcelLocation } from "../src/lib/calculator-import/messages";
+import { toExcelLocation, clip } from "../src/lib/calculator-import/messages";
 import { DEFAULT_SIZE_TABLE } from "../src/lib/calculator-size-table";
 import type { SizeRow } from "../src/lib/calculator-size-table";
 import { buildCalculatorWorkbook } from "../src/lib/calculator-import/export";
@@ -592,13 +592,17 @@ const hybridErrors = (r: Awaited<ReturnType<typeof importWith>>) => (r.ok ? [] :
   assert("duplicate brand names -> reject brand-invalid", !r4.ok && hybridErrors(r4)[0]?.code === "brand-invalid");
   // Brand names with control / bidi / zero-width characters, and case-only duplicates, are rejected;
   // the issue text is fixed and never echoes the name.
-  const HIDDEN = /[\p{Cc}\p{Cf}]/u;
+  const HIDDEN = /[\p{Cc}\p{Cf}\p{Co}\p{Cn}\u3164\u115F\u1160\u2800\u034F]/u;
   const badBrands: [string, string[]][] = [
     ["U+202E (bidi override)", ["BrandA", "Brand\u202EB", "BrandC", "BrandD", "BrandE"]],
     ["U+2066 (bidi isolate)", ["BrandA", "\u2066BrandB", "BrandC", "BrandD", "BrandE"]],
     ["U+200B (zero-width space)", ["BrandA", "Brand\u200BB", "BrandC", "BrandD", "BrandE"]],
     ["U+FEFF (BOM)", ["BrandA", "Brand\uFEFFB", "BrandC", "BrandD", "BrandE"]],
     ["NUL", ["BrandA", "Brand\u0000B", "BrandC", "BrandD", "BrandE"]],
+    ["U+3164 (Hangul filler)", ["BrandA", "Brand\u3164B", "BrandC", "BrandD", "BrandE"]],
+    ["U+2800 (braille blank)", ["BrandA", "Brand\u2800B", "BrandC", "BrandD", "BrandE"]],
+    ["U+034F (grapheme joiner)", ["BrandA", "Brand\u034FB", "BrandC", "BrandD", "BrandE"]],
+    ["U+E000 (private use)", ["BrandA", "Brand\uE000B", "BrandC", "BrandD", "BrandE"]],
     ["case-only duplicate", ["BrandA", "brandA", "BrandC", "BrandD", "BrandE"]],
   ];
   for (const [label, brands] of badBrands) {
@@ -618,6 +622,17 @@ const hybridErrors = (r: Awaited<ReturnType<typeof importWith>>) => (r.ok ? [] :
     const r = await importWith({ rows });
     const msgs = hybridErrors(r).map((e) => e.message);
     assert("echoed cell value is stripped of control/bidi characters", !r.ok && msgs.length > 0 && msgs.every((m) => !HIDDEN.test(m)), msgs.join("|"));
+  }
+  // clip(): whitespace collapses BEFORE stripping, so "kW\nMW" keeps its separator
+  assert("clip keeps a newline as a single space", clip("kW\nMW") === "kW MW", clip("kW\nMW"));
+  assert("clip collapses mixed whitespace then strips hidden chars", clip("a \t\n b\u200Bc") === "a bc", clip("a \t\n b\u200Bc"));
+  // The shared table schema also caps the brand name at 50 chars
+  {
+    const rows = SYNTH_HYBRID_FOR_SCHEMA();
+    const long = rows.map((row) => ({ ...row, brandPrices: row.brandPrices.map((b, i) => (i === 0 ? { ...b, brand: "x".repeat(51) } : b)) }));
+    const ok50 = rows.map((row) => ({ ...row, brandPrices: row.brandPrices.map((b, i) => (i === 0 ? { ...b, brand: "x".repeat(50) } : b)) }));
+    assert("hybridTableSchema rejects a 51-char brand name", !hybridTableSchema.safeParse(long).success);
+    assert("hybridTableSchema accepts a 50-char brand name", hybridTableSchema.safeParse(ok50).success);
   }
   // The shared table schema (manual editor, R2-S6) rejects the same names
   for (const [label, brands] of badBrands) {
