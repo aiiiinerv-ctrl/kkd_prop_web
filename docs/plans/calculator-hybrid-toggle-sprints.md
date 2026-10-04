@@ -38,7 +38,7 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 
 **2026-10-04**: Release 1 (On-grid แก้ตาราง + export) ขึ้น production แล้ว (R1-S7 done) — R1 soak 2–3 วันทำการก่อน R2-S0; R2 พัฒนาล่วงหน้าบน branch `feat/r2-s1-hybrid-lib` (ยังไม่ merge).
 
-**2026-10-04 (กติกาใหม่)**: R2 ทำให้เสร็จทั้งหมดบน local และให้ผู้ใช้รีวิวบน localhost ก่อน แล้วค่อย release production ครั้งเดียว — R1 soak เป็นเงื่อนไขของ deploy เท่านั้น ไม่ block การพัฒนา. สถานะ branch: R2-S1/S2/S3/S4/S5 เสร็จ (merge main @ 8e20fae แล้ว).
+**2026-10-04 (กติกาใหม่)**: R2 ทำให้เสร็จทั้งหมดบน local และให้ผู้ใช้รีวิวบน localhost ก่อน แล้วค่อย release production ครั้งเดียว — R1 soak เป็นเงื่อนไขของ deploy เท่านั้น ไม่ block การพัฒนา. สถานะ branch: R2-S1/S2/S3/S4/S5/S6/S7 เสร็จ (merge main @ 8e20fae แล้ว).
 
 ## Sprint tracker
 
@@ -62,8 +62,8 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 | **R2-S3** | Schema R2 (3 คอลัมน์) + DDL asset | `nextjs-dev` | `deploy-verify` | ✅ ขนานกับ R2-S1/S2 | 0.5 d | done |
 | **R2-S4** | Actions + read path: preview/apply/save/reset รู้จัก Hybrid, `getCalculatorConfig` คืน projection + payload test | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R2-S2, R2-S3 | 1 d | done (branch `feat/r2-s1-hybrid-lib`) — build ✓, verify-calculator ✓, verify-calculator-import ✓, e2e-calculator-config ✓ (+R2-S4 block), e2e-admin-crud ✓, รอ `audit-compliance-reviewer` |
 | **R2-S5** | Export ชีต Hybrid (merged block, กลุ่มยี่ห้อ) + round-trip 2 ชีต | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R2-S2 · ✅ ขนานกับ R2-S4 | 0.75 d | done — round-trip ✓ (fixture + ไฟล์จริง), Excel check ✓, route wiring ทำใน R2-S4 แล้ว, รอ `audit-compliance-reviewer` |
-| **R2-S6** | หลังบ้าน: แท็บย่อย On-grid/Hybrid, รายการ + Dialog Hybrid, save 2 ตาราง | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R2-S4 | 1.25 d | pending |
-| **R2-S7** | หลังบ้าน: preview นำเข้า 2 ชีต, กล่อง "Hybrid จะถูกลบ", reject แยกชีต, ประวัติ/reset copy | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R2-S4 · ✅ ขนานกับ R2-S6 (คนละไฟล์) | 0.75 d | pending |
+| **R2-S6** | หลังบ้าน: แท็บย่อย On-grid/Hybrid, รายการ + Dialog Hybrid, save 2 ตาราง | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R2-S4 | 1.25 d | done (local) — build ✓, e2e-calculator-config ✓ (+R2-S6 block), e2e-save-calculator-tables ✓, e2e-admin-crud ✓, รอ `design-business-reviewer` |
+| **R2-S7** | หลังบ้าน: preview นำเข้า 2 ชีต, กล่อง "Hybrid จะถูกลบ", reject แยกชีต, ประวัติ/reset copy | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R2-S4 · ✅ ขนานกับ R2-S6 (คนละไฟล์) | 0.75 d | done (local) — build ✓, e2e-calculator-config ✓ (+R2-S7 block), รอ `design-business-reviewer` |
 | **R2-S8** | Lead fields: `interestedBatteryKwh`, booking `system`/`battery`, ช่องแบตในแท็บ quote, lead detail, แจ้งเตือน, export รายงาน | `nextjs-dev` | `audit-compliance-reviewer`, `i18n-parity-checker`, `design-business-reviewer` (booking form) | ⏳ R2-S3 · ✅ ขนานกับ R2-S1/S2/S4–S7 | 1 d | pending |
 | **R2-S9** | หน้า public Variant B: tab หัวการ์ด, segmented แบต, phase pill, CTA | `nextjs-dev` | `i18n-parity-checker`, `design-business-reviewer` (TH/EN × desktop/375px) | ⏳ R2-S4, R2-S8 · ✅ ขนานกับ R2-S6/S7 | 1.5 d | pending |
 | **R2-S10** | Release R2: runbook → snapshot → DDL → deploy → smoke + write-path lead | `hosting-deploy-specialist` + human | `deploy-verify` | ⏳ R2-S1…S9 | 0.5 d | pending |
@@ -458,7 +458,11 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback:** ไม่มี
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้ (2026-10-04, branch `feat/r2-s1-hybrid-lib`, local เท่านั้น)**
+- ไฟล์: `calculator-tables-tab.tsx` (แท็บย่อย controlled + keepMounted ทั้งสอง, working copy 2 ตาราง, save bar นับ On-grid/Hybrid, "ไปที่จุดแรก" สลับแท็บ, ส่ง `hybrid` เฉพาะเมื่อแก้), `calculator-table-list.tsx` (`HybridList` + empty state ไม่มีปุ่มเพิ่ม), `hybrid-size-dialog.tsx` (ใหม่), `save-tables-dialog.tsx` (คอลัมน์ Hybrid, diff ราคา/แถวแบต, คำเตือนเรียง Package → ไม่มีราคา → แผง → E3), `calculator-hybrid-diff-view.tsx` (ใหม่, ใช้ร่วมกับ R2-S7), `use-table-draft.ts` + `hybrid-draft.ts` (ใหม่, โมเดล Hybrid บริสุทธิ์ client-safe), `page.tsx` (+`multiplier`), `lib/calculator-import/diff.ts` (+`currentKws`/`nextKws` บน `HybridTableDiff` เพื่อแยกขนาดใหม่/ถูกลบ), `scripts/e2e-calculator-config.mts`
+- ต่างจากแผน: (1) แยกโมเดล Hybrid เป็น `src/hooks/admin/hybrid-draft.ts` แทนยัดใน use-table-draft.ts (ไฟล์เดียวจะเกิน 800 บรรทัด) (2) Dialog Hybrid ใช้ `sm:max-w-4xl` (5 ยี่ห้อพอดีที่ 1280) (3) draft เก็บ `brands` ใน state — พบ deadlock จริงจาก e2e: หลัง refresh ที่ Hybrid หาย props.brands เปลี่ยนก่อน state ทำให้ draft "dirty" ค้างและไม่ reset (4) `design-business-reviewer` ยังไม่ได้รัน; ตรวจ real render 1280/820 เองแล้ว (screenshot ใน scratchpad r2-admin)
+- DoD: `npm run build` ✓ · `e2e-calculator-config` ✓ (port 3002) · `e2e-save-calculator-tables` ✓ · `e2e-admin-crud` ✓ (สำเนา port 3002) · `verify-calculator` ✓ · `verify-calculator-import` ✓ · grep `_proto|_prototype|variant-switcher|load-hybrid` src = 0 · ไม่มี client component import `calculator-import/index`
+
 
 ---
 
@@ -642,7 +646,11 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback:** revert — action ยังรับ `hybrid: null` ได้
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้ (2026-10-04, local เท่านั้น)**
+- ไฟล์: `calculator-import-panel.tsx` (กล่องอธิบาย 2 ชีต + รายการคอลัมน์ On-grid 9 / Hybrid 11, meta line, กล่อง "แทนที่ทั้ง 2 ชุด", กล่อง `calc-import-hybrid-removed`, ส่วนชีต On-grid / Hybrid เรียงต่อกัน, confirm destructive, reject แยกกลุ่มชีต + "ทั้งไฟล์ไม่ผ่าน แม้ชีต On-grid จะถูกต้อง"), `calculator-version-history.tsx` (Hybrid {k} ขนาด / ไม่มี Hybrid, confirm เตือนและ `border-destructive` เมื่อเวอร์ชันไม่มี Hybrid), `calculator-config-tab.tsx` (copy reset R2), `scripts/e2e-calculator-config.mts` (บล็อก R2-S7)
+- ต่างจากแผน: bullet "ไม่อ่านราคา ยี่ห้อ…" ปรับให้ระบุว่าเป็นชีต On-grid (ชีต Hybrid อ่านราคา); reject ที่ผิดเฉพาะ On-grid คงรายการแบน (พฤติกรรม R1) ใช้หัวกลุ่มเฉพาะเมื่อมี issue ชีต Hybrid; ปุ่ม "ดูคอลัมน์ที่ระบบอ่าน" ไม่มีตัวเลขท้ายแล้ว; `design-business-reviewer` ยังไม่ได้รัน
+- DoD: `npm run build` ✓ · `e2e-calculator-config` ✓ (assert removal box, reject แยกชีต, history counts/คำเตือน)
+
 
 ---
 
