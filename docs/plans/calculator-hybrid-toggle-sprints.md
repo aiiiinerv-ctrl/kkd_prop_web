@@ -652,6 +652,20 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 - DoD: `npm run build` ✓ · `e2e-calculator-config` ✓ (assert removal box, reject แยกชีต, history counts/คำเตือน)
 
 
+**แก้ตามรีวิว `design-business-reviewer` (R2-S6/S7 admin polish, 2026-10-04, local)**
+- M1 Dialog On-grid/Hybrid เปิดพร้อมแสดง error เดิมของขนาดนั้น (ไม่ต้องแตะช่อง); error ของค่าร่วมที่ validator รายงานทีละแถวแบต แสดงครั้งเดียวใต้ช่องนั้น
+- M2 กติกาปัดแผงเดียว `Math.ceil(kW x 1.2 / 0.63)` (ตรง On-grid) ทั้ง helper, warning ใน Dialog, ข้อความ preview/save-confirm (`validate-hybrid.ts`, `hybrid-draft.ts`, `verify-calculator-import.mts` ปรับคาดหวัง)
+- m1 รายการ Hybrid ใช้ `table-fixed` + `colgroup` เปอร์เซ็นต์ + ตัดบรรทัดได้: 820px (sidebar 240) พอดีไม่ scroll (scrollWidth 464 = clientWidth 464), 1280px ไม่มีช่องว่างก้อนเดียวกลางตาราง
+- m2 ตารางราคาใน Dialog: ยี่ห้อ `min-w-[5.5rem]`, หัวคอลัมน์ตัดบรรทัด, คอลัมน์ปุ่มลบ sticky-right → 820px พอดีไม่ scroll (5 ยี่ห้อ); **คง `sm:max-w-4xl`** (ตัดสินใจ: กว้างพอที่ 1280 โดยไม่ทำให้ตารางลอยห่างฟอร์มค่าร่วม; ถ้ามี >5 ยี่ห้อจะ scroll ได้ แต่ปุ่มลบยังเห็นเพราะ sticky)
+- m3 Badge amber "เตือน {n}" ในแถวรายการ Hybrid (คำนวณจาก `validateHybridTable` ของแถวนั้น). **On-grid ไม่มีกติกา warning ต่อแถว** (design-162 Q2: แผงเป็นข้อมูลช่วยตรวจ ไม่เตือน) จึงไม่มีป้ายใน On-grid — ถ้ามีกติกาในอนาคตให้ใช้ `WARN_BADGE_CLASS` ใน `calculator-table-list.tsx`
+- m4 ไฮไลต์ทำเฉพาะเซลล์ที่ค่าที่แสดงเปลี่ยนจริง (เทียบข้อความที่แสดง) รวม "ยี่ห้อที่มีราคา" และ "คืนทุน"; หลังคา On-grid ไม่ไฮไลต์เมื่อค่าที่แสดงเท่าเดิม
+- m5 เฟสสุดท้ายแสดงข้อความ "ต้องมีอย่างน้อย 1 เฟส" (`aria-describedby`); แถวแบต 0 แทนปุ่มลบที่ disabled ด้วยไอคอนล็อกและข้อความอธิบายใต้ตาราง
+- Nit: บรรทัด diff ใน save-confirm/preview `text-sm`; ตารางอ่านอย่างเดียวของ import preview เพิ่ม "ประหยัด/ด." และ "คืนทุน (ปี)" ให้ตรง Dialog (§8.3); คอลัมน์ "คืนทุนบนหน้าเว็บ" ของตัวอย่างบิล On-grid **คงไว้** (เป็นพฤติกรรม R1 ที่ผูกกับ Package และมีข้อความ "ขนาดที่ไม่มี Package")
+- `MAX_HYBRID_ROWS` ใน `hybrid-draft.ts` import จาก `@/lib/calculator-hybrid` (ไฟล์ pure ใช้ zod อย่างเดียว ปลอดภัยกับ client)
+- ภาพ: 1280/820 ของรายการ Hybrid/On-grid, Dialog (50 kW, error เดิม, warning, hint เฟส), preview 2 ชีต, reject ทั้ง 2 ชีต, confirm "ใช้ชุดนี้" ของเวอร์ชันไม่มี Hybrid (§9)
+- **ต่างจากแผน:** ไม่ได้ทำ 375/768 ของหลังบ้าน — หลังบ้านใช้บนเดสก์ท็อป และ 820 ครอบคลุม tablet
+- e2e เพิ่ม: M1 (เปิดขนาดที่มี error → เห็นกล่อง error ทันที), M2/M3 (แผง 5 ที่ 10 kW → "≈20" ทั้งสองที่ + ป้าย "เตือน"); เพิ่ม `scripts/seed-synthetic-hybrid.mts` (ข้อมูลสังเคราะห์ ใส่ผ่าน UI นำเข้าเพื่อให้ toggle ขึ้นบน localhost)
+
 ---
 
 ## R2-S7 — หลังบ้าน: preview นำเข้า 2 ชีต + ประวัติ + reset copy  (⏳ R2-S4, ✅ ขนานกับ R2-S6)
