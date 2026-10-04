@@ -41,6 +41,8 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 
 **2026-10-04 (กติกาใหม่)**: R2 ทำให้เสร็จทั้งหมดบน local และให้ผู้ใช้รีวิวบน localhost ก่อน แล้วค่อย release production ครั้งเดียว — R1 soak เป็นเงื่อนไขของ deploy เท่านั้น ไม่ block การพัฒนา. สถานะ branch: R2-S1/S2/S3/S4/S5/S6/S7 เสร็จ (merge main @ 8e20fae แล้ว).
 
+**2026-10-04 (ค่ำ)**: Release 2 (Hybrid) ขึ้น production แล้ว (R2-S10 done, BUILD_ID hn-_MHg0STrHRMI5SamS6 @ 4850dcf) — แท็บ Hybrid จะขึ้นหลัง admin นำเข้าไฟล์ 2 ชีต (R2-S11)
+
 ## Sprint tracker
 
 ชื่อ sprint ใช้ prefix `R1-` / `R2-` เพื่อไม่ให้ชนกับ "On-grid S10" ของแผนต้นแบบ
@@ -57,7 +59,7 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 | **R1-S6** | ตัวแก้แบบ B: Dialog, working copy, แถบบันทึก, Dialog ยืนยัน diff (+ warning Package), conflict + e2e | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R1-S4, R1-S5 | 1.5 d | done — e2e ✓, รอ `design-business-reviewer` |
 | **R1-S7** | Release R1: runbook → snapshot → DDL → deploy → smoke + rollback runbook (R2 ของ research-158) | `hosting-deploy-specialist` + human (`!`, phpMyAdmin) | `deploy-verify` (ก่อน upload) | ⏳ R1-S1…S6 | 0.5 d | done (ข้อ 10 = optional, ยังไม่ทำ) |
 | **R2 — Hybrid** | | | | | | |
-| **R2-S0** | Gate R1 นิ่งบน prod + baseline หลัง R1 | `nextjs-dev` | — | ⏳ R1-S7 | 0.25 d | pending |
+| **R2-S0** | Gate R1 นิ่งบน prod + baseline หลัง R1 | `nextjs-dev` | — | ⏳ R1-S7 | 0.25 d | skipped — owner chose to release R2 same day as R1 (2026-10-04); R2 completed + reviewed on localhost first |
 | **R2-S1** | Pure lib Hybrid: `HybridRow`, schema, สูตร, ราคาที่ใช้ได้, `recommendHybrid` + projection | `nextjs-dev` | — (verify script = reviewer) | ⏳ R2-S0 | 1 d | done — verify-calculator ✓ (76/76), `tsc` ✓; full `npm run build` รันตอน merge; audit follow-up (clip/BRAND_FORBIDDEN_CHARS/.max(50)) ปิดแล้วใน a71233f |
 | **R2-S2** | Reader + validator + diff + messages ชีต Hybrid + import ไฟล์เดียว 2 ชีต (D3/D4) + fixture สังเคราะห์ | `nextjs-dev` | `audit-compliance-reviewer` (guard review) | ⏳ R2-S1 | 1.5 d | done — verify ✓ (fixture + ไฟล์จริง), รอ `audit-compliance-reviewer` |
 | **R2-S3** | Schema R2 (3 คอลัมน์) + DDL asset | `nextjs-dev` | `deploy-verify` | ✅ ขนานกับ R2-S1/S2 | 0.5 d | done |
@@ -67,7 +69,7 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 | **R2-S7** | หลังบ้าน: preview นำเข้า 2 ชีต, กล่อง "Hybrid จะถูกลบ", reject แยกชีต, ประวัติ/reset copy | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R2-S4 · ✅ ขนานกับ R2-S6 (คนละไฟล์) | 0.75 d | done (local) — build ✓, e2e-calculator-config ✓ (+R2-S7 block), รอ `design-business-reviewer` |
 | **R2-S8** | Lead fields: `interestedBatteryKwh`, booking `system`/`battery`, ช่องแบตในแท็บ quote, lead detail, แจ้งเตือน, export รายงาน | `nextjs-dev` | `audit-compliance-reviewer`, `i18n-parity-checker`, `design-business-reviewer` (booking form) | ⏳ R2-S3 · ✅ ขนานกับ R2-S1/S2/S4–S7 | 1 d | done (local) — build ✓, e2e-booking ✓ (+ battery th/en), e2e-admin-crud ✓, e2e-admin ✓, รอ `audit-compliance-reviewer` / `design-business-reviewer` |
 | **R2-S9** | หน้า public Variant B: tab หัวการ์ด, segmented แบต, phase pill, CTA | `nextjs-dev` | `i18n-parity-checker`, `design-business-reviewer` (TH/EN × desktop/375px) | ⏳ R2-S4, R2-S8 · ✅ ขนานกับ R2-S6/S7 | 1.5 d | done (local) — build ✓, e2e-calculator-config ✓ (R2-S9), verify-calculator ✓, e2e-booking ✓; การ์ดสูงคงที่ 0 px; รอ reviewer. **สรุปหลังแก้ (revision, design-business-reviewer FAIL → rebalance Option A):** ช่อง Output/เดือนไม่นับแบต (panels-only, assert ใน verify-calculator) · เฉพาะเมื่อมีตาราง Hybrid: กล่องระบบย้ายไปคอลัมน์ซ้าย, callout + footnote ใต้ป้ายทองฝั่งขวา, On-grid มีปุ่ม compare สลับไป Hybrid, ปุ่มแบต wrap 2 แถวเสมอ <640px (cell ≥56×44), tab ขาว + radio dot; ไม่มีตาราง Hybrid → DOM การ์ดเท่าเดิมทุกตัวอักษร (8/8 เทียบ baseline). วัดบน prod build: การ์ด 567 px @1280 (th/en) คงที่ทุก bill/โหมด/แบต, ซ้าย 502 / ขวา 508, ช่องว่างในกล่อง 6 px |
-| **R2-S10** | Release R2: runbook → snapshot → DDL → deploy → smoke + write-path lead | `hosting-deploy-specialist` + human | `deploy-verify` | ⏳ R2-S1…S9 | 0.5 d | pending |
+| **R2-S10** | Release R2: runbook → snapshot → DDL → deploy → smoke + write-path lead | `hosting-deploy-specialist` + human | `deploy-verify` | ⏳ R2-S1…S9 | 0.5 d | done (2026-10-04) |
 | **R2-S11** | Post-deploy: ADMIN อัปโหลดไฟล์ 2 ชีตจริงบน prod → ตรวจ toggle + lead | owner/ADMIN (human) + agent browser | `design-business-reviewer` (prod render) | ⏳ R2-S10 | 0.25 d | pending |
 | **R2-S12** | Cleanup: ลบ prototype worktree/branch #157/#162 + ปิด backlog | main session (หลัง user ยืนยัน) | — | ⏳ R2-S11 | 0.1 d | pending |
 
@@ -790,13 +792,24 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
   5. DDL ผิด → import snapshot ข้อ 3
 
 **DoD**
-- [ ] หลักฐานข้อ 3, 4, 7, 8, 9, 10 ใน "สรุปหลังแก้"
-- [ ] อัปเดต Status ของแผนนี้
+- [x] หลักฐานข้อ 3, 4, 7, 8, 9, 10 ใน "สรุปหลังแก้"
+- [x] อัปเดต Status ของแผนนี้
 - Commit: `docs(deploy): record hybrid calculator release evidence`
 
 **Rollback:** ตามขั้น rollback R2 ข้างบน
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้ (2026-10-04)**
+- **Artifact:** `deploy/dist.zip` 29,219,935 bytes, BUILD_ID `hn-_MHg0STrHRMI5SamS6`, build จาก `main` `4850dcf` (merge ของ `feat/r2-s1-hybrid-lib`); artifact ที่ live อยู่ก่อนหน้า (build `8e20fae`, สำหรับ rollback) เก็บไว้ในเครื่องที่ `backups/deploy-artifacts/dist-live-2026-10-04-8e20fae.zip` (29,046,160 bytes, ไม่ commit)
+- **ก่อน release:** merge + verify เต็มบน main — build ✓, tsc ✓, eslint ไม่มี error ใหม่ (7 รายการเดิม), verify-calculator ✓, verify-calculator-import ✓, e2e-admin ✓, e2e-admin-crud ✓ (118), e2e-booking ✓, e2e-calculator-config ✓, e2e-save-calculator-tables ✓; หน้าที่ไม่มี Hybrid ไม่มี tab ตรงกับ prod; `deploy-verify` PASS บน DDL asset ของ R2
+- **ข้อ 3 Snapshot:** phpMyAdmin export `CalculatorConfig` + `CalculatorImport` (5 แถว) + `Lead` (6 แถว), structure+data พร้อม DROP TABLE → `kkdprop1_pre-r2s10_2026-10-04.sql` 56,932 bytes; เก็บนอก server (ในเครื่อง, ไม่ commit)
+- **ข้อ 4 DDL:** pre-check 3 ตารางเป็น InnoDB, ยังไม่มีคอลัมน์ใหม่; human รัน ALTER 3 คำสั่งใน phpMyAdmin; ตรวจด้วย `pma-readonly-query`: `Lead.interestedBatteryKwh` int(11) NULL, `CalculatorConfig.hybridSizeTable` longtext(JSON) NULL, `CalculatorImport.hybridRows` longtext(JSON) NULL; จำนวนแถวไม่เปลี่ยน (Lead 6, Import 5), config v15; ตรวจ **ก่อน** upload
+- **ข้อ 6:** human upload 226 (29,219,935 bytes) → extract ได้ "File Extracted" → restart ได้ 302
+- **ข้อ 7:** `/api/admin/leads` 401, `/api/admin/calculator/export` 401, `/` → `/th`; smoke-test-production ✓ รวม `/th/calculator` "คำนวณ", `/en/calculator` "How Much Is Your Bill", `/th/booking` "แบต" (marker = มีช่องแบตในฟอร์ม)
+- **ข้อ 8 write path:** `/th/booking?tab=quote&system=hybrid&battery=16` prefill HYBRID + 16; ส่ง lead `[TEST] hybrid r2` → DB `["HYBRID"]` + `interestedBatteryKwh` 16; owner ลบผ่าน phpMyAdmin (admin ไม่มีปุ่มลบ lead) พร้อมลบ lead `[TEST] Deploy verify 2026-08-28` เก่า 2 รายการ → ไม่เหลือ lead `[TEST]`
+- **ข้อ 9:** `/th|en/calculator` ไม่มี tab เลือกโหมด (`hybridSizeTable` เป็น NULL); ข้าม baseline ตัวเลข R2-S0 (owner เลือก release วันเดียวกัน; owner รีวิว R2 บน localhost แล้ว)
+- **ข้อ 10:** owner ยืนยันแท็บ admin แสดง "Hybrid (ไม่มี)" และ export ใช้งานได้
+- **หมายเหตุกระบวนการ:** auto-mode classifier บล็อก agent ไม่ให้เขียน prod → human รัน DDL/upload/extract ผ่าน phpMyAdmin และ `!`
+- **ถัดไป:** R2-S11 owner นำเข้าไฟล์ Excel 2 ชีตจริงผ่าน admin; R2-S12 cleanup
 
 ---
 
