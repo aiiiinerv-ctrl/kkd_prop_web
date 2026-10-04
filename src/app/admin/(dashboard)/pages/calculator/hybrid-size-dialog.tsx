@@ -33,6 +33,8 @@ import {
   hybridRowPaybacks,
   isIgnoredBatteryPrice,
   liveRows,
+  dedupeHybridIssues,
+  isHybridRowField,
   livePhases,
   panelsFormulaGap,
   resolveHybridSize,
@@ -193,14 +195,12 @@ export function HybridSizeDialog({
     };
     return validateHybridDraft([...others, me], brands).issues.filter((i) => i.key === "__dialog__");
   }, [values, others, brands, size]);
-  const isRowField = (i: HybridIssue) => i.field === "batteryKwh" || i.field === "prices";
+  const isRowField = isHybridRowField;
   const issueVisible = (i: HybridIssue) =>
     forceAll || touched.has(isRowField(i) && i.rowKey ? `row:${i.rowKey}` : i.field);
   const visibleErrors = issues.filter((i) => i.field !== "table" && issueVisible(i));
-  // Only battery / price problems belong to one row; every other field is shared by all rows of the
-  // size, so the validator reports it once per row — show it once, under its own field.
-  const issueKey = (i: HybridIssue) => `${i.field}|${i.message}|${isRowField(i) ? (i.rowKey ?? "") : ""}`;
-  const summaryErrors = visibleErrors.filter((i, idx, all) => all.findIndex((o) => issueKey(o) === issueKey(i)) === idx);
+  // Shared-field problems are reported once per row by the validator — dedupeHybridIssues shows them once.
+  const summaryErrors = dedupeHybridIssues(visibleErrors);
   const errorsFor = (field: HybridField) =>
     summaryErrors.filter((i) => i.field === field && !isRowField(i)).map((i) => i.message);
   const rowErrors = (rowKey: string) => visibleErrors.filter((i) => i.rowKey === rowKey && isRowField(i));
