@@ -149,7 +149,7 @@ export function HybridSizeDialog({
       billMax: null,
       rows: [
         {
-          key: `new-${++seq.current}`,
+          key: "new-0", // seq starts at 0, so nextKey() never collides
           phase: 3,
           batteryKwh: 0,
           prices: blankPrices(),
