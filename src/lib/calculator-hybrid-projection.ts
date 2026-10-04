@@ -1,8 +1,8 @@
-// SERVER-ONLY. Projects raw Hybrid rows (brand names + per-brand prices) into
+// Not for public bundles; admin use is fine. Projects raw Hybrid rows (brand names + per-brand prices) into
 // the table the browser may see. The public caller is getCalculatorConfig();
 // the admin import diff (calculator-import/diff.ts, back-office bundles only)
 // also uses it to evaluate sample bills. Never import this from a public
-// client component (the repo has no `server-only` package, so this comment is
+// client component or any public bundle (the repo has no `server-only` package, so this comment is
 // the guard). Default #5 / research-158 §3.
 import {
   usablePrices,

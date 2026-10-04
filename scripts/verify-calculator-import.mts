@@ -16,6 +16,7 @@ import { importOnGridSizeTable, importCalculatorWorkbook } from "../src/lib/calc
 import { diffSizeTables, diffHybridTables, DIFF_SAMPLE_BILLS } from "../src/lib/calculator-import/diff";
 import { validateOnGridTable } from "../src/lib/calculator-import/validate-on-grid";
 import { validateHybridTable } from "../src/lib/calculator-import/validate-hybrid";
+import { hybridTableSchema } from "../src/lib/calculator-hybrid";
 import type { HybridRow } from "../src/lib/calculator-hybrid";
 import { toExcelLocation } from "../src/lib/calculator-import/messages";
 import { DEFAULT_SIZE_TABLE } from "../src/lib/calculator-size-table";
@@ -438,6 +439,9 @@ async function importWith(hybrid: HybridSheetOptions | undefined, onGridRows: Fi
   return importCalculatorWorkbook(buf, "คำนวณติดตั้ง.xlsx");
 }
 const hybridWarnings = (r: Awaited<ReturnType<typeof importWith>>) => (r.ok ? r.warnings.filter((w) => w.sheet === "hybrid") : []);
+const SYNTH_HYBRID_FOR_SCHEMA = (): HybridRow[] => [
+  { kw: 5, phase: 1, batteryKwh: 0, sunHours: 4.8, days: 30, pricePerKwh: 4.5, panels: 10, roofM2: 27, billMin: 3000, billMax: 6000, brandPrices: ["BrandA", "BrandB", "BrandC", "BrandD", "BrandE"].map((brand) => ({ brand, priceThb: 100000 })) },
+];
 const hybridErrors = (r: Awaited<ReturnType<typeof importWith>>) => (r.ok ? [] : r.groups.hybrid);
 
 {
@@ -586,6 +590,40 @@ const hybridErrors = (r: Awaited<ReturnType<typeof importWith>>) => (r.ok ? [] :
   assert("more than 10 brands -> reject brand-invalid", !r3.ok && hybridErrors(r3)[0]?.code === "brand-invalid");
   const r4 = await importWith({ rows: goodHybridRows(), brands: ["BrandA", "BrandA", "BrandC", "BrandD", "BrandE"] });
   assert("duplicate brand names -> reject brand-invalid", !r4.ok && hybridErrors(r4)[0]?.code === "brand-invalid");
+  // Brand names with control / bidi / zero-width characters, and case-only duplicates, are rejected;
+  // the issue text is fixed and never echoes the name.
+  const HIDDEN = /[\p{Cc}\p{Cf}]/u;
+  const badBrands: [string, string[]][] = [
+    ["U+202E (bidi override)", ["BrandA", "Brand\u202EB", "BrandC", "BrandD", "BrandE"]],
+    ["U+2066 (bidi isolate)", ["BrandA", "\u2066BrandB", "BrandC", "BrandD", "BrandE"]],
+    ["U+200B (zero-width space)", ["BrandA", "Brand\u200BB", "BrandC", "BrandD", "BrandE"]],
+    ["U+FEFF (BOM)", ["BrandA", "Brand\uFEFFB", "BrandC", "BrandD", "BrandE"]],
+    ["NUL", ["BrandA", "Brand\u0000B", "BrandC", "BrandD", "BrandE"]],
+    ["case-only duplicate", ["BrandA", "brandA", "BrandC", "BrandD", "BrandE"]],
+  ];
+  for (const [label, brands] of badBrands) {
+    const r = await importWith({ rows: goodHybridRows(), brands });
+    const msgs = hybridErrors(r).map((e) => e.message + (e.action ?? ""));
+    // U+FEFF is \s (the cell reader turns it into a space) and NUL never survives the xlsx XML writer, so for
+    // those two the workbook path is "sanitized before it reaches the check" — still never stored with the char.
+    const sanitizedByLoader = label.startsWith("U+FEFF") || label === "NUL";
+    const clean = r.ok ? (r.hybrid ?? []).every((row) => row.brandPrices.every((b) => !HIDDEN.test(b.brand))) : false;
+    const rejected = !r.ok && hybridErrors(r)[0]?.code === "brand-invalid" && msgs.every((m) => !HIDDEN.test(m) && !m.includes("BrandB"));
+    assert(`brand name ${label} -> ${sanitizedByLoader ? "rejected or sanitized" : "reject brand-invalid"}, no control chars in messages/stored names`, rejected || (sanitizedByLoader && clean), msgs.join("|"));
+  }
+  // clip(): a cell value echoed in an issue loses control/bidi characters
+  {
+    const rows = goodHybridRows();
+    rows[0] = { ...rows[0], phase: "\u202E3\u200Bx\u0000" as unknown as number };
+    const r = await importWith({ rows });
+    const msgs = hybridErrors(r).map((e) => e.message);
+    assert("echoed cell value is stripped of control/bidi characters", !r.ok && msgs.length > 0 && msgs.every((m) => !HIDDEN.test(m)), msgs.join("|"));
+  }
+  // The shared table schema (manual editor, R2-S6) rejects the same names
+  for (const [label, brands] of badBrands) {
+    const rows = SYNTH_HYBRID_FOR_SCHEMA().map((row) => ({ ...row, brandPrices: row.brandPrices.slice(0, brands.length).map((b, i) => ({ ...b, brand: brands[i] })) }));
+    assert(`hybridTableSchema rejects brand name ${label}`, !hybridTableSchema.safeParse(rows).success);
+  }
 }
 {
   // D4: any Hybrid issue rejects the whole file, even when On-grid is fine; both sheets bad -> both groups

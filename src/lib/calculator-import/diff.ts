@@ -1,3 +1,6 @@
+// WARNING: the Hybrid inputs here carry raw brandPrices (brand names + per-brand
+// prices). Never import this module from a public component or bundle.
+//
 // Compares two size tables (the one currently active vs. a freshly parsed
 // import) for the admin preview screen — see
 // docs/plans/calculator-excel-import-admin-ui-spec.md §4.2.3/§4.2.4.

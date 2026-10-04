@@ -135,7 +135,7 @@ export function cellNumber(ws: ExcelJS.Worksheet, row: number, col: number): Num
     return { ok: true, value: raw, wasFormula: false, wasText: false, noCachedResult: false };
   }
 
-  if (raw && typeof raw === "object" && "formula" in raw) {
+  if (raw && typeof raw === "object" && ("formula" in raw || "sharedFormula" in raw)) {
     const result = (raw as { result?: unknown }).result;
     if (typeof result === "number") {
       return { ok: true, value: result, wasFormula: true, wasText: false, noCachedResult: false };

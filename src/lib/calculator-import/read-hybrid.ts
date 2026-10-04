@@ -20,6 +20,7 @@
 // first (guards run before exceljs touches the file). Never import from a
 // client component.
 import ExcelJS from "exceljs";
+import { BRAND_FORBIDDEN_CHARS, brandNameKey } from "../calculator-hybrid";
 import type { HybridRow } from "../calculator-hybrid";
 import { validateOnGridRowBill, validateOnGridRowRanges } from "./validate-on-grid";
 import {
@@ -173,7 +174,9 @@ function findColumns(ws: ExcelJS.Worksheet, groupRow: number, subRow: number, co
   if (brandCols.length === 0) return hybridBrandGroupMissingIssue();
   const brands = brandCols.map((col) => ({ col, name: subs[col - 1] }));
   if (brands.length > MAX_BRANDS) return hybridBrandInvalidIssue(`มี ${brands.length} ยี่ห้อ`);
-  if (new Set(brands.map((b) => b.name)).size !== brands.length) return hybridBrandInvalidIssue("มีชื่อยี่ห้อซ้ำกัน");
+  // Fixed text only: a rejected name is never echoed back (it may hide bidi/control characters).
+  if (brands.some((b) => BRAND_FORBIDDEN_CHARS.test(b.name))) return hybridBrandInvalidIssue("มีชื่อยี่ห้อที่มีอักขระควบคุมหรืออักขระซ่อน");
+  if (new Set(brands.map((b) => brandNameKey(b.name))).size !== brands.length) return hybridBrandInvalidIssue("มีชื่อยี่ห้อซ้ำกัน");
   if (brands.some((b) => b.name.length > MAX_BRAND_NAME_CHARS)) return hybridBrandInvalidIssue("มีชื่อยี่ห้อที่ยาวเกินไป");
 
   return { size, unit, phase, battery, sunHours, days, panels, roof, billMin: billMatches[0], billMax: billMatches[1], pricePerKwh, brands };

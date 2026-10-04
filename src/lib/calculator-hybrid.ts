@@ -6,6 +6,12 @@
 import { z } from "zod";
 import { CALCULATOR_DEFAULTS } from "./calculator";
 
+/** Control (Cc) and format (Cf) characters: NUL, bidi overrides/isolates,
+ * zero-width — never valid in a brand name, which is echoed in admin UI. */
+export const BRAND_FORBIDDEN_CHARS = /[\p{Cc}\p{Cf}]/u;
+/** Identity of a brand name for duplicate detection: NFC, trimmed, case-folded. */
+export const brandNameKey = (name: string): string => name.normalize("NFC").trim().toLowerCase();
+
 export type HybridBrandPrice = { brand: string; priceThb: number | null };
 
 export type HybridRow = {
@@ -36,7 +42,11 @@ const hybridRowSchema = z.object({
   brandPrices: z
     .array(
       z.object({
-        brand: z.string().trim().min(1),
+        brand: z
+          .string()
+          .trim()
+          .min(1)
+          .refine((v) => !BRAND_FORBIDDEN_CHARS.test(v), "ชื่อยี่ห้อมีอักขระควบคุมหรืออักขระซ่อนที่ใช้ไม่ได้"),
         priceThb: z.coerce.number().nonnegative().nullable(),
       })
     )
@@ -95,6 +105,14 @@ export const hybridTableSchema = z
             });
           }
         }
+      }
+
+      if (new Set(row.brandPrices.map((b) => brandNameKey(b.brand))).size !== row.brandPrices.length) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${label}: ชื่อยี่ห้อซ้ำกัน (ไม่สนตัวพิมพ์เล็ก/ใหญ่)`,
+          path: [index, "brandPrices"],
+        });
       }
 
       const sameBrands =
