@@ -58,14 +58,15 @@ export function CalculatorConfigTab({
     }}>
       <CalculatorConfigClient key={configData.version} data={configData} onBusyChange={setConfigBusy} />
       <p className="text-sm text-muted-foreground">
-        ตารางขนาดระบบ (On-grid) ย้ายไปอยู่แท็บ &quot;ตารางขนาดระบบ&quot;
+        ตารางขนาดระบบ (On-grid / Hybrid) ย้ายไปอยู่แท็บ &quot;ตารางขนาดระบบ&quot;
       </p>
 
       <div className="space-y-3 border-t border-border/70 pt-6">
         <h3 className="text-sm font-semibold">คืนค่าเริ่มต้น</h3>
         <p className="text-sm text-muted-foreground">
-          คืนตัวคูณรายปีเป็น 10, สไลด์บิล 500–8,000 ฿ ทีละ 100 และกลับไปใช้ตารางเริ่มต้น 3 ขนาด (3, 5,
-          10 kW) — เวอร์ชันในประวัติยังอยู่ เลือก &quot;ใช้ชุดนี้&quot; ได้ภายหลัง
+          คืนตัวคูณรายปีเป็น 10, สไลด์บิล 500–8,000 ฿ ทีละ 100, กลับไปใช้ตาราง On-grid เริ่มต้น 3 ขนาด (3,
+          5, 10 kW) และลบตาราง Hybrid (หน้าเว็บจะซ่อนตัวเลือก Hybrid) — เวอร์ชันในประวัติยังอยู่
+          เลือก &quot;ใช้ชุดนี้&quot; ได้ภายหลัง
         </p>
         {!confirmingReset ? (
           <Button
@@ -80,7 +81,10 @@ export function CalculatorConfigTab({
           </Button>
         ) : (
           <div className="flex flex-wrap items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm">
-            <span>ยืนยันคืนค่าเริ่มต้นทั้งหมด? หน้าเครื่องคำนวณจะกลับไปใช้ตารางเริ่มต้น 3 ขนาดทันที</span>
+            <span>
+              ยืนยันคืนค่าเริ่มต้นทั้งหมด? หน้าเครื่องคำนวณจะกลับไปใช้ตารางเริ่มต้น 3 ขนาด
+              และตัวเลือก Hybrid จะหายทันที
+            </span>
             <Button
               type="button"
               variant="outline"

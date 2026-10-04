@@ -3,7 +3,7 @@
 // Version history of the size table (R1-S5) — moved out of the old size-table
 // card. design-162 §9: one list for both sources, a "Excel: <file>" or
 // "แก้ในหลังบ้าน" badge per item, original-file download only when a file
-// exists. R1 has On-grid only (no Hybrid counts / copy).
+// exists. R2-S7 adds the Hybrid counts and the "version has no Hybrid" warning.
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Download, FileSpreadsheet, PencilLine } from "lucide-react";
@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { applyCalculatorImport } from "@/actions/calculator-import";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { formatDateTime } from "./calculator-table-format";
 
 export type SizeTableHistoryItem = {
@@ -60,12 +61,15 @@ const HISTORY_PREVIEW = 5;
 
 export function CalculatorVersionHistory({
   history,
+  activeHasHybrid,
   activeImportId,
   configVersion,
   locked,
   onBusyChange,
 }: {
   history: SizeTableHistoryItem[];
+  /** The live config has a Hybrid table (so applying a version without one removes it). */
+  activeHasHybrid: boolean;
   activeImportId: string | null;
   configVersion: number;
   /** Unsaved table edits exist — "ใช้ชุดนี้" must not run underneath them. */
@@ -137,6 +141,7 @@ export function CalculatorVersionHistory({
         <ul id="calc-import-history" className="divide-y rounded-md border border-border/70">
           {(showAll ? history : history.slice(0, HISTORY_PREVIEW)).map((item) => {
             const isActive = item.id === activeImportId;
+            const removesHybrid = activeHasHybrid && item.hybridSizeCount === 0;
             return (
               <li
                 key={item.id}
@@ -149,6 +154,7 @@ export function CalculatorVersionHistory({
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {formatDateTime(item.createdAt)} · {item.uploadedByName} · On-grid {item.onGridCount} ขนาด ·{" "}
+                    {item.hybridSizeCount > 0 ? `Hybrid ${item.hybridSizeCount} ขนาด` : "ไม่มี Hybrid"} ·{" "}
                     {item.warnings.length === 0 ? (
                       <span className="whitespace-nowrap shrink-0">ไม่มีคำเตือน</span>
                     ) : (
@@ -193,11 +199,24 @@ export function CalculatorVersionHistory({
                     </div>
                   )}
                   {confirmId === item.id && (
-                    <div className="mt-2 flex flex-wrap items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+                    <div
+                      className={cn(
+                        "mt-2 flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm",
+                        removesHybrid ? "border-destructive" : "border-border"
+                      )}
+                    >
                       <span>
                         {item.source === "MANUAL"
-                          ? `ใช้เวอร์ชัน "แก้ในหลังบ้าน" (${formatDateTime(item.createdAt)}) บนหน้าเว็บจริงแทนชุดปัจจุบัน? ลูกค้าเห็นทันที`
-                          : `ใช้ชุด "${item.fileName}" (อัปโหลด ${formatDateTime(item.createdAt)}) บนหน้าเว็บจริงแทนชุดปัจจุบัน? ลูกค้าเห็นทันที`}
+                          ? `ใช้เวอร์ชัน "แก้ในหลังบ้าน" (${formatDateTime(item.createdAt)}) บนหน้าเว็บจริงแทนชุดปัจจุบัน? ทั้ง On-grid และ Hybrid จะเปลี่ยนเป็นของเวอร์ชันนี้ — ลูกค้าเห็นทันที`
+                          : `ใช้ชุด "${item.fileName}" (อัปโหลด ${formatDateTime(item.createdAt)}) บนหน้าเว็บจริงแทนชุดปัจจุบัน? ทั้ง On-grid และ Hybrid จะเปลี่ยนเป็นของเวอร์ชันนี้ — ลูกค้าเห็นทันที`}
+                        {removesHybrid && (
+                          <>
+                            {" "}
+                            <strong id={`calc-import-use-nohybrid-${item.id}`}>
+                              เวอร์ชันนี้ไม่มีตาราง Hybrid ตัวเลือก Hybrid จะหายจากหน้าเว็บ
+                            </strong>
+                          </>
+                        )}
                       </span>
                       <Button
                         type="button"
