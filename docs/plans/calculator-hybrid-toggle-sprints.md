@@ -57,7 +57,7 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 | **R2-S2** | Reader + validator + diff + messages ชีต Hybrid + import ไฟล์เดียว 2 ชีต (D3/D4) + fixture สังเคราะห์ | `nextjs-dev` | `audit-compliance-reviewer` (guard review) | ⏳ R2-S1 | 1.5 d | done — verify ✓ (fixture + ไฟล์จริง), รอ `audit-compliance-reviewer` |
 | **R2-S3** | Schema R2 (3 คอลัมน์) + DDL asset | `nextjs-dev` | `deploy-verify` | ✅ ขนานกับ R2-S1/S2 | 0.5 d | pending |
 | **R2-S4** | Actions + read path: preview/apply/save/reset รู้จัก Hybrid, `getCalculatorConfig` คืน projection + payload test | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R2-S2, R2-S3 | 1 d | pending |
-| **R2-S5** | Export ชีต Hybrid (merged block, กลุ่มยี่ห้อ) + round-trip 2 ชีต | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R2-S2 · ✅ ขนานกับ R2-S4 | 0.75 d | pending |
+| **R2-S5** | Export ชีต Hybrid (merged block, กลุ่มยี่ห้อ) + round-trip 2 ชีต | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R2-S2 · ✅ ขนานกับ R2-S4 | 0.75 d | done — round-trip ✓ (fixture + ไฟล์จริง), Excel check ✓, route ย้ายไป R2-S4, รอ `audit-compliance-reviewer` |
 | **R2-S6** | หลังบ้าน: แท็บย่อย On-grid/Hybrid, รายการ + Dialog Hybrid, save 2 ตาราง | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R2-S4 | 1.25 d | pending |
 | **R2-S7** | หลังบ้าน: preview นำเข้า 2 ชีต, กล่อง "Hybrid จะถูกลบ", reject แยกชีต, ประวัติ/reset copy | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R2-S4 · ✅ ขนานกับ R2-S6 (คนละไฟล์) | 0.75 d | pending |
 | **R2-S8** | Lead fields: `interestedBatteryKwh`, booking `system`/`battery`, ช่องแบตในแท็บ quote, lead detail, แจ้งเตือน, export รายงาน | `nextjs-dev` | `audit-compliance-reviewer`, `i18n-parity-checker`, `design-business-reviewer` (booking form) | ⏳ R2-S3 · ✅ ขนานกับ R2-S1/S2/S4–S7 | 1 d | pending |
@@ -526,6 +526,7 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **สรุปก่อนแก้**
 - ไฟล์:
+  - `src/app/api/admin/calculator/export/route.ts` — **ย้ายมาจาก R2-S5**: ส่ง `hybridSizeTable` เข้า `buildCalculatorWorkbook`
   - `src/actions/calculator-import.ts`
     - `previewCalculatorImport` → `importCalculatorWorkbook`; create `{ source: "EXCEL", rows, hybridRows }`; คืน diff 2 ตาราง + `hasHybridSheet` + `activeHybridCounts`; **dedupe ตาม Default #3**; snapshot projection + `hybridRowCount`
     - `applyCalculatorImport` — `hybridSizeTable: imp.hybridRows ?? Prisma.JsonNull` + `hybridTableSchema.safeParse` ซ้ำ
@@ -565,7 +566,13 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback:** revert — export กลับเป็น On-grid อย่างเดียว
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้ (2026-10-04)**
+- ไฟล์: `export.ts` (`buildCalculatorWorkbook({ onGrid, hybrid? })` + `writeHybridSheet`; ชีต `Hybrid` สร้างเฉพาะเมื่อ `hybrid` มีแถว — undefined/null/[] ไม่สร้าง), `scripts/verify-calculator-import.mts` (round-trip 2 ชีต)
+- ชีต: header 2 แถวใช้ `HYBRID_HEADER` ของ reader; ค่าร่วมต่อ kW (ขนาด/หน่วย/ชั่วโมง/วัน/แผง/หลังคา/บิล/ค่าไฟ + ช่องคำนวณ) เขียนที่แถวแรกของบล็อกแล้ว merge ลงทั้งบล็อก; Phase+แบตกรอกทุกแถว; ช่องประหยัดค่าไฟเป็นสูตร `(kW*ชม.+แบต)*ค่าไฟ*วัน` + result; ยี่ห้อเรียงตาม brands, ราคาเป็นตัวเลข (ว่าง = ไม่มีราคา) ไม่มีสูตรราคาแบต ไม่มีบล็อก HUAWEI (D6); กลุ่มคืนทุนไม่ export (reader ไม่อ่าน)
+- Round-trip: fixture สังเคราะห์ (BrandA-D, ราคา null, 1φ/3φ ชุดแบตต่างกัน, หลังคา override, วันทศนิยม) → On-grid และ Hybrid deep-equal, ไม่มี warning สูตร; ไม่มี Hybrid -> ไม่มีชีต -> `hybrid: null`; ไฟล์จริง On-grid 31 แถว / Hybrid 52 แถว round-trip equal (พิมพ์เฉพาะจำนวน)
+- Excel (AppleScript, `calculate full`): สูตรทุก cell คำนวณได้ ไม่มี error, merged block ถูกที่ (5 kW = แถว 3-7, 10 kW = 8-9, 20 kW = 10-11), ค่า cached ตรงกับค่าที่ Excel คำนวณ
+- **ต่างจากแผน:** ยัง **ไม่แก้ `src/app/api/admin/calculator/export/route.ts`** (ต้องรอคอลัมน์ `hybridSizeTable` จาก R2-S3) -> ย้ายไปทำใน **R2-S4** (ส่ง `hybridSizeTable` เข้า builder; ADMIN-only + `no-store` คงเดิม)
+
 
 ---
 

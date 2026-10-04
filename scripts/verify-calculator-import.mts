@@ -681,6 +681,84 @@ console.log("\n=== hybrid diff ===");
   assert("diff: Hybrid removed (D3) -> nextEmpty, all rows removed", removedAll.nextEmpty && removedAll.removed.length === rows.length);
 }
 
+// === Export round-trip, two sheets (R2-S5) — synthesized BrandA…E data only ===
+console.log("\n=== export round-trip: On-grid + Hybrid ===");
+const SYNTH_BRANDS = ["BrandA", "BrandB", "BrandC", "BrandD"];
+const synthHybrid = (kw: number, phase: 1 | 3, batteryKwh: number, shared: Partial<HybridRow>, prices: (number | null)[]): HybridRow => ({
+  kw,
+  phase,
+  batteryKwh,
+  sunHours: 4.8,
+  days: 30,
+  pricePerKwh: 4.5,
+  panels: 10,
+  roofM2: 27,
+  billMin: 3000,
+  billMax: 6000,
+  ...shared,
+  brandPrices: SYNTH_BRANDS.map((brand, i) => ({ brand, priceThb: prices[i] ?? null })),
+});
+const SYNTH_HYBRID: HybridRow[] = [
+  // 5 kW: 1φ has batteries 0/16, 3φ has a different set 0/16/32; one null price
+  synthHybrid(5, 1, 0, {}, [100000, 110000, null, null]),
+  synthHybrid(5, 1, 16, {}, [160000, 170000, null, null]),
+  synthHybrid(5, 3, 0, {}, [106000, 116000, null, null]),
+  synthHybrid(5, 3, 16, {}, [166000, null, null, null]),
+  synthHybrid(5, 3, 32, {}, [226000, 236000, null, null]),
+  // 10 kW: single phase, roof overridden (not panels x 2.7), decimal days
+  synthHybrid(10, 3, 0, { sunHours: 5.1, days: 30.5, panels: 19, roofM2: 60, billMin: 6000, billMax: 12000, pricePerKwh: 4.25 }, [150000, null, 160000, null]),
+  synthHybrid(10, 3, 16, { sunHours: 5.1, days: 30.5, panels: 19, roofM2: 60, billMin: 6000, billMax: 12000, pricePerKwh: 4.25 }, [null, null, null, null]),
+  // 20 kW: row with every price null
+  synthHybrid(20, 1, 0, { panels: 38, roofM2: 102.6, billMin: 13000, billMax: 20000 }, [250000, 255000, null, 260000]),
+  synthHybrid(20, 3, 0, { panels: 38, roofM2: 102.6, billMin: 13000, billMax: 20000 }, [null, null, null, null]),
+];
+{
+  assert("synthetic hybrid passes the shared table validator", validateHybridTable(SYNTH_HYBRID).issues.length === 0);
+  const exported = await buildCalculatorWorkbook({ onGrid: SYNTHETIC_TABLE, hybrid: SYNTH_HYBRID });
+  const back = await importCalculatorWorkbook(exported, "export.xlsx");
+  assert("two-sheet export re-imports ok", back.ok, back.ok ? "" : back.errors.slice(0, 3).map((e) => e.message).join(" | "));
+  if (back.ok) {
+    assert("On-grid deep-equals the original", JSON.stringify(back.onGrid) === JSON.stringify(SYNTHETIC_TABLE));
+    assert("Hybrid deep-equals the original", JSON.stringify(back.hybrid) === JSON.stringify(SYNTH_HYBRID));
+    assert("hasHybridSheet = true, no skipped sheets", back.hasHybridSheet && back.skippedSheets.length === 0);
+    const formulaWarnings = back.warnings.filter((w) => w.code === "formula-cached" || w.code === "formula-no-cache");
+    assert("no formula warnings on either sheet", formulaWarnings.length === 0, formulaWarnings.map((w) => w.code).join(","));
+    console.log(`  (info) warnings: ${back.warnings.map((w) => w.code).join(",") || "none"}`);
+  }
+
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(exported as unknown as Parameters<ExcelJS.Workbook["xlsx"]["load"]>[0]);
+  assert("sheets are On-grid then Hybrid", wb.worksheets.map((w) => w.name).join() === "On-grid,Hybrid");
+  const hs = wb.getWorksheet("Hybrid")!;
+  const types = new Set<string>();
+  let priceFormulas = 0;
+  for (let r = 3; r <= hs.rowCount; r++) {
+    for (let c = 16; c <= 19; c++) {
+      const v = hs.getRow(r).getCell(c).value;
+      if (v && typeof v === "object") priceFormulas++;
+      if (typeof v === "number") types.add("number");
+    }
+  }
+  assert("brand price cells are plain numbers, no formulas (D6)", priceFormulas === 0 && types.has("number"));
+  assert("brand header order matches brands", SYNTH_BRANDS.every((b, i) => hs.getRow(2).getCell(16 + i).value === b));
+  assert("rows end at the table: no second block below (D6)", hs.rowCount === 2 + SYNTH_HYBRID.length);
+  assert("kW 5 block (5 rows) is one merged range in the size column", hs.getRow(3).getCell(1).isMerged && hs.getRow(7).getCell(1).isMerged && hs.getRow(8).getCell(1).value === 10);
+  assert("phase and battery are filled on every row", Array.from({ length: SYNTH_HYBRID.length }, (_, i) => hs.getRow(3 + i)).every((r) => typeof r.getCell(3).value === "number" && typeof r.getCell(4).value === "number"));
+  const f = hs.getRow(3).getCell(6).value as { formula?: string; result?: number };
+  assert("derived cell is a formula with cached result", !!f && typeof f === "object" && !!f.formula && typeof f.result === "number");
+
+  // No Hybrid -> no Hybrid sheet -> importer says hybrid: null (D3)
+  const noHybridCases: (HybridRow[] | null | undefined)[] = [undefined, null, []];
+  for (const hybrid of noHybridCases) {
+    const noHybrid = await buildCalculatorWorkbook({ onGrid: SYNTHETIC_TABLE, ...(hybrid === undefined ? {} : { hybrid }) });
+    const nb = await importCalculatorWorkbook(noHybrid, "export.xlsx");
+    assert(
+      `hybrid=${JSON.stringify(hybrid)} -> no Hybrid sheet, import gives hybrid: null`,
+      nb.ok && nb.hybrid === null && !nb.hasHybridSheet && JSON.stringify(nb.onGrid) === JSON.stringify(SYNTHETIC_TABLE)
+    );
+  }
+}
+
 // === Optional: real workbook, both sheets — aggregate counts only (never prices/brands) ===
 console.log("\n=== real workbook, hybrid sheet (optional) ===");
 {
@@ -714,6 +792,15 @@ console.log("\n=== real workbook, hybrid sheet (optional) ===");
       assert(`real: E4 = ${e4rows} rows in ${e4.length} kW warnings (expect 7 rows)`, e4rows === 7 && e4.length === 3);
       assert("real: Hybrid not in skippedSheets", !r.skippedSheets.some((n) => /^hybrid$/i.test(n.trim())), r.skippedSheets.join());
       assert("real: no hybrid formula-cached warnings", !hw.some((w) => w.code === "formula-cached"));
+      const again = await importCalculatorWorkbook(await buildCalculatorWorkbook({ onGrid: r.onGrid, hybrid: r.hybrid }), "export.xlsx");
+      assert(
+        `real: export -> import round-trip equal (On-grid ${r.onGrid.length} rows, Hybrid ${r.hybrid.length} rows)`,
+        again.ok && JSON.stringify(again.onGrid) === JSON.stringify(r.onGrid) && JSON.stringify(again.hybrid) === JSON.stringify(r.hybrid)
+      );
+      if (again.ok) {
+        const codes = (ws: typeof r.warnings) => ws.filter((w) => w.sheet === "hybrid").map((w) => w.code).join();
+        assert("real: re-import has no formula-cached warnings and the same hybrid data warnings as the first import", !again.warnings.some((w) => w.code === "formula-cached") && codes(again.warnings) === codes(r.warnings), codes(again.warnings));
+      }
       const kwRange = `${Math.min(...r.hybrid.map((x) => x.kw))}-${Math.max(...r.hybrid.map((x) => x.kw))}`;
       console.log(`  (info) On-grid ${r.onGrid.length} sizes, Hybrid kW ${kwRange}, hybrid warnings ${hw.length}`);
     } else if (r.ok) {
