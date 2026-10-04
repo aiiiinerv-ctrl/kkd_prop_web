@@ -363,7 +363,7 @@
     "modeOnGridHint": "ใช้ไฟจากแผงตอนกลางวัน คืนทุนเร็ว",
     "modeHybridHint": "มีแบตเตอรี่เก็บไฟไว้ใช้ตอนเย็นและตอนไฟดับ",
     "hybridResultSize": "ระบบไฮบริดที่แนะนำ: {kw} kW",
-    "phaseSupportBoth": "รองรับไฟ 1 และ 3 เฟส",
+    "phaseSupportBoth": "ใช้ได้ทั้งไฟ 1 เฟสและ 3 เฟส",
     "phaseOnly1": "ไฟ 1 เฟส",
     "phaseOnly3": "ไฟ 3 เฟส",
     "batteryLabel": "ขนาดแบตเตอรี่",
@@ -372,7 +372,16 @@
     "batteryOption": "{kwh} kWh",
     "batteryAutoAdjusted": "ปรับเป็น {kwh} ให้เข้ากับระบบ {kw} kW",
     "batteryAssumption": "คิดจากแบตชาร์จเต็มและใช้หมดวันละ 1 รอบ",
-    "modeOnGridNoBattery": "ไม่มีแบตเตอรี่ — ต้องการไฟสำรองตอนไฟดับ ดูแบบไฮบริด"
+    "compareYears": "~{years} ปี",
+    "compareHybrid": "ไฮบริด แบต {kwh} kWh",
+    "compareAskQuote": "ขอใบเสนอราคา",
+    "compareTalkTeam": "ปรึกษาทีมงาน",
+    "batterySizedOnSite": "ระบบเกิน {kw} kW เลือกขนาดแบตหน้างานกับทีมงาน",
+    "batteryEnterBill": "กรอกค่าไฟเพื่อดูตัวเลือกแบตเตอรี่",
+    "noBatteryFootnote": "ไม่มีแบต: ไม่มีไฟสำรองตอนไฟดับ",
+    "onGridFootnote": "คิดจากการใช้ไฟจากแผงในช่วงกลางวัน",
+    "batteryTradeoffHint": "แบตเล็กลง คืนทุนเร็วขึ้น · แบตใหญ่ขึ้น สำรองไฟได้นานขึ้น",
+    "modeCompareNote": "เทียบระยะคืนทุนที่ค่าไฟนี้ · ไฮบริดมีไฟสำรองตอนไฟดับ"
   },
   "testimonials": {
     "title": "เสียงจากลูกค้าของเรา",

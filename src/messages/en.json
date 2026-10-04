@@ -372,7 +372,16 @@
     "batteryOption": "{kwh} kWh",
     "batteryAutoAdjusted": "Adjusted to {kwh} for {kw} kW",
     "batteryAssumption": "Assumes one full battery charge used per day",
-    "modeOnGridNoBattery": "No battery — choose Hybrid for backup power in outages"
+    "compareYears": "~{years} yrs",
+    "compareHybrid": "Hybrid {kwh} kWh",
+    "compareAskQuote": "Get a quote",
+    "compareTalkTeam": "Talk to our team",
+    "batterySizedOnSite": "Battery is sized on site for systems over {kw} kW",
+    "batteryEnterBill": "Enter your bill to see battery options",
+    "noBatteryFootnote": "No battery: no backup power during outages",
+    "onGridFootnote": "Assumes solar power is used during daytime",
+    "batteryTradeoffHint": "Smaller battery, faster payback · bigger battery, longer backup",
+    "modeCompareNote": "Payback at this bill · Hybrid adds backup power in outages"
   },
   "testimonials": {
     "title": "What Our Customers Say",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Link } from "@/i18n/navigation";
 import {
   recommendFromTable,
@@ -13,7 +13,8 @@ import { recommendHybrid, type PublicHybridSize } from "@/lib/calculator-hybrid"
 import type { SizeRow } from "@/lib/calculator-size-table";
 import { AVG_MONTHLY_BILL_MAX } from "@/lib/validations/lead";
 import { useCalculatorStore } from "@/store/use-calculator-store";
-import { BatteryPicker, ModeInfoBox } from "./battery-picker";
+import { BatteryTrack, CompareTrack, SystemBox, type CompareCell } from "./battery-picker";
+import { PhasePill } from "./phase-pill";
 import { SystemModeTabs } from "./system-mode-tabs";
 
 /** What the result box needs, whichever system produced it. */
@@ -105,13 +106,34 @@ export function CalculatorClient({
   // Slots always show real content (no slot toggles between content and nothing); the card
   // height stays constant because variants are designed to ~the same height and invisible
   // ghosts only absorb <=1-line differences inside a filled box.
-  const renderResult = (result: ResultView, bill: number) => {
+  // `footnote` (Hybrid-toggle layout only): small print under the gold badge. undefined = none, so
+  // the plain On-grid card keeps its original markup.
+  const renderResult = (result: ResultView, bill: number, footnote?: string | null) => {
     const years = (result.paybackYears ?? 9.9).toLocaleString(locale, {
       minimumFractionDigits: 1,
       maximumFractionDigits: 1,
     });
     const amount = result.monthlySaving.toLocaleString(locale);
     const hasPayback = result.paybackYears != null;
+    const goldBadge = (
+          <div className="rounded-xl bg-brand-gold px-5 py-4 text-center">
+            {/* widest plausible digits (tabular-nums) so the line count can't depend on the amount */}
+            <div className="grid">
+              <p aria-hidden className="invisible col-start-1 row-start-1 font-extrabold text-primary">
+                {t("saveBadge", { amount: (88888).toLocaleString(locale) })}
+              </p>
+              <p className="col-start-1 row-start-1 font-extrabold text-primary">{t("saveBadge", { amount })}</p>
+            </div>
+            <div className="grid">
+              <p aria-hidden className="invisible col-start-1 row-start-1 mt-1 text-sm leading-5 font-semibold text-primary">
+                {t("noPaybackCta")} {(88888).toLocaleString(locale)}
+              </p>
+              <p className="col-start-1 row-start-1 mt-1 text-sm leading-5 font-semibold text-primary">
+                {hasPayback ? t("paybackLine", { years }) : t("noPaybackCta")}
+              </p>
+            </div>
+          </div>
+    );
     return (
       <div className="space-y-3 tabular-nums">
         <div className="flex min-h-[54px] flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border border-border bg-white px-5 py-3 shadow-sm">
@@ -151,23 +173,21 @@ export function CalculatorClient({
             </div>
           ))}
         </div>
-        <div className="rounded-xl bg-brand-gold px-5 py-4 text-center">
-          {/* widest plausible digits (tabular-nums) so the line count can't depend on the amount */}
-          <div className="grid">
-            <p aria-hidden className="invisible col-start-1 row-start-1 font-extrabold text-primary">
-              {t("saveBadge", { amount: (88888).toLocaleString(locale) })}
-            </p>
-            <p className="col-start-1 row-start-1 font-extrabold text-primary">{t("saveBadge", { amount })}</p>
+        {footnote === undefined ? (
+          goldBadge
+        ) : (
+          <div>
+            {goldBadge}
+            <div className="mt-1.5 grid text-center text-[11px] leading-4 text-muted-foreground">
+              {[t("batteryAssumption"), t("noBatteryFootnote"), t("onGridFootnote")].map((text) => (
+                <p key={text} aria-hidden className="invisible col-start-1 row-start-1">
+                  {text}
+                </p>
+              ))}
+              {footnote && <p className="col-start-1 row-start-1">{footnote}</p>}
+            </div>
           </div>
-          <div className="grid">
-            <p aria-hidden className="invisible col-start-1 row-start-1 mt-1 text-sm leading-5 font-semibold text-primary">
-              {t("noPaybackCta")} {(88888).toLocaleString(locale)}
-            </p>
-            <p className="col-start-1 row-start-1 mt-1 text-sm leading-5 font-semibold text-primary">
-              {hasPayback ? t("paybackLine", { years }) : t("noPaybackCta")}
-            </p>
-          </div>
-        </div>
+        )}
       </div>
     );
   };
@@ -227,171 +247,288 @@ export function CalculatorClient({
         }
       : null;
 
-  // The battery box is the biggest thing Hybrid adds to the result side. Its footprint is reserved
-  // from the Hybrid size with the most options (invisible ghost) in BOTH modes, so switching mode,
-  // size or battery never changes the card height.
-  const widestHybrid = hasHybrid
-    ? hybridTable!.reduce((best, size) => (size.batteries.length > best.batteries.length ? size : best), hybridTable![0])
-    : null;
   const ghostKw = hasHybrid ? Math.max(...hybridTable!.map((size) => size.kw)) : 0;
 
   const resolvedPanelTitle = panelTitle ?? t("panelTitle");
   const resolvedPanelIntro = panelIntro ?? t("panelIntro");
 
-  return (
-    <div className="mx-auto max-w-[1140px] overflow-hidden rounded-[18px] border border-border bg-card text-left shadow-[0_18px_55px_rgba(13,71,161,0.08)]">
-      {hasHybrid && (
-        <SystemModeTabs
-          value={mode}
-          onChange={setSystemMode}
-        />
-      )}
-      <div className="grid lg:grid-cols-[1.08fr_0.92fr]">
-        <div className="bg-muted p-8 sm:p-10 lg:p-[30px]">
-          <h2 className="text-2xl font-bold text-primary">{resolvedPanelTitle}</h2>
-          <p className="mt-3 text-sm text-muted-foreground">{resolvedPanelIntro}</p>
+  // --- shared by both layouts (identical markup) ---
+  const inputBlock = (
+    <>
+      <h2 className="text-2xl font-bold text-primary">{resolvedPanelTitle}</h2>
+      <p className="mt-3 text-sm text-muted-foreground">{resolvedPanelIntro}</p>
 
-          <label className="mt-7 block text-sm font-bold text-foreground" htmlFor="monthly-bill">
-            {t("billLabel")}
-          </label>
-          <div className="mt-3 flex min-h-[62px] items-center rounded-xl border border-border bg-accent px-5">
-            <span className="mr-3 text-sm font-medium text-foreground">฿</span>
-            <input
-              id="monthly-bill"
-              type="number"
-              inputMode="numeric"
-              min={config.minBill}
-              max={maxTypedBill}
-              step={1}
-              value={bill}
-              onChange={(e) => setBill(e.target.value)}
-              onBlur={clampBill}
-              aria-describedby="bill-type-hint"
-              placeholder={t("billPlaceholder")}
-              className="min-w-0 flex-1 bg-transparent text-2xl font-extrabold text-primary outline-none"
-            />
-            <span className="ml-2 text-sm text-muted-foreground">
-              / {t("month")}
-            </span>
+      <label className="mt-7 block text-sm font-bold text-foreground" htmlFor="monthly-bill">
+        {t("billLabel")}
+      </label>
+      <div className="mt-3 flex min-h-[62px] items-center rounded-xl border border-border bg-accent px-5">
+        <span className="mr-3 text-sm font-medium text-foreground">฿</span>
+        <input
+          id="monthly-bill"
+          type="number"
+          inputMode="numeric"
+          min={config.minBill}
+          max={maxTypedBill}
+          step={1}
+          value={bill}
+          onChange={(e) => setBill(e.target.value)}
+          onBlur={clampBill}
+          aria-describedby="bill-type-hint"
+          placeholder={t("billPlaceholder")}
+          className="min-w-0 flex-1 bg-transparent text-2xl font-extrabold text-primary outline-none"
+        />
+        <span className="ml-2 text-sm text-muted-foreground">
+          / {t("month")}
+        </span>
+      </div>
+
+      <input
+        type="range"
+        aria-label={t("billLabel")}
+        min={config.minBill}
+        max={config.maxBill}
+        step={config.stepBill}
+        value={Number.isFinite(billValue) ? Math.min(config.maxBill, Math.max(config.minBill, billValue)) : config.minBill}
+        onChange={(e) => setBill(e.target.value)}
+        className="mt-5 w-full accent-primary"
+      />
+      <p id="bill-type-hint" className="mt-1 text-xs leading-5 text-muted-foreground">
+        {t("billTypeHint", { max: maxTypedBill.toLocaleString(locale) })}
+      </p>
+    </>
+  );
+  const calloutBlock = (
+    <div className="grid">
+      <p aria-hidden className="invisible col-start-1 row-start-1 px-4 py-2.5 text-xs leading-5">
+        {t("belowFirstRowNote")}
+      </p>
+      <p aria-hidden className="invisible col-start-1 row-start-1 px-4 py-2.5 text-xs leading-5">
+        <b className="font-bold">{t("coversFullBill")}</b> {t("coversFullBillSub")}
+      </p>
+      <div className={`col-start-1 row-start-1 flex items-center rounded-lg px-4 py-2.5 text-xs leading-5 ring-1 ${calloutTone}`}>
+        <p>{calloutBody}</p>
+      </div>
+    </div>
+  );
+  const ctas = (padding: string) => (
+    <div className={`flex flex-wrap justify-center gap-3 ${padding}`}>
+      <Link href={bookingHref({ tab: "survey" })} className="btn-pill-outline">
+        {tCommon("bookSurvey")}
+      </Link>
+      <Link
+        href={bookingHref({ tab: "quote", bill: quoteBill, system: quoteSystem, battery: quoteBattery })}
+        className="btn-pill"
+      >
+        {tCommon("requestQuoteFree")}
+      </Link>
+    </div>
+  );
+  const tooLargeKw = (isHybrid && hybridRecommendation?.kind === "tooLarge"
+    ? hybridRecommendation.lastSize.kw
+    : recommendation.kind === "tooLarge"
+      ? recommendation.lastRow.kw
+      : 0
+  ).toLocaleString(locale);
+  const unavailableKind = isHybrid ? hybridRecommendation?.kind : recommendation.kind;
+  // Same footprint as a normal result: an invisible sample panel sizes the slot, the message
+  // overlays it, so the card never jumps when the state changes.
+  const renderUnavailable = (hybridLayout: boolean) => (
+    <div className="grid">
+      {sampleResult && (
+        <div aria-hidden className="invisible col-start-1 row-start-1">
+          {renderResult(sampleResult, sampleBill, hybridLayout ? null : undefined)}
+        </div>
+      )}
+      <div
+        className={hybridLayout ? "col-start-1 row-start-1 flex items-stretch justify-center" : "col-start-1 row-start-1 flex items-center justify-center"}
+      >
+        {unavailableKind === "tooLarge" ? (
+          <div
+            className={`w-full rounded-xl border border-border bg-white p-6 text-center shadow-sm${hybridLayout ? " flex h-full flex-col justify-center" : ""}`}
+          >
+            <h3 className="text-lg font-extrabold text-primary">{t("tooLargeTitle", { size: tooLargeKw })}</h3>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">{t("tooLargeBody")}</p>
+          </div>
+        ) : (
+          hybridLayout ? (
+            <div className="flex h-full w-full flex-col justify-center rounded-xl border border-border bg-white p-6 text-center shadow-sm">
+              <p className="text-sm text-muted-foreground">{t("billPlaceholder")}</p>
+            </div>
+          ) : (
+            <p className="text-center text-sm text-muted-foreground">{t("billPlaceholder")}</p>
+          )
+        )}
+      </div>
+    </div>
+  );
+
+  if (!hasHybrid) {
+    return (
+      <div className="mx-auto max-w-[1140px] overflow-hidden rounded-[18px] border border-border bg-card text-left shadow-[0_18px_55px_rgba(13,71,161,0.08)]">
+        <div className="grid lg:grid-cols-[1.08fr_0.92fr]">
+          <div className="bg-muted p-8 sm:p-10 lg:p-[30px]">
+            {inputBlock}
+            <div className="mt-4 space-y-3">
+              <p className="min-h-10 text-sm font-bold tabular-nums text-primary sm:min-h-5">
+                {displayedResult && (
+                  <>
+                    {t("resultSystemSize", { kw: displayedResult.row.kw.toLocaleString(locale) })}
+                    {displayedResult.row.phases.includes(1) && displayedResult.row.phases.includes(3) && ` ${t("phaseBoth")}`}
+                    {popular && ` ${t("popularSuffix")}`}
+                  </>
+                )}
+              </p>
+              {calloutBlock}
+            </div>
           </div>
 
-          <input
-            type="range"
-            aria-label={t("billLabel")}
-            min={config.minBill}
-            max={config.maxBill}
-            step={config.stepBill}
-            value={Number.isFinite(billValue) ? Math.min(config.maxBill, Math.max(config.minBill, billValue)) : config.minBill}
-            onChange={(e) => setBill(e.target.value)}
-            className="mt-5 w-full accent-primary"
-          />
-          <p id="bill-type-hint" className="mt-1 text-xs leading-5 text-muted-foreground">
-            {t("billTypeHint", { max: maxTypedBill.toLocaleString(locale) })}
-          </p>
-          <div className="mt-4 space-y-3">
-            <p className="min-h-10 text-sm font-bold tabular-nums text-primary sm:min-h-5">
-              {displayedResult && (
-                <>
-                  {t("resultSystemSize", { kw: displayedResult.row.kw.toLocaleString(locale) })}
-                  {displayedResult.row.phases.includes(1) && displayedResult.row.phases.includes(3) && ` ${t("phaseBoth")}`}
-                  {popular && ` ${t("popularSuffix")}`}
-                </>
-              )}
-              {isHybrid && hybridOk && t("hybridResultSize", { kw: hybridOk.size.kw.toLocaleString(locale) })}
-            </p>
-            <div className="grid">
-              <p aria-hidden className="invisible col-start-1 row-start-1 px-4 py-2.5 text-xs leading-5">
-                {t("belowFirstRowNote")}
-              </p>
-              <p aria-hidden className="invisible col-start-1 row-start-1 px-4 py-2.5 text-xs leading-5">
-                <b className="font-bold">{t("coversFullBill")}</b> {t("coversFullBillSub")}
-              </p>
-              <div className={`col-start-1 row-start-1 flex items-center rounded-lg px-4 py-2.5 text-xs leading-5 ring-1 ${calloutTone}`}>
-                <p>{calloutBody}</p>
-              </div>
+          <div className="flex items-center bg-accent p-8 sm:p-10 lg:px-[30px]">
+            <div className="w-full space-y-3">
+              {resultView ? renderResult(resultView, billValue) : renderUnavailable(false)}
+              {ctas("pt-2")}
             </div>
           </div>
         </div>
+      </div>
+    );
+  }
 
-        <div className="flex items-center bg-accent p-8 sm:p-10 lg:px-[30px]">
+  // --- Hybrid toggle layout: inputs left (incl. the system box), outputs right ---
+  const years = (n: number) =>
+    n.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const full = (kwh: number) => (kwh === 0 ? t("batteryNone") : t("batteryOption", { kwh: kwh.toLocaleString(locale) }));
+  const short = (kwh: number) => (kwh === 0 ? t("batteryNone") : kwh.toLocaleString(locale));
+  const paybackValue = (r: { kind: string; paybackYears?: number | null }) =>
+    r.kind === "ok"
+      ? r.paybackYears == null
+        ? t("compareAskQuote")
+        : t("compareYears", { years: years(r.paybackYears) })
+      : r.kind === "tooLarge"
+        ? t("compareTalkTeam")
+        : "—";
+  const adjusted = hybridOk !== null && preferredBatteryKwh !== null && preferredBatteryKwh !== hybridOk.batteryKwh;
+  const maxBattery = Math.max(0, ...hybridTable!.flatMap((size) => size.batteries.map((b) => b.batteryKwh)));
+  const maxOnGridKw = Math.max(0, ...sizeTable.map((row) => row.kw));
+  const popularChip = (
+    <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">{tCommon("popular")}</span>
+  );
+  const bothPhases: (1 | 3)[] = [1, 3];
+  // What the battery track lists while Hybrid has nothing to price (disabled look).
+  const idleSize =
+    hybridRecommendation?.kind === "tooLarge" ? hybridRecommendation.lastSize : hybridTable![0];
+  const idleOptions = idleSize.batteries.map((b) => b.batteryKwh);
+
+  let header: ReactNode;
+  let caption: ReactNode;
+  let track: ReactNode;
+  let footer: ReactNode;
+  if (isHybrid && hybridOk) {
+    header = (
+      <>
+        {t("hybridResultSize", { kw: hybridOk.size.kw.toLocaleString(locale) })}
+        <PhasePill phases={hybridOk.phases} />
+      </>
+    );
+    caption = (
+      <>
+        <span className="sr-only">{t("batteryLabel")}: </span>
+        {adjusted
+          ? t("batteryAutoAdjusted", { kwh: full(hybridOk.batteryKwh), kw: hybridOk.size.kw.toLocaleString(locale) })
+          : `${t("batteryFor", { kw: hybridOk.size.kw.toLocaleString(locale) })} (kWh)`}
+      </>
+    );
+    track = (
+      <BatteryTrack
+        options={hybridOk.batteryOptions}
+        value={hybridOk.batteryKwh}
+        onChange={setPreferredBatteryKwh}
+        labelledBy="calc-battery-label"
+        optionLabel={full}
+        optionText={short}
+      />
+    );
+    footer = t("batteryTradeoffHint");
+  } else if (isHybrid) {
+    header = "Hybrid";
+    caption = t("modeHybridHint");
+    track = <BatteryTrack options={idleOptions} optionLabel={full} optionText={short} />;
+    footer =
+      hybridRecommendation?.kind === "tooLarge"
+        ? t("batterySizedOnSite", { kw: hybridRecommendation.lastSize.kw.toLocaleString(locale) })
+        : t("batteryEnterBill");
+  } else {
+    header = displayedResult ? (
+      <>
+        {t("resultSystemSize", { kw: displayedResult.row.kw.toLocaleString(locale) })}
+        {displayedResult.row.phases.length > 0 && <PhasePill phases={displayedResult.row.phases} />}
+        {popular && popularChip}
+      </>
+    ) : (
+      "On-grid"
+    );
+    caption = t("modeOnGridHint");
+    const current: CompareCell = { label: "On-grid", value: paybackValue(recommendation) };
+    const other: CompareCell = {
+      label: hybridOk && hybridOk.batteryKwh > 0 ? t("compareHybrid", { kwh: hybridOk.batteryKwh.toLocaleString(locale) }) : "Hybrid",
+      value: paybackValue(hybridRecommendation ?? { kind: "empty" }),
+    };
+    track = <CompareTrack current={current} other={other} onSwitch={() => setSystemMode("hybrid")} />;
+    footer = t("modeCompareNote");
+  }
+  const footnote = resultView
+    ? isHybrid
+      ? hybridOk && hybridOk.batteryKwh > 0
+        ? t("batteryAssumption")
+        : t("noBatteryFootnote")
+      : t("onGridFootnote")
+    : null;
+
+  return (
+    <div className="mx-auto max-w-[1140px] overflow-hidden rounded-[18px] border border-border bg-card text-left shadow-[0_18px_55px_rgba(13,71,161,0.08)]">
+      <SystemModeTabs value={mode} onChange={setSystemMode} />
+      <div className="grid lg:grid-cols-[1.08fr_0.92fr]">
+        <div className="flex flex-col bg-muted p-8 sm:p-10 lg:p-[30px]">
+          {inputBlock}
+          <div className="mt-5 flex-1">
+            <SystemBox
+              header={header}
+              headerGhosts={[
+                <>
+                  {t("hybridResultSize", { kw: ghostKw.toLocaleString(locale) })}
+                  <PhasePill phases={bothPhases} />
+                </>,
+                <>
+                  {t("resultSystemSize", { kw: maxOnGridKw.toLocaleString(locale) })}
+                  <PhasePill phases={bothPhases} />
+                  {popularChip}
+                </>,
+              ]}
+              caption={caption}
+              captionId={isHybrid && hybridOk ? "calc-battery-label" : undefined}
+              captionAdjusted={isHybrid && adjusted}
+              captionGhosts={[
+                `${t("batteryFor", { kw: ghostKw.toLocaleString(locale) })} (kWh)`,
+                t("batteryAutoAdjusted", { kwh: full(maxBattery), kw: ghostKw.toLocaleString(locale) }),
+                t("modeOnGridHint"),
+                t("modeHybridHint"),
+              ]}
+              track={track}
+              footer={footer}
+              footerGhosts={[
+                t("batteryTradeoffHint"),
+                t("modeCompareNote"),
+                t("batterySizedOnSite", { kw: ghostKw.toLocaleString(locale) }),
+                t("batteryEnterBill"),
+              ]}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-start bg-accent p-8 sm:p-10 lg:p-[30px]">
           <div className="w-full space-y-3">
-            {hasHybrid && widestHybrid && (
-              <div className="grid">
-                <div aria-hidden inert className="invisible col-start-1 row-start-1">
-                  <BatteryPicker
-                    ghost
-                    kw={ghostKw}
-                    phases={[1, 3]}
-                    options={widestHybrid.batteries.map((b) => b.batteryKwh)}
-                    value={Math.max(...widestHybrid.batteries.map((b) => b.batteryKwh))}
-                    preferred={null}
-                  />
-                </div>
-                <div className="col-start-1 row-start-1">
-                  <div className="h-full w-full">
-                    {isHybrid && hybridOk ? (
-                      <BatteryPicker
-                        kw={hybridOk.size.kw}
-                        phases={hybridOk.phases}
-                        options={hybridOk.batteryOptions}
-                        value={hybridOk.batteryKwh}
-                        preferred={preferredBatteryKwh}
-                        onChange={setPreferredBatteryKwh}
-                      />
-                    ) : (
-                      <ModeInfoBox
-                        mode={mode}
-                        phases={!isHybrid && displayedResult ? displayedResult.row.phases : undefined}
-                      />
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-            {resultView ? (
-              renderResult(resultView, billValue)
-            ) : (
-              // Same footprint as a normal result: an invisible sample panel sizes the slot,
-              // the message overlays it, so the card never jumps when the state changes.
-              <div className="grid">
-                {sampleResult && (
-                  <div aria-hidden className="invisible col-start-1 row-start-1">
-                    {renderResult(sampleResult, sampleBill)}
-                  </div>
-                )}
-                <div className="col-start-1 row-start-1 flex items-center justify-center">
-                  {(isHybrid ? hybridRecommendation?.kind : recommendation.kind) === "tooLarge" ? (
-                    <div className="w-full rounded-xl border border-border bg-white p-6 text-center shadow-sm">
-                      <h3 className="text-lg font-extrabold text-primary">
-                        {t("tooLargeTitle", {
-                          size: (isHybrid && hybridRecommendation?.kind === "tooLarge"
-                            ? hybridRecommendation.lastSize.kw
-                            : recommendation.kind === "tooLarge"
-                              ? recommendation.lastRow.kw
-                              : 0
-                          ).toLocaleString(locale),
-                        })}
-                      </h3>
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{t("tooLargeBody")}</p>
-                    </div>
-                  ) : (
-                    <p className="text-center text-sm text-muted-foreground">{t("billPlaceholder")}</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-wrap justify-center gap-3 pt-2">
-              <Link href={bookingHref({ tab: "survey" })} className="btn-pill-outline">
-                {tCommon("bookSurvey")}
-              </Link>
-              <Link
-                href={bookingHref({ tab: "quote", bill: quoteBill, system: quoteSystem, battery: quoteBattery })}
-                className="btn-pill"
-              >
-                {tCommon("requestQuoteFree")}
-              </Link>
-            </div>
+            {resultView ? renderResult(resultView, billValue, footnote) : renderUnavailable(true)}
+            {calloutBlock}
+            {ctas("pt-1")}
           </div>
         </div>
       </div>

@@ -33,7 +33,7 @@ export function SystemModeTabs({
             "relative flex min-h-14 cursor-pointer flex-col items-center justify-center px-3 py-2.5 text-center transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-inset has-[:focus-visible]:ring-ring/50",
             value === option.mode
               ? "bg-primary text-primary-foreground"
-              : "bg-muted text-muted-foreground hover:bg-muted/70"
+              : "bg-white text-primary hover:bg-muted/50"
           )}
         >
           <input
@@ -44,8 +44,26 @@ export function SystemModeTabs({
             onChange={() => onChange(option.mode)}
             className="sr-only"
           />
-          <span className="text-sm font-bold leading-tight">{option.title}</span>
-          <span className="text-xs leading-tight opacity-80">{option.sub}</span>
+          <span className="inline-flex items-center gap-2 text-sm font-bold leading-tight">
+            <span
+              aria-hidden
+              className={cn(
+                "inline-flex size-3.5 items-center justify-center rounded-full ring-2",
+                value === option.mode ? "bg-primary ring-white" : "bg-white ring-primary/40"
+              )}
+            >
+              {value === option.mode && <span className="size-1.5 rounded-full bg-white" />}
+            </span>
+            {option.title}
+          </span>
+          <span
+            className={cn(
+              "text-xs leading-tight",
+              value === option.mode ? "text-primary-foreground/90" : "text-muted-foreground"
+            )}
+          >
+            {option.sub}
+          </span>
         </label>
       ))}
     </div>

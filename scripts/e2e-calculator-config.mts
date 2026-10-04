@@ -946,9 +946,29 @@ await marketingR1.close();
       const cta = () => p.locator("#monthly-bill").locator("xpath=ancestor::div[contains(@class,'overflow-hidden')][1]").locator("a.btn-pill").getAttribute("href");
       const ogHref = (await cta()) ?? "";
       if (!/system=on-grid/.test(ogHref) || /battery=/.test(ogHref)) fail(`${tag}: On-grid CTA must carry system=on-grid and no battery, got ${ogHref}`);
-      await p.locator('label:has(input[name="calc-mode"][value="hybrid"])').click();
+      const card = p.locator("#monthly-bill").locator("xpath=ancestor::div[contains(@class,'overflow-hidden')][1]");
+      if (!/ในช่วงกลางวัน|during daytime/.test(await card.innerText())) fail(`${tag}: On-grid footnote missing under the gold badge`);
+      // Rebalanced layout: the system box lives in the left (input) column, the compare row is a real button.
+      const compare = card.locator("button:has-text('→')");
+      if ((await compare.count()) !== 1) fail(`${tag}: On-grid compare row must have exactly one switch-to-Hybrid button`);
+      await compare.focus();
+      if (!(await compare.evaluate((el) => el === document.activeElement))) fail(`${tag}: compare button must be keyboard focusable`);
+      await compare.click();
       await p.waitForSelector('input[name="calc-battery"]');
+      if (!(await p.locator('input[name="calc-mode"][value="hybrid"]').isChecked())) fail(`${tag}: compare button must switch to Hybrid`);
+      if ((await p.locator("#monthly-bill").inputValue()) !== "9500") fail(`${tag}: compare switch must keep the bill`);
       heights.push(await cardHeight(p));
+      if (!/คิดจากแบต|one full battery charge/.test(await card.innerText())) fail(`${tag}: battery assumption must sit under the gold badge`);
+      {
+        // Battery control: always exactly 2 rows below 640px, one row from 640px; cells >= 56 x 44.
+        const cells = await p.locator('label:has(input[name="calc-battery"])').evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { w: r.width, h: r.height, top: Math.round(r.top) }; }));
+        const rows = new Set(cells.map((c) => c.top)).size;
+        if (rows !== (width < 640 ? 2 : 1)) fail(`${tag}: battery cells must form ${width < 640 ? 2 : 1} row(s), got ${rows}`);
+        if (cells.some((c) => c.w < 56 || c.h < 44)) fail(`${tag}: battery cells must be >= 56x44, got ${JSON.stringify(cells)}`);
+      }
+      await p.locator('label:has(input[name="calc-battery"][value="0"])').click();
+      if (!/ไม่มีแบต: |No battery: /.test(await card.innerText())) fail(`${tag}: no-battery footnote missing`);
+      await p.locator('label:has(input[name="calc-battery"][value="16"])').click();
       if (!(await p.locator('input[name="calc-battery"][value="16"]').isChecked())) fail(`${tag}: first battery shown must be the smallest > 0 (16)`);
       if (!/system=hybrid/.test((await cta()) ?? "") || !/battery=16/.test((await cta()) ?? "")) fail(`${tag}: Hybrid CTA must carry system=hybrid&battery=16, got ${await cta()}`);
       await p.locator('label:has(input[name="calc-battery"][value="32"])').click();
@@ -969,6 +989,7 @@ await marketingR1.close();
       await setBill(25000);
       heights.push(await cardHeight(p));
       if ((await p.locator('input[name="calc-battery"]').count()) !== 0) fail(`${tag}: tooLarge must hide the battery choice`);
+      if ((await p.locator('[aria-disabled="true"]').count()) < 1) fail(`${tag}: tooLarge must show the battery track as aria-disabled`);
       if (!/20 kW/.test(await p.locator("body").innerText())) fail(`${tag}: tooLarge must name the last Hybrid size (20 kW)`);
       await setBill(9500);
       await p.locator('label:has(input[name="calc-mode"][value="onGrid"])').click();
@@ -978,7 +999,7 @@ await marketingR1.close();
       await p.close();
     }
   }
-  pass("R2-S9 public: toggle, smallest battery first, nearest + note + restore, CTA params, below/tooLarge, constant card height (th/en x 1280/375)");
+  pass("R2-S9 public: toggle, compare button, 2-row battery wrap, footnotes, smallest battery first, nearest + note + restore, CTA params, below/tooLarge, constant card height (th/en x 1280/375)");
   for (const locale of ["th", "en"] as const) {
     const html = await (await fetch(`${BASE_URL}/${locale}/calculator`)).text();
     if (/BrandA|BrandB|brandPrices|hybridSizeTable/.test(html)) fail(`R2-S9 PUBLIC ${locale}: HTML leaks brand names / per-brand prices`);
