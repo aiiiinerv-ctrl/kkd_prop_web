@@ -23,6 +23,7 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 
 > "ประหยัด/เดือน = (ผลิตต่อวัน kWh + ขนาดแบต kWh) × 4.5 × 30 แม้สูตรนี้นับแบตเป็นพลังงานที่เพิ่มขึ้น" — #153 ข้อ 2 (โค้ดใช้ `(kw × sunHours + batteryKwh) × pricePerKwh × days` จากค่าที่ import, research-154 E7)
 > "ประหยัด = min(…, ค่าไฟ) … คิดระยะคืนทุนจากยอดที่ cap แล้ว" — #156 ข้อ 4
+> การตัดสินใจเจ้าของ 2026-10-04 (#156 แบตใกล้สุด): เมื่อแบตที่เลือกไว้ไม่มีในขนาดระบบใหม่และระยะห่างเท่ากัน → "ปัดขึ้น" เลือกตัวที่ใหญ่กว่า (เฉพาะแบตที่เลือก > 0; ไม่เอาแบต 0 คงเป็น 0)
 > "หน้าเว็บเริ่มต้นที่ On-grid และซ่อน toggle ถ้ายังไม่มีตาราง Hybrid ตัวเลขหลัง deploy จึงเหมือนเดิม" — #153 ข้อ 6
 > "server คำนวณราคาที่ใช้ได้ต่ำสุดต่อแถว แล้วส่งให้ browser แค่ตัวเลขเดียว ไม่มีชื่อยี่ห้อและไม่มีราคาแยกยี่ห้อ" — #155 ข้อ 5
 > "CTA ส่ง `system` ตามโหมดที่ลูกค้าดูอยู่ทั้ง 2 โหมด … `battery` ส่งเฉพาะ Hybrid" — #157
@@ -477,7 +478,7 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
     - `hybridMonthlySaving(row)` = `(kw × sunHours + batteryKwh) × pricePerKwh × days`
     - `usablePrices(rows)` — ราคา > 0 และแถวแบต > 0 ใช้ได้เมื่อยี่ห้อเดียวกันใน kW/phase เดียวกันมีราคาแถวแบต 0 > 0 (E3); คืนราคาต่ำสุด + ยี่ห้อ (ยี่ห้อใช้เฉพาะหลังบ้าน)
     - `type PublicHybridSize` ตาม research-158 §3
-    - `recommendHybrid(bill, table: PublicHybridSize[], preferredBatteryKwh: number | null, multiplier)` → union เดียวกับ `recommendFromTable` + `batteryKwh` (derive), `batteryOptions`, `phases`: kW เล็กสุดที่ `billMax > bill`; แบต null → เล็กสุด > 0; ไม่มีในตัวเลือก → ใกล้สุด (เสมอ → เล็กกว่า); cap ที่ค่าไฟ; payback จากยอดหลัง cap, null เมื่อไม่มีราคา; `belowFirstRow`/`tooLarge`
+    - `recommendHybrid(bill, table: PublicHybridSize[], preferredBatteryKwh: number | null, multiplier)` → union เดียวกับ `recommendFromTable` + `batteryKwh` (derive), `batteryOptions`, `phases`: kW เล็กสุดที่ `billMax > bill`; แบต null → เล็กสุด > 0; ไม่มีในตัวเลือก → ใกล้สุด (เสมอ → **ใหญ่กว่า** ตามเจ้าของ 2026-10-04 "ปัดขึ้น" เฉพาะเมื่อแบตที่เลือกไว้ > 0; 0 คงเป็น 0); cap ที่ค่าไฟ; payback จากยอดหลัง cap, null เมื่อไม่มีราคา; `belowFirstRow`/`tooLarge`
   - `src/lib/calculator-hybrid-projection.ts` (ใหม่, comment "server-only") — `toPublicHybridTable(rows: HybridRow[]): PublicHybridSize[]`: รวม phase ต่อ kW, แบตแต่ละตัวใช้ phase ที่ราคาต่ำกว่า (#156 ข้อ 2), `minPriceThb` ไม่มียี่ห้อ
   - `scripts/verify-calculator.mts` — section Hybrid (ตารางสังเคราะห์ BrandA…E): ทุกกติกา #156 ข้อ 1–7 ที่ทดสอบได้ในฟังก์ชัน pure, E3 (ราคาแบตอย่างเดียวไม่นับ), E4 (ไม่มีราคา → payback null), cheaper-phase, **`JSON.stringify(toPublicHybridTable(rows))` ไม่มี `"brand"` และไม่มีชื่อ BrandA…E และไม่มีราคาที่ไม่ใช่ min**; ตัวเลข design-157 §7 กับตารางสังเคราะห์ที่ตั้งค่าร่วมเท่าไฟล์จริง (ค่าไฟ 9,500 → 10 kW แบต 16 ประหยัด 8,910 หลังติดตั้ง 590)
   - `CONTEXT.md` — ศัพท์ "Hybrid row", "ราคาที่ใช้ได้", "Public Hybrid table (projection)"
@@ -492,7 +493,7 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **สรุปหลังแก้:** (2026-10-03, branch `feat/r2-s1-hybrid-lib`, ทำใน worktree แยกขนานกับ R1-S6 — ยังไม่ merge เข้า main)
 - ไฟล์ใหม่ `src/lib/calculator-hybrid.ts` (client-safe: `HybridRow`, `hybridTableSchema`, `hybridMonthlySaving`, `usablePrices`, `PublicHybridSize`, `recommendHybrid`) และ `src/lib/calculator-hybrid-projection.ts` (`toPublicHybridTable`, comment "server-only"); `CONTEXT.md` เพิ่ม 3 ศัพท์
-- `verify-calculator.mts` เพิ่ม section Hybrid ตารางสังเคราะห์ BrandA…E: schema reject 5 กรณี (ซ้ำ, ไม่มีแบต 0 = C7, ค่าร่วมต่าง, billMax ไม่เพิ่ม, ชื่อยี่ห้อต่าง), E3, E4, 0 ฿ ไม่นับ, cheaper-phase (ทั้งสองทิศ), กติกา #156 (kW เล็กสุด `billMax > bill`, แบตเริ่ม >0, ใกล้สุด/เสมอ→เล็กกว่า, cap, payback จากยอดหลัง cap, tooLarge/belowFirstRow) และ projection JSON ไม่มี `brand`/BrandA…E/ราคาที่ไม่ใช่ min; ตัวเลข design-157 §7 (9,500 → 10 kW แบต 16 ประหยัด 8,910 หลังติดตั้ง 590 คืนทุน ≈4.0)
+- `verify-calculator.mts` เพิ่ม section Hybrid ตารางสังเคราะห์ BrandA…E: schema reject 5 กรณี (ซ้ำ, ไม่มีแบต 0 = C7, ค่าร่วมต่าง, billMax ไม่เพิ่ม, ชื่อยี่ห้อต่าง), E3, E4, 0 ฿ ไม่นับ, cheaper-phase (ทั้งสองทิศ), กติกา #156 (kW เล็กสุด `billMax > bill`, แบตเริ่ม >0, ใกล้สุด/เสมอ→ใหญ่กว่า (แก้ 2026-10-04), cap, payback จากยอดหลัง cap, tooLarge/belowFirstRow) และ projection JSON ไม่มี `brand`/BrandA…E/ราคาที่ไม่ใช่ min; ตัวเลข design-157 §7 (9,500 → 10 kW แบต 16 ประหยัด 8,910 หลังติดตั้ง 590 คืนทุน ≈4.0)
 - Verify: `npx tsx scripts/verify-calculator.mts` ✓ ทั้งหมด (434 ✓, On-grid equality sweep 76/76); `grep exceljs|jszip|prisma src/lib/calculator-hybrid.ts` ว่าง; `npx tsc --noEmit -p .` ✓
 - ที่ต่างจากแผน: `npm run build` เต็มรอบยังไม่ได้รันใน worktree (ไม่มี `.env`/DB, `node_modules` + `src/generated` เป็น symlink) — ไม่มีผู้เรียกจึงเสี่ยงต่ำ ให้รันตอน merge. `hybridTableSchema` ตรวจ billMax เพิ่มเคร่งครัดข้าม kW (ค่าเดียวต่อ kW) และ kW/phase ที่ไม่มีแถวแบต 0 = reject ตาม C7
 

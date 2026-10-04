@@ -411,7 +411,10 @@ const batteryOf = (bill: number, preferred: number | null) => {
   return r.kind === "ok" ? r.batteryKwh : -1;
 };
 assertEqual("#156: initial battery = smallest > 0", batteryOf(9500, null), 8);
-assertEqual("#156: 12 not offered -> tie 8/16 resolves to smaller", batteryOf(9500, 12), 8);
+assertEqual("#156: 12 not offered -> tie 8/16 resolves to larger", batteryOf(9500, 12), 16);
+assertEqual("#156: 24 not offered -> tie 16/32 resolves to larger", batteryOf(9500, 24), 32);
+assertEqual("#156: exact match unchanged (16)", batteryOf(9500, 16), 16);
+assertEqual("#156: non-tie nearest unchanged (10 -> 8)", batteryOf(9500, 10), 8);
 assertEqual("#156: 20 not offered -> nearest 16", batteryOf(9500, 20), 16);
 assertEqual("#156: preferred 0 (no battery) is honoured", batteryOf(9500, 0), 0);
 const rec32 = recommendHybrid(9500, pub, 32, 10);

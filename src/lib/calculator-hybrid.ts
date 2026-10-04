@@ -243,24 +243,26 @@ export type HybridRecommendation =
       paybackYears: number | null;
     };
 
-/** Smallest battery > 0 when nothing is preferred; else preferred or nearest (tie -> smaller). */
+/** Smallest battery > 0 when nothing is preferred; else preferred or nearest (tie -> larger, owner decision 2026-10-04; preferred 0 stays 0). */
 function pickBattery(options: number[], preferred: number | null): number {
   if (preferred === null) {
     return options.find((b) => b > 0) ?? options[0];
   }
   if (options.includes(preferred)) return preferred;
+  const roundUpTies = preferred > 0;
   let best = options[0];
   for (const option of options) {
     const d = Math.abs(option - preferred);
     const bd = Math.abs(best - preferred);
-    if (d < bd || (d === bd && option < best)) best = option;
+    if (d < bd || (roundUpTies && d === bd && option > best)) best = option;
   }
   return best;
 }
 
 /**
  * Hybrid counterpart of recommendFromTable (#156): kW = smallest size whose
- * billMax exceeds the bill; battery = preferred if offered, else nearest
+ * billMax exceeds the bill; battery = preferred if offered, else nearest (tie -> larger when
+ * preferred > 0)
  * (initially the smallest > 0); saving capped at the bill and payback computed
  * from the capped figure; payback null when no usable price exists.
  */
