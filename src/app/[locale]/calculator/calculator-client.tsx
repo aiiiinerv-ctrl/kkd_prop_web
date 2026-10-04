@@ -1,6 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
+import { ArrowLeft, ArrowUp } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
 import { Link } from "@/i18n/navigation";
 import {
@@ -108,13 +109,15 @@ export function CalculatorClient({
   // ghosts only absorb <=1-line differences inside a filled box.
   // `footnote` (Hybrid-toggle layout only): small print under the gold badge. undefined = none, so
   // the plain On-grid card keeps its original markup.
-  const renderResult = (result: ResultView, bill: number, footnote?: string | null) => {
+  const renderResult = (result: ResultView, bill: number, footnote?: string | null, placeholder?: boolean) => {
+    const hybridLayout = footnote !== undefined;
     const years = (result.paybackYears ?? 9.9).toLocaleString(locale, {
       minimumFractionDigits: 1,
       maximumFractionDigits: 1,
     });
     const amount = result.monthlySaving.toLocaleString(locale);
     const hasPayback = result.paybackYears != null;
+    const ghostLine = "invisible col-start-1 row-start-1 mt-1 text-sm leading-5 font-semibold text-primary";
     const goldBadge = (
           <div className="rounded-xl bg-brand-gold px-5 py-4 text-center">
             {/* widest plausible digits (tabular-nums) so the line count can't depend on the amount */}
@@ -122,14 +125,43 @@ export function CalculatorClient({
               <p aria-hidden className="invisible col-start-1 row-start-1 font-extrabold text-primary">
                 {t("saveBadge", { amount: (88888).toLocaleString(locale) })}
               </p>
-              <p className="col-start-1 row-start-1 font-extrabold text-primary">{t("saveBadge", { amount })}</p>
+              {hybridLayout && (
+                <p aria-hidden className="invisible col-start-1 row-start-1 font-extrabold text-primary">
+                  {t("emptyPrompt")}
+                </p>
+              )}
+              {placeholder ? (
+                <p className="col-start-1 row-start-1 inline-flex items-center justify-center gap-1.5 font-extrabold text-primary">
+                  <ArrowUp aria-hidden className="size-4 lg:hidden" />
+                  <ArrowLeft aria-hidden className="hidden size-4 lg:inline" />
+                  {t("emptyPrompt")}
+                </p>
+              ) : (
+                <p className="col-start-1 row-start-1 font-extrabold text-primary">{t("saveBadge", { amount })}</p>
+              )}
             </div>
             <div className="grid">
-              <p aria-hidden className="invisible col-start-1 row-start-1 mt-1 text-sm leading-5 font-semibold text-primary">
-                {t("noPaybackCta")} {(88888).toLocaleString(locale)}
-              </p>
+              {hybridLayout ? (
+                <>
+                  <p aria-hidden className={ghostLine}>
+                    {t("paybackLine", { years: (88.8).toLocaleString(locale, { minimumFractionDigits: 1 }) })}
+                  </p>
+                  <p aria-hidden className={ghostLine}>{t("noPaybackShort")}</p>
+                  <p aria-hidden className={ghostLine}>{t("emptyPromptSub")}</p>
+                </>
+              ) : (
+                <p aria-hidden className="invisible col-start-1 row-start-1 mt-1 text-sm leading-5 font-semibold text-primary">
+                  {t("noPaybackCta")} {(88888).toLocaleString(locale)}
+                </p>
+              )}
               <p className="col-start-1 row-start-1 mt-1 text-sm leading-5 font-semibold text-primary">
-                {hasPayback ? t("paybackLine", { years }) : t("noPaybackCta")}
+                {placeholder
+                  ? t("emptyPromptSub")
+                  : hasPayback
+                    ? t("paybackLine", { years })
+                    : hybridLayout
+                      ? t("noPaybackShort")
+                      : t("noPaybackCta")}
               </p>
             </div>
           </div>
@@ -141,7 +173,11 @@ export function CalculatorClient({
             {t("beforeLabel")} / {t("month")}
           </span>
           <span className="ml-auto grid text-right text-xl font-extrabold text-[#bf3b3b]">
-            <span className="col-start-1 row-start-1">฿{Number.isFinite(bill) ? bill.toLocaleString(locale) : "0"}</span>
+            {placeholder ? (
+              <span aria-hidden className="col-start-1 row-start-1 text-muted-foreground/50">—</span>
+            ) : (
+              <span className="col-start-1 row-start-1">฿{Number.isFinite(bill) ? bill.toLocaleString(locale) : "0"}</span>
+            )}
             <span aria-hidden className="invisible col-start-1 row-start-1">฿88,888</span>
           </span>
         </div>
@@ -149,14 +185,18 @@ export function CalculatorClient({
           <span className="text-sm font-medium text-muted-foreground">
             {t("afterLabel")} / {t("month")}
           </span>
-          {result.coversFullBill ? (
+          {result.coversFullBill && !placeholder ? (
             <span className="ml-auto inline-flex items-center gap-2">
               <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">100%</span>
               <span className="text-xl font-extrabold text-emerald-600">฿0</span>
             </span>
           ) : (
             <span className="ml-auto grid text-right text-xl font-extrabold text-emerald-600">
-              <span className="col-start-1 row-start-1">฿{result.afterBill.toLocaleString(locale)}</span>
+              {placeholder ? (
+                <span aria-hidden className="col-start-1 row-start-1 text-muted-foreground/50">—</span>
+              ) : (
+                <span className="col-start-1 row-start-1">฿{result.afterBill.toLocaleString(locale)}</span>
+              )}
               <span aria-hidden className="invisible col-start-1 row-start-1">฿88,888</span>
             </span>
           )}
@@ -169,7 +209,12 @@ export function CalculatorClient({
           ].map((tile) => (
             <div key={tile.label} className="min-w-0 rounded-xl border border-border bg-white px-2 py-3 text-center">
               <p className="text-[11px] leading-4 text-muted-foreground">{tile.label}</p>
-              <p className="mt-1 min-h-10 break-words text-sm font-extrabold text-primary sm:min-h-5">{tile.value}</p>
+              <p
+                aria-hidden={placeholder || undefined}
+                className={`mt-1 min-h-10 break-words text-sm font-extrabold sm:min-h-5 ${placeholder ? "text-muted-foreground/50" : "text-primary"}`}
+              >
+                {placeholder ? "—" : tile.value}
+              </p>
             </div>
           ))}
         </div>
@@ -177,6 +222,7 @@ export function CalculatorClient({
           goldBadge
         ) : (
           <div>
+            {placeholder && <span className="sr-only">{t("emptyPrompt")}</span>}
             {goldBadge}
             <div className="mt-1.5 grid text-center text-[11px] leading-4 text-muted-foreground">
               {[t("batteryAssumption"), t("noBatteryFootnote"), t("onGridFootnote")].map((text) => (
@@ -184,7 +230,11 @@ export function CalculatorClient({
                   {text}
                 </p>
               ))}
-              {footnote && <p className="col-start-1 row-start-1">{footnote}</p>}
+              {placeholder ? (
+                <p className="col-start-1 row-start-1">{t("emptyFootnote")}</p>
+              ) : (
+                footnote && <p className="col-start-1 row-start-1">{footnote}</p>
+              )}
             </div>
           </div>
         )}
@@ -526,7 +576,10 @@ export function CalculatorClient({
 
         <div className="flex items-start bg-accent p-8 sm:p-10 lg:p-[30px]">
           <div className="w-full space-y-3">
-            {resultView ? renderResult(resultView, billValue, footnote) : renderUnavailable(true)}
+            {resultView ? renderResult(resultView, billValue, footnote)
+              : unavailableKind === "empty" && sampleResult
+                ? renderResult(sampleResult, sampleBill, null, true)
+                : renderUnavailable(true)}
             {calloutBlock}
             {ctas("pt-1")}
           </div>
