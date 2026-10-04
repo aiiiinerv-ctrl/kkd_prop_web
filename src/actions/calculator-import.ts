@@ -6,7 +6,13 @@ import { auditedEntity } from "@/lib/audit";
 import { requireRole } from "@/lib/auth";
 import { resolveSizeTable, sizeTableSchema, type SizeRow } from "@/lib/calculator-size-table";
 import { calculatorConfigAuditView, rowToCalculatorParams } from "@/lib/calculator-config";
-import { hybridTableSchema, type HybridRow } from "@/lib/calculator-hybrid";
+import {
+  BRAND_FORBIDDEN_CHARS,
+  hybridTableSchema,
+  MAX_HYBRID_BRANDS,
+  MAX_HYBRID_ROWS,
+  type HybridRow,
+} from "@/lib/calculator-hybrid";
 import {
   diffHybridTables,
   diffSizeTables,
@@ -85,7 +91,11 @@ function sanitizeFileName(name: string): string {
   const base = name.split(/[/\\]/).pop() ?? name;
   // Control chars plus bidi overrides/isolates (U+202E etc.), which could
   // make a name display deceptively in the admin list and audit log.
-  const stripped = base.replace(/[\x00-\x1f\x7f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, "").trim();
+  // Also drops every invisible/format char (zero-width, U+2028/2029, BOM, \p{Cf}).
+  const stripped = Array.from(base)
+    .filter((ch) => !BRAND_FORBIDDEN_CHARS.test(ch) && ch !== "\u2028" && ch !== "\u2029")
+    .join("")
+    .trim();
   const safe = stripped.length > 0 ? stripped : "import.xlsx";
   return safe.length > 120 ? safe.slice(0, 120) : safe;
 }
@@ -393,8 +403,6 @@ export async function applyCalculatorImport({
 }
 
 const MAX_ON_GRID_ROWS = 200; // Default #11 — the server never trusts the client's row count.
-const MAX_HYBRID_ROWS = 500;
-const MAX_HYBRID_BRANDS = 10;
 
 // Shape only (types, finiteness, size cap). Range / ordering rules belong to
 // validateOnGridTable so every failure carries a rowIndex/field the editor
@@ -491,6 +499,14 @@ export async function saveCalculatorTables(input: {
   if (existing.version !== version) return { ok: false, conflict: true };
 
   const liveHybrid = readStoredHybrid(existing.hybridSizeTable);
+  if (!liveHybrid && existing.hybridSizeTable != null) {
+    // Never overwrite a stored-but-unreadable Hybrid table with null on save.
+    console.error("saveCalculatorTables: stored hybridSizeTable is unreadable — save rejected");
+    return {
+      ok: false,
+      error: "ตาราง Hybrid ที่ใช้อยู่อ่านไม่ได้ — การบันทึกถูกยกเลิกเพื่อไม่ให้ข้อมูลหาย กรุณานำเข้าไฟล์ Excel ใหม่หรือติดต่อผู้ดูแลระบบ",
+    };
+  }
   let hybridToStore: HybridRow[] | null = liveHybrid;
   if (hybrid) {
     if (!liveHybrid) {

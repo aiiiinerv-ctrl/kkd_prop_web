@@ -24,6 +24,9 @@ export async function GET() {
     // Unreadable/absent Hybrid -> no Hybrid sheet (Default #8). Brand prices go
     // into the file, which is why this route stays ADMIN-only.
     const storedHybrid = hybridTableSchema.safeParse(config?.hybridSizeTable);
+    if (!storedHybrid.success && config?.hybridSizeTable != null) {
+      console.error("calculator export: stored hybridSizeTable is unreadable — exporting without the Hybrid sheet");
+    }
     const buffer = await buildCalculatorWorkbook({
       onGrid: table,
       hybrid: storedHybrid.success ? storedHybrid.data : null,

@@ -9,7 +9,7 @@
 // shared values differ within a kW E11 -> missing no-battery row E13 (C7) ->
 // billMax strictly increasing by kW -> zod schema (final guard). Warnings
 // (E3/E4/E5) are only produced for a table with no issues.
-import { hybridTableSchema, usablePrices, type HybridRow } from "../calculator-hybrid";
+import { hybridTableSchema, MAX_HYBRID_BRANDS, MAX_HYBRID_ROWS, usablePrices, type HybridRow } from "../calculator-hybrid";
 import { validateOnGridRowBill, validateOnGridRowRanges } from "./validate-on-grid";
 import {
   billMaxNotIncreasingTableIssue,
@@ -50,6 +50,22 @@ export function validateHybridTable(input: HybridRow[]): HybridValidation {
   const warnings: TableWarning[] = [];
   const order = input.map((_, i) => i).sort((a, b) => compareRows(input[a], input[b]));
   const sorted = order.map((i) => input[i]);
+
+  // 0. size caps — same limits as the save schema and the stored-table schema
+  if (input.length > MAX_HYBRID_ROWS) {
+    return {
+      rows: sorted,
+      issues: [hybridSchemaTableIssue(-1, `ตาราง Hybrid มีได้ไม่เกิน ${MAX_HYBRID_ROWS} แถว (ไฟล์นี้มี ${input.length} แถว)`)],
+      warnings,
+    };
+  }
+  if (input.some((row) => row.brandPrices.length > MAX_HYBRID_BRANDS)) {
+    return {
+      rows: sorted,
+      issues: [hybridSchemaTableIssue(-1, `ตาราง Hybrid มีได้ไม่เกิน ${MAX_HYBRID_BRANDS} ยี่ห้อ`)],
+      warnings,
+    };
+  }
 
   // 1. per-row ranges + bill range + battery
   const rowIssues: TableIssue[] = [];

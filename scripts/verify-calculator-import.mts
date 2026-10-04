@@ -679,6 +679,17 @@ console.log("\n=== hybrid validator + client safety ===");
   assert("validator: out-of-range sunHours -> out-of-range, table 'hybrid'", badRange.issues[0]?.code === "out-of-range" && badRange.issues[0].table === "hybrid");
   const manual = validateHybridTable(rows.map((r) => (r.kw === 10 ? { ...r, panels: 5 } : r)));
   assert("validator: E5 hand-edit copy", manual.warnings[0]?.message === "Hybrid 10 kW: จำนวนแผง 5 ต่างจากที่สูตรคำนวณได้ (≈19) เกิน 20%", manual.warnings[0]?.message);
+  // R2-S4 hardening: import path enforces the same caps as the save schema (<=500 rows, <=10 brands)
+  const wide = (n: number): HybridRow[] =>
+    Array.from({ length: n }, (_, b) => ({ ...rows[0], batteryKwh: b, brandPrices: rows[0].brandPrices.map((p) => ({ ...p })) }));
+  assert("validator: 500 rows accepted", validateHybridTable(wide(500)).issues.length === 0);
+  const over = validateHybridTable(wide(501));
+  assert("validator: 501 rows -> rejected with 500-row message", over.issues.length === 1 && over.issues[0].message.includes("ไม่เกิน 500 แถว"), over.issues[0]?.message);
+  const manyBrands = validateHybridTable(rows.map((r) => ({ ...r, brandPrices: Array.from({ length: 11 }, (_, i) => ({ brand: `Brand${i}`, priceThb: 1 })) })));
+  assert("validator: 11 brands -> rejected with 10-brand message", manyBrands.issues.length === 1 && manyBrands.issues[0].message.includes("ไม่เกิน 10 ยี่ห้อ"), manyBrands.issues[0]?.message);
+  assert("stored schema: 501 rows -> unparseable", !hybridTableSchema.safeParse(wide(501)).success && hybridTableSchema.safeParse(wide(500)).success);
+  const over501 = await importWith({ rows: wide(501).map((r) => ({ kw: r.kw, phase: r.phase, battery: r.batteryKwh, panels: r.panels, roof: r.roofM2, billMin: r.billMin, billMax: r.billMax, prices: r.brandPrices.map((p) => p.priceThb) })) });
+  assert("Excel import: 501 hybrid rows -> rejected (not stored)", !over501.ok && hybridErrors(over501).length > 0, hybridErrors(over501)[0]?.message);
 }
 {
   // validate-hybrid.ts must stay client-safe: no excel/zip/prisma anywhere in its import graph

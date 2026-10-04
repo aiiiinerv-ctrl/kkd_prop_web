@@ -13,6 +13,10 @@ export const BRAND_FORBIDDEN_CHARS = /[\p{Cc}\p{Cf}\p{Co}\p{Cn}\u3164\u115F\u116
 /** Identity of a brand name for duplicate detection: NFC, trimmed, case-folded. */
 export const brandNameKey = (name: string): string => name.normalize("NFC").trim().toLowerCase();
 
+/** Caps shared by the Excel import, manual save and stored-data parsing. */
+export const MAX_HYBRID_ROWS = 500;
+export const MAX_HYBRID_BRANDS = 10;
+
 export type HybridBrandPrice = { brand: string; priceThb: number | null };
 
 export type HybridRow = {
@@ -52,7 +56,8 @@ const hybridRowSchema = z.object({
         priceThb: z.coerce.number().nonnegative().nullable(),
       })
     )
-    .min(1),
+    .min(1)
+    .max(MAX_HYBRID_BRANDS),
 });
 
 const SHARED_FIELDS = [
@@ -68,6 +73,7 @@ const SHARED_FIELDS = [
 export const hybridTableSchema = z
   .array(hybridRowSchema)
   .min(1)
+  .max(MAX_HYBRID_ROWS)
   .superRefine((rows, ctx) => {
     const seenKeys = new Set<string>();
     const firstByKw = new Map<number, number>();

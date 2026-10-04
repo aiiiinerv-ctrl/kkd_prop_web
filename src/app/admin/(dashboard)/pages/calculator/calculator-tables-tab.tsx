@@ -65,6 +65,8 @@ export type CalculatorTablesTabData = {
   onGrid: SizeRow[];
   /** Live Hybrid table (null = none). ADMIN-only data: carries brand prices. */
   hybrid: HybridRow[] | null;
+  /** A Hybrid table is stored but fails schema parsing (treated as none elsewhere — tell the admin). */
+  hybridUnreadable: boolean;
   /** Brand names of the live Hybrid table, in column order ([] when none). */
   brands: string[];
   /** For the whole-table warnings in the save-confirm dialog. */
@@ -279,6 +281,17 @@ export function CalculatorTablesTab({ data }: { data: CalculatorTablesTabData })
               แล้วนำเข้ากลับ ตรวจผลก่อนแล้วกดยืนยันเพื่อใช้บนหน้าเว็บ
             </p>
           </div>
+
+          {data.hybridUnreadable && (
+            <div
+              role="alert"
+              className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              ตาราง Hybrid ที่ใช้อยู่อ่านไม่ได้ (ข้อมูลในระบบไม่ถูกต้อง) — หน้าเว็บจะไม่แสดงตัวเลือก Hybrid
+              และไฟล์ Excel ที่ดาวน์โหลดจะไม่มีชีต Hybrid การบันทึกแก้ไขในหน้านี้จะถูกปฏิเสธเพื่อไม่ให้ข้อมูลหาย
+              กรุณานำเข้าไฟล์ Excel ใหม่หรือติดต่อผู้ดูแลระบบ
+            </div>
+          )}
 
           <div
             id="calc-size-table-summary"

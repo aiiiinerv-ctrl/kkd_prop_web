@@ -91,6 +91,10 @@ export default async function PagesCalculatorPage() {
   const parsedHybrid = canManageConfig ? hybridTableSchema.safeParse(configRow?.hybridSizeTable) : null;
   const activeHybrid: HybridRow[] | null = parsedHybrid?.success ? (parsedHybrid.data as HybridRow[]) : null;
 
+  const hybridUnreadable =
+    !!parsedHybrid && !parsedHybrid.success && configRow?.hybridSizeTable != null;
+  if (hybridUnreadable) console.error("calculator admin: stored hybridSizeTable is unreadable");
+
   return (
     <CalculatorAdminShell
       key={`${pageRow?.version ?? 0}-${pageSeo?.version ?? 0}`}
@@ -172,6 +176,7 @@ export default async function PagesCalculatorPage() {
               },
               onGrid: activeTable,
               hybrid: activeHybrid,
+              hybridUnreadable,
               brands: activeHybrid?.[0]?.brandPrices.map((b) => b.brand) ?? [],
               packages,
               sliderMaxBill: params.maxBill,
