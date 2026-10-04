@@ -38,6 +38,8 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 
 **2026-10-04**: Release 1 (On-grid แก้ตาราง + export) ขึ้น production แล้ว (R1-S7 done) — R1 soak 2–3 วันทำการก่อน R2-S0; R2 พัฒนาล่วงหน้าบน branch `feat/r2-s1-hybrid-lib` (ยังไม่ merge).
 
+**2026-10-04 (กติกาใหม่)**: R2 ทำให้เสร็จทั้งหมดบน local และให้ผู้ใช้รีวิวบน localhost ก่อน แล้วค่อย release production ครั้งเดียว — R1 soak เป็นเงื่อนไขของ deploy เท่านั้น ไม่ block การพัฒนา. สถานะ branch: R2-S1/S2/S3/S4/S5 เสร็จ (merge main @ 8e20fae แล้ว).
+
 ## Sprint tracker
 
 ชื่อ sprint ใช้ prefix `R1-` / `R2-` เพื่อไม่ให้ชนกับ "On-grid S10" ของแผนต้นแบบ
@@ -55,11 +57,11 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 | **R1-S7** | Release R1: runbook → snapshot → DDL → deploy → smoke + rollback runbook (R2 ของ research-158) | `hosting-deploy-specialist` + human (`!`, phpMyAdmin) | `deploy-verify` (ก่อน upload) | ⏳ R1-S1…S6 | 0.5 d | done (ข้อ 10 = optional, ยังไม่ทำ) |
 | **R2 — Hybrid** | | | | | | |
 | **R2-S0** | Gate R1 นิ่งบน prod + baseline หลัง R1 | `nextjs-dev` | — | ⏳ R1-S7 | 0.25 d | pending |
-| **R2-S1** | Pure lib Hybrid: `HybridRow`, schema, สูตร, ราคาที่ใช้ได้, `recommendHybrid` + projection | `nextjs-dev` | — (verify script = reviewer) | ⏳ R2-S0 | 1 d | done — verify-calculator ✓ (76/76), `tsc` ✓; full `npm run build` รันตอน merge |
+| **R2-S1** | Pure lib Hybrid: `HybridRow`, schema, สูตร, ราคาที่ใช้ได้, `recommendHybrid` + projection | `nextjs-dev` | — (verify script = reviewer) | ⏳ R2-S0 | 1 d | done — verify-calculator ✓ (76/76), `tsc` ✓; full `npm run build` รันตอน merge; audit follow-up (clip/BRAND_FORBIDDEN_CHARS/.max(50)) ปิดแล้วใน a71233f |
 | **R2-S2** | Reader + validator + diff + messages ชีต Hybrid + import ไฟล์เดียว 2 ชีต (D3/D4) + fixture สังเคราะห์ | `nextjs-dev` | `audit-compliance-reviewer` (guard review) | ⏳ R2-S1 | 1.5 d | done — verify ✓ (fixture + ไฟล์จริง), รอ `audit-compliance-reviewer` |
 | **R2-S3** | Schema R2 (3 คอลัมน์) + DDL asset | `nextjs-dev` | `deploy-verify` | ✅ ขนานกับ R2-S1/S2 | 0.5 d | done |
-| **R2-S4** | Actions + read path: preview/apply/save/reset รู้จัก Hybrid, `getCalculatorConfig` คืน projection + payload test | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R2-S2, R2-S3 | 1 d | pending |
-| **R2-S5** | Export ชีต Hybrid (merged block, กลุ่มยี่ห้อ) + round-trip 2 ชีต | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R2-S2 · ✅ ขนานกับ R2-S4 | 0.75 d | done — round-trip ✓ (fixture + ไฟล์จริง), Excel check ✓, route ย้ายไป R2-S4, รอ `audit-compliance-reviewer` |
+| **R2-S4** | Actions + read path: preview/apply/save/reset รู้จัก Hybrid, `getCalculatorConfig` คืน projection + payload test | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R2-S2, R2-S3 | 1 d | done (branch `feat/r2-s1-hybrid-lib`) — build ✓, verify-calculator ✓, verify-calculator-import ✓, e2e-calculator-config ✓ (+R2-S4 block), e2e-admin-crud ✓, รอ `audit-compliance-reviewer` |
+| **R2-S5** | Export ชีต Hybrid (merged block, กลุ่มยี่ห้อ) + round-trip 2 ชีต | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R2-S2 · ✅ ขนานกับ R2-S4 | 0.75 d | done — round-trip ✓ (fixture + ไฟล์จริง), Excel check ✓, route wiring ทำใน R2-S4 แล้ว, รอ `audit-compliance-reviewer` |
 | **R2-S6** | หลังบ้าน: แท็บย่อย On-grid/Hybrid, รายการ + Dialog Hybrid, save 2 ตาราง | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R2-S4 | 1.25 d | pending |
 | **R2-S7** | หลังบ้าน: preview นำเข้า 2 ชีต, กล่อง "Hybrid จะถูกลบ", reject แยกชีต, ประวัติ/reset copy | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R2-S4 · ✅ ขนานกับ R2-S6 (คนละไฟล์) | 0.75 d | pending |
 | **R2-S8** | Lead fields: `interestedBatteryKwh`, booking `system`/`battery`, ช่องแบตในแท็บ quote, lead detail, แจ้งเตือน, export รายงาน | `nextjs-dev` | `audit-compliance-reviewer`, `i18n-parity-checker`, `design-business-reviewer` (booking form) | ⏳ R2-S3 · ✅ ขนานกับ R2-S1/S2/S4–S7 | 1 d | pending |
@@ -580,7 +582,17 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback:** revert — public ยังไม่อ่าน `hybridTable`
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้ (2026-10-04, branch `feat/r2-s1-hybrid-lib`, local เท่านั้น — ยังไม่ deploy)**
+- ไฟล์: `src/actions/calculator-import.ts` (preview/apply/save), `src/actions/calculator-config.ts` (reset ล้าง `hybridSizeTable`), `src/lib/calculator-config.ts` (`calculatorConfigAuditView`), `src/lib/content/index.ts` (`getCalculatorConfig` + `hybridTable`), `src/app/api/admin/calculator/export/route.ts` (ส่ง Hybrid เข้า builder), หน้า admin `page.tsx` + types ของ tab/history, `scripts/e2e-calculator-config.mts`
+- preview ใช้ `importCalculatorWorkbook`: คืน `hybridRows`, `hasHybridSheet`, `hybridDiff`, `activeHybridCounts {sizes, rows, brands}`; reject คืน `messages` เดิม + `groups {onGrid, hybrid}` (D4: issue ชีตไหนก็ reject ทั้งไฟล์ ไม่มีอะไรถูกบันทึก)
+- Default #3: ถ้าแถว sha256 เดิมมี `hybridRows` ให้ reuse; ถ้าเป็นแถวก่อน R2 (null) จะ parse ใหม่ก่อน — มีชีต Hybrid → สร้างแถว EXCEL ใหม่, ไม่มี → reuse แถวเดิม
+- apply: `hybridSizeTable = imp.hybridRows` (ผ่าน `hybridTableSchema.safeParse` ซ้ำ) หรือ `Prisma.JsonNull` เมื่อเวอร์ชันนั้นไม่มี Hybrid (D3)
+- save (Default #11): `hybrid` เป็น optional — ไม่ส่ง/null = คง Hybrid ที่ใช้อยู่ไว้ (เวอร์ชัน MANUAL ใหม่พกตารางเดิมไปด้วย); ส่งมาแต่ยังไม่มี Hybrid → reject; ชุด/ลำดับชื่อยี่ห้อต้องตรงของเดิม; cap 500 แถว/10 ยี่ห้อ; ผ่าน `validateHybridTable`
+- Audit: snapshot ของ `CalculatorImport` เพิ่ม `hybridRowCount` (ไม่มี rows); snapshot ของ `CalculatorConfig` เปลี่ยนจาก `"full"` เป็น `calculatorConfigAuditView` (แทน `hybridSizeTable` ด้วยจำนวนแถว) ในทั้ง 2 entity
+- `getCalculatorConfig` คืน `hybridTable` ผ่าน safeParse → `toPublicHybridTable` (parse ไม่ผ่าน → null + console.error); หน้า public ยังไม่ส่งต่อ
+- ไม่ต้องแก้ `storage-engine-contract.ts` (ไม่มีตารางใหม่ — มีเฉพาะคอลัมน์ Json nullable บนตารางที่ลงทะเบียนไว้แล้ว)
+- DoD: `npm run build` ✓ · `verify-calculator` ✓ · `verify-calculator-import` ✓ · `npm run start` (port 3002) → `e2e-calculator-config` ✓ (บล็อก R2-S4: Default #3, apply, HTML public ไม่มี BrandA/brandPrices ทั้ง /th + /en, export มีชีต Hybrid, forged save 3 แบบ, audit ไม่มียี่ห้อ/ราคา, D4, D3, ใช้ชุดนี้, reset ล้าง Hybrid) · `e2e-save-calculator-tables` ✓ · `e2e-admin-crud` ✓ (ใช้สำเนา script ที่แทน port เพราะ hardcode 3000)
+- **ต่างจากแผน/ค้าง:** (1) `audit-compliance-reviewer` ยังไม่ได้รัน; (2) UI preview 2 ชีต/กล่องเตือน D3 อยู่ R2-S7 — e2e จึงตรวจผ่าน DB; (3) แก้ assertion เดิมของ e2e ที่ bill 500 (callout "ต่ำกว่าช่วงของระบบเล็กสุด" มาก่อน "ครอบคลุม 100%" ตั้งแต่ 79b1fad)
 
 ---
 
