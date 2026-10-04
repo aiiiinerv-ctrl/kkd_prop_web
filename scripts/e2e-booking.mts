@@ -121,6 +121,55 @@ console.log(
   }`
 );
 
+// --- Route A3: hybrid battery hand-off (R2-S8) — the calculator link
+// `?system=hybrid&battery=16` ticks HYBRID and prefills the battery field;
+// un-ticking HYBRID before submit must null the stored size (R16). Both locales. ---
+for (const [loc, phoneN] of [["th", "0877770016"], ["en", "0877770017"]] as const) {
+  // Own rate-limit bucket per locale (submit-quote keys on x-forwarded-for) so
+  // these 4 extra submits don't push the whole script past the 5/10min cap.
+  await page.setExtraHTTPHeaders({ "x-forwarded-for": loc === "th" ? "203.0.113.16" : "203.0.113.17" });
+  await page.goto(`http://localhost:3000/${loc}/booking?tab=quote&system=hybrid&battery=16&bill=9500`);
+  const hybridTicked = await page.isChecked('input[name="interestedSystems"][value="HYBRID"]');
+  const batteryShown = await page.inputValue('input[name="interestedBatteryKwh"]');
+  console.log(
+    `BATTERY ${loc}: link ticks HYBRID and prefills battery=16 ${hybridTicked && batteryShown === "16" ? "✓" : "✗ FAIL"}`
+  );
+  await page.fill('input[name="name"]', `ทดสอบ แบต ${loc}`);
+  await page.fill('input[name="phone"]', phoneN);
+  await page.selectOption('select[name="province"]', "เชียงใหม่");
+  await page.selectOption('select[name="buildingType"]', "RESIDENTIAL");
+  await page.click('button[type="submit"]');
+  await page.waitForSelector(loc === "th" ? "text=ส่งข้อมูลสำเร็จ" : "text=Submitted Successfully", { timeout: 15000 });
+  const withBattery = await prisma.lead.findFirst({ where: { phone: phoneN }, orderBy: { createdAt: "desc" } });
+  const withSystems = Array.isArray(withBattery?.interestedSystems) ? (withBattery!.interestedSystems as string[]) : [];
+  console.log(
+    `BATTERY ${loc}: HYBRID + interestedBatteryKwh=16 saved ${
+      withSystems.includes("HYBRID") && withBattery?.interestedBatteryKwh === 16 ? "✓" : "✗ FAIL"
+    }`
+  );
+
+  // un-tick HYBRID: field hides, value kept in form state, server stores null
+  await page.goto(`http://localhost:3000/${loc}/booking?tab=quote&system=hybrid&battery=16`);
+  await page.uncheck('input[name="interestedSystems"][value="HYBRID"]');
+  const hiddenAfterUntick = (await page.locator('input[name="interestedBatteryKwh"]').count()) === 0;
+  console.log(`BATTERY ${loc}: un-ticking HYBRID hides the battery field ${hiddenAfterUntick ? "✓" : "✗ FAIL"}`);
+  await page.fill('input[name="name"]', `ทดสอบ ไม่มีแบต ${loc}`);
+  await page.fill('input[name="phone"]', phoneN);
+  await page.selectOption('select[name="province"]', "เชียงใหม่");
+  await page.selectOption('select[name="buildingType"]', "RESIDENTIAL");
+  await page.check('input[name="interestedSystems"][value="ON_GRID"]');
+  await page.click('button[type="submit"]');
+  await page.waitForSelector(loc === "th" ? "text=ส่งข้อมูลสำเร็จ" : "text=Submitted Successfully", { timeout: 15000 });
+  const noBattery = await prisma.lead.findFirst({ where: { phone: phoneN }, orderBy: { createdAt: "desc" } });
+  console.log(
+    `BATTERY ${loc}: HYBRID un-ticked -> interestedBatteryKwh null ${
+      noBattery?.name.includes("ไม่มีแบต") && noBattery.interestedBatteryKwh === null ? "✓" : "✗ FAIL"
+    }`
+  );
+}
+
+await page.setExtraHTTPHeaders({});
+
 // --- Route B: survey with slip upload ---
 // 1x1 red pixel PNG
 const png = Buffer.from(
