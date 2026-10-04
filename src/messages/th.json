@@ -322,7 +322,7 @@
     "beforeLabel": "ค่าไฟก่อนติดตั้ง",
     "afterLabel": "ค่าไฟหลังติดตั้ง",
     "saveBadge": "ประหยัดได้ทันที ~ ฿{amount}/เดือน",
-    "saveBadgeWithPayback": "ประหยัดได้ทันที ~ ฿{amount}/เดือน · คืนทุนใน ~{years} ปี",
+    "paybackLine": "คืนทุนใน ~{years} ปี",
     "resultSystemSize": "ขนาดระบบที่แนะนำ: {kw} kW",
     "phaseBoth": "(1 หรือ 3 เฟส)",
     "tilePanels": "แผงโซลาร์",

@@ -50,9 +50,9 @@ export function CalculatorClient({
     ? String(billValue)
     : undefined;
 
-  // Every conditional slot below is sized for its tallest variant so the card height
-  // never depends on the bill: alternatives are stacked in one grid cell (the inactive one
-  // is invisible but still sizes the cell) and the optional note always reserves its row.
+  // Slots always show real content (no slot toggles between content and nothing); the card
+  // height stays constant because variants are designed to ~the same height and invisible
+  // ghosts only absorb <=1-line differences inside a filled box.
   type OkResult = Extract<ReturnType<typeof recommendFromTable>, { kind: "ok" }>;
   const renderResult = (result: OkResult, bill: number) => {
     const years = (result.paybackYears ?? 9.9).toLocaleString(locale, {
@@ -61,36 +61,32 @@ export function CalculatorClient({
     });
     const amount = result.monthlySaving.toLocaleString(locale);
     const hasPayback = result.paybackYears != null;
-    const hide = (active: boolean) =>
-      `col-start-1 row-start-1 ${active ? "" : "invisible"}`;
     return (
       <div className="space-y-3 tabular-nums">
         <div className="flex min-h-[54px] flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border border-border bg-white px-5 py-3 shadow-sm">
           <span className="text-sm font-medium text-muted-foreground">
             {t("beforeLabel")} / {t("month")}
           </span>
-          <span className="grid text-right text-xl font-extrabold text-[#bf3b3b]">
+          <span className="ml-auto grid text-right text-xl font-extrabold text-[#bf3b3b]">
             <span className="col-start-1 row-start-1">฿{Number.isFinite(bill) ? bill.toLocaleString(locale) : "0"}</span>
             <span aria-hidden className="invisible col-start-1 row-start-1">฿88,888</span>
           </span>
         </div>
-        <div className="grid items-center rounded-xl border border-border bg-white px-5 py-3 shadow-sm">
-          <div className={hide(result.coversFullBill)} aria-hidden={!result.coversFullBill}>
-            <p className="font-extrabold text-emerald-700">{t("coversFullBill")}</p>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">{t("coversFullBillSub")}</p>
-          </div>
-          <div
-            className={`${hide(!result.coversFullBill)} flex min-h-[28px] flex-wrap items-center justify-between gap-x-3 gap-y-1`}
-            aria-hidden={result.coversFullBill}
-          >
-            <span className="text-sm font-medium text-muted-foreground">
-              {t("afterLabel")} / {t("month")}
+        <div className="flex min-h-[54px] flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border border-border bg-white px-5 py-3 shadow-sm">
+          <span className="text-sm font-medium text-muted-foreground">
+            {t("afterLabel")} / {t("month")}
+          </span>
+          {result.coversFullBill ? (
+            <span className="ml-auto inline-flex items-center gap-2">
+              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">100%</span>
+              <span className="text-xl font-extrabold text-emerald-600">฿0</span>
             </span>
-            <span className="grid text-right text-xl font-extrabold text-emerald-600">
+          ) : (
+            <span className="ml-auto grid text-right text-xl font-extrabold text-emerald-600">
               <span className="col-start-1 row-start-1">฿{result.afterBill.toLocaleString(locale)}</span>
               <span aria-hidden className="invisible col-start-1 row-start-1">฿88,888</span>
             </span>
-          </div>
+          )}
         </div>
         <div className="grid grid-cols-3 gap-2">
           {[
@@ -104,34 +100,48 @@ export function CalculatorClient({
             </div>
           ))}
         </div>
-        <p
-          className={`rounded-lg bg-amber-50 px-4 py-2 text-xs leading-5 text-amber-900 ${result.belowFirstRow ? "" : "invisible"}`}
-          aria-hidden={!result.belowFirstRow}
-        >
-          {t("belowFirstRowNote")}
-        </p>
-        <div className="grid items-center rounded-xl bg-brand-gold px-5 py-4 text-center">
-          <div className={hide(hasPayback)} aria-hidden={!hasPayback}>
-            <p className="font-extrabold text-primary">{t("saveBadgeWithPayback", { amount, years })}</p>
-          </div>
+        <div className="rounded-xl bg-brand-gold px-5 py-4 text-center">
           {/* widest plausible digits (tabular-nums) so the line count can't depend on the amount */}
-          <div className="invisible col-start-1 row-start-1" aria-hidden>
-            <p className="font-extrabold text-primary">
-              {t("saveBadgeWithPayback", { amount: (88888).toLocaleString(locale), years: (88.8).toLocaleString(locale) })}
+          <div className="grid">
+            <p aria-hidden className="invisible col-start-1 row-start-1 font-extrabold text-primary">
+              {t("saveBadge", { amount: (88888).toLocaleString(locale) })}
             </p>
+            <p className="col-start-1 row-start-1 font-extrabold text-primary">{t("saveBadge", { amount })}</p>
           </div>
-          <div className="invisible col-start-1 row-start-1" aria-hidden>
-            <p className="font-extrabold text-primary">{t("saveBadge", { amount: (88888).toLocaleString(locale) })}</p>
-            <p className="mt-1 text-xs leading-5 text-primary">{t("noPaybackCta")}</p>
-          </div>
-          <div className={hide(!hasPayback)} aria-hidden={hasPayback}>
-            <p className="font-extrabold text-primary">{t("saveBadge", { amount })}</p>
-            <p className="mt-1 text-xs leading-5 text-primary">{t("noPaybackCta")}</p>
+          <div className="grid">
+            <p aria-hidden className="invisible col-start-1 row-start-1 mt-1 text-sm leading-5 font-semibold text-primary">
+              {t("noPaybackCta")} {(88888).toLocaleString(locale)}
+            </p>
+            <p className="col-start-1 row-start-1 mt-1 text-sm leading-5 font-semibold text-primary">
+              {hasPayback ? t("paybackLine", { years }) : t("noPaybackCta")}
+            </p>
           </div>
         </div>
       </div>
     );
   };
+  const calloutKind = displayedResult
+    ? displayedResult.belowFirstRow
+      ? "amber"
+      : displayedResult.coversFullBill
+        ? "emerald"
+        : "normal"
+    : "normal";
+  const calloutTone = {
+    amber: "bg-amber-50 text-amber-900 ring-amber-200/70",
+    emerald: "bg-emerald-50 text-emerald-900 ring-emerald-200/70",
+    normal: "bg-white/70 text-muted-foreground ring-border",
+  }[calloutKind];
+  const calloutBody =
+    calloutKind === "amber" ? (
+      t("belowFirstRowNote")
+    ) : calloutKind === "emerald" ? (
+      <>
+        <b className="font-bold text-emerald-700">{t("coversFullBill")}</b> {t("coversFullBillSub")}
+      </>
+    ) : (
+      t("coversFullBillSub")
+    );
   const sampleBill = Math.max(config.minBill, sizeTable[0]?.billMin ?? config.minBill);
   const sampleRecommendation = recommendFromTable(
     sampleBill,
@@ -188,15 +198,28 @@ export function CalculatorClient({
           <p id="bill-type-hint" className="mt-1 text-xs leading-5 text-muted-foreground">
             {t("billTypeHint", { max: maxTypedBill.toLocaleString(locale) })}
           </p>
-          <p className="mt-3 min-h-10 text-sm font-bold tabular-nums text-primary sm:min-h-5">
-            {displayedResult && (
-              <>
-                {t("resultSystemSize", { kw: displayedResult.row.kw.toLocaleString(locale) })}
-                {displayedResult.row.phases.includes(1) && displayedResult.row.phases.includes(3) && ` ${t("phaseBoth")}`}
-                {popular && ` ${t("popularSuffix")}`}
-              </>
-            )}
-          </p>
+          <div className="mt-4 space-y-3">
+            <p className="min-h-10 text-sm font-bold tabular-nums text-primary sm:min-h-5">
+              {displayedResult && (
+                <>
+                  {t("resultSystemSize", { kw: displayedResult.row.kw.toLocaleString(locale) })}
+                  {displayedResult.row.phases.includes(1) && displayedResult.row.phases.includes(3) && ` ${t("phaseBoth")}`}
+                  {popular && ` ${t("popularSuffix")}`}
+                </>
+              )}
+            </p>
+            <div className="grid">
+              <p aria-hidden className="invisible col-start-1 row-start-1 px-4 py-2.5 text-xs leading-5">
+                {t("belowFirstRowNote")}
+              </p>
+              <p aria-hidden className="invisible col-start-1 row-start-1 px-4 py-2.5 text-xs leading-5">
+                <b className="font-bold">{t("coversFullBill")}</b> {t("coversFullBillSub")}
+              </p>
+              <div className={`col-start-1 row-start-1 flex items-center rounded-lg px-4 py-2.5 text-xs leading-5 ring-1 ${calloutTone}`}>
+                <p>{calloutBody}</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center bg-accent p-8 sm:p-10 lg:px-[30px]">
