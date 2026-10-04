@@ -322,7 +322,7 @@
     "beforeLabel": "Bill before installation",
     "afterLabel": "Bill after installation",
     "saveBadge": "Save instantly ~ ฿{amount}/month",
-    "saveBadgeWithPayback": "Save instantly ~ ฿{amount}/month · Payback in ~{years} years",
+    "paybackLine": "Payback in ~{years} years",
     "resultSystemSize": "Recommended system: {kw} kW",
     "phaseBoth": "(1 or 3 phase)",
     "tilePanels": "Solar panels",

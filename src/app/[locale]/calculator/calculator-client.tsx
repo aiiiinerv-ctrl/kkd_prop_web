@@ -50,9 +50,106 @@ export function CalculatorClient({
     ? String(billValue)
     : undefined;
 
-  const formattedBill = Number.isFinite(billValue)
-    ? billValue.toLocaleString(locale)
-    : "0";
+  // Slots always show real content (no slot toggles between content and nothing); the card
+  // height stays constant because variants are designed to ~the same height and invisible
+  // ghosts only absorb <=1-line differences inside a filled box.
+  type OkResult = Extract<ReturnType<typeof recommendFromTable>, { kind: "ok" }>;
+  const renderResult = (result: OkResult, bill: number) => {
+    const years = (result.paybackYears ?? 9.9).toLocaleString(locale, {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    });
+    const amount = result.monthlySaving.toLocaleString(locale);
+    const hasPayback = result.paybackYears != null;
+    return (
+      <div className="space-y-3 tabular-nums">
+        <div className="flex min-h-[54px] flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border border-border bg-white px-5 py-3 shadow-sm">
+          <span className="text-sm font-medium text-muted-foreground">
+            {t("beforeLabel")} / {t("month")}
+          </span>
+          <span className="ml-auto grid text-right text-xl font-extrabold text-[#bf3b3b]">
+            <span className="col-start-1 row-start-1">฿{Number.isFinite(bill) ? bill.toLocaleString(locale) : "0"}</span>
+            <span aria-hidden className="invisible col-start-1 row-start-1">฿88,888</span>
+          </span>
+        </div>
+        <div className="flex min-h-[54px] flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border border-border bg-white px-5 py-3 shadow-sm">
+          <span className="text-sm font-medium text-muted-foreground">
+            {t("afterLabel")} / {t("month")}
+          </span>
+          {result.coversFullBill ? (
+            <span className="ml-auto inline-flex items-center gap-2">
+              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">100%</span>
+              <span className="text-xl font-extrabold text-emerald-600">฿0</span>
+            </span>
+          ) : (
+            <span className="ml-auto grid text-right text-xl font-extrabold text-emerald-600">
+              <span className="col-start-1 row-start-1">฿{result.afterBill.toLocaleString(locale)}</span>
+              <span aria-hidden className="invisible col-start-1 row-start-1">฿88,888</span>
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: t("tilePanels"), value: result.row.panels.toLocaleString(locale) },
+            { label: t("tileRoofArea"), value: `${result.row.roofM2.toLocaleString(locale)} ${t("unitSqm")}` },
+            { label: t("tileKwhPerMonth"), value: `${result.kwhPerMonth.toLocaleString(locale)} ${t("unitKwh")}` },
+          ].map((tile) => (
+            <div key={tile.label} className="min-w-0 rounded-xl border border-border bg-white px-2 py-3 text-center">
+              <p className="text-[11px] leading-4 text-muted-foreground">{tile.label}</p>
+              <p className="mt-1 min-h-10 break-words text-sm font-extrabold text-primary sm:min-h-5">{tile.value}</p>
+            </div>
+          ))}
+        </div>
+        <div className="rounded-xl bg-brand-gold px-5 py-4 text-center">
+          {/* widest plausible digits (tabular-nums) so the line count can't depend on the amount */}
+          <div className="grid">
+            <p aria-hidden className="invisible col-start-1 row-start-1 font-extrabold text-primary">
+              {t("saveBadge", { amount: (88888).toLocaleString(locale) })}
+            </p>
+            <p className="col-start-1 row-start-1 font-extrabold text-primary">{t("saveBadge", { amount })}</p>
+          </div>
+          <div className="grid">
+            <p aria-hidden className="invisible col-start-1 row-start-1 mt-1 text-sm leading-5 font-semibold text-primary">
+              {t("noPaybackCta")} {(88888).toLocaleString(locale)}
+            </p>
+            <p className="col-start-1 row-start-1 mt-1 text-sm leading-5 font-semibold text-primary">
+              {hasPayback ? t("paybackLine", { years }) : t("noPaybackCta")}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  const calloutKind = displayedResult
+    ? displayedResult.belowFirstRow
+      ? "amber"
+      : displayedResult.coversFullBill
+        ? "emerald"
+        : "normal"
+    : "normal";
+  const calloutTone = {
+    amber: "bg-amber-50 text-amber-900 ring-amber-200/70",
+    emerald: "bg-emerald-50 text-emerald-900 ring-emerald-200/70",
+    normal: "bg-white/70 text-muted-foreground ring-border",
+  }[calloutKind];
+  const calloutBody =
+    calloutKind === "amber" ? (
+      t("belowFirstRowNote")
+    ) : calloutKind === "emerald" ? (
+      <>
+        <b className="font-bold text-emerald-700">{t("coversFullBill")}</b> {t("coversFullBillSub")}
+      </>
+    ) : (
+      t("coversFullBillSub")
+    );
+  const sampleBill = Math.max(config.minBill, sizeTable[0]?.billMin ?? config.minBill);
+  const sampleRecommendation = recommendFromTable(
+    sampleBill,
+    sizeTable,
+    packages,
+    config.annualSavingMonthsMultiplier
+  );
+  const sampleResult = sampleRecommendation.kind === "ok" ? sampleRecommendation : null;
 
   const resolvedPanelTitle = panelTitle ?? t("panelTitle");
   const resolvedPanelIntro = panelIntro ?? t("panelIntro");
@@ -101,83 +198,56 @@ export function CalculatorClient({
           <p id="bill-type-hint" className="mt-1 text-xs leading-5 text-muted-foreground">
             {t("billTypeHint", { max: maxTypedBill.toLocaleString(locale) })}
           </p>
-          {displayedResult && (
-            <p className="mt-3 text-sm font-bold text-primary">
-              {t("resultSystemSize", { kw: displayedResult.row.kw.toLocaleString(locale) })}
-              {displayedResult.row.phases.includes(1) && displayedResult.row.phases.includes(3) && ` ${t("phaseBoth")}`}
-              {popular && ` ${t("popularSuffix")}`}
+          <div className="mt-4 space-y-3">
+            <p className="min-h-10 text-sm font-bold tabular-nums text-primary sm:min-h-5">
+              {displayedResult && (
+                <>
+                  {t("resultSystemSize", { kw: displayedResult.row.kw.toLocaleString(locale) })}
+                  {displayedResult.row.phases.includes(1) && displayedResult.row.phases.includes(3) && ` ${t("phaseBoth")}`}
+                  {popular && ` ${t("popularSuffix")}`}
+                </>
+              )}
             </p>
-          )}
+            <div className="grid">
+              <p aria-hidden className="invisible col-start-1 row-start-1 px-4 py-2.5 text-xs leading-5">
+                {t("belowFirstRowNote")}
+              </p>
+              <p aria-hidden className="invisible col-start-1 row-start-1 px-4 py-2.5 text-xs leading-5">
+                <b className="font-bold">{t("coversFullBill")}</b> {t("coversFullBillSub")}
+              </p>
+              <div className={`col-start-1 row-start-1 flex items-center rounded-lg px-4 py-2.5 text-xs leading-5 ring-1 ${calloutTone}`}>
+                <p>{calloutBody}</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center bg-accent p-8 sm:p-10 lg:px-[30px]">
           <div className="w-full space-y-3">
-            {recommendation.kind === "tooLarge" ? (
-              <div className="rounded-xl border border-border bg-white p-6 text-center shadow-sm">
-                <h3 className="text-lg font-extrabold text-primary">
-                  {t("tooLargeTitle", { size: recommendation.lastRow.kw.toLocaleString(locale) })}
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">{t("tooLargeBody")}</p>
-              </div>
-            ) : displayedResult ? (
-              <>
-                <div className="flex min-h-[54px] flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border border-border bg-white px-5 py-3 shadow-sm">
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {t("beforeLabel")} / {t("month")}
-                  </span>
-                  <span className="text-xl font-extrabold text-[#bf3b3b]">฿{formattedBill}</span>
-                </div>
-                <div className="rounded-xl border border-border bg-white px-5 py-3 shadow-sm">
-                  {displayedResult.coversFullBill ? (
-                    <>
-                      <p className="font-extrabold text-emerald-700">{t("coversFullBill")}</p>
-                      <p className="mt-1 text-xs leading-5 text-muted-foreground">{t("coversFullBillSub")}</p>
-                    </>
-                  ) : (
-                    <div className="flex min-h-[28px] flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                      <span className="text-sm font-medium text-muted-foreground">
-                        {t("afterLabel")} / {t("month")}
-                      </span>
-                      <span className="text-xl font-extrabold text-emerald-600">
-                        ฿{displayedResult.afterBill.toLocaleString(locale)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { label: t("tilePanels"), value: displayedResult.row.panels.toLocaleString(locale) },
-                    { label: t("tileRoofArea"), value: `${displayedResult.row.roofM2.toLocaleString(locale)} ${t("unitSqm")}` },
-                    { label: t("tileKwhPerMonth"), value: `${displayedResult.kwhPerMonth.toLocaleString(locale)} ${t("unitKwh")}` },
-                  ].map((tile) => (
-                    <div key={tile.label} className="min-w-0 rounded-xl border border-border bg-white px-2 py-3 text-center">
-                      <p className="text-[11px] leading-4 text-muted-foreground">{tile.label}</p>
-                      <p className="mt-1 break-words text-sm font-extrabold text-primary">{tile.value}</p>
-                    </div>
-                  ))}
-                </div>
-                {displayedResult.belowFirstRow && (
-                  <p className="rounded-lg bg-amber-50 px-4 py-2 text-xs leading-5 text-amber-900">{t("belowFirstRowNote")}</p>
-                )}
-                <div className="rounded-xl bg-brand-gold px-5 py-4 text-center">
-                  <p className="font-extrabold text-primary">
-                    {displayedResult.paybackYears != null
-                      ? t("saveBadgeWithPayback", {
-                          amount: displayedResult.monthlySaving.toLocaleString(locale),
-                          years: displayedResult.paybackYears.toLocaleString(locale, {
-                            minimumFractionDigits: 1,
-                            maximumFractionDigits: 1,
-                          }),
-                        })
-                      : t("saveBadge", { amount: displayedResult.monthlySaving.toLocaleString(locale) })}
-                  </p>
-                  {displayedResult.paybackYears == null && (
-                    <p className="mt-1 text-xs leading-5 text-primary">{t("noPaybackCta")}</p>
-                  )}
-                </div>
-              </>
+            {displayedResult ? (
+              renderResult(displayedResult, billValue)
             ) : (
-              <p className="text-center text-sm text-muted-foreground">{t("billPlaceholder")}</p>
+              // Same footprint as a normal result: an invisible sample panel sizes the slot,
+              // the message overlays it, so the card never jumps when the state changes.
+              <div className="grid">
+                {sampleResult && (
+                  <div aria-hidden className="invisible col-start-1 row-start-1">
+                    {renderResult(sampleResult, sampleBill)}
+                  </div>
+                )}
+                <div className="col-start-1 row-start-1 flex items-center justify-center">
+                  {recommendation.kind === "tooLarge" ? (
+                    <div className="w-full rounded-xl border border-border bg-white p-6 text-center shadow-sm">
+                      <h3 className="text-lg font-extrabold text-primary">
+                        {t("tooLargeTitle", { size: recommendation.lastRow.kw.toLocaleString(locale) })}
+                      </h3>
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">{t("tooLargeBody")}</p>
+                    </div>
+                  ) : (
+                    <p className="text-center text-sm text-muted-foreground">{t("billPlaceholder")}</p>
+                  )}
+                </div>
+              </div>
             )}
 
             <div className="flex flex-wrap justify-center gap-3 pt-2">

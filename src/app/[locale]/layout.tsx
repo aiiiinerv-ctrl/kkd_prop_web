@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Script from "next/script";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { setRequestLocale } from "next-intl/server";
+import { HeadHtmlInjector } from "@/components/site/head-html-injector";
 import { LocalBusinessJsonLd } from "@/components/site/local-business-jsonld";
 import { MobileBookingBar } from "@/components/site/mobile-booking-bar";
 import { RefConsentCapture } from "@/components/site/ref-consent-capture";
@@ -96,16 +97,12 @@ export default async function LocaleLayout({
       className={`${notoSans.variable} ${notoSansThai.variable} h-full antialiased [--font-sans:var(--font-noto-sans),var(--font-noto-sans-thai),sans-serif]`}
       suppressHydrationWarning
     >
-      {analyticsScripts.headerScript ? (
-        // The admin pastes whole <script>…</script> tags (decision #3), so this
-        // must inject them as literal head children, not nested inside another
-        // <script> element — a browser's HTML parser treats a nested "<script>"
-        // string as inert text of the outer script, so it would never execute.
-        <head dangerouslySetInnerHTML={{ __html: analyticsScripts.headerScript }} />
-      ) : null}
       <body className="site-shell min-h-full flex flex-col">
+        {analyticsScripts.headerScript ? (
+          <HeadHtmlInjector html={analyticsScripts.headerScript} />
+        ) : null}
         {analyticsScripts.bodyScript ? (
-          // Same reasoning as the header script above — wrap in a plain element,
+          // The admin pastes whole <script> tags — wrap in a plain element,
           // not a <script> tag, so any <script> tags pasted by the admin parse
           // and execute as real DOM children instead of inert nested text.
           <div dangerouslySetInnerHTML={{ __html: analyticsScripts.bodyScript }} />

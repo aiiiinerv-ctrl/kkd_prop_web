@@ -36,6 +36,8 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 
 **2026-10-02**: แผนร่าง — ยังไม่เริ่ม implement. **เงื่อนไขก่อนเริ่ม: On-grid S10 (`calculator-excel-import-sprints.md` §S10 — ADMIN อัปโหลด `คำนวณติดตั้ง.xlsx` บน prod แล้วยืนยัน) ต้องเสร็จก่อน** ณ วันที่เขียน On-grid S10 ยัง `pending` (ดู S0)
 
+**2026-10-04**: Release 1 (On-grid แก้ตาราง + export) ขึ้น production แล้ว (R1-S7 done) — R1 soak 2–3 วันทำการก่อน R2-S0; R2 พัฒนาล่วงหน้าบน branch `feat/r2-s1-hybrid-lib` (ยังไม่ merge).
+
 ## Sprint tracker
 
 ชื่อ sprint ใช้ prefix `R1-` / `R2-` เพื่อไม่ให้ชนกับ "On-grid S10" ของแผนต้นแบบ
@@ -49,8 +51,8 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 | **R1-S3** | Export On-grid (สูตร + result) + route `/api/admin/calculator/export` + round-trip test | `nextjs-dev` | `audit-compliance-reviewer` (route auth/headers) | ⏳ R1-S1 · ✅ ขนานกับ R1-S2 | 1 d | done — Excel check ✓, `audit-compliance-reviewer` PASS |
 | **R1-S4** | Action `saveCalculatorTables` (On-grid) + preview/apply/reset รู้จัก `source` | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R1-S1, R1-S2 · ✅ ขนานกับ R1-S3 | 1 d | done — e2e 4 กรณี ✓, รอ `audit-compliance-reviewer` |
 | **R1-S5** | แท็บ "ตารางขนาดระบบ": โครงหน้า, ย้ายแผงนำเข้า, กล่องที่ใช้อยู่ + ปุ่ม export, ประวัติ 2 แหล่ง, รายการ On-grid อ่านอย่างเดียว | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R1-S2, R1-S3 | 1 d | done — e2e ✓, รอ `design-business-reviewer` |
-| **R1-S6** | ตัวแก้แบบ B: Dialog, working copy, แถบบันทึก, Dialog ยืนยัน diff (+ warning Package), conflict + e2e | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R1-S4, R1-S5 | 1.5 d | pending |
-| **R1-S7** | Release R1: runbook → snapshot → DDL → deploy → smoke + rollback runbook (R2 ของ research-158) | `hosting-deploy-specialist` + human (`!`, phpMyAdmin) | `deploy-verify` (ก่อน upload) | ⏳ R1-S1…S6 | 0.5 d | pending |
+| **R1-S6** | ตัวแก้แบบ B: Dialog, working copy, แถบบันทึก, Dialog ยืนยัน diff (+ warning Package), conflict + e2e | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R1-S4, R1-S5 | 1.5 d | done — e2e ✓, รอ `design-business-reviewer` |
+| **R1-S7** | Release R1: runbook → snapshot → DDL → deploy → smoke + rollback runbook (R2 ของ research-158) | `hosting-deploy-specialist` + human (`!`, phpMyAdmin) | `deploy-verify` (ก่อน upload) | ⏳ R1-S1…S6 | 0.5 d | done (ข้อ 10 = optional, ยังไม่ทำ) |
 | **R2 — Hybrid** | | | | | | |
 | **R2-S0** | Gate R1 นิ่งบน prod + baseline หลัง R1 | `nextjs-dev` | — | ⏳ R1-S7 | 0.25 d | pending |
 | **R2-S1** | Pure lib Hybrid: `HybridRow`, schema, สูตร, ราคาที่ใช้ได้, `recommendHybrid` + projection | `nextjs-dev` | — (verify script = reviewer) | ⏳ R2-S0 | 1 d | done — verify-calculator ✓ (76/76), `tsc` ✓; full `npm run build` รันตอน merge |
@@ -373,15 +375,27 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 - UX: ใช้ `noValidate` ตาม convention; Dialog เต็มจอบน <640px
 
 **DoD**
-- [ ] `npm run build` ✓ · `npm run start` → `e2e-calculator-config.mts` ✓ ทุกบรรทัด · `e2e-admin-crud.mts` ✓ · `e2e-admin.mts` ✓
-- [ ] `/th/calculator` + `/en/calculator` หลัง reset → ตัวเลขเท่า baseline S0 (public ไม่เปลี่ยนจาก R1)
-- [ ] `grep -rln "\"use client\"" src/app/admin | xargs grep -n "calculator-import\"\|calculator-import/index\|exceljs"` → ว่าง (Default #6)
+- [x] `npm run build` ✓ · `npm run start` → `e2e-calculator-config.mts` ✓ ทุกบรรทัด · `e2e-admin-crud.mts` ✓ · `e2e-admin.mts` ✓
+- [x] `/th/calculator` + `/en/calculator` หลัง reset → ตัวเลขเท่า baseline S0 (public ไม่เปลี่ยนจาก R1)
+- [x] `grep -rln "\"use client\"" src/app/admin | xargs grep -n "calculator-import\"\|calculator-import/index\|exceljs"` → ว่าง (Default #6)
 - [ ] `design-business-reviewer` บน admin real render: T-1…T-8 desktop + 375 (Dialog เต็มจอ, แถบบันทึก, ความเข้าใจของ diff สำหรับเจ้าของที่ไม่ใช่สาย tech)
 - Commits: `feat(admin): edit on-grid size table by hand with diff confirmation` · `test(e2e): cover manual size table edit, save, conflict and round-trip`
 
 **Rollback:** revert UI — แถว MANUAL ที่สร้างระหว่างทดสอบอยู่ใน dev DB เท่านั้น
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้:** ตัวแก้แบบ B (On-grid) ใช้งานจริงบนแท็บ "ตารางขนาดระบบ". ใหม่: `src/hooks/admin/use-table-draft.ts` (reducer working copy `{ baseVersion, rows[] }`, dirty = deep-equal กับค่าเดิม จึงแก้กลับแล้วแถบหาย, `validateDraft` = ช่องว่าง/ไม่ใช่ตัวเลขฝั่ง client + `validateOnGridTable` ตัวเดียวกับ server), `calculator-num-input.tsx` (text + `inputMode=decimal`, จัดรูปแบบตอน blur), `on-grid-size-dialog.tsx` (§5: kW ขนาดเดิม readOnly, error ตอน blur + `aria-invalid` + ข้อความใต้ช่อง + กล่องสรุปที่มีลิงก์ focus, ลบขนาด, inline confirm ทิ้งค่า), `save-tables-dialog.tsx` (§7: ผลต่อบิลตัวอย่าง + diff list จาก `diffSizeTables` + กล่องเตือนรวม Package -> slider, ตัด 10 รายการ + "แสดงทั้งหมด", กล่อง conflict `#calc-tables-conflict` ไม่ refresh เอง, server reject T-7). แก้: `calculator-tables-tab.tsx` (แถบบันทึก sticky, "ไปที่จุดแรก", ยกเลิกทั้งหมดแบบ inline confirm, `beforeunload`, `aria-live`, focus heading หลังบันทึก, ปุ่มนำเข้า disabled ระหว่าง dirty + hint), `calculator-table-list.tsx` (สถานะแถว แก้แล้ว/ใหม่/จะลบ/ผิด n + `<mark>` ค่าที่เปลี่ยน), `calculator-version-history.tsx` (`locked` + hint, 5 แถวแรก + "แสดงทั้งหมด (อีก n เวอร์ชัน)"), `calculator-table-format.ts` (ย้าย helper diff/format มาใช้ร่วมกับ import panel), `page.tsx` (ส่ง `packages` + `sliderMaxBill` สำหรับ warning).
+- ข้อจาก review R1-S5 ที่รวมใน sprint นี้: (1) ปุ่ม "แก้ไข" บน tablet 820px — **ย้ายปุ่มและป้ายสถานะเข้าไปในเซลล์ "ขนาด" ที่ sticky-left** (ไม่ทำ sticky-right: ต้องปักคอลัมน์ที่สองทับเซลล์ที่เลื่อนผ่านใต้มัน และป้าย "ผิด n" ก็ยังตกขอบจอ; รวมไว้ที่เซลล์ระบุตัวแถวทำให้ทั้งปุ่มและสถานะเห็นตลอดโดยไม่ต้องเลื่อน) จึงยุบคอลัมน์ "สถานะ" แยกเข้าไปอยู่ใต้ขนาด; (2) ประวัติแสดง 5 แถวแรก + ปุ่ม "แสดงทั้งหมด"; (3) ปุ่ม disabled มีข้อความ `text-xs text-muted-foreground` เสมอ (`#calc-import-lock-hint`, `#calc-history-lock-hint`, `#calc-edit-lock-hint`); (4) real render 1280 + 820 ครบทุกสถานะที่ระบุ (เก็บใน scratchpad ไม่ commit) โดย `e2e-calculator-config.mts` assert ว่าหน้า**ไม่ล้นแนวนอน**ที่ 1280/820 ในทุกสถานะ.
+- e2e: `e2e-calculator-config.mts` เพิ่มบล็อก R1-S6 (แก้ -> แถบ/ล็อกนำเข้า/สลับแท็บ -> แก้กลับแถบหาย -> เพิ่มขนาดผิด -> error ชี้ช่อง/ปุ่มบันทึก disabled/ไปที่จุดแรก -> Dialog ยืนยัน diff -> บันทึก -> public `/th` `/en` เปลี่ยน + ประวัติ "แก้ในหลังบ้าน" -> ลบ/คืนขนาด + ล็อก "ใช้ชุดนี้" -> ใช้ชุดนี้ย้อนกลับ -> conflict 2 context -> export -> นำเข้าไฟล์เดิม (กล่อง "แทนที่ทั้งชุด") ตารางเท่าเดิม -> audit MANUAL CREATE + config UPDATE ไม่มี rows/fileKey -> MARKETING เรียก save action ตรง ๆ ถูก redirect -> reset ผ่าน UI กลับ baseline). `e2e-save-calculator-tables.mts` ไม่ SKIP แล้ว (action ถูกลงมานิเฟสต์) ทุกเคสรวม concurrency ผ่านโดยไม่ใช้ harness.
+- ข้อแตกต่างจากแผน: (1) ปุ่ม "แก้ไข" + ป้ายสถานะอยู่ในเซลล์ขนาด แทนคอลัมน์ท้ายแถว (เหตุผลข้างบน); (2) ช่วงที่แผงนำเข้าเปิดอยู่ ปุ่มแก้ไข/เพิ่มขนาดถูก disabled พร้อมข้อความ "ปิดการนำเข้าไฟล์ก่อน…" (ไม่อยู่ในสเปก — กัน preview ที่เปิดอยู่ถูกแทนด้วยค่าที่แก้ค้าง); (3) `NumInput` ใช้ `flushSync` ตอน focus เพื่อสลับข้อความจัดรูปแบบ -> ค่าดิบและ select พร้อมกัน (ไม่งั้นการพิมพ์ทับ/automation ต่อท้ายตัวเลขเดิม); (4) แก้ช่องว่างที่ขาดในกล่อง "แทนที่ทั้งชุด" ("…KKD Adminค่าที่แก้ไว้") เป็นข้อความต่อเนื่องของ R1-S5; (5) ไม่มีคำเตือนระดับแถวสำหรับ On-grid (Q2: ใช้เฉพาะ Hybrid) — คำเตือนที่เหลือคือ Package/slider ใน Dialog ยืนยัน; (6) grep DoD `calculator-import"` พบเฉพาะ `@/actions/calculator-import` (server action module) ไม่ใช่ `src/lib/calculator-import` — ไม่มี import ของ exceljs/lib index ฝั่ง client.
+- หมายเหตุสถานะ: `e2e-admin.mts` บรรทัด `DASHBOARD: recent lead visible ✗` เป็น info เดิม (ค้นหา lead ทดสอบชื่อ "ทดสอบ นัดสำรวจ" ซึ่งไม่เกี่ยวกับงานนี้) ไม่ทำให้ script fail. ยังไม่ได้รัน `design-business-reviewer`.
+
+**สรุปหลังแก้ (review `design-business-reviewer`, 2026-10-03)** — แก้ก่อนเข้า R1-S7:
+- **M1 (blocker) แก้แล้ว:** `line-through` ย้ายจาก `<tr>` ไปที่ `<span>` kW + เซลล์ตัวเลขเท่านั้น (ปุ่ม "คืนขนาดนี้" และป้าย "จะลบ" ไม่ถูกขีด; ลบ `no-underline` ที่ไม่ได้ผล). e2e ตรวจ computed `text-decoration-line`: ปุ่ม/tr/เซลล์ขนาด/ป้าย = `none`, kW + ตัวเลข = `line-through`; ภาพ `r1s6-deleted-row-1280/820`.
+- **N2 แก้แล้ว:** apply นำเข้าสำเร็จ -> แผงนำเข้าปิดเอง (`onApplied`); ข้อความล็อก = `กด "ปิดการนำเข้า" ด้านบน เพื่อแก้ตารางในหน้านี้`. พบ bug ร่วม: แผงที่ถูกปิดทันทีหลัง apply ทิ้ง `busy=true` ค้าง (ปุ่มแก้ไขยัง disabled) -> เพิ่ม cleanup `onBusyChange(false)` ตอน unmount.
+- **N5 แก้แล้ว:** ตอน conflict "กลับไปแก้" disabled (ทางเดียวคือ "โหลดข้อมูลล่าสุด"), กล่องคำเตือนถูกแทนที่ด้วยกล่อง conflict, คอลัมน์ "On-grid ตอนนี้" จาง, toast ใช้คำ "โหลดข้อมูลล่าสุด".
+- **N7 แก้แล้ว:** `whitespace-nowrap shrink-0` กับ "ดาวน์โหลดต้นฉบับ" และ "ไม่มีคำเตือน" ในประวัติ.
+- lint ของ script ที่งานนี้สร้าง: `e2e-calculator-config.mts` prefer-const, `e2e-save-calculator-tables.mts` no-explicit-any (ไม่แตะ lint เดิมไฟล์อื่น).
+- **Follow-up (ยังไม่ทำ):** N1 รูปแบบปุ่มแก้ไข (ให้ `ux-ui-expert` ตัดสิน) · N3 validator ตรวจเป็นขั้น · N4 ลำดับช่องใน Dialog ที่ 820px · N6 ภาพของสถานะที่ยังไม่มี.
 
 ---
 
@@ -407,13 +421,24 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 - Release note: ฟิลด์ไฟล์ของ `CalculatorImport` เป็น NULL ได้แล้ว; แถว MANUAL ไม่มีไฟล์ต้นฉบับ
 
 **DoD**
-- [ ] หลักฐานข้อ 3, 4, 7, 8, 9, 10 ใน "สรุปหลังแก้" (output/screenshot — ไม่มีราคา)
-- [ ] อัปเดต Status ของแผนนี้
+- [x] หลักฐานข้อ 3, 4, 7, 8, 9, 10 ใน "สรุปหลังแก้" (output/screenshot — ไม่มีราคา) — ข้อ 8 = เทียบ baseline S0 ไม่ได้ (ดูเหตุผลใน "สรุปหลังแก้"); ข้อ 10 = optional ยังไม่ทำ
+- [x] อัปเดต Status ของแผนนี้
 - Commit: `docs(deploy): record calculator table editing release evidence`
 
 **Rollback:** ตามขั้น rollback R1 ข้างบน
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้ (2026-10-04)**
+- **Artifact:** `deploy/dist.zip` 29,034,295 bytes, BUILD_ID `Z5DuTs5XGh2_zJUCUz_p5`, build จาก `main` `a7bbfbe`; artifact ก่อนหน้า (สำหรับ rollback) เก็บไว้ในเครื่องที่ `backups/deploy-artifacts/dist-pre-r1-2026-09-26.zip` (28,982,352 bytes, ไม่ commit)
+- **Pre-state (read-only):** `CalculatorImport` ไม่มี `source`, 5 แถว, InnoDB; `CalculatorConfig` version 15; export marker 404
+- **ข้อ 3 Snapshot:** phpMyAdmin export (structure+data, DROP TABLE+CREATE+INSERT) ของ `CalculatorConfig` + `CalculatorImport` → `kkdprop1_calculator_pre-r1s7_2026-10-04.sql` 51,112 bytes, 5 แถว import; เก็บนอก server (ในเครื่อง, ไม่ commit)
+- **ข้อ 4 DDL:** pre-check 0a InnoDB / 0b 0 rows / 0c collation ตรง (unicode_ci + bin บน rows/warnings) ผ่านก่อนรัน; ALTER รันใน phpMyAdmin โดย human; ยืนยันซ้ำด้วย `pma-readonly-query.mts`: `source` varchar(10) NOT NULL DEFAULT 'EXCEL', `fileName`/`fileKey`/`sha256`/`sizeBytes` เป็น NULL ได้, collation คอลัมน์เดิมไม่เปลี่ยน, GROUP BY source = EXCEL | 5, `CalculatorConfig` version 15 + `sizeTableImportId` เดิม
+- **ข้อ 6:** upload โดย human (`226 File successfully transferred`, 29,034,295 bytes ตรง) → extract `File Extracted` → restart HTTP 302
+- **ข้อ 7:** `/api/admin/calculator/export` → 401 (เดิม 404); `/api/admin/leads` → 401; `smoke-test-production.mts` ผ่านทุกข้อรวม `/th/calculator` "คำนวณ" และ `/en/calculator` "How Much Is Your Bill"; warm หน้า public 20 route สองรอบ ทุก route 200
+- **ข้อ 8:** **เทียบตัวเลขกับ baseline S0 ไม่ได้** — S0 บันทึกตอน config version 5 / import ชุดเก่า แต่ก่อน release prod เป็น version 15 แล้ว (owner apply ชุดใหม่ระหว่างนั้น); release นี้ไม่แตะ `CalculatorConfig` (version/import id เท่าเดิมก่อน-หลัง) และหน้า `/th/calculator` render + คำนวณได้ปกติในเบราว์เซอร์จริง. ถือเป็น baseline ใหม่ใน R2-S0
+- **ข้อ 9:** owner login ยืนยันผ่าน (2026-10-04): แท็บ "ตารางขนาดระบบ" แสดงชุด Excel ที่ใช้อยู่, ประวัติ, export ดาวน์โหลดได้; ยังไม่มีการ save ด้วยมือ → ตอนนี้ rollback ใช้ขั้น "ก่อนมีแถว MANUAL"
+- **ข้อ 10:** ยังไม่ทำ (optional) — ครั้งแรกที่ save ด้วยมือบน prod ต้องเปลี่ยนไปใช้ rollback "หลังมีแถว MANUAL"
+- **หมายเหตุกระบวนการ:** auto-mode classifier บล็อก action เขียน prod จาก agent (กด Go ใน phpMyAdmin, extract) → human รันเองผ่าน `!`; host มี bot challenge ("One moment, please...") ถ้ายิง request ถี่
+- **ถัดไป:** R1 soak 2–3 วันทำการ แล้วจึง R2-S0
 
 ---
 

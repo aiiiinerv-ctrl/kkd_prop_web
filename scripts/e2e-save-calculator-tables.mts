@@ -44,7 +44,15 @@ async function login(page: Page, email: string, password: string) {
   await page.waitForURL("**/admin", { timeout: 15000 });
 }
 
-type Res = { status: number; redirect?: string; result?: any };
+type ActionResult = {
+  ok?: boolean;
+  conflict?: boolean;
+  version: number;
+  importId: string;
+  issues?: { rowIndex: number; field?: string; message: string }[];
+};
+type Res = { status: number; redirect?: string; result: ActionResult };
+// `result` is undefined at runtime for redirects / non-action replies; call sites use `result?.`.
 async function callAction(page: Page, id: string, arg: unknown): Promise<Res> {
   const r = await page.request.post(`${BASE}/admin/pages/calculator`, {
     headers: { "next-action": id, "content-type": "text/plain;charset=UTF-8", accept: "text/x-component", origin: BASE },
@@ -54,7 +62,7 @@ async function callAction(page: Page, id: string, arg: unknown): Promise<Res> {
   const redirect = r.headers()["x-action-redirect"];
   const text = await r.text();
   const m = text.match(/^\d+:(\{"ok":.*\})$/m);
-  return { status: r.status(), redirect, result: m ? JSON.parse(m[1]) : undefined };
+  return { status: r.status(), redirect, result: (m ? JSON.parse(m[1]) : undefined) as ActionResult };
 }
 
 // updateCalculatorConfig takes FormData, so it is posted as multipart in
@@ -77,7 +85,7 @@ async function callConfigAction(page: Page, version: number, maxBill: number): P
   });
   const text = await r.text();
   const m = text.match(/^\d+:(\{"ok":.*\})$/m);
-  return { status: r.status(), result: m ? JSON.parse(m[1]) : undefined };
+  return { status: r.status(), result: (m ? JSON.parse(m[1]) : undefined) as ActionResult };
 }
 
 const row = (kw: number, over: Record<string, unknown> = {}) => ({
@@ -143,7 +151,7 @@ try {
     orderBy: { createdAt: "asc" },
   });
   const impAudit = audits.filter((x) => x.entityType === "CalculatorImport" && x.entityId === impB.id);
-  const cfgAudit = audits.filter((x) => x.entityType === "CalculatorConfig" && x.after && (x.after as any).sizeTableImportId === impB.id);
+  const cfgAudit = audits.filter((x) => x.entityType === "CalculatorConfig" && x.after && (x.after as { sizeTableImportId?: string }).sizeTableImportId === impB.id);
   if (impAudit.length !== 1 || impAudit[0].action !== "CREATE" || cfgAudit.length !== 1 || cfgAudit[0].action !== "UPDATE")
     fail(`AUDIT: expected 1 import CREATE + 1 config UPDATE for the save (got ${impAudit.length}/${cfgAudit.length})`);
   const snap = JSON.stringify(impAudit[0].after);
