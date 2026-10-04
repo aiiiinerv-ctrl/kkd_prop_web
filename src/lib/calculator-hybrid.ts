@@ -302,7 +302,7 @@ export function recommendHybrid(
     monthlySaving,
     afterBill,
     coversFullBill: theoretical >= bill,
-    kwhPerMonth: (size.kw * size.sunHours + batteryKwh) * size.days,
+    kwhPerMonth: size.kw * size.sunHours * size.days,
     minPriceThb,
     paybackYears,
   };

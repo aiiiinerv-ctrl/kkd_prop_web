@@ -385,7 +385,26 @@ if (rec.kind !== "ok") {
   assertEqual("design-157 §7: bill after install", rec.afterBill, 590);
   assertEqual("design-157 §7: payback ≈ 4.0 years", Number((rec.paybackYears ?? 0).toFixed(1)), 4);
   assertEqual("design-157 §7: phases 1,3", rec.phases.join(","), "1,3");
-  assertEqual("design-157 §7: kWh/month", rec.kwhPerMonth, (10 * 5 + 16) * 30);
+  assertEqual("design-157 §0: kWh/month is panels only (no battery term)", rec.kwhPerMonth, 10 * 5 * 30);
+}
+// design-157 §0: the Output/month tile is panels only, so it is identical for every battery option
+// and equals On-grid for the same kW / sunHours / days.
+{
+  const probe = recommendHybrid(9500, pub, null, 10);
+  if (probe.kind !== "ok") {
+    assert("kWh/month probe is ok", false);
+  } else {
+    const kwhs = probe.batteryOptions.map((b) => {
+      const r = recommendHybrid(9500, pub, b, 10);
+      return r.kind === "ok" ? r.kwhPerMonth : -1;
+    });
+    assert(`kWh/month identical across ${kwhs.length} battery options (${kwhs.join(",")})`, new Set(kwhs).size === 1 && kwhs[0] > 0);
+    assertEqual("kWh/month = kW x sunHours x days (no battery term)", kwhs[0], probe.size.kw * probe.size.sunHours * probe.size.days);
+    const gridRow: SizeRow = { ...probe.size };
+    const grid = recommendFromTable(9500, [gridRow], [], 10);
+    if (grid.kind === "ok") assertEqual("kWh/month equals On-grid for the same kW/sunHours/days", kwhs[0], grid.kwhPerMonth);
+    else assert("On-grid comparison row is ok", false);
+  }
 }
 const batteryOf = (bill: number, preferred: number | null) => {
   const r = recommendHybrid(bill, pub, preferred, 10);
