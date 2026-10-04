@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { ArrowLeft, ArrowUp } from "lucide-react";
+import { ArrowLeft, ArrowUp, Check, ZapOff } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
 import { Link } from "@/i18n/navigation";
 import {
@@ -14,7 +14,7 @@ import { recommendHybrid, type PublicHybridSize } from "@/lib/calculator-hybrid"
 import type { SizeRow } from "@/lib/calculator-size-table";
 import { AVG_MONTHLY_BILL_MAX } from "@/lib/validations/lead";
 import { useCalculatorStore } from "@/store/use-calculator-store";
-import { BatteryTrack, CompareTrack, SystemBox, type CompareCell } from "./battery-picker";
+import { BatteryTrack, FactTrack, SystemBox } from "./battery-picker";
 import { PhasePill } from "./phase-pill";
 import { SystemModeTabs } from "./system-mode-tabs";
 
@@ -131,9 +131,9 @@ export function CalculatorClient({
                 </p>
               )}
               {placeholder ? (
-                <p className="col-start-1 row-start-1 inline-flex items-center justify-center gap-1.5 font-extrabold text-primary">
-                  <ArrowUp aria-hidden className="size-4 lg:hidden" />
-                  <ArrowLeft aria-hidden className="hidden size-4 lg:inline" />
+                <p className="col-start-1 row-start-1 text-center font-extrabold text-primary">
+                  <ArrowUp aria-hidden className="mr-1.5 inline-block size-4 align-[-3px] lg:hidden" />
+                  <ArrowLeft aria-hidden className="mr-1.5 hidden size-4 align-[-3px] lg:inline-block" />
                   {t("emptyPrompt")}
                 </p>
               ) : (
@@ -444,18 +444,8 @@ export function CalculatorClient({
   }
 
   // --- Hybrid toggle layout: inputs left (incl. the system box), outputs right ---
-  const years = (n: number) =>
-    n.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const full = (kwh: number) => (kwh === 0 ? t("batteryNone") : t("batteryOption", { kwh: kwh.toLocaleString(locale) }));
   const short = (kwh: number) => (kwh === 0 ? t("batteryNone") : kwh.toLocaleString(locale));
-  const paybackValue = (r: { kind: string; paybackYears?: number | null }) =>
-    r.kind === "ok"
-      ? r.paybackYears == null
-        ? t("compareAskQuote")
-        : t("compareYears", { years: years(r.paybackYears) })
-      : r.kind === "tooLarge"
-        ? t("compareTalkTeam")
-        : "—";
   const adjusted = hybridOk !== null && preferredBatteryKwh !== null && preferredBatteryKwh !== hybridOk.batteryKwh;
   const maxBattery = Math.max(0, ...hybridTable!.flatMap((size) => size.batteries.map((b) => b.batteryKwh)));
   const maxOnGridKw = Math.max(0, ...sizeTable.map((row) => row.kw));
@@ -463,6 +453,10 @@ export function CalculatorClient({
     <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">{tCommon("popular")}</span>
   );
   const bothPhases: (1 | 3)[] = [1, 3];
+  const phaseUnion = (rows: { phases: (1 | 3)[] }[]) =>
+    ([1, 3] as const).filter((ph) => rows.some((r) => r.phases.includes(ph)));
+  const onGridPhases = phaseUnion(sizeTable);
+  const hybridPhases = phaseUnion(hybridTable!);
   // What the battery track lists while Hybrid has nothing to price (disabled look).
   const idleSize =
     hybridRecommendation?.kind === "tooLarge" ? hybridRecommendation.lastSize : hybridTable![0];
@@ -499,7 +493,12 @@ export function CalculatorClient({
     );
     footer = t("batteryTradeoffHint");
   } else if (isHybrid) {
-    header = t("modeHybrid");
+    header = (
+      <>
+        {t("modeHybrid")}
+        <PhasePill phases={hybridPhases} />
+      </>
+    );
     caption = t("modeHybridHint");
     track = <BatteryTrack options={idleOptions} optionLabel={full} optionText={short} />;
     footer =
@@ -514,16 +513,25 @@ export function CalculatorClient({
         {popular && popularChip}
       </>
     ) : (
-      t("modeOnGrid")
+      <>
+        {t("modeOnGrid")}
+        <PhasePill phases={onGridPhases} />
+      </>
     );
     caption = t("modeOnGridHint");
-    const current: CompareCell = { label: t("modeOnGrid"), value: paybackValue(recommendation) };
-    const other: CompareCell = {
-      label: hybridOk && hybridOk.batteryKwh > 0 ? t("compareHybrid", { kwh: hybridOk.batteryKwh.toLocaleString(locale) }) : t("modeHybrid"),
-      value: paybackValue(hybridRecommendation ?? { kind: "empty" }),
-    };
-    track = <CompareTrack current={current} other={other} onSwitch={() => setSystemMode("hybrid")} />;
-    footer = t("modeCompareNote");
+    track = (
+      <FactTrack
+        facts={[
+          { icon: <Check className="size-4 text-emerald-600" />, text: t("onGridFactNoBattery") },
+          { icon: <ZapOff className="size-4 text-muted-foreground" />, text: t("onGridFactOutage") },
+        ]}
+      />
+    );
+    footer = displayedResult
+      ? t("onGridSizedNote")
+      : recommendation.kind === "tooLarge"
+        ? t("onGridSizedOnSite", { kw: recommendation.lastRow.kw.toLocaleString(locale) })
+        : t("onGridEnterBill");
   }
   const footnote = resultView
     ? isHybrid
@@ -566,7 +574,9 @@ export function CalculatorClient({
               footer={footer}
               footerGhosts={[
                 t("batteryTradeoffHint"),
-                t("modeCompareNote"),
+                t("onGridSizedNote"),
+                t("onGridEnterBill"),
+                t("onGridSizedOnSite", { kw: maxOnGridKw.toLocaleString(locale) }),
                 t("batterySizedOnSite", { kw: ghostKw.toLocaleString(locale) }),
                 t("batteryEnterBill"),
               ]}

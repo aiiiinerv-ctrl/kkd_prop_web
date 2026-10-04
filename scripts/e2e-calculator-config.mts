@@ -960,15 +960,19 @@ await marketingR1.close();
       if (!/system=on-grid/.test(ogHref) || /battery=/.test(ogHref)) fail(`${tag}: On-grid CTA must carry system=on-grid and no battery, got ${ogHref}`);
       const card = p.locator("#monthly-bill").locator("xpath=ancestor::div[contains(@class,'overflow-hidden')][1]");
       if (!/ในช่วงกลางวัน|during daytime/.test(await card.innerText())) fail(`${tag}: On-grid footnote missing under the gold badge`);
-      // Rebalanced layout: the system box lives in the left (input) column, the compare row is a real button.
-      const compare = card.locator("button:has-text('→')");
-      if ((await compare.count()) !== 1) fail(`${tag}: On-grid compare row must have exactly one switch-to-Hybrid button`);
-      await compare.focus();
-      if (!(await compare.evaluate((el) => el === document.activeElement))) fail(`${tag}: compare button must be keyboard focusable`);
-      await compare.click();
+      // Rebalanced layout: the system box lives in the left (input) column; On-grid shows a non-interactive FactTrack
+      // (no compare button / no focusable element), and switching tabs must not change the card height.
+      const systemBox = card.locator("ul:has(> li)").first();
+      if ((await systemBox.count()) !== 1) fail(`${tag}: On-grid FactTrack (ul with 2 facts) missing`);
+      if ((await systemBox.locator("li").count()) !== 2) fail(`${tag}: FactTrack must show exactly 2 facts`);
+      if ((await systemBox.locator("a, button, input, [tabindex]").count()) !== 0) fail(`${tag}: FactTrack must contain no focusable element`);
+      if ((await card.locator("button:has-text('→')").count()) !== 0) fail(`${tag}: On-grid must not have a compare button`);
+      const ogHeight = await cardHeight(p);
+      await p.locator('label:has(input[name="calc-mode"][value="hybrid"])').click();
       await p.waitForSelector('input[name="calc-battery"]');
-      if (!(await p.locator('input[name="calc-mode"][value="hybrid"]').isChecked())) fail(`${tag}: compare button must switch to Hybrid`);
-      if ((await p.locator("#monthly-bill").inputValue()) !== "9500") fail(`${tag}: compare switch must keep the bill`);
+      if (!(await p.locator('input[name="calc-mode"][value="hybrid"]').isChecked())) fail(`${tag}: mode tab must switch to Hybrid`);
+      if ((await p.locator("#monthly-bill").inputValue()) !== "9500") fail(`${tag}: tab switch must keep the bill`);
+      if ((await cardHeight(p)) - ogHeight !== 0) fail(`${tag}: tab switch On-grid -> Hybrid must change card height by 0px`);
       heights.push(await cardHeight(p));
       if (!/คิดจากแบต|one full battery charge/.test(await card.innerText())) fail(`${tag}: battery assumption must sit under the gold badge`);
       {
@@ -1011,7 +1015,7 @@ await marketingR1.close();
       await p.close();
     }
   }
-  pass("R2-S9 public: toggle, compare button, 2-row battery wrap, footnotes, smallest battery first, nearest + note + restore, CTA params, below/tooLarge, constant card height (th/en x 1280/375)");
+  pass("R2-S9 public: toggle, FactTrack (no focusable, tab-switch height delta 0), 2-row battery wrap, footnotes, smallest battery first, nearest + note + restore, CTA params, below/tooLarge, constant card height (th/en x 1280/375)");
   for (const locale of ["th", "en"] as const) {
     const html = await (await fetch(`${BASE_URL}/${locale}/calculator`)).text();
     if (/BrandA|BrandB|brandPrices|hybridSizeTable/.test(html)) fail(`R2-S9 PUBLIC ${locale}: HTML leaks brand names / per-brand prices`);

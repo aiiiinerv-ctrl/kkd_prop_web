@@ -376,16 +376,16 @@
     "emptyPromptSub": "ระบบคำนวณระยะคืนทุนให้ทันที",
     "emptyFootnote": "ประมาณการจากค่าไฟและแพ็กเกจมาตรฐาน",
     "noPaybackShort": "ขอใบเสนอราคาเพื่อดูระยะคืนทุน",
-    "compareYears": "~{years} ปี",
-    "compareHybrid": "ไฮบริด แบต {kwh} kWh",
-    "compareAskQuote": "ขอใบเสนอราคา",
-    "compareTalkTeam": "ปรึกษาทีมงาน",
     "batterySizedOnSite": "ระบบเกิน {kw} kW เลือกขนาดแบตหน้างานกับทีมงาน",
     "batteryEnterBill": "กรอกค่าไฟเพื่อดูตัวเลือกแบตเตอรี่",
     "noBatteryFootnote": "ไม่มีแบต: ไม่มีไฟสำรองตอนไฟดับ",
     "onGridFootnote": "คิดจากการใช้ไฟจากแผงในช่วงกลางวัน",
     "batteryTradeoffHint": "แบตเล็กลง คืนทุนเร็วขึ้น · แบตใหญ่ขึ้น สำรองไฟได้นานขึ้น",
-    "modeCompareNote": "เทียบระยะคืนทุนที่ค่าไฟนี้ · ไฮบริดมีไฟสำรองตอนไฟดับ"
+    "onGridFactNoBattery": "ไม่มีแบตเตอรี่ให้ดูแลหรือเปลี่ยน",
+    "onGridFactOutage": "ไฟดับ ระบบหยุดจ่ายไฟเพื่อความปลอดภัย",
+    "onGridSizedNote": "ขนาดระบบคิดจากค่าไฟต่อเดือนที่กรอก",
+    "onGridEnterBill": "กรอกค่าไฟเพื่อดูขนาดระบบที่แนะนำ",
+    "onGridSizedOnSite": "ระบบเกิน {kw} kW ทีมงานจะออกแบบให้หน้างาน"
   },
   "testimonials": {
     "title": "เสียงจากลูกค้าของเรา",

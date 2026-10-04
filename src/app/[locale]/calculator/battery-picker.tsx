@@ -36,7 +36,7 @@ export function SystemBox({
   footer: ReactNode;
   footerGhosts: ReactNode[];
 }) {
-  const headerCls = "flex min-h-6 flex-wrap items-center gap-x-2 gap-y-1 text-sm font-extrabold tabular-nums text-primary";
+  const headerCls = "flex min-h-6 flex-wrap content-start items-center gap-x-2 gap-y-1 text-sm font-extrabold tabular-nums text-primary";
   const captionCls = "mt-1 text-xs leading-5 text-muted-foreground";
   const footerCls = "mt-2 text-center text-xs leading-5 text-muted-foreground";
   return (
@@ -148,44 +148,22 @@ export function BatteryTrack({
   );
 }
 
-/** One side of the compare row: label left, payback right. */
-export type CompareCell = { label: string; value: string };
-
 /**
- * On-grid's track: current system (not interactive) next to the Hybrid payback at
- * the same bill, as a real button that switches to Hybrid. Same track geometry as
- * the battery control (two stacked rows below 640px, two columns from 640px).
+ * On-grid's track: two non-interactive facts (one benefit, one limitation) with the
+ * same track geometry as the battery control (two stacked rows below 640px, two
+ * columns from 640px), so the card keeps its height across tabs.
  */
-export function CompareTrack({
-  current,
-  other,
-  onSwitch,
-}: {
-  current: CompareCell;
-  other: CompareCell;
-  onSwitch: () => void;
-}) {
-  const cell = "flex min-h-11 items-center justify-between gap-2 rounded-lg px-3 text-[13px] font-bold";
+export function FactTrack({ facts }: { facts: { icon: ReactNode; text: string }[] }) {
   return (
-    <div className={cn(TRACK, "flex flex-col gap-[3px] sm:grid sm:grid-cols-2")}>
-      <div aria-current="true" className={cn(cell, "bg-primary text-primary-foreground")}>
-        <span>{current.label}</span>
-        <span className="text-xs font-semibold tabular-nums">{current.value}</span>
-      </div>
-      <button
-        type="button"
-        onClick={onSwitch}
-        className={cn(
-          cell,
-          "cursor-pointer bg-white text-primary ring-1 ring-primary/25 transition-colors hover:ring-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        )}
-      >
-        <span>{other.label}</span>
-        <span className="text-xs font-semibold tabular-nums">
-          {other.value}
-          <span aria-hidden> →</span>
-        </span>
-      </button>
-    </div>
+    <ul className={cn(TRACK, "flex flex-col gap-[3px] sm:grid sm:grid-cols-2")}>
+      {facts.map((f) => (
+        <li key={f.text} className="flex min-h-11 min-w-0 items-center gap-2 rounded-lg px-3 text-xs font-semibold leading-4 text-foreground/80">
+          <span aria-hidden className="shrink-0">
+            {f.icon}
+          </span>
+          <span className="min-w-0">{f.text}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
