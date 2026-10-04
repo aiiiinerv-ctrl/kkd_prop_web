@@ -55,7 +55,7 @@ Precedent (รูปแบบ + กลไกที่ต่อยอด): [`calc
 | **R2-S0** | Gate R1 นิ่งบน prod + baseline หลัง R1 | `nextjs-dev` | — | ⏳ R1-S7 | 0.25 d | pending |
 | **R2-S1** | Pure lib Hybrid: `HybridRow`, schema, สูตร, ราคาที่ใช้ได้, `recommendHybrid` + projection | `nextjs-dev` | — (verify script = reviewer) | ⏳ R2-S0 | 1 d | done — verify-calculator ✓ (76/76), `tsc` ✓; full `npm run build` รันตอน merge |
 | **R2-S2** | Reader + validator + diff + messages ชีต Hybrid + import ไฟล์เดียว 2 ชีต (D3/D4) + fixture สังเคราะห์ | `nextjs-dev` | `audit-compliance-reviewer` (guard review) | ⏳ R2-S1 | 1.5 d | done — verify ✓ (fixture + ไฟล์จริง), รอ `audit-compliance-reviewer` |
-| **R2-S3** | Schema R2 (3 คอลัมน์) + DDL asset | `nextjs-dev` | `deploy-verify` | ✅ ขนานกับ R2-S1/S2 | 0.5 d | pending |
+| **R2-S3** | Schema R2 (3 คอลัมน์) + DDL asset | `nextjs-dev` | `deploy-verify` | ✅ ขนานกับ R2-S1/S2 | 0.5 d | done |
 | **R2-S4** | Actions + read path: preview/apply/save/reset รู้จัก Hybrid, `getCalculatorConfig` คืน projection + payload test | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R2-S2, R2-S3 | 1 d | pending |
 | **R2-S5** | Export ชีต Hybrid (merged block, กลุ่มยี่ห้อ) + round-trip 2 ชีต | `nextjs-dev` | `audit-compliance-reviewer` | ⏳ R2-S2 · ✅ ขนานกับ R2-S4 | 0.75 d | done — round-trip ✓ (fixture + ไฟล์จริง), Excel check ✓, route ย้ายไป R2-S4, รอ `audit-compliance-reviewer` |
 | **R2-S6** | หลังบ้าน: แท็บย่อย On-grid/Hybrid, รายการ + Dialog Hybrid, save 2 ตาราง | `nextjs-dev` | `design-business-reviewer` (admin real render) | ⏳ R2-S4 | 1.25 d | pending |
@@ -518,7 +518,16 @@ Critical path ≈ 11.5 d: S0 → R1-S1 → R1-S4 → R1-S6 → R1-S7 (≈ 5 d) �
 
 **Rollback (local):** revert + `prisma migrate reset`
 
-**สรุปหลังแก้:** _(กรอกหลังทำ)_
+**สรุปหลังแก้:**
+- Migration `20261004050912_add_hybrid_calculator_tables_and_lead_battery` (3 ADD COLUMN nullable: `CalculatorConfig.hybridSizeTable JSON`, `CalculatorImport.hybridRows JSON`, `Lead.interestedBatteryKwh INTEGER`) — backup ก่อน, ไม่ reset DB
+- DDL asset `docs/plans/assets/calculator-hybrid-r2-production-ddl.sql`: หัวไฟล์เตือนลำดับ (DDL + `SHOW COLUMNS` ก่อน restart ไม่งั้น quote submit 500), 0a InnoDB 3 ตาราง, 0b เช็คคอลัมน์, 0c ไม่ต้อง (ไม่มี string col), ALTER `IF NOT EXISTS` ×3, verify + gate COUNT = 3, ไม่มี DROP
+- Verify: `migrate dev` ✓ · `db seed` ×2 ✓ · `verify-storage-engine` ENGINE_GATE=GREEN · `restore-db` dry-run ✓ · `tsc --noEmit` ✓ · `npm run build` ✓ (Compiled + Finished TypeScript)
+- ยังไม่ทำ: `npm run start` + `verify-all.mts`, `deploy-verify` review (ไม่ได้รันใน worktree) — ให้ทำตอน merge/R2-S4
+- worktree: `src/generated` เลิก symlink (generate เอง), `.env` copy มา (gitignored)
+
+**Status:** done (ยกเว้นข้อที่ระบุข้างบน)
+
+
 
 ---
 
